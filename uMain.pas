@@ -51,6 +51,7 @@ type
     sp1: TJvxSplitter;
     acAttachProcess: TAction;
     sbInfo: TJvStatusBar;
+    cbCPUTimeLine: TCheckBox;
     procedure FormCreate(Sender: TObject);
 
     procedure acAppOpenExecute(Sender: TObject);
@@ -79,6 +80,8 @@ type
     procedure vdtTimeLineScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: Integer);
     procedure vdtTimeLineChange(Sender: TBaseVirtualTree; Node: PVirtualNode);
     procedure vdtTimeLinePaintBackground(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; R: TRect; var Handled: Boolean);
+
+    procedure cbCPUTimeLineClick(Sender: TObject);
   private
     FPID: DWORD;
     FAppName: String;
@@ -93,12 +96,16 @@ type
 
     procedure DrawTimeLineHeader(C: TCanvas; const R: TRect; const Offset: Integer);
     procedure DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
+    procedure DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
     procedure DrawProcessTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+    procedure DrawProcessCPUTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
     procedure DrawBackground(TargetCanvas: TCanvas; const R: TRect; BkColor: TColor);
 
     procedure AddProcess(const ProcessID: Cardinal);
     procedure AddThread(const ThreadID: Cardinal);
     procedure SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
+
+    function EllapsedToTime(const Ellapsed: UInt64): String;
   public
     procedure Log(const Msg: String);
     procedure DoAction(Action: TacAction; Args: array of Variant);
@@ -281,6 +288,11 @@ begin
   LinkData^.ThreadData := ThData;
 end;
 
+procedure TMainForm.cbCPUTimeLineClick(Sender: TObject);
+begin
+  UpdateTrees;
+end;
+
 procedure TMainForm.DoAction(Action: TacAction; Args: array of Variant);
 begin
   case Action of
@@ -353,6 +365,66 @@ begin
   TargetCanvas.Pen.Mode := pmCopy;
 end;
 
+procedure TMainForm.DrawProcessCPUTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+var
+  X1, X2, Y1, Y2: Integer;
+  T1, T2, F: Int64;
+  OffsetT1, OffsetT2, Offset: Cardinal;
+  I: Cardinal;
+  ProcPoint: PProcessPoint;
+begin
+  DrawBackground(C, R, C.Brush.Color);
+
+  if (ProcData = nil) or (ProcData^.DbgPointsCount = 0) then Exit;
+
+  T1 := 0;
+  T2 := ProcData^.DbgPointsCount - 1;
+
+  X1 := R.Left + Integer(T1 - CurOffset);
+  X2 := R.Left + Integer(T2 - CurOffset);
+
+  if (X1 < R.Left) and (X2 < R.Left) then Exit;
+  if (X1 > R.Right) and (X2 > R.Right) then Exit;
+
+  if X1 < R.Left then X1 := R.Left;
+  if X1 > R.Right then X1 := R.Right;
+
+  if X2 < R.Left then X2 := R.Left;
+  if X2 > R.Right then X2 := R.Right;
+
+  Y1 := R.Top + 3;
+  Y2 := R.Bottom - 3;
+
+  C.Brush.Color := clHotLight;
+  C.FillRect(Rect(X1, Y1, X2, Y2));
+
+  C.Pen.Color := clGreen;
+  C.Pen.Style := psSolid;
+
+  if ProcData^.DbgPointsCount > 0 then
+  begin
+    I := 0;
+    While I < ProcData^.DbgPointsCount do
+    begin
+      try
+        ProcPoint := ProcData^.DbgPointByIdx(I);
+        if (ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0) then
+        begin
+          T1 := I;
+          X1 := R.Left + Integer(T1 - CurOffset) - 1;
+          if (X1 < R.Left) then Continue;
+          if (X1 > R.Right) then Continue;
+
+          C.MoveTo(X1, Y1);
+          C.LineTo(X1, Y2);
+        end;
+      finally
+        Inc(I);
+      end;
+    end;
+  end;
+end;
+
 procedure TMainForm.DrawProcessTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
 var
   X1, X2, Y1, Y2: Integer;
@@ -423,6 +495,82 @@ begin
           C.MoveTo(X1, Y1);
           C.LineTo(X1, Y2);
         end;
+      finally
+        Inc(I);
+      end;
+    end;
+  end;
+end;
+
+procedure TMainForm.DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
+var
+  X1, X2, Y1, Y2: Integer;
+  T1, T2, F: Int64;
+  //OffsetT1, OffsetT2, Offset: Cardinal;
+  I: Cardinal;
+  ThPoint: PThreadPoint;
+  ProcPoint: PProcessPoint;
+begin
+  DrawBackground(C, R, C.Brush.Color);
+
+  if (ThData = nil) or (ThData^.DbgPointsCount = 0) then Exit;
+
+  T1 := ThData^.DbgPointByIdx(0)^.PerfIdx;
+  if ThData^.State = tsFinished then
+    T2 := ThData^.DbgPointByIdx(ThData^.DbgPointsCount - 1)^.PerfIdx
+  else
+    T2 := FDebugInfo.Debuger.ProcessData.CurDbgPointIdx;
+
+  X1 := R.Left + Integer(T1 - CurOffset);
+  X2 := R.Left + Integer(T2 - CurOffset);
+
+  if (X1 < R.Left) and (X2 < R.Left) then Exit;
+  if (X1 > R.Right) and (X2 > R.Right) then Exit;
+
+  if X1 < R.Left then X1 := R.Left;
+  if X1 > R.Right then X1 := R.Right;
+
+  if X2 < R.Left then X2 := R.Left;
+  if X2 > R.Right then X2 := R.Right;
+
+  Y1 := R.Top + 3;
+  Y2 := R.Bottom - 3;
+
+  C.Brush.Color := clHotLight;
+  C.Brush.Style := bsSolid;
+  C.FillRect(Rect(X1, Y1, X2, Y2));
+
+  C.Pen.Style := psSolid;
+
+  if ThData^.DbgPointsCount > 0 then
+  begin
+    I := 0;
+    While I < ThData^.DbgPointsCount do
+    begin
+      try
+        ThPoint := ThData^.DbgPointByIdx(I);
+
+        if ThPoint = nil then
+          Continue;
+
+        ProcPoint := FDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
+
+        case ThPoint^.PointType of
+          ptStart, ptStop:
+            C.Pen.Color := clWindowText;
+          ptException:
+            C.Pen.Color := clRed;
+          ptPerfomance:
+            C.Pen.Color := clGreen;
+        end;
+
+        T1 := ThPoint^.PerfIdx;
+        X1 := R.Left + Integer(T1 - CurOffset) - 1;
+        if (X1 < R.Left) then Continue;
+        if (X1 > R.Right) then Continue;
+
+        C.MoveTo(X1, Y1);
+        C.LineTo(X1, Y2);
       finally
         Inc(I);
       end;
@@ -526,6 +674,8 @@ var
   Cnt: Integer;
   X, Y: Integer;
   T: String;
+  Idx: Integer;
+  ProcPoint: PProcessPoint;
 begin
   C.Font.Color := clWindowText;
   C.Font.Size := 8;
@@ -543,8 +693,26 @@ begin
     X := R.Left + Cnt * 100;
     Y := R.Bottom;
 
-    T := OffsetToTime(Offset + Cnt);
-    C.TextOut(X + 3, R.Top, T);
+    T := '';
+
+    if cbCPUTimeLine.Checked then
+    begin
+      if Assigned(FDebuger) then
+      begin
+        Idx := Offset + Cnt * 100;
+
+        if Idx < FDebuger.ProcessData.DbgPointsCount then
+        begin
+          ProcPoint := FDebuger.ProcessData.DbgPointByIdx(Idx);
+          T := EllapsedToTime(ProcPoint^.CPUTime);
+        end;
+      end;
+    end
+    else
+      T := OffsetToTime(Offset + Cnt);
+
+    if T <> '' then
+      C.TextOut(X + 3, R.Top, T);
 
     C.MoveTo(X + 1, Y - 1);
     C.LineTo(X + 1, Y - 8);
@@ -565,11 +733,16 @@ var
   PW: Integer;
 begin
   Result := 0;
-  if Assigned(FDebugInfo) and Assigned(FDebugInfo.Debuger) then
+  if Assigned(FDebugInfo) and Assigned(FDebugInfo.Debuger) and
+    (FDebugInfo.Debuger.ProcessData.DbgPointsCount > 0)
+  then
   begin
     PW := vdtTimeLine.Header.Columns[0].Width - vdtTimeLine.ClientWidth;
     F := (-vdtTimeLine.OffsetX) / PW;
-    Result := Trunc((FDebugInfo.Debuger.ProcessData.Ellapsed_MSec div 1000) * F);
+    if cbCPUTimeLine.Checked then
+      Result := (Trunc(FDebugInfo.Debuger.ProcessData.CurDbgPointIdx * F) div 100) * 100
+    else
+      Result := Trunc((FDebugInfo.Debuger.ProcessData.Ellapsed_MSec div 1000) * F);
   end;
 end;
 
@@ -786,9 +959,19 @@ begin
   LinkData := Sender.GetNodeData(PaintInfo.Node);
   case LinkData^.LinkType of
     ltProcess:
-      DrawProcessTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ProcessData, GetLineTimeOffset);
+    begin
+      if cbCPUTimeLine.Checked then
+        DrawProcessCPUTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ProcessData, GetLineTimeOffset)
+      else
+        DrawProcessTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ProcessData, GetLineTimeOffset);
+    end;
     ltThread:
-      DrawThreadTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ThreadData, GetLineTimeOffset);
+    begin
+      if cbCPUTimeLine.Checked then
+        DrawThreadCPUTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ThreadData, GetLineTimeOffset)
+      else
+        DrawThreadTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ThreadData, GetLineTimeOffset);
+    end;
   end;
 end;
 
@@ -862,7 +1045,7 @@ begin
   NodeDataSize := SizeOf(TLinkData);
 end;
 
-function EllapsedToTime(const Ellapsed: UInt64): String;
+function TMainForm.EllapsedToTime(const Ellapsed: UInt64): String;
 var
   FT: TFileTime;
   DT: TDateTime;

@@ -74,6 +74,17 @@ object MainForm: TMainForm
       Caption = 'Attach...'
       TabOrder = 5
     end
+    object cbCPUTimeLine: TCheckBox
+      Left = 312
+      Top = 48
+      Width = 97
+      Height = 17
+      Caption = 'CPU TimeLine'
+      Checked = True
+      State = cbChecked
+      TabOrder = 6
+      OnClick = cbCPUTimeLineClick
+    end
   end
   object PageControl1: TPageControl
     Left = 0
@@ -106,9 +117,6 @@ object MainForm: TMainForm
         Left = 279
         Top = 0
         Height = 436
-        ExplicitLeft = 376
-        ExplicitTop = 208
-        ExplicitHeight = 100
       end
       object pUnits: TPanel
         Left = 0
