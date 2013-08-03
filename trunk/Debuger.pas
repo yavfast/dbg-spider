@@ -2444,7 +2444,10 @@ end;
 
 function TProcessData.DbgPointsCount: Cardinal;
 begin
-  Result := DbgPoints.Count;
+  if Assigned(DbgPoints) then
+    Result := DbgPoints.Count
+  else
+    Result := 0;
 end;
 
 function TProcessData.Ellapsed_MSec: Cardinal;
