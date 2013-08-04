@@ -1075,7 +1075,7 @@ begin
 end;
 
 type
-  TDbgStrType = (dstUnknown = 0, dstThreadClassName = 1);
+  TDbgStrType = (dstUnknown = 0, dstThreadClassName = 1, dstThreadParentId);
 
 procedure TDebuger.DoParseDebugString(const DbgStr: String);
 var
@@ -1100,6 +1100,8 @@ begin
       case DbgStrType of
         dstThreadClassName:
           SetThreadInfo(ThreadId)^.ThreadClassName := SL[2];
+        dstThreadParentId:
+          SetThreadInfo(ThreadId)^.ThreadParentId := StrToIntDef(SL[2], 0);
       end;
     end;
   finally

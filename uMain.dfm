@@ -248,6 +248,7 @@ object MainForm: TMainForm
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
         OnChange = vdtTimeLineChange
         OnCollapsed = vstThreadsCollapsed
+        OnColumnResize = vstThreadsColumnResize
         OnDrawText = vstThreadsDrawText
         OnExpanded = vstThreadsExpanded
         OnGetText = vstThreadsGetText
@@ -277,9 +278,9 @@ object MainForm: TMainForm
           end>
       end
       object vdtTimeLine: TVirtualDrawTree
-        Left = 316
+        Left = 315
         Top = 0
-        Width = 641
+        Width = 642
         Height = 436
         Align = alClient
         BorderStyle = bsNone
@@ -314,16 +315,6 @@ object MainForm: TMainForm
             Style = vsOwnerDraw
             Width = 10000
           end>
-      end
-      object sp1: TJvxSplitter
-        Left = 315
-        Top = 0
-        Width = 1
-        Height = 436
-        ControlFirst = vstThreads
-        ControlSecond = vdtTimeLine
-        Align = alLeft
-        BevelOuter = bvNone
       end
     end
     object tsCodeView: TTabSheet

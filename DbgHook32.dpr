@@ -27,6 +27,7 @@ var
   Name: String;
   ThRec: PThreadRec;
   Th: TObject;
+  ParentId: Cardinal;
 begin
   Name := '';
 
@@ -36,6 +37,7 @@ begin
     try
       Th := TObject(ThRec^.Parameter);
       Name := Th.ClassName;
+      ParentId := GetCurrentThreadId;
     except
 
     end;
@@ -45,7 +47,10 @@ begin
 
   if (Result <> 0) and (Name <> '') then
   begin
+    // Thread ClassName
     OutputDebugString(PWideChar(Format('###%d|%d|%s', [1, ThreadId, Name])));
+    // Thread ParentID
+    OutputDebugString(PWideChar(Format('###%d|%d|%d', [2, ThreadId, ParentId])));
   end;
 end;
 
