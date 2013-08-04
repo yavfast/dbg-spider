@@ -49,7 +49,6 @@ type
     vstThreads: TVirtualStringTree;
     sm1: TJvNavPaneStyleManager;
     vdtTimeLine: TVirtualDrawTree;
-    sp1: TJvxSplitter;
     acAttachProcess: TAction;
     sbInfo: TJvStatusBar;
     cbCPUTimeLine: TCheckBox;
@@ -87,6 +86,8 @@ type
     procedure vdtTimeLinePaintBackground(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; R: TRect; var Handled: Boolean);
 
     procedure cbCPUTimeLineClick(Sender: TObject);
+    procedure vstThreadsColumnResize(Sender: TVTHeader;
+      Column: TColumnIndex);
   private
     FPID: DWORD;
     FAppName: String;
@@ -111,6 +112,7 @@ type
     procedure SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
 
     function EllapsedToTime(const Ellapsed: UInt64): String;
+    function FindThreadNode(ThData: PThreadData): PVirtualNode;
   public
     procedure Log(const Msg: String);
     procedure DoAction(Action: TacAction; Args: array of Variant);
@@ -256,12 +258,39 @@ begin
   LinkData := vstThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := TimeLineNode;
   LinkData^.LinkType := ltProcess;
-  LinkData^.ThreadData := @gvDebuger.ProcessData;
+  LinkData^.ProcessData := @gvDebuger.ProcessData;
 
   LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
   LinkData^.SyncNode := NameNode;
   LinkData^.LinkType := ltProcess;
-  LinkData^.ThreadData := @gvDebuger.ProcessData;
+  LinkData^.ProcessData := @gvDebuger.ProcessData;
+end;
+
+function TMainForm.FindThreadNode(ThData: PThreadData): PVirtualNode;
+
+  function _Find(Node: PVirtualNode): PVirtualNode;
+  var
+    CurNode: PVirtualNode;
+    LinkData: PLinkData;
+  begin
+    Result := Nil;
+    CurNode := Node^.FirstChild;
+    if CurNode <> Nil then
+    repeat
+      LinkData := vstThreads.GetNodeData(CurNode);
+      if (LinkData^.LinkType = ltThread) and (LinkData^.ThreadData = ThData) then
+      begin
+        Result := CurNode;
+        Break;
+      end;
+
+      Result := _Find(CurNode);
+      CurNode := CurNode^.NextSibling;
+    until (CurNode = nil) or (Result <> Nil);
+  end;
+
+begin
+  Result := _Find(vstThreads.RootNode);
 end;
 
 procedure TMainForm.AddThread(const ThreadID: Cardinal);
@@ -270,14 +299,32 @@ var
   NameNode: PVirtualNode;
   TimeLineNode: PVirtualNode;
   ThData: PThreadData;
+  ParentThData: PThreadData;
+  ParentId: Cardinal;
+  ParentNode: PVirtualNode;
 begin
   ThData := gvDebuger.GetThreadData(ThreadID);
+  ParentId := ThData^.ThreadAdvInfo^.ThreadParentId;
 
-  NameNode := vstThreads.AddChild(vstThreads.RootNode^.FirstChild);
-  vstThreads.Expanded[vstThreads.RootNode^.FirstChild] := True;
+  ParentNode := Nil;
+  if ParentId <> 0 then
+  begin
+    ParentThData := gvDebuger.GetThreadData(ParentId);
+    if ParentThData <> Nil then
+      ParentNode := FindThreadNode(ParentThData);
+  end;
 
-  TimeLineNode := vdtTimeLine.AddChild(vdtTimeLine.RootNode^.FirstChild);
-  vdtTimeLine.Expanded[vdtTimeLine.RootNode^.FirstChild] := True;
+  if ParentNode = Nil then
+    ParentNode := vstThreads.RootNode^.FirstChild;
+
+  NameNode := vstThreads.AddChild(ParentNode);
+  vstThreads.Expanded[ParentNode] := True;
+
+  LinkData := vstThreads.GetNodeData(ParentNode);
+  ParentNode := LinkData^.SyncNode;
+
+  TimeLineNode := vdtTimeLine.AddChild(ParentNode);
+  vdtTimeLine.Expanded[ParentNode] := True;
 
   LinkData := vstThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := TimeLineNode;
@@ -1009,6 +1056,23 @@ end;
 procedure TMainForm.vstThreadsCollapsed(Sender: TBaseVirtualTree; Node: PVirtualNode);
 begin
   SyncNodes(Sender, Node);
+end;
+
+procedure TMainForm.vstThreadsColumnResize(Sender: TVTHeader; Column: TColumnIndex);
+var
+  W: Integer;
+  I: Integer;
+  C: TVirtualTreeColumn;
+begin
+  W := 0;
+  for I := 0 to Sender.Columns.Count - 1 do
+  begin
+    C := Sender.Columns[I];
+    if coVisible in C.Options then
+      Inc(W, C.Width);
+  end;
+
+  vstThreads.Width := W;
 end;
 
 procedure TMainForm.vstThreadsDrawText(Sender: TBaseVirtualTree;
