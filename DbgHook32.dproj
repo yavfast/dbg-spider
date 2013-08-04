@@ -1,8 +1,8 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
-			<ProjectGuid>{99256B98-0F1D-4707-BC25-85850B6A52B7}</ProjectGuid>
+			<ProjectGuid>{5769B713-B63C-48E8-8145-EF5BBB15C728}</ProjectGuid>
 			<ProjectVersion>12.0</ProjectVersion>
-			<MainSource>Spider.dpr</MainSource>
+			<MainSource>DbgHook32.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 		</PropertyGroup>
@@ -20,19 +20,19 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_Optimize>false</DCC_Optimize>
-			<DCC_UnitSearchPath>C:\Projects\JVCL\jcl\jcl\source\common;C:\Projects\JVCL\jcl\jcl\source\windows;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<BRCC_IncludePath>C:\Projects\Spider\JCL\source\common;C:\Projects\Spider\JCL\source\include;C:\Projects\Spider\JCL\source\include\jedi;C:\Projects\Spider\JCL\source\windows;C:\Projects\Spider\JCL\source;$(BRCC_IncludePath)</BRCC_IncludePath>
-			<DCC_DcuOutput>dcu</DCC_DcuOutput>
+			<DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
+			<ImageDebugInfo>true</ImageDebugInfo>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_DependencyCheckOutputName>Spider.exe</DCC_DependencyCheckOutputName>
-			<DCC_K>false</DCC_K>
+			<DCC_DependencyCheckOutputName>DbgHook32.dll</DCC_DependencyCheckOutputName>
 			<DCC_F>false</DCC_F>
+			<DCC_K>false</DCC_K>
+			<DCC_UsePackage>vclx;vcl;vclimg;dbrtl;Rave77VCL;bdertl;rtl;vclactnband;vcldb;vcldbx;vcltouch;xmlrtl;dsnap;dsnapcon;TeeUI;Tee;TeeDB;vclib;ibxpress;adortl;IndyCore;IndySystem;IndyProtocols;inet;intrawebdb_100_140;Intraweb_100_140;VclSmp;vclie;websnap;webdsnap;inetdb;inetdbbde;inetdbxpress;soaprtl;vclribbon;dbexpress;DbxCommonDriver;DataSnapIndy10ServerTransport;DataSnapProviderClient;DataSnapServer;DbxClientDriver;DBXInterBaseDriver;DBXMySQLDriver;dbxcds;DBXFirebirdDriver;DBXSybaseASEDriver;DBXSybaseASADriver;DBXOracleDriver;DBXMSSQLDriver;DBXInformixDriver;DBXDb2Driver;GanttPackage;JclDeveloperTools;Jcl;JclVcl;JclContainers;JvCore;JvSystem;JvStdCtrls;JvAppFrm;JvBands;JvDB;JvDlgs;JvBDE;JvControls;JvCmp;JvCrypt;JvCustom;JvDocking;JvDotNetCtrls;JvGlobus;JvHMI;JvJans;JvManagedThreads;JvMM;JvNet;JvPageComps;JvPascalInterpreter;JvPluginSystem;JvPrintPreview;JvRuntimeDesign;JvTimeFramework;JvWizards;JvXPCtrls;VirtualTreesR</DCC_UsePackage>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_Platform>x86</DCC_Platform>
 			<DCC_N>false</DCC_N>
-			<DCC_S>false</DCC_S>
 			<DCC_E>false</DCC_E>
+			<DCC_S>false</DCC_S>
+			<GenDll>true</GenDll>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
@@ -44,29 +44,9 @@
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="Spider.dpr">
+			<DelphiCompile Include="DbgHook32.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="uMain.pas">
-				<Form>MainForm</Form>
-			</DCCReference>
-			<DCCReference Include="Debuger.pas"/>
-			<DCCReference Include="DebugInfo.pas"/>
-			<DCCReference Include="ClassUtils.pas"/>
-			<DCCReference Include="DelphiDebugInfo.pas">
-				<Form>$R *.res</Form>
-			</DCCReference>
-			<DCCReference Include="EvaluateTypes.pas"/>
-			<DCCReference Include="EvaluateProcs.pas"/>
-			<DCCReference Include="EvaluateConsts.pas"/>
-			<DCCReference Include="Evaluator.pas"/>
-			<DCCReference Include="uProcessList.pas">
-				<Form>frmProcessList</Form>
-			</DCCReference>
-			<DCCReference Include="JclTD32Ex.pas"/>
-			<DCCReference Include="DebugHook.pas"/>
-			<None Include="CollectList.inc"/>
-			<None Include="CollectListIntf.inc"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
@@ -86,12 +66,13 @@
 			<BorlandProject>
 				<Delphi.Personality>
 					<Source>
-						<Source Name="MainSource">Spider.dpr</Source>
+						<Source Name="MainSource">DbgHook32.dpr</Source>
 					</Source>
 					<Parameters>
 						<Parameters Name="UseLauncher">False</Parameters>
 						<Parameters Name="LoadAllSymbols">True</Parameters>
 						<Parameters Name="LoadUnspecifiedSymbols">False</Parameters>
+						<Parameters Name="HostApplication">C:\Projects\dbg-spider\Spider.exe</Parameters>
 					</Parameters>
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">False</VersionInfo>
@@ -120,6 +101,10 @@
 						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
+					<Excluded_Packages>
+						<Excluded_Packages Name="$(BDS)\bin\dcloffice2k140.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDS)\bin\dclofficexp140.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+					</Excluded_Packages>
 				</Delphi.Personality>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>

@@ -326,6 +326,75 @@ object MainForm: TMainForm
         BevelOuter = bvNone
       end
     end
+    object tsCodeView: TTabSheet
+      Caption = 'CodeView'
+      ImageIndex = 3
+      object spl1: TJvSplitter
+        Left = 257
+        Top = 0
+        Height = 436
+      end
+      object vstModules: TVirtualStringTree
+        Left = 0
+        Top = 0
+        Width = 257
+        Height = 436
+        Align = alLeft
+        Header.AutoSizeIndex = 0
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'Tahoma'
+        Header.Font.Style = []
+        Header.MainColumn = -1
+        TabOrder = 0
+        Columns = <>
+      end
+      object hleCodeView: TJvWideHLEditor
+        Left = 260
+        Top = 0
+        Width = 697
+        Height = 436
+        Cursor = crIBeam
+        RightMarginVisible = False
+        Completion.ItemHeight = 13
+        Completion.CRLF = '/n'
+        Completion.Separator = '='
+        TabStops = '3 5'
+        BracketHighlighting.StringEscape = #39#39
+        Align = alClient
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Courier New'
+        Font.Style = []
+        Colors.Comment.Style = [fsItalic]
+        Colors.Comment.ForeColor = clOlive
+        Colors.Comment.BackColor = clWindow
+        Colors.Number.ForeColor = clNavy
+        Colors.Number.BackColor = clWindow
+        Colors.Strings.ForeColor = clPurple
+        Colors.Strings.BackColor = clWindow
+        Colors.Symbol.ForeColor = clBlue
+        Colors.Symbol.BackColor = clWindow
+        Colors.Reserved.Style = [fsBold]
+        Colors.Reserved.ForeColor = clWindowText
+        Colors.Reserved.BackColor = clWindow
+        Colors.Identifier.ForeColor = clWindowText
+        Colors.Identifier.BackColor = clWindow
+        Colors.Preproc.ForeColor = clGreen
+        Colors.Preproc.BackColor = clWindow
+        Colors.FunctionCall.ForeColor = clWindowText
+        Colors.FunctionCall.BackColor = clWindow
+        Colors.Declaration.ForeColor = clWindowText
+        Colors.Declaration.BackColor = clWindow
+        Colors.Statement.Style = [fsBold]
+        Colors.Statement.ForeColor = clWindowText
+        Colors.Statement.BackColor = clWindow
+        Colors.PlainText.ForeColor = clWindowText
+        Colors.PlainText.BackColor = clWindow
+      end
+    end
   end
   object sbInfo: TJvStatusBar
     Left = 0
