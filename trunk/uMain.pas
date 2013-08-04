@@ -7,7 +7,8 @@ uses
   Dialogs, StdCtrls, Buttons, Mask, ExtCtrls, ComCtrls, ActnList, DebugInfo,
   Grids, JvExGrids, JvGrids, JvgStringGrid, VirtualTrees, JvComponentBase,
   JvNavigationPane, JvExExtCtrls, JvExtComponent, JvSplit,
-  Debuger, DelphiDebugInfo, JvExComCtrls, JvStatusBar;
+  Debuger, DelphiDebugInfo, JvExComCtrls, JvStatusBar, JvExControls,
+  JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor, JvSplitter;
 
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
@@ -52,6 +53,10 @@ type
     acAttachProcess: TAction;
     sbInfo: TJvStatusBar;
     cbCPUTimeLine: TCheckBox;
+    tsCodeView: TTabSheet;
+    vstModules: TVirtualStringTree;
+    spl1: TJvSplitter;
+    hleCodeView: TJvWideHLEditor;
     procedure FormCreate(Sender: TObject);
 
     procedure acAppOpenExecute(Sender: TObject);
@@ -177,9 +182,6 @@ var
   _DbgThread: TDebugerThread = nil;
   _AC: TActionController = nil;
 
-  FDebuger: TDebuger = nil;
-  FDebugInfo: TDebugInfo = nil;
-
 type
   TLinkType = (ltProcess, ltThread);
 
@@ -254,12 +256,12 @@ begin
   LinkData := vstThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := TimeLineNode;
   LinkData^.LinkType := ltProcess;
-  LinkData^.ThreadData := @FDebuger.ProcessData;
+  LinkData^.ThreadData := @gvDebuger.ProcessData;
 
   LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
   LinkData^.SyncNode := NameNode;
   LinkData^.LinkType := ltProcess;
-  LinkData^.ThreadData := @FDebuger.ProcessData;
+  LinkData^.ThreadData := @gvDebuger.ProcessData;
 end;
 
 procedure TMainForm.AddThread(const ThreadID: Cardinal);
@@ -269,7 +271,7 @@ var
   TimeLineNode: PVirtualNode;
   ThData: PThreadData;
 begin
-  ThData := FDebuger.GetThreadData(ThreadID);
+  ThData := gvDebuger.GetThreadData(ThreadID);
 
   NameNode := vstThreads.AddChild(vstThreads.RootNode^.FirstChild);
   vstThreads.Expanded[vstThreads.RootNode^.FirstChild] := True;
@@ -519,7 +521,7 @@ begin
   if ThData^.State = tsFinished then
     T2 := ThData^.DbgPointByIdx(ThData^.DbgPointsCount - 1)^.PerfIdx
   else
-    T2 := FDebugInfo.Debuger.ProcessData.CurDbgPointIdx;
+    T2 := gvDebugInfo.Debuger.ProcessData.CurDbgPointIdx;
 
   X1 := R.Left + Integer(T1 - CurOffset);
   X2 := R.Left + Integer(T2 - CurOffset);
@@ -553,7 +555,7 @@ begin
         if ThPoint = nil then
           Continue;
 
-        ProcPoint := FDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
+        ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
 
         case ThPoint^.PointType of
           ptStart, ptStop:
@@ -597,8 +599,8 @@ begin
   else
     QueryPerformanceCounter(T2);
 
-  T1 := T1 - FDebugInfo.Debuger.ProcessData.Started;
-  T2 := T2 - FDebugInfo.Debuger.ProcessData.Started;
+  T1 := T1 - gvDebugInfo.Debuger.ProcessData.Started;
+  T2 := T2 - gvDebugInfo.Debuger.ProcessData.Started;
 
   Offset := CurOffset * _TicksPerSec;
 
@@ -641,7 +643,7 @@ begin
         if ThPoint = nil then
           Continue;
 
-        ProcPoint := FDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
+        ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
 
         case ThPoint^.PointType of
           ptStart, ptStop:
@@ -697,13 +699,13 @@ begin
 
     if cbCPUTimeLine.Checked then
     begin
-      if Assigned(FDebuger) then
+      if Assigned(gvDebuger) then
       begin
         Idx := Offset + Cnt * 100;
 
-        if Idx < FDebuger.ProcessData.DbgPointsCount then
+        if Idx < gvDebuger.ProcessData.DbgPointsCount then
         begin
-          ProcPoint := FDebuger.ProcessData.DbgPointByIdx(Idx);
+          ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(Idx);
           T := EllapsedToTime(ProcPoint^.CPUTime);
         end;
       end;
@@ -733,16 +735,16 @@ var
   PW: Integer;
 begin
   Result := 0;
-  if Assigned(FDebugInfo) and Assigned(FDebugInfo.Debuger) and
-    (FDebugInfo.Debuger.ProcessData.DbgPointsCount > 0)
+  if Assigned(gvDebugInfo) and Assigned(gvDebugInfo.Debuger) and
+    (gvDebugInfo.Debuger.ProcessData.DbgPointsCount > 0)
   then
   begin
     PW := vdtTimeLine.Header.Columns[0].Width - vdtTimeLine.ClientWidth;
     F := (-vdtTimeLine.OffsetX) / PW;
     if cbCPUTimeLine.Checked then
-      Result := (Trunc(FDebugInfo.Debuger.ProcessData.CurDbgPointIdx * F) div 100) * 100
+      Result := (Trunc(gvDebugInfo.Debuger.ProcessData.CurDbgPointIdx * F) div 100) * 100
     else
-      Result := Trunc((FDebugInfo.Debuger.ProcessData.Ellapsed_MSec div 1000) * F);
+      Result := Trunc((gvDebugInfo.Debuger.ProcessData.Ellapsed_MSec div 1000) * F);
   end;
 end;
 
@@ -826,10 +828,10 @@ begin
   try
     lbUnits.Clear;
 
-    lbUnits.Items.Capacity := FDebugInfo.Units.Count;
-    for I := 0 to FDebugInfo.Units.Count - 1 do
+    lbUnits.Items.Capacity := gvDebugInfo.Units.Count;
+    for I := 0 to gvDebugInfo.Units.Count - 1 do
     begin
-      UnitInfo := TUnitInfo(FDebugInfo.Units.Objects[I]);
+      UnitInfo := TUnitInfo(gvDebugInfo.Units.Objects[I]);
       lbUnits.AddItem(String(UnitInfo.Name), UnitInfo);
     end;
   finally
@@ -885,8 +887,8 @@ begin
 
   UpdateStatusInfo;
 
-  if not Assigned(FDebugInfo) or not Assigned(FDebugInfo.Debuger) or
-    (FDebugInfo.Debuger.DbgState in [dsNone, dsStoped]) then Exit;
+  if not Assigned(gvDebugInfo) or not Assigned(gvDebugInfo.Debuger) or
+    (gvDebugInfo.Debuger.DbgState in [dsNone, dsStoped]) then Exit;
 
   UpdateTrees;
 
@@ -897,14 +899,14 @@ procedure TMainForm.UpdateStatusInfo;
 var
   Msg: String;
 begin
-  if Assigned(FDebuger) then
+  if Assigned(gvDebuger) then
   begin
-    if Assigned(FDebugInfo) and (FDebugInfo.DebugInfoLoaded) then
+    if Assigned(gvDebugInfo) and (gvDebugInfo.DebugInfoLoaded) then
       sbInfo.Panels[0].Text := 'DBG_INFO'
     else
       sbInfo.Panels[0].Text := 'NO_DBG_INFO';
 
-    case FDebuger.DbgState of
+    case gvDebuger.DbgState of
       dsNone: Msg := 'NONE';
       dsStarted: Msg := 'STARTED';
       dsWait: Msg := 'ACTIVE';
@@ -919,8 +921,8 @@ begin
     end;
     sbInfo.Panels[1].Text := Msg;
 
-    if FDebuger.PerfomanceMode and not(FDebuger.DbgState in [dsNone]) then
-      sbInfo.Panels[2].Text := IntToStr(FDebuger.ProcessData.CurDbgPointIdx)
+    if gvDebuger.PerfomanceMode and not(gvDebuger.DbgState in [dsNone]) then
+      sbInfo.Panels[2].Text := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
     else
       sbInfo.Panels[2].Text := 'NO_PERF';
   end
@@ -999,7 +1001,7 @@ end;
 
 procedure TMainForm.ViewDebugInfo(DebugInfo: TDebugInfo);
 begin
-  FDebugInfo := DebugInfo;
+  gvDebugInfo := DebugInfo;
 
   LoadUnits;
 end;
@@ -1081,8 +1083,8 @@ begin
         ThData := Data^.ThreadData;
         if ThData <> nil then
           case Column of
-            0: CellText := ThData^.ThreadName;
-            1: CellText := Format('%x', [ThData^.ThreadID]);
+            0: CellText := ThData^.ThreadAdvInfo^.AsString;
+            1: CellText := Format('%d', [ThData^.ThreadID]);
             2: CellText := EllapsedToTime(ThData^.CPUTime);
           end;
       end;
@@ -1138,28 +1140,28 @@ begin
   if doDebugInfo in FDbgOptions then
     LoadDebugInfo
   else
-    FreeAndNil(FDebugInfo);
+    FreeAndNil(gvDebugInfo);
 
   if doRun in FDbgOptions then
   begin
     if FProcessID = 0 then
     begin
       _AC.Log('Run application "%s"', [FAppName]);
-      FRun := FDebuger.DebugNewProcess(FAppName, True);
+      FRun := gvDebuger.DebugNewProcess(FAppName, False);
     end
     else
     begin
       _AC.Log('Attach to process [%d]', [FProcessID]);
-      FRun := FDebuger.AttachToProcess(FProcessID, True);
+      FRun := gvDebuger.AttachToProcess(FProcessID, False);
     end;
 
     if FRun then
     begin
-      FDebuger.PerfomanceMode := (doProfiler in FDbgOptions);
+      gvDebuger.PerfomanceMode := (doProfiler in FDbgOptions);
 
       _AC.Log('Start debug process');
       try
-        FDebuger.ProcessDebugEvents;
+        gvDebuger.ProcessDebugEvents;
       except
         on E: Exception do
           _AC.Log('Fail debug process: "%s"', [E.Message]);
@@ -1170,41 +1172,41 @@ end;
 
 procedure TDebugerThread.InitDebuger;
 begin
-  if FDebuger <> nil then
-    FreeAndNil(FDebuger);
+  if gvDebuger <> nil then
+    FreeAndNil(gvDebuger);
 
   _AC.Log('Init debuger for "%s"', [FAppName]);
 
-  FDebuger := TDebuger.Create();
+  gvDebuger := TDebuger.Create();
 
-  FDebuger.OnEndDebug := OnEndDebug;
-  FDebuger.OnRip := OnRip;
-  FDebuger.OnCreateProcess := OnCreateProcess;
-  FDebuger.OnExitProcess := OnExitProcess;
-  FDebuger.OnCreateThread := OnCreateThread;
-  FDebuger.OnExitThread := OnExitThread;
-  FDebuger.OnLoadDll := OnLoadDll;
-  FDebuger.OnUnloadDll := OnUnLoadDll;
-  FDebuger.OnDebugString := OnDebugString;
-  FDebuger.OnUnknownException := OnUnknownException;
-  FDebuger.OnUnknownBreakPoint := OnUnknownBreakPoint;
-  FDebuger.OnBreakPoint := OnBreakPoint;
+  gvDebuger.OnEndDebug := OnEndDebug;
+  gvDebuger.OnRip := OnRip;
+  gvDebuger.OnCreateProcess := OnCreateProcess;
+  gvDebuger.OnExitProcess := OnExitProcess;
+  gvDebuger.OnCreateThread := OnCreateThread;
+  gvDebuger.OnExitThread := OnExitThread;
+  gvDebuger.OnLoadDll := OnLoadDll;
+  gvDebuger.OnUnloadDll := OnUnLoadDll;
+  gvDebuger.OnDebugString := OnDebugString;
+  gvDebuger.OnUnknownException := OnUnknownException;
+  gvDebuger.OnUnknownBreakPoint := OnUnknownBreakPoint;
+  gvDebuger.OnBreakPoint := OnBreakPoint;
 end;
 
 procedure TDebugerThread.LoadDebugInfo;
 begin
-  if FDebugInfo <> nil then
-    FreeAndNil(FDebugInfo);
+  if gvDebugInfo <> nil then
+    FreeAndNil(gvDebugInfo);
 
   _AC.Log('Load debug info for "%s"', [FAppName]);
 
-  FDebugInfo := TDelphiDebugInfo.Create(FDebuger);
-  FDbgInfoLoaded := FDebugInfo.ReadDebugInfo(FAppName, nil);
+  gvDebugInfo := TDelphiDebugInfo.Create(gvDebuger);
+  FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(FAppName, nil);
 
   if FDbgInfoLoaded then
   begin
     _AC.Log('Loaded debug info for "%s"', [FAppName]);
-    _AC.ViewDebugInfo(FDebugInfo);
+    _AC.ViewDebugInfo(gvDebugInfo);
   end
   else
     _AC.Log('No debug info for "%s"', [FAppName]);
@@ -1236,9 +1238,9 @@ end;
 procedure TDebugerThread.OnDebugString(Sender: TObject; ThreadId: TThreadId; Data: POutputDebugStringInfo);
 begin
   if Data^.fUnicode = 1 then
-    _AC.Log('Debug String: ' + PWideChar(FDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
+    _AC.Log('Debug String: ' + PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
   else
-    _AC.Log('Debug String: ' + PAnsiChar(FDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
+    _AC.Log('Debug String: ' + PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
 
   _AC.DoAction(acUpdateInfo, []);
 end;
@@ -1278,7 +1280,7 @@ var
 begin
   //FDebuger.ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
   IsUnicodeData := Data^.fUnicode = 1;
-  DllName := FDebuger.GetDllName(Data^.lpImageName, Data^.lpBaseOfDll, IsUnicodeData);
+  DllName := gvDebuger.GetDllName(Data^.lpImageName, Data^.lpBaseOfDll, IsUnicodeData);
   if DllName <> '' then
   begin
     if IsUnicodeData then
@@ -1298,7 +1300,7 @@ end;
 
 procedure TDebugerThread.OnUnknownBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
 begin
-  //
+  _AC.Log('OnUnknownBreakPoint ThreadID: %d', [ThreadId]);
 end;
 
 procedure TDebugerThread.OnUnknownException(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
@@ -1308,20 +1310,20 @@ var
   I: Integer;
   ThData: PThreadData;
 begin
-  FDebuger.ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
+  gvDebuger.ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
 
-  _AC.Log(FDebugInfo.GetExceptionMessage(ExceptionRecord, ThreadId));
+  _AC.Log(gvDebugInfo.GetExceptionMessage(ExceptionRecord, ThreadId));
 
-  if FDebuger.ProcessData.State = psActive then
+  if gvDebuger.ProcessData.State = psActive then
   begin
-    ThData := FDebuger.GetThreadData(ThreadId);
+    ThData := gvDebuger.GetThreadData(ThreadId);
     if Assigned(ThData) and (ThData^.State <> tsFinished) then
     begin
       StackItems := TList.Create;
       try
-        FDebugInfo.GetCallStackItems(ThreadId,
-          FDebugInfo.GetExceptionAddress(ExceptionRecord),
-          FDebugInfo.GetExceptionFrame(ExceptionRecord),
+        gvDebugInfo.GetCallStackItems(ThreadId,
+          gvDebugInfo.GetExceptionAddress(ExceptionRecord),
+          gvDebugInfo.GetExceptionFrame(ExceptionRecord),
           StackItems);
 
         for I := 0 to StackItems.Count - 1 do
@@ -1400,8 +1402,8 @@ end;
 
 class procedure TActionController.StopDebug;
 begin
-  if Assigned(FDebuger) then
-    FDebuger.StopDebug;
+  if Assigned(gvDebuger) then
+    gvDebuger.StopDebug;
 end;
 
 class procedure TActionController.ViewDebugInfo(DebugInfo: TDebugInfo);
@@ -1423,7 +1425,7 @@ finalization
 //  if FDebugInfo <> Nil then
 //    FreeAndNil(FDebugInfo);
 
-  if FDebuger <> Nil then
-    FreeAndNil(FDebuger);
+  if gvDebuger <> Nil then
+    FreeAndNil(gvDebuger);
 
 end.

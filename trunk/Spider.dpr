@@ -12,7 +12,8 @@ uses
   EvaluateConsts in 'EvaluateConsts.pas',
   Evaluator in 'Evaluator.pas',
   uProcessList in 'uProcessList.pas' {frmProcessList},
-  JclTD32Ex in 'JclTD32Ex.pas';
+  JclTD32Ex in 'JclTD32Ex.pas',
+  DebugHook in 'DebugHook.pas';
 
 {$R *.res}
 

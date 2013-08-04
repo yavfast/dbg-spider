@@ -85,6 +85,8 @@ Function HasDelphiDebugInfo(Const AFileName : String) : Boolean;
 Implementation
 
 Uses
+    JclDebug,
+    JclPeImage,
     //ApiConsts,
     //DebugInfoUtils,
     //EvaluateProcs,
@@ -1359,6 +1361,8 @@ var
 Begin
   Debuger.ProcessData.SetPEImage(FImage);
 
+  //_HookThreads;
+
 //  if FindSystemPas then
 //  Begin
 //    SetDebugHook;
@@ -1402,5 +1406,11 @@ Begin
     End;
 End;
 {...............................................................................}
+
+initialization
+  //_HookThreads;
+
+finalization
+  //_UnhookThreads;
 
 End.
