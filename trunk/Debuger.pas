@@ -298,8 +298,6 @@ type
 
     procedure SetPerfomanceMode(const Value: Boolean);
     procedure SetPerfCallStacks(const Value: Boolean);
-
-    procedure DoParseDebugString(const DbgStr: String);
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -334,7 +332,11 @@ type
     procedure ProcessPerfomanceBreakPoint(DebugEvent: PDebugEvent);
     procedure ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
     procedure ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
+
     procedure SetThreadName(DebugEvent: PDebugEvent);
+    procedure ProcessDbgException(DebugEvent: PDebugEvent);
+    procedure ProcessDbgThreadInfo(DebugEvent: PDebugEvent);
+    procedure ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
 
     function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 
@@ -388,7 +390,8 @@ type
     Function AllocMem(const Size: Cardinal): Pointer;
     Procedure FreeMem(Data : Pointer; const Size: Cardinal = 0);
 
-    procedure InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer; aParamsSize: Cardinal);
+    procedure InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer;
+      aParamsSize: Cardinal; WaitAndFree: Boolean = True);
     function InjectFunc(Func: Pointer; const CodeSize: Cardinal): Pointer;
 
     procedure InjectPerfThread;
@@ -494,9 +497,6 @@ type
     constructor Create(Debuger: TDebuger; const DbgTick: Cardinal);
   end;
 
-//function _DbgSystemThreadFuncProc(ThreadFunc: TThreadFunc; Parameter: Pointer): Pointer;
-//function _DbgThreadProc(Parameter: Pointer): Integer;
-
 var
   gvDebuger: TDebuger = nil;
 
@@ -505,7 +505,7 @@ procedure RaiseDebugCoreException(const Msg: String = '');
 implementation
 
 uses
-  RTLConsts, Math, DebugHook;
+  RTLConsts, Math, DebugHook, DebugInfo;
 
 // Флаги процессора
 const
@@ -518,6 +518,16 @@ const
   EFLAGS_IF = $200;
   EFLAGS_DF = $400;
   EFLAGS_OF = $800;
+
+const
+  DBG_EXCEPTION = $0EEDFFF0;
+
+type
+  TDbgException = record
+    DbgType: Cardinal;
+    Ptr: Pointer;
+    Size: Cardinal;
+  end;
 
 function QueryThreadCycleTime(ThreadHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryThreadCycleTime';
 function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryProcessCycleTime';
@@ -532,36 +542,6 @@ procedure RaiseDebugCoreException(const Msg: String);
 begin
   raise EDebugCoreException.Create(Msg);
 end;
-
-//function _DbgThreadProc(Parameter: Pointer): Integer;
-//var
-//  DbgParam: PDbgThreadParameter;
-//begin
-//  DbgParam := PDbgThreadParameter(Parameter);
-//
-//
-//  Result := DbgParam.BaseThreadFunc(DbgParam.Parameter);
-//
-//  FreeMem(DbgParam);
-//end;
-//
-//function _DbgSystemThreadFuncProc(ThreadFunc: TThreadFunc; Parameter: Pointer): Pointer;
-//var
-//  ThreadRec: PDbgThreadRec;
-//  DbgParam: PDbgThreadParameter;
-//begin
-//  New(DbgParam); !!! В другом процесс у этой функции будет другой адрес
-//  DbgParam.Parameter := Parameter;
-//  DbgParam.BaseThreadFunc := ThreadFunc;
-//
-//  DbgParam.ParentThreadId := GetCurrentThreadId; // ID родительского потока
-//
-//  New(ThreadRec);
-//  ThreadRec.Func := ThreadFunc;
-//  ThreadRec.Parameter := DbgParam;
-//
-//  Result := ThreadRec;
-//end;
 
 const
   BPOpcode: Byte = $CC;
@@ -988,8 +968,6 @@ begin
     FProcessData.ProcessID := TProcessId(PI.dwProcessId);
     FProcessData.CreatedProcessHandle := PI.hProcess;
     FProcessData.CreatedThreadHandle := PI.hThread;
-
-    //RemoteLoadDll(FDebuger.ProcessData.AttachedProcessHandle, 'DbgHook32.dll', 'InitHook');
   end;
 end;
 
@@ -1031,11 +1009,12 @@ begin
   QueryPerformanceCounter(FProcessData.Started);
   FProcessData.DbgPoints := TProcessPointList.Create;
 
-  RemoteLoadDll(ProcessData.AttachedProcessHandle, 'DbgHook32.dll', 'InitHook',
-    Pointer(ProcessData.PEImage.OptionalHeader32.ImageBase));
-
   // Метка старта процесса
   AddProcessPointInfo(ptStart);
+
+  // Инициализация хуков
+  if Assigned(gvDebugInfo) then
+    gvDebugInfo.InitDebugHook;
 
   // Устанавливаем BreakPoint на точку входа процесса
   if FSetEntryPointBreakPoint then
@@ -1075,43 +1054,9 @@ begin
 end;
 
 type
-  TDbgStrType = (dstUnknown = 0, dstThreadClassName = 1, dstThreadParentId);
-
-procedure TDebuger.DoParseDebugString(const DbgStr: String);
-var
-  SL: TStringList;
-  DbgStrType: TDbgStrType;
-  ThreadId: TThreadId;
-begin
-  // [Type]|[ThreadId]|[Params]...
-
-  SL := TStringList.Create;
-  try
-    SL.Delimiter := '|';
-    SL.StrictDelimiter := True;
-
-    SL.DelimitedText := DbgStr;
-
-    if SL.Count >= 3 then
-    begin
-      DbgStrType := TDbgStrType(StrTointDef(SL[0], 0));
-      ThreadId := TThreadId(StrTointDef(SL[1], 0));
-
-      case DbgStrType of
-        dstThreadClassName:
-          SetThreadInfo(ThreadId)^.ThreadClassName := SL[2];
-        dstThreadParentId:
-          SetThreadInfo(ThreadId)^.ThreadParentId := StrToIntDef(SL[2], 0);
-      end;
-    end;
-  finally
-    FreeAndNil(SL);
-  end;
-end;
+  TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstGetMem, dstFreeMem);
 
 procedure TDebuger.DoDebugString(DebugEvent: PDebugEvent);
-const
-  _DBG_STR: String = '###';
 var
   Data: POutputDebugStringInfo;
   DbgStr: String;
@@ -1121,9 +1066,6 @@ begin
     DbgStr := String(PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
   else
     DbgStr := String(PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
-
-  if Copy(DbgStr, 1, 3) = _DBG_STR then
-    DoParseDebugString(Copy(DbgStr, 4, MaxInt));
 
   if Assigned(FDebugString) then
   begin
@@ -1633,7 +1575,8 @@ begin
   end
 end;
 
-procedure TDebuger.InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer; aParamsSize: Cardinal);
+procedure TDebuger.InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer;
+  aParamsSize: Cardinal; WaitAndFree: Boolean = True);
 var
   hThread: THandle;
   lpNumberOfBytes: Cardinal;
@@ -1658,13 +1601,16 @@ begin
   // Создаем поток, в котором все это будет выполняться.
   hThread := CreateRemoteThread(hProcess, nil, 0, ThreadAddr, ParamAddr, 0, lpThreadId);
 
-  // Ожидаем завершения функции
-  //WaitForSingleObject(hThread, INFINITE);
+  if WaitAndFree then
+  begin
+    // Ожидаем завершения функции
+    WaitForSingleObject(hThread, INFINITE);
 
-  // подчищаем за собой
-  CloseHandle(hThread);
-  //VirtualFreeEx(hProcess, ParamAddr, 0, MEM_RELEASE);
-  //VirtualFreeEx(hProcess, ThreadAddr, 0, MEM_RELEASE);
+    // подчищаем за собой
+    CloseHandle(hThread);
+    VirtualFreeEx(hProcess, ParamAddr, 0, MEM_RELEASE);
+    VirtualFreeEx(hProcess, ThreadAddr, 0, MEM_RELEASE);
+  end;
 end;
 
 function TDebuger.PerfomancePauseDebug: Boolean;
@@ -1907,6 +1853,7 @@ begin
   if Len = -1 then
   begin
     // передан указатель на PAnsiChar. Читаем до первого #0
+    // TODO: Переписать это на чтение буфером
     repeat
       if not ReadData(AddrPrt, @C, SizeOf(AnsiChar)) then Exit;
 
@@ -1938,12 +1885,12 @@ begin
   Result := '';
 
   if Len = 0 then
-    ReadData(AddrPrt, @Len, SizeOf(Byte));
+    ReadData(IncPointer(AddrPrt, -SizeOf(Byte)), @Len, SizeOf(Byte));
 
   if (Len > 0) then
   begin
     SetLength(Result, Len);
-    if not ReadData(IncPointer(AddrPrt, SizeOf(Byte)), @Result[1], Len) then
+    if not ReadData(AddrPrt, @Result[1], Len) then
       Result := '';
   end;
 end;
@@ -2008,6 +1955,50 @@ begin
   end;
 end;
 
+procedure TDebuger.ProcessDbgException(DebugEvent: PDebugEvent);
+var
+  ER: PExceptionRecord;
+begin
+  ER := @DebugEvent^.Exception.ExceptionRecord;
+  case TDbgInfoType(ER^.ExceptionInformation[0]) of
+    dstThreadInfo:
+      ProcessDbgThreadInfo(DebugEvent);
+    dstGetMem, dstFreeMem:
+      ProcessDbgMemoryInfo(DebugEvent);
+  end;
+end;
+
+procedure TDebuger.ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
+var
+  ER: PExceptionRecord;
+  Ptr: Pointer;
+  Size: Cardinal;
+begin
+  ER := @DebugEvent^.Exception.ExceptionRecord;
+  Ptr := Pointer(ER^.ExceptionInformation[1]);
+  Size := ER^.ExceptionInformation[2];
+end;
+
+procedure TDebuger.ProcessDbgThreadInfo(DebugEvent: PDebugEvent);
+var
+  ER: PExceptionRecord;
+  ThreadID: Cardinal;
+  StrAddr: Pointer;
+  Str: ShortString;
+begin
+  ER := @DebugEvent^.Exception.ExceptionRecord;
+  ThreadID := ER^.ExceptionInformation[1];
+  if ThreadID <> 0 then
+  begin
+    SetThreadInfo(ThreadID)^.ThreadParentId := DebugEvent^.dwThreadId;
+
+    StrAddr := Pointer(ER^.ExceptionInformation[2]);
+    Str := ReadStringP(StrAddr, 0);
+    if Str <> '' then
+      SetThreadInfo(ThreadID)^.ThreadClassName := String(Str);
+  end;
+end;
+
 procedure TDebuger.ProcessDebugEvents;
 var
   DebugEvent: TDebugEvent;
@@ -2046,6 +2037,9 @@ begin
 
             EXCEPTION_SET_THREAD_NAME:
               SetThreadName(@DebugEvent);
+
+            DBG_EXCEPTION:
+              ProcessDbgException(@DebugEvent);
 
             EXCEPTION_GUARD_PAGE:
               ProcessExceptionGuardPage(@DebugEvent);
