@@ -405,8 +405,6 @@ Begin
             FExeFileName := FileName;
             FDebugInfoLoaded := True;
         End;
-
-        InitDebugHook;
     End;
 End;
 {..............................................................................}

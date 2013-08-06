@@ -94,7 +94,7 @@ Uses
     //ExpressionEvaluator,
     Math, Variants,
     //Morfik.dcSystem,
-    EvaluateTypes, EvaluateProcs, ClassUtils;
+    EvaluateTypes, EvaluateProcs, ClassUtils, DebugHook;
 {..............................................................................}
 
 {..............................................................................}
@@ -1310,7 +1310,7 @@ var
 
   function FindSystemPas: Boolean;
   const
-    _SystemPas : String = 'system.pas';
+    _SystemUnit : String = 'system';
   var
     I: Integer;
   begin
@@ -1318,7 +1318,7 @@ var
     Result := False;
     for I := 0 to Units.Count - 1 do
     begin
-      if SameText(_SystemPas, String(TUnitInfo(Units.Objects[I]).Name)) then
+      if SameText(_SystemUnit, String(TUnitInfo(Units.Objects[I]).Name)) then
       begin
         USystem := TUnitInfo(Units.Objects[I]);
         Result := True;
@@ -1341,33 +1341,37 @@ var
       Debuger.WriteData(Pointer(DebugHook.Offset), @Enable, 1);
   end;
 
-  procedure SetBeginThreadHook;
+  function GetMemoryManagerVar: Pointer;
   const
-    _SystemThreadFuncProc: AnsiString = '@@SystemThreadFuncProc';
+    _MemoryManagerStr: AnsiString = '@@MemoryManager';
   Var
-    SystemThreadFuncProc: TVarInfo;
-    //DbgThreadProcAddr: Pointer;
-    //DbgSystemThreadFuncProcAddr: Pointer;
+    _MemoryManager: TVarInfo;
   begin
-    SystemThreadFuncProc := USystem.FindVarByName(_SystemThreadFuncProc);
-    If Assigned(SystemThreadFuncProc) Then
-    begin
-      //DbgThreadProcAddr := Debuger.InjectFunc(@_DbgThreadProc);
-      //DbgSystemThreadFuncProcAddr := Debuger.InjectFunc(@_DbgSystemThreadFuncProc);
-      //Debuger.WriteData(Pointer(SystemThreadFuncProc.Offset), @DbgSystemThreadFuncProcAddr, SizeOf(Pointer));
-    end;
+    Result := Nil;
+
+    if USystem = nil then Exit;
+
+    _MemoryManager := USystem.FindVarByName(_MemoryManagerStr);
+    If Assigned(_MemoryManager) Then
+      //Debuger.ReadData(Pointer(_MemoryManager.Offset), @Result, SizeOf(Pointer));
+      Result := Pointer(_MemoryManager.Offset);
   end;
 
 Begin
   Debuger.ProcessData.SetPEImage(FImage);
 
-  //_HookThreads;
+  if FindSystemPas then
+  Begin
+    //SetDebugHook;
 
-//  if FindSystemPas then
-//  Begin
-//    SetDebugHook;
-//    SetBeginThreadHook;
-//  End;
+  End;
+
+  LoadDbgHookDll(
+    Debuger.ProcessData.AttachedProcessHandle,
+    'DbgHook32.dll',
+    Pointer(FImage.OptionalHeader32.ImageBase),
+    GetMemoryManagerVar);
+
 End;
 {...............................................................................}
 
