@@ -417,8 +417,7 @@ end;
 procedure TMainForm.DrawProcessCPUTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
 var
   X1, X2, Y1, Y2: Integer;
-  T1, T2, F: Int64;
-  OffsetT1, OffsetT2, Offset: Cardinal;
+  T1, T2: Int64;
   I: Cardinal;
   ProcPoint: PProcessPoint;
 begin
@@ -554,8 +553,7 @@ end;
 procedure TMainForm.DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
 var
   X1, X2, Y1, Y2: Integer;
-  T1, T2, F: Int64;
-  //OffsetT1, OffsetT2, Offset: Cardinal;
+  T1, T2: Int64;
   I: Cardinal;
   ThPoint: PThreadPoint;
   ProcPoint: PProcessPoint;
@@ -601,8 +599,6 @@ begin
 
         if ThPoint = nil then
           Continue;
-
-        ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
 
         case ThPoint^.PointType of
           ptStart, ptStop:
