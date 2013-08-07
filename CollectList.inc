@@ -12,7 +12,7 @@ begin
 
   Result := @FSegList[Seg][Offset];
 
-  FillChar(Result^, SizeOf(Result^), 0);
+  FillChar(Result^, SizeOf(T), 0);
 end;
 
 procedure TCollectList<T>.CheckSeg(const Seg: Integer);

@@ -99,7 +99,44 @@ type
     Active: array [THWBPIndex] of Boolean;
   end;
 
-  {$I CollectListIntf.inc}
+const
+  _SEGMENT_SIZE = 16 * 1024;
+
+type
+  TSegment<T> = Array of T;
+
+  TSegList<T> = Array of TSegment<T>;
+
+  TCollectListError = class(Exception);
+
+  PData = Pointer;
+
+  TCollectList<T> = class
+  private
+    FCount: Cardinal;
+    FSegSize: Cardinal;
+    FLock: TCriticalSection;
+    FSegList: TSegList<T>;
+    function GetItem(const Index: Cardinal): PData;
+    procedure CheckSeg(const Seg: Integer);
+  protected
+    function IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
+    procedure RaiseError(Msg: PString; const Args: Array of const);
+  public
+
+    constructor Create;
+    destructor Destroy; override;
+
+    function Add: PData;
+
+    procedure Clear;
+
+    procedure Lock;
+    procedure UnLock;
+
+    property Count: Cardinal read FCount;
+    property Items[const Index: Cardinal]: PData read GetItem; default;
+  end;
 
   PStackPoint = ^TStackPoint;
   TStackPoint = packed record
@@ -112,7 +149,24 @@ type
     List: array of TStackPoint;
   end;
 
-  TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo);
+  TMemAction = (maGetMem, maFreeMem);
+
+  PMemInfo = ^TMemInfo;
+  TMemInfo = packed record
+    PerfIdx: Cardinal;
+    case MemAction: TMemAction of
+      maGetMem: (
+        GetMemPtr: Pointer;
+        GetMemSize: Cardinal;
+        //Stack: TStackPointList;
+      );
+      maFreeMem: (
+        FreeMemPtr: Pointer;
+        //ObjType: Cardinal;
+      );
+  end;
+
+  TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
 
   PThreadPoint = ^TThreadPoint;
   TThreadPoint = packed record
@@ -131,6 +185,8 @@ type
         DeltaTime: UInt64;
         //StackPoint: TStackPointList;
       );
+      ptMemoryInfo: (
+      );
   end;
 
   PThreadAdvInfo = ^TThreadAdvInfo;
@@ -147,6 +203,8 @@ type
 
   TThreadPointList = TCollectList<TThreadPoint>;
 
+  TThreadMemInfoList = TCollectList<TMemInfo>;
+
   TThreadState = (tsNone, tsActive, tsFinished, tsSuspended, tsLocked);
 
   PThreadData = ^TThreadData;
@@ -162,9 +220,14 @@ type
     ThreadEllapsed: UInt64; // время использования CPU
     CPUTime: UInt64;
     DbgPoints: TThreadPointList;
+    DbgMemInfo: TThreadMemInfoList;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
+
+    function DbgMemInfoCount: Cardinal;
+    function DbgMemInfoByIdx(const Idx: Cardinal): PThreadPoint;
+
     procedure Clear;
   end;
 
@@ -183,6 +246,7 @@ type
         DeltaTickCPU: UInt64;
         DeltaTime: UInt64;
       );
+      ptMemoryInfo: ();
   end;
 
   TProcessPointList = TCollectList<TProcessPoint>;
@@ -228,20 +292,6 @@ type
 
   THardwareBreakpointEvent = procedure(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord;
     BreakPointIndex: THWBPIndex; var ReleaseBreakpoint: Boolean) of object;
-
-type
-  PDbgThreadParameter = ^TDbgThreadParameter;
-  TDbgThreadParameter = record
-    Parameter: Pointer;
-    BaseThreadFunc: TThreadFunc;
-    ParentThreadId: DWORD;
-  end;
-
-  PDbgThreadRec = ^TDbgThreadRec;
-  TDbgThreadRec = record
-    Func: TThreadFunc;
-    Parameter: Pointer;
-  end;
 
 type
   TDbgState = (dsNone, dsStarted, dsWait, dsPerfomance, dsTrace, dsEvent, dsStoping, dsStoped, dsDbgFail);
@@ -522,13 +572,6 @@ const
 const
   DBG_EXCEPTION = $0EEDFFF0;
 
-type
-  TDbgException = record
-    DbgType: Cardinal;
-    Ptr: Pointer;
-    Size: Cardinal;
-  end;
-
 function QueryThreadCycleTime(ThreadHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryThreadCycleTime';
 function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryProcessCycleTime';
 function DebugBreakProcess(Process: THandle): BOOL; stdcall; external kernel32 name 'DebugBreakProcess';
@@ -550,7 +593,89 @@ var
   _FreqPerSec: Int64 = 0;
   _FreqPerMSec: Int64 = 0;
 
-{$I CollectList.inc}
+{ TCollectList<T> }
+
+function TCollectList<T>.Add: PData;
+var
+  Idx: Cardinal;
+  Seg, Offset: Integer;
+begin
+  Idx := Count;
+  IndexToSegment(Idx, Seg, Offset);
+  CheckSeg(Seg);
+  FCount := Idx + 1;
+
+  Result := @FSegList[Seg][Offset];
+
+  FillChar(Result^, SizeOf(T), 0);
+end;
+
+procedure TCollectList<T>.CheckSeg(const Seg: Integer);
+begin
+  if Length(FSegList) <= Seg then
+  begin
+    SetLength(FSegList, Seg + 1);
+    SetLength(FSegList[Seg], FSegSize);
+  end;
+end;
+
+procedure TCollectList<T>.Clear;
+begin
+  FCount := 0;
+  SetLength(FSegList, 0);
+end;
+
+constructor TCollectList<T>.Create;
+begin
+  inherited;
+
+  FCount := 0;
+  FLock := TCriticalSection.Create;
+  FSegSize := _SEGMENT_SIZE div SizeOf(T);
+  SetLength(FSegList, 0);
+end;
+
+destructor TCollectList<T>.Destroy;
+begin
+  Clear;
+
+  FreeAndNil(FLock);
+
+  inherited;
+end;
+
+function TCollectList<T>.GetItem(const Index: Cardinal): PData;
+var
+  Seg, Offset: Integer;
+begin
+  if IndexToSegment(Index, Seg, Offset) then
+    Result := @FSegList[Seg][Offset]
+  else
+    RaiseError(@EIndexError, [Index]);
+end;
+
+function TCollectList<T>.IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
+begin
+  Result := Index < Count;
+
+  Seg := Index div FSegSize;
+  Offset := Index mod FSegSize;
+end;
+
+procedure TCollectList<T>.RaiseError(Msg: PString; const Args: Array of const);
+begin
+  raise TCollectListError.CreateFmt(Msg^, Args);
+end;
+
+procedure TCollectList<T>.Lock;
+begin
+  FLock.Enter;
+end;
+
+procedure TCollectList<T>.UnLock;
+begin
+  FLock.Leave;
+end;
 
 function Check(const Value: Boolean): Boolean; //inline;
 begin
@@ -710,7 +835,7 @@ begin
   Prev := 0;
 
   case PointType of
-    ptStart, ptException, ptThreadInfo:
+    ptStart, ptException, ptThreadInfo{, ptMemoryInfo}:
       begin
         Result := True;
       end;
@@ -789,6 +914,7 @@ begin
     Result^.Ellapsed := 0;
     Result^.ThreadEllapsed := 0;
     Result^.DbgPoints := TThreadPointList.Create;
+    Result^.DbgMemInfo := TThreadMemInfoList.Create;
 
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(Result, ptStart);
@@ -1054,7 +1180,7 @@ begin
 end;
 
 type
-  TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstGetMem, dstFreeMem);
+  TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstGetMem, dstFreeMem, dstMemInfo);
 
 procedure TDebuger.DoDebugString(DebugEvent: PDebugEvent);
 var
@@ -1963,7 +2089,7 @@ begin
   case TDbgInfoType(ER^.ExceptionInformation[0]) of
     dstThreadInfo:
       ProcessDbgThreadInfo(DebugEvent);
-    dstGetMem, dstFreeMem:
+    dstGetMem, dstFreeMem, dstMemInfo:
       ProcessDbgMemoryInfo(DebugEvent);
   end;
 end;
@@ -1971,12 +2097,47 @@ end;
 procedure TDebuger.ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
 var
   ER: PExceptionRecord;
+  DbgInfoType: TDbgInfoType;
   Ptr: Pointer;
   Size: Cardinal;
+  ThData: PThreadData;
+  MemInfo: PMemInfo;
 begin
-  ER := @DebugEvent^.Exception.ExceptionRecord;
-  Ptr := Pointer(ER^.ExceptionInformation[1]);
-  Size := ER^.ExceptionInformation[2];
+  ThData := GetThreadData(DebugEvent^.dwThreadId);
+  if (ThData <> Nil) {and AddProcessPointInfo(ptMemoryInfo)} then
+  begin
+    ER := @DebugEvent^.Exception.ExceptionRecord;
+    DbgInfoType := TDbgInfoType(ER^.ExceptionInformation[0]);
+    Ptr := Pointer(ER^.ExceptionInformation[1]);
+    Size := ER^.ExceptionInformation[2];
+
+
+    case DbgInfoType of
+      dstGetMem:
+      begin
+        MemInfo := ThData^.DbgMemInfo.Add;
+        MemInfo^.PerfIdx := ProcessData.CurDbgPointIdx;
+
+        MemInfo^.MemAction := maGetMem;
+        MemInfo^.GetMemPtr := Ptr;
+        MemInfo^.GetMemSize := Size;
+        // Stack
+      end;
+      dstFreeMem:
+      begin
+        MemInfo := ThData^.DbgMemInfo.Add;
+        MemInfo^.PerfIdx := ProcessData.CurDbgPointIdx;
+
+        MemInfo^.MemAction := maFreeMem;
+        MemInfo^.FreeMemPtr := Ptr;
+        // ObjType
+      end;
+      dstMemInfo:
+      begin
+
+      end;
+    end;
+  end;
 end;
 
 procedure TDebuger.ProcessDbgThreadInfo(DebugEvent: PDebugEvent);
@@ -2025,21 +2186,18 @@ begin
         begin
           ExceptionCode := DebugEvent.Exception.ExceptionRecord.ExceptionCode;
 
-          if ExceptionCode <> EXCEPTION_SET_THREAD_NAME then
-            FCurThreadData := UpdateThreadContext(DebugEvent.dwThreadId);
-
           case ExceptionCode of
-            EXCEPTION_BREAKPOINT:
-              ProcessExceptionBreakPoint(@DebugEvent);
+            DBG_EXCEPTION:
+              ProcessDbgException(@DebugEvent);
 
             EXCEPTION_SINGLE_STEP:
               ProcessExceptionSingleStep(@DebugEvent);
 
+            EXCEPTION_BREAKPOINT:
+              ProcessExceptionBreakPoint(@DebugEvent);
+
             EXCEPTION_SET_THREAD_NAME:
               SetThreadName(@DebugEvent);
-
-            DBG_EXCEPTION:
-              ProcessDbgException(@DebugEvent);
 
             EXCEPTION_GUARD_PAGE:
               ProcessExceptionGuardPage(@DebugEvent);
@@ -2605,7 +2763,22 @@ begin
     FreeAndNil(DbgPoints);
   end;
 
+  FreeAndNil(DbgMemInfo);
+
   ThreadAdvInfo := Nil;
+end;
+
+function TThreadData.DbgMemInfoByIdx(const Idx: Cardinal): PThreadPoint;
+begin
+  if Idx < DbgMemInfo.Count then
+    Result := DbgMemInfo[Idx]
+  else
+    Result := Nil;
+end;
+
+function TThreadData.DbgMemInfoCount: Cardinal;
+begin
+  Result := DbgMemInfo.Count;
 end;
 
 function TThreadData.DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
