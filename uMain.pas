@@ -442,7 +442,7 @@ begin
 
   TargetCanvas.Pen.Color := vdtTimeLine.Colors.GridLineColor;
   TargetCanvas.Pen.Style := psDot;
-  TargetCanvas.Pen.Mode := pmMaskPenNot;
+  TargetCanvas.Pen.Mode := pmMergePenNot;
 
   For Cnt := 0 to ((R.Right - R.Left + 1) div 100) + 1 do
   begin
@@ -484,7 +484,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clHotLight;
+  C.Brush.Color := clScrollBar;
   C.FillRect(Rect(X1, Y1, X2, Y2));
 
   C.Pen.Color := clGreen;
@@ -558,7 +558,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clHotLight;
+  C.Brush.Color := clScrollBar;
   C.FillRect(Rect(X1, Y1, X2, Y2));
 
   C.Pen.Color := clGreen;
@@ -624,7 +624,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clHotLight;
+  C.Brush.Color := clScrollBar;
   C.Brush.Style := bsSolid;
   C.FillRect(Rect(X1, Y1, X2, Y2));
 
@@ -643,7 +643,7 @@ begin
 
         case ThPoint^.PointType of
           ptStart, ptStop:
-            C.Pen.Color := clWindowText;
+            C.Pen.Color := clGreen;
           ptException:
             C.Pen.Color := clRed;
           ptPerfomance:
@@ -710,7 +710,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clHotLight;
+  C.Brush.Color := clScrollBar;
   C.Brush.Style := bsSolid;
   C.FillRect(Rect(X1, Y1, X2, Y2));
 
@@ -731,7 +731,7 @@ begin
 
         case ThPoint^.PointType of
           ptStart, ptStop:
-            C.Pen.Color := clWindowText;
+            C.Pen.Color := clGreen;
           ptException:
             C.Pen.Color := clRed;
           ptPerfomance:
@@ -766,10 +766,7 @@ begin
   C.Font.Color := clWindowText;
   C.Font.Size := 8;
 
-  C.Brush.Color := clWindow;
-  C.Brush.Style := bsSolid;
-
-  C.FillRect(R);
+  C.Brush.Style := bsClear;
 
   C.Pen.Color := clWindowText;
   C.Pen.Style := psSolid;
@@ -798,10 +795,10 @@ begin
       T := OffsetToTime(Offset + Cnt);
 
     if T <> '' then
-      C.TextOut(X + 3, R.Top, T);
+      C.TextOut(X + 2, R.Top - 3, T);
 
-    C.MoveTo(X + 1, Y - 1);
-    C.LineTo(X + 1, Y - 8);
+    C.MoveTo(X - 1, Y - 1);
+    C.LineTo(X - 1, Y - 8);
 
     C.MoveTo(X + 50, Y - 1);
     C.LineTo(X + 50, Y - 4);
@@ -1069,7 +1066,7 @@ end;
 procedure TMainForm.vdtTimeLineHeaderDrawQueryElements(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; var Elements: THeaderPaintElements);
 begin
-  Include(Elements, hpeBackground);
+  Include(Elements, hpeText);
 end;
 
 procedure TMainForm.vdtTimeLinePaintBackground(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; R: TRect; var Handled: Boolean);
