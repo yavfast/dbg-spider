@@ -47,6 +47,10 @@
 			<DelphiCompile Include="DbgHook32.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<DCCReference Include="DbgHookTypes.pas"/>
+			<DCCReference Include="DbgHookThread.pas"/>
+			<DCCReference Include="DbgHookMemory.pas"/>
+			<DCCReference Include="DbgHookPerf.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

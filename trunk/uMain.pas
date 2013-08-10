@@ -13,6 +13,20 @@ uses
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
 
+  TLinkType = (ltProcess, ltThread);
+
+  PLinkData = ^TLinkData;
+  TLinkData = record
+    SyncNode: PVirtualNode;
+    case LinkType: TLinkType of
+      ltProcess:
+        (ProcessData: PProcessData);
+      ltThread:
+        (ThreadData: PThreadData);
+  end;
+
+  TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
+
   TMainForm = class(TForm)
     pActions: TPanel;
     BitBtn1: TBitBtn;
@@ -88,6 +102,7 @@ type
     procedure cbCPUTimeLineClick(Sender: TObject);
     procedure vstThreadsColumnResize(Sender: TVTHeader;
       Column: TColumnIndex);
+    procedure FormShow(Sender: TObject);
   private
     FPID: DWORD;
     FAppName: String;
@@ -113,6 +128,8 @@ type
 
     function EllapsedToTime(const Ellapsed: UInt64): String;
     function FindThreadNode(ThData: PThreadData): PVirtualNode;
+    function FindThreadNodeById(const ThreadId: TThreadId): PVirtualNode;
+    function FindNode(Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
   public
     procedure Log(const Msg: String);
     procedure DoAction(Action: TacAction; Args: array of Variant);
@@ -184,19 +201,6 @@ var
   _DbgThread: TDebugerThread = nil;
   _AC: TActionController = nil;
 
-type
-  TLinkType = (ltProcess, ltThread);
-
-  PLinkData = ^TLinkData;
-  TLinkData = record
-    SyncNode: PVirtualNode;
-    case LinkType: TLinkType of
-      ltProcess:
-        (ProcessData: PProcessData);
-      ltThread:
-        (ThreadData: PThreadData);
-  end;
-
 procedure TMainForm.acAppOpenExecute(Sender: TObject);
 begin
   if OD.Execute then
@@ -266,9 +270,7 @@ begin
   LinkData^.ProcessData := @gvDebuger.ProcessData;
 end;
 
-function TMainForm.FindThreadNode(ThData: PThreadData): PVirtualNode;
-
-  function _Find(Node: PVirtualNode): PVirtualNode;
+function TMainForm.FindNode(Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
   var
     CurNode: PVirtualNode;
     LinkData: PLinkData;
@@ -278,19 +280,37 @@ function TMainForm.FindThreadNode(ThData: PThreadData): PVirtualNode;
     if CurNode <> Nil then
     repeat
       LinkData := vstThreads.GetNodeData(CurNode);
-      if (LinkData^.LinkType = ltThread) and (LinkData^.ThreadData = ThData) then
+      if CheckFunc(LinkData, CmpData) then
       begin
         Result := CurNode;
         Break;
       end;
 
-      Result := _Find(CurNode);
+      Result := FindNode(CurNode, CheckFunc, CmpData);
       CurNode := CurNode^.NextSibling;
     until (CurNode = nil) or (Result <> Nil);
+end;
+
+function TMainForm.FindThreadNode(ThData: PThreadData): PVirtualNode;
+
+  function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
+  begin
+    Result := (LinkData^.LinkType = ltThread) and (LinkData^.ThreadData = CmpData);
   end;
 
 begin
-  Result := _Find(vstThreads.RootNode);
+  Result := FindNode(vstThreads.RootNode, @_Cmp, ThData);
+end;
+
+function TMainForm.FindThreadNodeById(const ThreadId: TThreadId): PVirtualNode;
+
+  function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
+  begin
+    Result := (LinkData^.LinkType = ltThread) and (LinkData^.ThreadData^.ThreadID = TThreadId(CmpData));
+  end;
+
+begin
+  Result := FindNode(vstThreads.RootNode, @_Cmp, Pointer(ThreadId));
 end;
 
 procedure TMainForm.AddThread(const ThreadID: Cardinal);
@@ -302,39 +322,58 @@ var
   ParentThData: PThreadData;
   ParentId: Cardinal;
   ParentNode: PVirtualNode;
+  CurNode: PVirtualNode;
+  CurSelNode: PVirtualNode;
 begin
-  ThData := gvDebuger.GetThreadData(ThreadID);
-  ParentId := ThData^.ThreadAdvInfo^.ThreadParentId;
+  CurNode := vstThreads.FocusedNode;
 
-  ParentNode := Nil;
-  if ParentId <> 0 then
-  begin
-    ParentThData := gvDebuger.GetThreadData(ParentId);
-    if ParentThData <> Nil then
-      ParentNode := FindThreadNode(ParentThData);
+  vstThreads.BeginUpdate;
+  vdtTimeLine.BeginUpdate;
+  try
+    ThData := gvDebuger.GetThreadData(ThreadID);
+
+    if ThData = nil then Exit;
+
+    ParentId := ThData^.ThreadAdvInfo^.ThreadParentId;
+
+    ParentNode := Nil;
+    if ParentId <> 0 then
+    begin
+      ParentThData := gvDebuger.GetThreadData(ParentId);
+
+      if ParentThData = nil then
+        // Если родительский поток завершился раньше старта дочернего
+        ParentNode := FindThreadNodeById(ParentId)
+      else
+        ParentNode := FindThreadNode(ParentThData);
+    end;
+
+    if ParentNode = Nil then
+      ParentNode := vstThreads.RootNode^.FirstChild;
+
+    NameNode := vstThreads.AddChild(ParentNode);
+    vstThreads.Expanded[ParentNode] := True;
+
+    LinkData := vstThreads.GetNodeData(ParentNode);
+    ParentNode := LinkData^.SyncNode;
+
+    TimeLineNode := vdtTimeLine.AddChild(ParentNode);
+    vdtTimeLine.Expanded[ParentNode] := True;
+
+    LinkData := vstThreads.GetNodeData(NameNode);
+    LinkData^.SyncNode := TimeLineNode;
+    LinkData^.LinkType := ltThread;
+    LinkData^.ThreadData := ThData;
+
+    LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
+    LinkData^.SyncNode := NameNode;
+    LinkData^.LinkType := ltThread;
+    LinkData^.ThreadData := ThData;
+  finally
+    vstThreads.FocusedNode := CurNode;
+    vstThreads.EndUpdate;
+    vdtTimeLine.EndUpdate;
   end;
-
-  if ParentNode = Nil then
-    ParentNode := vstThreads.RootNode^.FirstChild;
-
-  NameNode := vstThreads.AddChild(ParentNode);
-  vstThreads.Expanded[ParentNode] := True;
-
-  LinkData := vstThreads.GetNodeData(ParentNode);
-  ParentNode := LinkData^.SyncNode;
-
-  TimeLineNode := vdtTimeLine.AddChild(ParentNode);
-  vdtTimeLine.Expanded[ParentNode] := True;
-
-  LinkData := vstThreads.GetNodeData(NameNode);
-  LinkData^.SyncNode := TimeLineNode;
-  LinkData^.LinkType := ltThread;
-  LinkData^.ThreadData := ThData;
-
-  LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
-  LinkData^.SyncNode := NameNode;
-  LinkData^.LinkType := ltThread;
-  LinkData^.ThreadData := ThData;
 end;
 
 procedure TMainForm.cbCPUTimeLineClick(Sender: TObject);
@@ -359,7 +398,9 @@ begin
   end;
 
   UpdateStatusInfo;
-  UpdateTrees;
+
+  if not tmrThreadsUpdate.Enabled then
+    UpdateTrees;
 end;
 
 function OffsetToTime(const Offset: Cardinal): String;
@@ -772,6 +813,11 @@ begin
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
 end;
 
+procedure TMainForm.FormShow(Sender: TObject);
+begin
+  vstThreadsColumnResize(vstThreads.Header, 0);
+end;
+
 function TMainForm.GetLineTimeOffset: Cardinal;
 var
   F: Double;
@@ -1134,7 +1180,7 @@ begin
         if ProcData <> nil then
           case Column of
             0: CellText := ExtractFileName(FAppName);
-            1: CellText := Format('%x', [ProcData^.ProcessID]);
+            1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: CellText := EllapsedToTime(ProcData^.CPUTime);
           end;
       end;
@@ -1144,7 +1190,7 @@ begin
         if ThData <> nil then
           case Column of
             0: CellText := ThData^.ThreadAdvInfo^.AsString;
-            1: CellText := Format('%d', [ThData^.ThreadID]);
+            1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
             2: CellText := EllapsedToTime(ThData^.CPUTime);
           end;
       end;

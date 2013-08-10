@@ -13,7 +13,8 @@ uses
   Evaluator in 'Evaluator.pas',
   uProcessList in 'uProcessList.pas' {frmProcessList},
   JclTD32Ex in 'JclTD32Ex.pas',
-  DebugHook in 'DebugHook.pas';
+  DebugHook in 'DebugHook.pas',
+  DbgHookTypes in 'DbgHookTypes.pas';
 
 {$R *.res}
 

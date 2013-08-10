@@ -13,6 +13,7 @@ object MainForm: TMainForm
   OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object pActions: TPanel
@@ -228,7 +229,7 @@ object MainForm: TMainForm
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 315
+        Width = 457
         Height = 436
         Align = alLeft
         BorderStyle = bsNone
@@ -244,7 +245,9 @@ object MainForm: TMainForm
         ScrollBarOptions.AlwaysVisible = True
         ScrollBarOptions.ScrollBars = ssHorizontal
         TabOrder = 0
-        TreeOptions.PaintOptions = [toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines, toUseBlendedSelection]
+        TreeOptions.AutoOptions = [toAutoDropExpand, toAutoTristateTracking, toAutoDeleteMovedNodes]
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines, toUseBlendedSelection]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
         OnChange = vdtTimeLineChange
         OnCollapsed = vstThreadsCollapsed
@@ -259,17 +262,19 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coUseCaptionAlignment]
             Position = 0
-            Width = 200
+            Width = 300
             WideText = 'Thread name'
           end
           item
+            Alignment = taRightJustify
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 1
-            Width = 40
+            Width = 75
             WideText = 'ID'
           end
           item
+            Alignment = taRightJustify
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 2
@@ -278,9 +283,9 @@ object MainForm: TMainForm
           end>
       end
       object vdtTimeLine: TVirtualDrawTree
-        Left = 315
+        Left = 457
         Top = 0
-        Width = 642
+        Width = 500
         Height = 436
         Align = alClient
         BorderStyle = bsNone
@@ -295,6 +300,7 @@ object MainForm: TMainForm
         Header.Style = hsPlates
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 1
+        TreeOptions.AutoOptions = [toAutoDropExpand, toAutoTristateTracking, toAutoDeleteMovedNodes]
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toShowBackground, toThemeAware, toUseBlendedSelection]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]

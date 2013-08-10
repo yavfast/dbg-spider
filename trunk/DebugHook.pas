@@ -8,7 +8,7 @@ function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Poi
 
 implementation
 
-uses Debuger, JclPeImage;
+uses Debuger;
 
 type
   PDbgLoaderInfo = ^TDbgLoaderInfo;
@@ -20,11 +20,13 @@ type
     sExitThread    : array[0..16] of AnsiChar;
     sDllPath       : array[0..MAX_PATH] of AnsiChar;
 
-    sDllInitProc   : array[0..16] of AnsiChar;
+    sDllInitThreadHook: array[0..16] of AnsiChar;
     sDllInitMemoryHook: array[0..16] of AnsiChar;
+    sDllInitPerfomance: array[0..16] of AnsiChar;
 
     ImageBase      : Pointer;
     MemoryMgr      : Pointer;
+    PerfDelta      : Cardinal;
   end;
 
 procedure _DbgLoader(DbgLoaderInfo: PDbgLoaderInfo); stdcall;
@@ -32,8 +34,9 @@ var
   HLib: HMODULE;
 
   ExitThread: procedure(uExitCode: UINT); stdcall;
-  InitProc: function(ImageBase: Pointer): Boolean; stdcall;
+  InitThreadHook: function(ImageBase: Pointer): Boolean; stdcall;
   InitMemoryHook: procedure(MemoryMgr: Pointer); stdcall;
+  InitPerfomance: procedure(Delta: Cardinal); stdcall;
 begin
   with DbgLoaderInfo^ do
   begin
@@ -41,11 +44,14 @@ begin
     @ExitThread := GetProcAddress(HLib, sExitThread);
 
     HLib := LoadLibrary(sDllPath);
-    @InitProc := GetProcAddress(HLib, sDllInitProc);
+    @InitThreadHook := GetProcAddress(HLib, sDllInitThreadHook);
     @InitMemoryHook := GetProcAddress(HLib, sDllInitMemoryHook);
+    @InitPerfomance := GetProcAddress(HLib, sDllInitPerfomance);
 
-    if InitProc(ImageBase) then
+    if InitThreadHook(ImageBase) then
     begin
+      InitPerfomance(PerfDelta);
+
       if MemoryMgr <> Nil then
         InitMemoryHook(MemoryMgr);
     end;
@@ -63,6 +69,7 @@ begin
 
   DbgLoaderInfo.ImageBase := ImageBase;
   DbgLoaderInfo.MemoryMgr := MemoryMgr;
+  DbgLoaderInfo.PerfDelta := 10;
 
   @DbgLoaderInfo.LoadLibrary    := GetProcAddress(GetModuleHandle('kernel32.dll'), 'LoadLibraryA');
   @DbgLoaderInfo.GetProcAddress := GetProcAddress(GetModuleHandle('kernel32.dll'), 'GetProcAddress');
@@ -71,8 +78,9 @@ begin
   lstrcpyA(DbgLoaderInfo.sUser32, 'user32.dll');
   lstrcpyA(DbgLoaderInfo.sExitThread, 'ExitThread');
   lstrcpyA(DbgLoaderInfo.sDllPath, PAnsiChar(AnsiString(DllPath)));
-  lstrcpyA(DbgLoaderInfo.sDllInitProc, 'InitHook');
+  lstrcpyA(DbgLoaderInfo.sDllInitThreadHook, 'InitThreadHook');
   lstrcpyA(DbgLoaderInfo.sDllInitMemoryHook, 'InitMemoryHook');
+  lstrcpyA(DbgLoaderInfo.sDllInitPerfomance, 'InitPerfomance');
 
   try
     gvDebuger.InjectThread(hProcess,

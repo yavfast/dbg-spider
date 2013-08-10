@@ -189,10 +189,13 @@ type
       );
   end;
 
+  PThreadData = ^TThreadData;
+
   PThreadAdvInfo = ^TThreadAdvInfo;
   TThreadAdvInfo = record
     ThreadId: TThreadId;
     ThreadParentId: TThreadId;
+    ThreadData: PThreadData;
     ThreadClassName: String;
     ThreadName: String;
 
@@ -207,7 +210,6 @@ type
 
   TThreadState = (tsNone, tsActive, tsFinished, tsSuspended, tsLocked);
 
-  PThreadData = ^TThreadData;
   TThreadData = packed record
     ThreadID: TThreadId;
     State: TThreadState;
@@ -295,7 +297,7 @@ type
 
 type
   TDbgState = (dsNone, dsStarted, dsWait, dsPerfomance, dsTrace, dsEvent, dsStoping, dsStoped, dsDbgFail);
-  TDbgPerfomanceThread = class;
+  //TDbgPerfomanceThread = class;
 
   TDebuger = class
   private
@@ -317,7 +319,7 @@ type
     FCurThreadData: PThreadData;
     FDbgState: TDbgState;
 
-    FDbgPerfomanceThread: TDbgPerfomanceThread;
+    //FDbgPerfomanceThread: TDbgPerfomanceThread;
     FPerfomanceMode: Boolean;
     FPerfCallStacks: Boolean;
 
@@ -537,16 +539,6 @@ type
     property DbgShareMem: THandle read FDbgShareMem;
   end;
 
-  TDbgPerfomanceThread = class(TThread)
-  private
-    FDebuger: TDebuger;
-    FDbgTick: Cardinal;
-  protected
-    procedure Execute; override;
-  public
-    constructor Create(Debuger: TDebuger; const DbgTick: Cardinal);
-  end;
-
 var
   gvDebuger: TDebuger = nil;
 
@@ -555,7 +547,7 @@ procedure RaiseDebugCoreException(const Msg: String = '');
 implementation
 
 uses
-  RTLConsts, Math, DebugHook, DebugInfo;
+  RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes;
 
 // Флаги процессора
 const
@@ -568,9 +560,6 @@ const
   EFLAGS_IF = $200;
   EFLAGS_DF = $400;
   EFLAGS_OF = $800;
-
-const
-  DBG_EXCEPTION = $0EEDFFF0;
 
 function QueryThreadCycleTime(ThreadHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryThreadCycleTime';
 function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryProcessCycleTime';
@@ -909,6 +898,7 @@ begin
     Result^.State := tsActive;
     Result^.ThreadHandle := ThreadHandle;
     Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
+    Result^.ThreadAdvInfo^.ThreadData := Result;
     Result^.Breakpoint := GetMemory(SizeOf(THardwareBreakpoint));
     Result^.Started := 0;
     Result^.Ellapsed := 0;
@@ -929,6 +919,7 @@ begin
   try
     Result := FThreadAdvInfoList.Add;
     Result^.ThreadId := ThreadId;
+    Result^.ThreadData := Nil;
   finally
     FThreadAdvInfoList.UnLock;
   end;
@@ -970,12 +961,6 @@ end;
 
 procedure TDebuger.CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 begin
-//  if Code = ecBreakpoint then
-//  begin
-//    RemoteLoadDll(ProcessData.AttachedProcessHandle, 'DbgHook32.dll', 'InitHook',
-//      Pointer(ProcessData.PEImage.OptionalHeader32.ImageBase));
-//  end;
-
   if AddProcessPointInfo(ptException) then
     AddThreadPointInfo(FCurThreadData, ptException);
 
@@ -1053,7 +1038,7 @@ begin
   FProcessData.State := psNone;
   FProcessData.DbgPoints := Nil;
 
-  FDbgPerfomanceThread := TDbgPerfomanceThread.Create(Self, 10);
+  //FDbgPerfomanceThread := TDbgPerfomanceThread.Create(Self, 10);
   FPerfomanceMode := False;
   FPerfCallStacks := False;
   FPerfomanceCheckPtr := Nil; //Pointer($76FED315);
@@ -1100,10 +1085,6 @@ end;
 destructor TDebuger.Destroy;
 begin
   StopDebug;
-
-  if not FPerfomanceMode then
-    FDbgPerfomanceThread.Suspended := False;
-  FDbgPerfomanceThread := nil;
 
   ClearDbgInfo;
   FreeAndNil(FThreadList);
@@ -1164,23 +1145,14 @@ end;
 
 procedure TDebuger.DoCreateThread(DebugEvent: PDebugEvent);
 begin
-  if FPerfomanceMode and (FPerfomanceCheckPtr <> Nil) and (DebugEvent^.CreateThread.lpStartAddress = FPerfomanceCheckPtr)
-  then begin
-    ProcessPerfomanceBreakPoint(DebugEvent);
-    Exit;
-  end;
-
   AddThread(DebugEvent^.dwThreadId, DebugEvent^.CreateThread.hThread);
 
   if Assigned(FCreateThread) then
   begin
     FCreateThread(Self, DebugEvent^.dwThreadId, @DebugEvent^.CreateThread);
-    DoResumeAction(DebugEvent^.dwThreadId);
+    //DoResumeAction(DebugEvent^.dwThreadId);
   end;
 end;
-
-type
-  TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstGetMem, dstFreeMem, dstMemInfo);
 
 procedure TDebuger.DoDebugString(DebugEvent: PDebugEvent);
 var
@@ -1196,7 +1168,7 @@ begin
   if Assigned(FDebugString) then
   begin
     FDebugString(Self, DebugEvent.dwThreadId, Data);
-    DoResumeAction(DebugEvent.dwThreadId);
+    //DoResumeAction(DebugEvent.dwThreadId);
   end;
 end;
 
@@ -1516,13 +1488,6 @@ begin
   end;
 end;
 
-//function TDebuger.GetThreadData(ThreadIndex: Integer): TThreadData;
-//begin
-//  ZeroMemory(@Result, SizeOf(TThreadData));
-//  if (ThreadIndex >= 0) and (ThreadIndex < Length(FThreadList)) then
-//    Result := FThreadList[ThreadIndex];
-//end;
-
 function TDebuger.GetThreadIndex(const ThreadID: TThreadId): Integer;
 var
   ThData: PThreadData;
@@ -1532,7 +1497,7 @@ begin
     for Result := FThreadList.Count - 1 downto 0 do
     begin
       ThData := FThreadList[Result];
-      if Cardinal(ThData^.ThreadID) = Cardinal(ThreadID) then
+      if (ThData^.State <> tsFinished) and (ThData^.ThreadID = ThreadID) then
         Exit;
     end;
   finally
@@ -1567,7 +1532,9 @@ begin
     for Result := FThreadAdvInfoList.Count - 1 downto 0 do
     begin
       ThInfo := FThreadAdvInfoList[Result];
-      if Cardinal(ThInfo^.ThreadID) = Cardinal(ThreadID) then
+      if (ThInfo^.ThreadID = ThreadID) and
+        ((ThInfo^.ThreadData = Nil) or (ThInfo^.ThreadData^.State <> tsFinished))
+      then
         Exit;
     end;
   finally
@@ -2091,6 +2058,8 @@ begin
       ProcessDbgThreadInfo(DebugEvent);
     dstGetMem, dstFreeMem, dstMemInfo:
       ProcessDbgMemoryInfo(DebugEvent);
+    dstPerfomance:
+      ProcessPerfomanceBreakPoint(DebugEvent);
   end;
 end;
 
@@ -2146,17 +2115,24 @@ var
   ThreadID: Cardinal;
   StrAddr: Pointer;
   Str: ShortString;
+  ThInfo: PThreadAdvInfo;
 begin
   ER := @DebugEvent^.Exception.ExceptionRecord;
   ThreadID := ER^.ExceptionInformation[1];
   if ThreadID <> 0 then
   begin
-    SetThreadInfo(ThreadID)^.ThreadParentId := DebugEvent^.dwThreadId;
+    ThInfo := SetThreadInfo(ThreadID);
+
+    //ThInfo^.ThreadParentId := DebugEvent^.dwThreadId;
+    ThInfo^.ThreadParentId := ER^.ExceptionInformation[3];
 
     StrAddr := Pointer(ER^.ExceptionInformation[2]);
-    Str := ReadStringP(StrAddr, 0);
-    if Str <> '' then
-      SetThreadInfo(ThreadID)^.ThreadClassName := String(Str);
+    if StrAddr <> Nil then
+    begin
+      Str := ReadStringP(StrAddr, 0);
+      if Str <> '' then
+        ThInfo^.ThreadClassName := String(Str);
+    end;
   end;
 end;
 
@@ -2354,10 +2330,12 @@ begin
   if FPerfomanceMode <> Value then
   begin
     FPerfomanceMode := Value;
+    (*
     if FPerfomanceMode then
       FDbgPerfomanceThread.Suspended := False
     else
       FDbgPerfomanceThread.Suspended := True;
+    *)
   end;
 end;
 
@@ -2710,37 +2688,6 @@ end;
 procedure TProcessData.SetPEImage(APEImage: TJclPeImage);
 begin
   PEImage := APEImage;
-end;
-
-{ TDbgPerfomanceThread }
-
-constructor TDbgPerfomanceThread.Create(Debuger: TDebuger; const DbgTick: Cardinal);
-begin
-  inherited Create(True);
-  FreeOnTerminate := True;
-
-  FDebuger := Debuger;
-  FDbgTick := DbgTick;
-
-  Priority := tpHigher;
-end;
-
-procedure TDbgPerfomanceThread.Execute;
-begin
-  NameThreadForDebugging(AnsiString(ClassName), ThreadId);
-
-  while not Terminated and not(FDebuger.DbgState in [dsStoping, dsStoped]) do
-  begin
-    Sleep(FDbgTick);
-    if FDebuger.DbgState = dsWait then
-    begin
-      // Получение инфы без паузы дебагера
-      //FDebuger.ProcessPerfomanceBreakPoint(nil); !!! Работает неправильно
-
-      // Получение инфы с паузой дебагера
-      FDebuger.PerfomancePauseDebug;
-    end;
-  end;
 end;
 
 { TThreadData }
