@@ -2,7 +2,7 @@ unit ClassUtils;
 
 interface
 
-uses Windows, Classes, SysUtils{, Generics.Collections};
+uses Windows, Classes, SysUtils;
 
 const
   EIndexError: String = 'List index error: %d';

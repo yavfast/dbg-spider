@@ -66,8 +66,7 @@
 			<DCCReference Include="JclTD32Ex.pas"/>
 			<DCCReference Include="DebugHook.pas"/>
 			<DCCReference Include="DbgHookTypes.pas"/>
-			<None Include="CollectList.inc"/>
-			<None Include="CollectListIntf.inc"/>
+			<DCCReference Include="DebugerTypes.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
