@@ -14,7 +14,8 @@ uses
   uProcessList in 'uProcessList.pas' {frmProcessList},
   JclTD32Ex in 'JclTD32Ex.pas',
   DebugHook in 'DebugHook.pas',
-  DbgHookTypes in 'DbgHookTypes.pas';
+  DbgHookTypes in 'DbgHookTypes.pas',
+  DebugerTypes in 'DebugerTypes.pas';
 
 {$R *.res}
 

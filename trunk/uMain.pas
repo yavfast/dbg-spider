@@ -7,7 +7,7 @@ uses
   Dialogs, StdCtrls, Buttons, Mask, ExtCtrls, ComCtrls, ActnList, DebugInfo,
   Grids, JvExGrids, JvGrids, JvgStringGrid, VirtualTrees, JvComponentBase,
   JvNavigationPane, JvExExtCtrls, JvExtComponent, JvSplit,
-  Debuger, DelphiDebugInfo, JvExComCtrls, JvStatusBar, JvExControls,
+  Debuger, DebugerTypes, DelphiDebugInfo, JvExComCtrls, JvStatusBar, JvExControls,
   JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor, JvSplitter;
 
 type
@@ -100,8 +100,7 @@ type
     procedure vdtTimeLinePaintBackground(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; R: TRect; var Handled: Boolean);
 
     procedure cbCPUTimeLineClick(Sender: TObject);
-    procedure vstThreadsColumnResize(Sender: TVTHeader;
-      Column: TColumnIndex);
+    procedure vstThreadsColumnResize(Sender: TVTHeader; Column: TColumnIndex);
     procedure FormShow(Sender: TObject);
   private
     FPID: DWORD;

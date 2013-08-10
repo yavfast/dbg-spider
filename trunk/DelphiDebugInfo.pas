@@ -3,12 +3,7 @@ unit DelphiDebugInfo;
 Interface
 
 Uses
-    Windows,
-    Classes,
-    SysUtils,
-    DebugInfo,
-    Debuger,
-    JclTD32Ex;
+    Windows, Classes, SysUtils, DebugInfo, Debuger, DebugerTypes, JclTD32Ex;
 {..............................................................................}
 
 {..............................................................................}

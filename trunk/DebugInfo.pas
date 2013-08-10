@@ -3,7 +3,7 @@ Unit DebugInfo;
 Interface
 
 Uses
-    Windows, Classes, Debuger, SysUtils;
+    Windows, Classes, Debuger, SysUtils, DebugerTypes;
 {..............................................................................}
 
 Type
