@@ -3,10 +3,11 @@ unit DbgHookPerf;
 interface
 
 procedure InitPerfomance(Delta: Cardinal); stdcall;
+procedure ResetPerfomance; stdcall;
 
 implementation
 
-uses Windows, Classes, SysUtils, DbgHookTypes;
+uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory;
 
 type
   TPerfThread = class(TThread)
@@ -27,6 +28,18 @@ begin
   OutputDebugString(PWideChar(Format('Init perfomance thread (%d msec) - ok', [_Delta])));
 end;
 
+procedure ResetPerfomance; stdcall;
+begin
+  if _PerfThread = nil then Exit;
+  
+  OutputDebugStringA('Reset perfomance thread...');
+
+  _PerfThread.Terminate;
+  _PerfThread := Nil;
+
+  OutputDebugStringA('Reset perfomance thread - ok');
+end;
+
 { TPerfThread }
 
 constructor TPerfThread.Create;
@@ -41,19 +54,23 @@ end;
 
 procedure TPerfThread.Execute;
 var
-  DbgInfo: array[0..0] of Cardinal;
+  DbgInfo: PDWORD;
 begin
-  NameThreadForDebugging('###Perfomance thread', GetCurrentThreadId);
+  NameThreadForDebugging('### Dbg control thread', GetCurrentThreadId);
 
-  DbgInfo[0] := Cardinal(dstPerfomance);
-  while not Terminated do
-  begin
-    Sleep(_Delta);
+  DbgInfo := GetMemory(SizeOf(DWORD)); // для выравнивания по памяти
+  DbgInfo^ := DWORD(dstPerfomance);
+  try
+    while not Terminated do
+    begin
+      Sleep(_Delta);
+      RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
 
-    try
-      RaiseException(DBG_EXCEPTION, 0, 1, @DbgInfo[0]);
-    except
+      _OutMemInfoBuf; // Сброс буфера по памяти
     end;
+  except
+    on E: Exception do
+      OutputDebugStringW(PWideChar(Format('Fail perfomance thread: [%s] %s', [E.ClassName, E.Message])));
   end;
 end;
 

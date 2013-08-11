@@ -5,6 +5,7 @@ interface
 uses Windows;
 
 function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: Pointer): Boolean;
+function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
 
 implementation
 
@@ -86,6 +87,82 @@ begin
     gvDebuger.InjectThread(hProcess,
       @_DbgLoader, Cardinal(@_DbgLoaderEnd) - Cardinal(@_DbgLoader),
       @DbgLoaderInfo, SizeOf(TDbgLoaderInfo), False);
+
+    Result := True;
+  except
+    Raise;
+  end;
+end;
+
+type
+  PDbgUnLoaderInfo = ^TDbgLoaderInfo;
+  TDbgUnLoaderInfo = record
+    LoadLibrary    : function(lpLibFileName: PAnsiChar): HMODULE; stdcall;
+    GetProcAddress : function(hModule: HMODULE; lpProcName: LPCSTR): FARPROC; stdcall;
+    sKernel32      : array[0..16] of AnsiChar;
+    sUser32        : array[0..16] of AnsiChar;
+    sExitThread    : array[0..16] of AnsiChar;
+    sDllPath       : array[0..MAX_PATH] of AnsiChar;
+
+    sDllResetThreadHook: array[0..16] of AnsiChar;
+    sDllResetMemoryHook: array[0..16] of AnsiChar;
+    sDllResetPerfomance: array[0..16] of AnsiChar;
+  end;
+
+procedure _DbgUnLoader(DbgLoaderInfo: PDbgLoaderInfo); stdcall;
+var
+  HLib: HMODULE;
+
+  ExitThread: procedure(uExitCode: UINT); stdcall;
+  ResetThreadHook: procedure; stdcall;
+  ResetMemoryHook: procedure; stdcall;
+  ResetPerfomance: procedure; stdcall;
+begin
+  with DbgLoaderInfo^ do
+  begin
+    HLib := LoadLibrary(sKernel32);
+    @ExitThread := GetProcAddress(HLib, sExitThread);
+
+    HLib := LoadLibrary(sDllPath);
+    @ResetThreadHook := GetProcAddress(HLib, sDllInitThreadHook);
+    @ResetMemoryHook := GetProcAddress(HLib, sDllInitMemoryHook);
+    @ResetPerfomance := GetProcAddress(HLib, sDllInitPerfomance);
+
+    if @ResetPerfomance <> Nil then
+      ResetPerfomance();
+
+    if @ResetMemoryHook <> Nil then
+      ResetMemoryHook();
+
+    if @ResetThreadHook <> Nil then
+      ResetThreadHook();
+
+    ExitThread(0);
+  end;
+end;
+procedure _DbgUnLoaderEnd; begin end;
+
+function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
+var
+  DbgUnLoaderInfo: TDbgLoaderInfo;
+begin
+  ZeroMemory(@DbgUnLoaderInfo, SizeOf(TDbgUnLoaderInfo));
+
+  @DbgUnLoaderInfo.LoadLibrary    := GetProcAddress(GetModuleHandle('kernel32.dll'), 'LoadLibraryA');
+  @DbgUnLoaderInfo.GetProcAddress := GetProcAddress(GetModuleHandle('kernel32.dll'), 'GetProcAddress');
+
+  lstrcpyA(DbgUnLoaderInfo.sKernel32, 'kernel32.dll');
+  lstrcpyA(DbgUnLoaderInfo.sUser32, 'user32.dll');
+  lstrcpyA(DbgUnLoaderInfo.sExitThread, 'ExitThread');
+  lstrcpyA(DbgUnLoaderInfo.sDllPath, PAnsiChar(AnsiString(DllPath)));
+  lstrcpyA(DbgUnLoaderInfo.sDllInitThreadHook, 'ResetThreadHook');
+  lstrcpyA(DbgUnLoaderInfo.sDllInitMemoryHook, 'ResetMemoryHook');
+  lstrcpyA(DbgUnLoaderInfo.sDllInitPerfomance, 'ResetPerfomance');
+
+  try
+    gvDebuger.InjectThread(hProcess,
+      @_DbgLoader, Cardinal(@_DbgLoaderEnd) - Cardinal(@_DbgLoader),
+      @DbgUnLoaderInfo, SizeOf(TDbgUnLoaderInfo), False);
 
     Result := True;
   except

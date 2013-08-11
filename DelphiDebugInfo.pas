@@ -61,6 +61,7 @@ Type
 
         Function  CheckAddr(Const Addr : Pointer) : Boolean; Override;
 
+        Function  GetClassName(ObjectPtr: Pointer): String;
         Function  GetExceptionName   (ExceptionRecord: PExceptionRecord) : String; Override;
         Function  GetExceptionMessage(ExceptionRecord: PExceptionRecord; Const ThreadId: TThreadId) : String; Override;
         Function  GetExceptionAddress(ExceptionRecord: PExceptionRecord) : Pointer; Override;
@@ -1100,6 +1101,22 @@ End;
 {...............................................................................}
 
 {...............................................................................}
+function TDelphiDebugInfo.GetClassName(ObjectPtr: Pointer): String;
+Var
+  ObjTypePtr: Pointer;
+  ClassNamePtr: Pointer;
+  ClassName: ShortString;
+begin
+  if Debuger.ReadData(ObjectPtr, @ObjTypePtr, SizeOf(Pointer)) then
+    if Debuger.ReadData(IncPointer(ObjTypePtr, vmtClassName), @ClassNamePtr, SizeOf(Pointer)) then
+    begin
+      ClassName := Debuger.ReadStringP(IncPointer(ClassNamePtr, SizeOf(Byte)));
+      Result := String(ClassName);
+    end;
+end;
+{...............................................................................}
+
+{...............................................................................}
 Function TDelphiDebugInfo.GetExceptionAddress(ExceptionRecord: PExceptionRecord): TPointer;
 Begin
     If IsDelphiException(ExceptionRecord) And (ExceptionRecord^.NumberParameters > 0) Then
@@ -1148,19 +1165,11 @@ End;
 Function TDelphiDebugInfo.GetExceptionName(ExceptionRecord: PExceptionRecord): String;
 Var
     ExceptTypeAddr : TPointer;
-    ExceptTypePtr  : TPointer;
-    ExceptNamePtr  : TPointer;
 Begin
     If ExceptionRecord^.ExceptionCode = cDelphiException Then
     Begin
         ExceptTypeAddr := Pointer(ExceptionRecord^.ExceptionInformation[1]);
-        //ExceptTypePtr  := ReadAddressValue(Debuger, ExceptTypeAddr);
-        if Debuger.ReadData(ExceptTypeAddr, @ExceptTypePtr, SizeOf(Pointer)) then
-          if Debuger.ReadData(IncPointer(ExceptTypePtr, vmtClassName), @ExceptNamePtr, SizeOf(Pointer)) then
-            Result := String(Debuger.ReadStringP(ExceptNamePtr));
-
-        //ExceptNamePtr  := ReadAddressValue(Debuger, IncPointer(ExceptTypePtr, vmtClassName)); //???
-        //Result         := String(ReadShortStringValue(Debuger, ExceptNamePtr));
+        Result := GetClassName(ExceptTypeAddr);
     End
     Else
         Result := Inherited GetExceptionName(ExceptionRecord);

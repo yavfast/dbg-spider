@@ -2,7 +2,7 @@ unit DebugerTypes;
 
 interface
 
-uses Windows, Classes, SysUtils, JclPeImage, SyncObjs, ClassUtils;
+uses Windows, Classes, SysUtils, JclPeImage, SyncObjs, ClassUtils, Generics.Collections;
 
 const
   _SEGMENT_SIZE = 16 * 1024;
@@ -176,11 +176,11 @@ type
     List: array of TStackPoint;
   end;
 
-  TMemAction = (maGetMem, maFreeMem);
+  TMemAction = (maGetMem = 0, maFreeMem);
 
   PMemInfo = ^TMemInfo;
   TMemInfo = packed record
-    PerfIdx: Cardinal;
+    //PerfIdx: Cardinal;
     case MemAction: TMemAction of
       maGetMem: (
         GetMemPtr: Pointer;
@@ -192,6 +192,8 @@ type
         //ObjType: Cardinal;
       );
   end;
+
+  TGetMemInfo = TDictionary<Pointer,Cardinal>;
 
   TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
 
@@ -242,14 +244,15 @@ type
     State: TThreadState;
     ThreadHandle: THandle;
     ThreadAdvInfo: PThreadAdvInfo;
-    Context: TContext;
+    Context: PContext; // Указатель должен быть выровнен по памяти 32 бит
     Breakpoint: PHardwareBreakpoint;
     Started: Int64;         // момент запуска
     Ellapsed: Int64;        // время выполнения
     ThreadEllapsed: UInt64; // время использования CPU
     CPUTime: UInt64;
     DbgPoints: TThreadPointList;
-    DbgMemInfo: TThreadMemInfoList;
+    //DbgMemInfo: TThreadMemInfoList;
+    DbgGetMemInfo: TGetMemInfo;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -302,6 +305,7 @@ type
     CPUTime: UInt64;
     CPUEllapsed: UInt64; // время использования CPU
     DbgPoints: TProcessPointList;
+    DbgGetMemInfo: TGetMemInfo; // Указатели с коллизиями
 
     CreatedProcessHandle: THandle;
     CreatedThreadHandle: THandle;
@@ -340,6 +344,8 @@ procedure TProcessData.Clear;
 begin
   if DbgPoints <> Nil then
     FreeAndNil(DbgPoints);
+
+  FreeAndNil(DbgGetMemInfo);
 end;
 
 function TProcessData.CurDbgPointIdx: Cardinal;
@@ -403,22 +409,24 @@ begin
     FreeAndNil(DbgPoints);
   end;
 
-  FreeAndNil(DbgMemInfo);
+  //FreeAndNil(DbgMemInfo);
+  FreeAndNil(DbgGetMemInfo);
+  FreeMemory(Context);
 
   ThreadAdvInfo := Nil;
 end;
 
 function TThreadData.DbgMemInfoByIdx(const Idx: Cardinal): PThreadPoint;
 begin
-  if Idx < DbgMemInfo.Count then
-    Result := DbgMemInfo[Idx]
-  else
-    Result := Nil;
+//  if Idx < DbgMemInfo.Count then
+//    Result := DbgMemInfo[Idx]
+//  else
+//    Result := Nil;
 end;
 
 function TThreadData.DbgMemInfoCount: Cardinal;
 begin
-  Result := DbgMemInfo.Count;
+//  Result := DbgMemInfo.Count;
 end;
 
 function TThreadData.DbgPointByIdx(const Idx: Cardinal): PThreadPoint;

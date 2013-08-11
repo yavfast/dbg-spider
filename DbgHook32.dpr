@@ -1,15 +1,31 @@
 library DbgHook32;
 
 uses
+  Windows,
   DbgHookTypes in 'DbgHookTypes.pas',
   DbgHookThread in 'DbgHookThread.pas',
-  DbgHookMemory in 'DbgHookMemory.pas',
-  DbgHookPerf in 'DbgHookPerf.pas';
+  DbgHookPerf in 'DbgHookPerf.pas',
+  DbgHookMemory in 'DbgHookMemory.pas';
 
-exports InitThreadHook;
-exports InitMemoryHook;
-exports InitPerfomance;
+exports
+  InitThreadHook,
+  InitMemoryHook,
+  InitPerfomance,
 
-//TODO: Сброс буфера памяти и освобождение хуков
+  ResetThreadHook,
+  ResetMemoryHook,
+  ResetPerfomance;
 
+procedure _HookDLLProc(Reason: Integer);
+begin
+  if Reason = DLL_PROCESS_DETACH then
+  begin
+    ResetPerfomance;
+    ResetMemoryHook;
+    ResetThreadHook;
+  end;
+end;
+
+begin
+  DllProc := @_HookDLLProc;
 end.
