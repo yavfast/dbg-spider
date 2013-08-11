@@ -3,6 +3,7 @@ unit DbgHookThread;
 interface
 
 function InitThreadHook(ImageBase: Pointer): Boolean; stdcall;
+procedure ResetThreadHook; stdcall;
 
 implementation
 
@@ -110,6 +111,12 @@ begin
     OutputDebugStringA('Init thread hook - ok')
   else
     OutputDebugStringA('Init thread hook - fail')
+end;
+
+procedure ResetThreadHook; stdcall;
+begin
+  OutputDebugStringA('Reset thread hook - skip')
+  // TODO:
 end;
 
 end.

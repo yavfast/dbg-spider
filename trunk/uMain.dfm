@@ -229,7 +229,7 @@ object MainForm: TMainForm
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 457
+        Width = 489
         Height = 436
         Align = alLeft
         BorderStyle = bsNone
@@ -275,7 +275,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 1
-            Width = 75
+            Width = 70
             WideText = 'ID'
           end
           item
@@ -283,14 +283,22 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 2
-            Width = 75
+            Width = 70
             WideText = 'CPU time'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 3
+            Width = 40
+            WideText = 'Mem'
           end>
       end
       object vdtTimeLine: TVirtualDrawTree
-        Left = 457
+        Left = 489
         Top = 0
-        Width = 500
+        Width = 468
         Height = 436
         Align = alClient
         BorderStyle = bsNone

@@ -23,6 +23,7 @@ type
     FContinueStatus: DWORD;              // Статус с которым вызывается ContinueDebugEvent
     FResumeAction: TResumeAction;        // Флаг поведения отладчика после обработки очередного события
     FRemoveCurrentBreakpoint: Boolean;   // Флаг удаления текущего ВР
+    FCurThreadId: TThreadId;
     FCurThreadData: PThreadData;
     FDbgState: TDbgState;
 
@@ -57,12 +58,14 @@ type
 
     procedure SetPerfomanceMode(const Value: Boolean);
     procedure SetPerfCallStacks(const Value: Boolean);
+
+    procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
     procedure RemoveThread(const ThreadID: TThreadId);
 
-    function GetThreadIndex(const ThreadID: TThreadId): Integer;
+    function GetThreadIndex(const ThreadID: TThreadId; const UseFinished: Boolean = False): Integer;
 
     function GetThreadInfoIndex(const ThreadId: TThreadId): Integer;
     function AddThreadInfo(const ThreadId: TThreadId): PThreadAdvInfo;
@@ -88,14 +91,15 @@ type
     // обработчики отладочных событий второй очереди
     procedure CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
     procedure ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
-    procedure ProcessPerfomanceBreakPoint(DebugEvent: PDebugEvent);
     procedure ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
     procedure ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
 
     procedure SetThreadName(DebugEvent: PDebugEvent);
+
     procedure ProcessDbgException(DebugEvent: PDebugEvent);
     procedure ProcessDbgThreadInfo(DebugEvent: PDebugEvent);
     procedure ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
+    procedure ProcessDbgPerfomance(DebugEvent: PDebugEvent);
 
     function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 
@@ -179,8 +183,9 @@ type
 
     procedure GetCallStack(ThData: PThreadData; Stack: TStackPointList);
 
-    function GetThreadData(const ThreadID: TThreadId): PThreadData;
+    function GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
     function CurThreadId: TThreadId;
+    function CurThreadData: PThreadData;
     function GetThreadCount: Integer;
     function GetThreadDataByIdx(const Idx: Cardinal): PThreadData;
 
@@ -588,12 +593,14 @@ begin
     Result^.ThreadHandle := ThreadHandle;
     Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
     Result^.ThreadAdvInfo^.ThreadData := Result;
+    Result^.Context := GetMemory(SizeOf(TContext));
     Result^.Breakpoint := GetMemory(SizeOf(THardwareBreakpoint));
     Result^.Started := 0;
     Result^.Ellapsed := 0;
     Result^.ThreadEllapsed := 0;
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
-    Result^.DbgMemInfo := TCollectList<TMemInfo>.Create;
+    //Result^.DbgMemInfo := TCollectList<TMemInfo>.Create;
+    Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
 
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(Result, ptStart);
@@ -650,8 +657,10 @@ end;
 
 procedure TDebuger.CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 begin
+  ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
+
   if AddProcessPointInfo(ptException) then
-    AddThreadPointInfo(FCurThreadData, ptException);
+    AddThreadPointInfo(CurThreadData, ptException);
 
   if Assigned(FExceptioEvents[Code]) then
     FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
@@ -736,13 +745,17 @@ begin
     CreateFileMapping($FFFFFFFF, nil, PAGE_READWRITE, 0, 4 * 1024, 'DBG_SHARE_MEM');
 end;
 
+function TDebuger.CurThreadData: PThreadData;
+begin
+  if FCurThreadData = Nil then
+    FCurThreadData := UpdateThreadContext(FCurThreadId);
+
+  Result := FCurThreadData;
+end;
+
 function TDebuger.CurThreadId: TThreadId;
 begin
-  Result := 0;
-  if FCurThreadData <> nil then
-    Result := FCurThreadData^.ThreadID
-  else
-    RaiseDebugCoreException;
+  Result := FCurThreadId;
 end;
 
 function TDebuger.DebugNewProcess(const FilePath: string; SentEntryPointBreakPoint: Boolean): Boolean;
@@ -791,6 +804,8 @@ var
 begin
   FDbgState := dsStarted;
 
+  LoadLibrary('DbgHook32.dll'); // Блокировка от преждевременной выгрузки
+
   FProcessData.State := psActive;
 
   // Сохраняем данные о процессе
@@ -804,6 +819,7 @@ begin
 
   QueryPerformanceCounter(FProcessData.Started);
   FProcessData.DbgPoints := TCollectList<TProcessPoint>.Create;
+  FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1000);
 
   // Метка старта процесса
   AddProcessPointInfo(ptStart);
@@ -882,6 +898,8 @@ begin
     CloseHandle(FProcessData.AttachedFileHandle);
     FProcessData.AttachedFileHandle := 0;
   end;
+
+  //FreeLibrary('DbgHook32.dll');
 end;
 
 procedure TDebuger.DoExitThread(DebugEvent: PDebugEvent);
@@ -1166,18 +1184,18 @@ var
   ThData: PThreadData;
 begin
   if (FCurThreadData <> Nil) and (ThreadID = FCurThreadData^.ThreadID) then
-    Result := FCurThreadData^.Context
+    Result := FCurThreadData^.Context^
   else
   begin
     ThData := UpdateThreadContext(ThreadId);
     if ThData <> nil then
-      Result := ThData^.Context
+      Result := ThData^.Context^
     else
       RaiseDebugCoreException();
   end;
 end;
 
-function TDebuger.GetThreadIndex(const ThreadID: TThreadId): Integer;
+function TDebuger.GetThreadIndex(const ThreadID: TThreadId; const UseFinished: Boolean = False): Integer;
 var
   ThData: PThreadData;
 begin
@@ -1186,7 +1204,7 @@ begin
     for Result := FThreadList.Count - 1 downto 0 do
     begin
       ThData := FThreadList[Result];
-      if (ThData^.State <> tsFinished) and (ThData^.ThreadID = ThreadID) then
+      if (ThData^.ThreadID = ThreadID) and ((ThData^.State <> tsFinished) or UseFinished) then
         Exit;
     end;
   finally
@@ -1247,7 +1265,7 @@ begin
     Result := FileTimeToInt64(KT) + FileTimeToInt64(UT);
 end;
 
-function TDebuger.GetThreadData(const ThreadID: TThreadId): PThreadData;
+function TDebuger.GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
 var
   Index: Integer;
 begin
@@ -1531,9 +1549,9 @@ end;
 function TDebuger.ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 var
   Index: Integer;
-  Context: TContext;
   ReleaseBP: Boolean;
   //ThData: PThreadData;
+  Context: PContext;
 begin
   Result := False;
 
@@ -1545,25 +1563,25 @@ begin
 //  Context.ContextFlags := CONTEXT_DEBUG_REGISTERS;
 //  Check(GetThreadContext(ThData^.ThreadHandle, Context));
 
-  if FCurThreadData = Nil then
-    Exit;
+  if CurThreadData = Nil then
+    RaiseDebugCoreException();
 
-  Context := FCurThreadData^.Context;
+  Context := CurThreadData^.Context;
 
   //UpdateThreadContext()
 
-  Result := Context.Dr6 and $F <> 0;
+  Result := Context^.Dr6 and $F <> 0;
   if not Result then
     Exit;
 
   Index := -1;
-  if Context.Dr6 and 1 <> 0 then
+  if Context^.Dr6 and 1 <> 0 then
     Index := 0;
-  if Context.Dr6 and 2 <> 0 then
+  if Context^.Dr6 and 2 <> 0 then
     Index := 1;
-  if Context.Dr6 and 4 <> 0 then
+  if Context^.Dr6 and 4 <> 0 then
     Index := 2;
-  if Context.Dr6 and 8 <> 0 then
+  if Context^.Dr6 and 8 <> 0 then
     Index := 3;
 
   if Index < 0 then
@@ -1593,7 +1611,7 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessPerfomanceBreakPoint(DebugEvent: PDebugEvent);
+procedure TDebuger.ProcessDbgPerfomance(DebugEvent: PDebugEvent);
 var
   ThData: PThreadData;
   I: Integer;
@@ -1745,11 +1763,56 @@ begin
   case TDbgInfoType(ER^.ExceptionInformation[0]) of
     dstThreadInfo:
       ProcessDbgThreadInfo(DebugEvent);
-    dstGetMem, dstFreeMem, dstMemInfo:
+    dstMemInfo:
       ProcessDbgMemoryInfo(DebugEvent);
     dstPerfomance:
-      ProcessPerfomanceBreakPoint(DebugEvent);
+      ProcessDbgPerfomance(DebugEvent);
   end;
+end;
+
+var
+  _DbgMemInfoList: TDbgMemInfoList;
+
+procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
+var
+  Idx: Integer;
+  DbgMemInfo: PDbgMemInfo;
+  CurPerfIdx: Cardinal;
+  ThData: PThreadData;
+begin
+  if ReadData(MemInfoPack, @_DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
+  begin
+    CurPerfIdx := ProcessData.CurDbgPointIdx;
+
+    // TODO: Можно вынести обработку в отдельный поток
+    ThData := Nil;
+    for Idx := 0 to Count - 1 do
+    begin
+      DbgMemInfo := @_DbgMemInfoList[Idx];
+      if (ThData = Nil) or (ThData^.ThreadID <> DbgMemInfo^.ThreadId) then
+        ThData := GetThreadData(DbgMemInfo^.ThreadId, True);
+
+      if ThData <> Nil then
+        case DbgMemInfo^.MemInfoType of
+          miGetMem:
+          begin
+            if ThData^.DbgGetMemInfo.ContainsKey(DbgMemInfo^.Ptr) then
+              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, DbgMemInfo^.Size)
+            else
+              ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, DbgMemInfo^.Size);
+          end;
+          miFreeMem:
+          begin
+            if ThData^.DbgGetMemInfo.ContainsKey(DbgMemInfo^.Ptr) then
+              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr)
+            else
+              ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+          end;
+        end;
+    end;
+  end
+  else
+    RaiseDebugCoreException();
 end;
 
 procedure TDebuger.ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
@@ -1758,43 +1821,15 @@ var
   DbgInfoType: TDbgInfoType;
   Ptr: Pointer;
   Size: Cardinal;
-  ThData: PThreadData;
-  MemInfo: PMemInfo;
 begin
-  ThData := GetThreadData(DebugEvent^.dwThreadId);
-  if (ThData <> Nil) {and AddProcessPointInfo(ptMemoryInfo)} then
-  begin
-    ER := @DebugEvent^.Exception.ExceptionRecord;
-    DbgInfoType := TDbgInfoType(ER^.ExceptionInformation[0]);
-    Ptr := Pointer(ER^.ExceptionInformation[1]);
-    Size := ER^.ExceptionInformation[2];
+  ER := @DebugEvent^.Exception.ExceptionRecord;
+  DbgInfoType := TDbgInfoType(ER^.ExceptionInformation[0]);
+  Ptr := Pointer(ER^.ExceptionInformation[1]);
+  Size := ER^.ExceptionInformation[2];
 
-
-    case DbgInfoType of
-      dstGetMem:
-      begin
-        MemInfo := ThData^.DbgMemInfo.Add;
-        MemInfo^.PerfIdx := ProcessData.CurDbgPointIdx;
-
-        MemInfo^.MemAction := maGetMem;
-        MemInfo^.GetMemPtr := Ptr;
-        MemInfo^.GetMemSize := Size;
-        // Stack
-      end;
-      dstFreeMem:
-      begin
-        MemInfo := ThData^.DbgMemInfo.Add;
-        MemInfo^.PerfIdx := ProcessData.CurDbgPointIdx;
-
-        MemInfo^.MemAction := maFreeMem;
-        MemInfo^.FreeMemPtr := Ptr;
-        // ObjType
-      end;
-      dstMemInfo:
-      begin
-
-      end;
-    end;
+  case DbgInfoType of
+    dstMemInfo:
+      LoadMemoryInfoPack(Ptr, Size);
   end;
 end;
 
@@ -1835,6 +1870,8 @@ begin
     ContinueStatus := DBG_CONTINUE;
 
     FDbgState := dsWait;
+    FCurThreadData := nil;
+    FCurThreadId := 0;
 
     if not WaitForDebugEvent(DebugEvent, INFINITE) then
     begin
@@ -1845,6 +1882,7 @@ begin
     FDbgState := dsEvent;
 
     FCurThreadData := nil;
+    FCurThreadId := TThreadId(DebugEvent.dwThreadId);
 
     case DebugEvent.dwDebugEventCode of
       EXCEPTION_DEBUG_EVENT:
@@ -2083,6 +2121,8 @@ begin
 
   if not(FDbgState in [dsNone, dsStoped, dsDbgFail]) then
   begin
+    UnLoadDbgHookDll(ProcessData.AttachedProcessHandle, 'DbgHook32.dll');
+
     if CloseDebugProcessOnFree then
     begin
       if FProcessData.CreatedProcessHandle <> 0 then
@@ -2304,10 +2344,10 @@ begin
   Result := False;
   if ThreadData <> Nil then
   begin
-    ZeroMemory(@ThreadData^.Context, SizeOf(TContext));
+    ZeroMemory(ThreadData^.Context, SizeOf(TContext));
 
-    ThreadData^.Context.ContextFlags := CONTEXT_FULL;// or CONTEXT_DEBUG_REGISTERS;
-    Result := GetThreadContext(ThreadData^.ThreadHandle, ThreadData^.Context);
+    ThreadData^.Context^.ContextFlags := CONTEXT_FULL or CONTEXT_DEBUG_REGISTERS;
+    Result := GetThreadContext(ThreadData^.ThreadHandle, ThreadData^.Context^);
   end;
 end;
 
@@ -2316,7 +2356,7 @@ begin
   Result := GetThreadData(ThreadId);
   if Result <> nil then
     if not UpdateThreadContext(Result) then
-      Result := nil;
+      RaiseDebugCoreException();
 end;
 
 function TDebuger.WriteData(AddrPrt, DataPtr: Pointer; const DataSize: Cardinal): Boolean;

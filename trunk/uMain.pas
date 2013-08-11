@@ -486,7 +486,6 @@ begin
   C.Brush.Color := clScrollBar;
   C.FillRect(Rect(X1, Y1, X2, Y2));
 
-  C.Pen.Color := clGreen;
   C.Pen.Style := psSolid;
 
   if ProcData^.DbgPointsCount > 0 then
@@ -496,12 +495,22 @@ begin
     begin
       try
         ProcPoint := ProcData^.DbgPointByIdx(I);
-        if (ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0) then
+        if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
+          (ProcPoint^.PointType = ptException) then
         begin
           T1 := I;
           X1 := R.Left + Integer(T1 - CurOffset) - 1;
           if (X1 < R.Left) then Continue;
           if (X1 > R.Right) then Continue;
+
+          case ProcPoint^.PointType of
+            ptPerfomance:
+              C.Pen.Color := clGreen;
+            ptException:
+              C.Pen.Color := clRed;
+            ptThreadInfo:
+              C.Pen.Color := clGreen;
+          end;
 
           C.MoveTo(X1, Y1);
           C.LineTo(X1, Y2);
@@ -807,6 +816,8 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
+
+  LoadLibrary('DbgHook32.dll'); // Для дебага этой самой DLL
 end;
 
 procedure TMainForm.FormShow(Sender: TObject);
@@ -1178,6 +1189,7 @@ begin
             0: CellText := ExtractFileName(FAppName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: CellText := EllapsedToTime(ProcData^.CPUTime);
+            3: CellText := Format('%d', [ProcData^.DbgGetMemInfo.Count]);
           end;
       end;
     ltThread:
@@ -1188,6 +1200,7 @@ begin
             0: CellText := ThData^.ThreadAdvInfo^.AsString;
             1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
             2: CellText := EllapsedToTime(ThData^.CPUTime);
+            3: CellText := Format('%d', [ThData^.DbgGetMemInfo.Count]);
           end;
       end;
   end;
@@ -1412,8 +1425,6 @@ var
   I: Integer;
   ThData: PThreadData;
 begin
-  gvDebuger.ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
-
   _AC.Log(gvDebugInfo.GetExceptionMessage(ExceptionRecord, ThreadId));
 
   if gvDebuger.ProcessData.State = psActive then
@@ -1458,7 +1469,8 @@ begin
     TThread.Synchronize(nil,
       procedure
       begin
-        MainForm.Log(_Msg);
+        if Assigned(MainForm) and MainForm.Visible then
+          MainForm.Log(_Msg);
       end
     );
 end;

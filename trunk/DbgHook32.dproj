@@ -20,6 +20,8 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_Define>NO_UNITVERSIONING;$(DCC_Define)</DCC_Define>
+			<DCC_DcuOutput>dcu_hook</DCC_DcuOutput>
 			<DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
 			<ImageDebugInfo>true</ImageDebugInfo>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
@@ -41,6 +43,7 @@
 			<DCC_DebugInformation>false</DCC_DebugInformation>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
@@ -49,8 +52,8 @@
 			</DelphiCompile>
 			<DCCReference Include="DbgHookTypes.pas"/>
 			<DCCReference Include="DbgHookThread.pas"/>
-			<DCCReference Include="DbgHookMemory.pas"/>
 			<DCCReference Include="DbgHookPerf.pas"/>
+			<DCCReference Include="DbgHookMemory.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
@@ -77,6 +80,7 @@
 						<Parameters Name="LoadAllSymbols">True</Parameters>
 						<Parameters Name="LoadUnspecifiedSymbols">False</Parameters>
 						<Parameters Name="HostApplication">C:\Projects\dbg-spider\Spider.exe</Parameters>
+						<Parameters Name="DebugCWD">C:\Projects\dbg-spider</Parameters>
 					</Parameters>
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">False</VersionInfo>
