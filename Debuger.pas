@@ -1779,6 +1779,7 @@ var
   DbgMemInfo: PDbgMemInfo;
   CurPerfIdx: Cardinal;
   ThData: PThreadData;
+  Size: Cardinal;
 begin
   if ReadData(MemInfoPack, @_DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
   begin
@@ -1796,17 +1797,34 @@ begin
         case DbgMemInfo^.MemInfoType of
           miGetMem:
           begin
-            if ThData^.DbgGetMemInfo.ContainsKey(DbgMemInfo^.Ptr) then
-              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, DbgMemInfo^.Size)
-            else
-              ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, DbgMemInfo^.Size);
+            // Если такой указатель ещё есть, то это глобальная утечка
+            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, Size) then
+            begin
+              // Переносим инфу в процесс
+              Dec(ThData^.DbgGetMemInfoSize, Size);
+
+              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, Size);
+              Inc(FProcessData.DbgGetMemInfoSize, Size);
+            end;
+
+            ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, DbgMemInfo^.Size);
+            Inc(ThData^.DbgGetMemInfoSize, DbgMemInfo^.Size);
           end;
           miFreeMem:
           begin
-            if ThData^.DbgGetMemInfo.ContainsKey(DbgMemInfo^.Ptr) then
-              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr)
+            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, Size) then
+            begin
+              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+              Dec(ThData^.DbgGetMemInfoSize, Size);
+            end
             else
-              ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+            begin
+              if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, Size) then
+              begin
+                ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+                Dec(FProcessData.DbgGetMemInfoSize, Size);
+              end;
+            end;
           end;
         end;
     end;
