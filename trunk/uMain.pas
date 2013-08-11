@@ -66,11 +66,13 @@ type
     acAttachProcess: TAction;
     sbInfo: TJvStatusBar;
     cbCPUTimeLine: TCheckBox;
-    tsCodeView: TTabSheet;
-    vstModules: TVirtualStringTree;
-    spl1: TJvSplitter;
-    hleCodeView: TJvWideHLEditor;
+    tsMemInfo: TTabSheet;
+    vstMemInfoThreads: TVirtualStringTree;
+    pnl1: TPanel;
+    vstMemList: TVirtualStringTree;
+    vstMemStack: TVirtualStringTree;
     procedure FormCreate(Sender: TObject);
+    procedure FormShow(Sender: TObject);
 
     procedure acAppOpenExecute(Sender: TObject);
     procedure acAttachProcessExecute(Sender: TObject);
@@ -79,10 +81,9 @@ type
     procedure acDebugInfoExecute(Sender: TObject);
 
     procedure tmrThreadsUpdateTimer(Sender: TObject);
-    procedure UpdateTrees;
-    procedure UpdateStatusInfo;
 
     procedure lbUnitsClick(Sender: TObject);
+    procedure cbCPUTimeLineClick(Sender: TObject);
 
     procedure vstThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstThreadsDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
@@ -91,6 +92,7 @@ type
     procedure vstThreadsScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: Integer);
     procedure vstThreadsCollapsed(Sender: TBaseVirtualTree; Node: PVirtualNode);
     procedure vstThreadsExpanded(Sender: TBaseVirtualTree; Node: PVirtualNode);
+    procedure vstThreadsColumnResize(Sender: TVTHeader; Column: TColumnIndex);
 
     procedure vdtTimeLineDrawNode(Sender: TBaseVirtualTree; const PaintInfo: TVTPaintInfo);
     procedure vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader; var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
@@ -99,14 +101,17 @@ type
     procedure vdtTimeLineChange(Sender: TBaseVirtualTree; Node: PVirtualNode);
     procedure vdtTimeLinePaintBackground(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; R: TRect; var Handled: Boolean);
 
-    procedure cbCPUTimeLineClick(Sender: TObject);
-    procedure vstThreadsColumnResize(Sender: TVTHeader; Column: TColumnIndex);
-    procedure FormShow(Sender: TObject);
+    procedure vstMemInfoThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstMemInfoThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+
   private
     FPID: DWORD;
     FAppName: String;
 
     function GetLineTimeOffset: Cardinal;
+
+    procedure UpdateTrees;
+    procedure UpdateStatusInfo;
 
     procedure LoadUnits;
     procedure LoadConsts(UnitInfo: TUnitInfo);
@@ -126,9 +131,10 @@ type
     procedure SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
 
     function EllapsedToTime(const Ellapsed: UInt64): String;
-    function FindThreadNode(ThData: PThreadData): PVirtualNode;
-    function FindThreadNodeById(const ThreadId: TThreadId): PVirtualNode;
-    function FindNode(Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
+
+    function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
+    function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
+    function FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
   public
     procedure Log(const Msg: String);
     procedure DoAction(Action: TacAction; Args: array of Variant);
@@ -255,6 +261,7 @@ var
   NameNode: PVirtualNode;
   TimeLineNode: PVirtualNode;
 begin
+  // Threads timeline
   NameNode := vstThreads.AddChild(Nil);
   TimeLineNode := vdtTimeLine.AddChild(Nil);
 
@@ -267,9 +274,16 @@ begin
   LinkData^.SyncNode := NameNode;
   LinkData^.LinkType := ltProcess;
   LinkData^.ProcessData := @gvDebuger.ProcessData;
+
+  // Memory Info
+  NameNode := vstMemInfoThreads.AddChild(Nil);
+  LinkData := vstMemInfoThreads.GetNodeData(NameNode);
+  LinkData^.SyncNode := nil;
+  LinkData^.LinkType := ltProcess;
+  LinkData^.ProcessData := @gvDebuger.ProcessData;
 end;
 
-function TMainForm.FindNode(Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
+function TMainForm.FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
   var
     CurNode: PVirtualNode;
     LinkData: PLinkData;
@@ -278,19 +292,19 @@ function TMainForm.FindNode(Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: 
     CurNode := Node^.FirstChild;
     if CurNode <> Nil then
     repeat
-      LinkData := vstThreads.GetNodeData(CurNode);
+      LinkData := vTree.GetNodeData(CurNode);
       if CheckFunc(LinkData, CmpData) then
       begin
         Result := CurNode;
         Break;
       end;
 
-      Result := FindNode(CurNode, CheckFunc, CmpData);
+      Result := FindNode(vTree, CurNode, CheckFunc, CmpData);
       CurNode := CurNode^.NextSibling;
     until (CurNode = nil) or (Result <> Nil);
 end;
 
-function TMainForm.FindThreadNode(ThData: PThreadData): PVirtualNode;
+function TMainForm.FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
 
   function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
   begin
@@ -298,10 +312,10 @@ function TMainForm.FindThreadNode(ThData: PThreadData): PVirtualNode;
   end;
 
 begin
-  Result := FindNode(vstThreads.RootNode, @_Cmp, ThData);
+  Result := FindNode(vTree, vTree.RootNode, @_Cmp, ThData);
 end;
 
-function TMainForm.FindThreadNodeById(const ThreadId: TThreadId): PVirtualNode;
+function TMainForm.FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
 
   function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
   begin
@@ -309,7 +323,7 @@ function TMainForm.FindThreadNodeById(const ThreadId: TThreadId): PVirtualNode;
   end;
 
 begin
-  Result := FindNode(vstThreads.RootNode, @_Cmp, Pointer(ThreadId));
+  Result := FindNode(vTree, vTree.RootNode, @_Cmp, Pointer(ThreadId));
 end;
 
 procedure TMainForm.AddThread(const ThreadID: Cardinal);
@@ -335,6 +349,7 @@ begin
 
     ParentId := ThData^.ThreadAdvInfo^.ThreadParentId;
 
+    // Threads timeline
     ParentNode := Nil;
     if ParentId <> 0 then
     begin
@@ -342,9 +357,9 @@ begin
 
       if ParentThData = nil then
         // Если родительский поток завершился раньше старта дочернего
-        ParentNode := FindThreadNodeById(ParentId)
+        ParentNode := FindThreadNodeById(vstThreads, ParentId)
       else
-        ParentNode := FindThreadNode(ParentThData);
+        ParentNode := FindThreadNode(vstThreads, ParentThData);
     end;
 
     if ParentNode = Nil then
@@ -368,6 +383,28 @@ begin
     LinkData^.SyncNode := NameNode;
     LinkData^.LinkType := ltThread;
     LinkData^.ThreadData := ThData;
+
+    // Memory Info
+    ParentNode := Nil;
+    if ParentId <> 0 then
+    begin
+      if ParentThData = nil then
+        // Если родительский поток завершился раньше старта дочернего
+        ParentNode := FindThreadNodeById(vstMemInfoThreads, ParentId)
+      else
+        ParentNode := FindThreadNode(vstMemInfoThreads, ParentThData);
+    end;
+
+    if ParentNode = Nil then
+      ParentNode := vstMemInfoThreads.RootNode^.FirstChild;
+
+    NameNode := vstMemInfoThreads.AddChild(ParentNode);
+    vstMemInfoThreads.Expanded[ParentNode] := True;
+
+    LinkData := vstMemInfoThreads.GetNodeData(NameNode);
+    LinkData^.SyncNode := nil;
+    LinkData^.LinkType := ltThread;
+    LinkData^.ThreadData := ThData;
   finally
     vstThreads.FocusedNode := CurNode;
     vstThreads.EndUpdate;
@@ -382,6 +419,8 @@ end;
 
 procedure TMainForm.DoAction(Action: TacAction; Args: array of Variant);
 begin
+  if not Visible then Exit;
+
   case Action of
     acRunEnabled:
       acRun.Enabled := Args[0];
@@ -823,6 +862,7 @@ end;
 procedure TMainForm.FormShow(Sender: TObject);
 begin
   vstThreadsColumnResize(vstThreads.Header, 0);
+  vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
 end;
 
 function TMainForm.GetLineTimeOffset: Cardinal;
@@ -1036,6 +1076,8 @@ begin
 
   vdtTimeLine.Invalidate;
   vdtTimeLine.Header.Invalidate(nil);
+
+  vstMemInfoThreads.Invalidate;
 end;
 
 procedure TMainForm.vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader;
@@ -1102,6 +1144,65 @@ begin
   LoadUnits;
 end;
 
+procedure TMainForm.vstMemInfoThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+  MemInfo: TGetMemInfo;
+begin
+  Data := Sender.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProcess:
+    begin
+      ProcData := Data^.ProcessData;
+      MemInfo := ProcData^.DbgGetMemInfo;
+
+    end;
+    ltThread:
+    begin
+      ThData := Data^.ThreadData;
+      MemInfo := ThData^.DbgGetMemInfo;
+
+    end;
+  end;
+end;
+
+procedure TMainForm.vstMemInfoThreadsGetText(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
+var
+  Data: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+begin
+  Data := Sender.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProcess:
+      begin
+        ProcData := Data^.ProcessData;
+        if ProcData <> nil then
+          case Column of
+            0: CellText := ExtractFileName(FAppName);
+            1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
+            2: CellText := Format('%d', [ProcData^.DbgGetMemInfo.Count]);
+            3: CellText := Format('%d', [ProcData^.DbgGetMemInfoSize]);
+          end;
+      end;
+    ltThread:
+      begin
+        ThData := Data^.ThreadData;
+        if ThData <> nil then
+          case Column of
+            0: CellText := ThData^.ThreadAdvInfo^.AsString;
+            1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
+            2: CellText := Format('%d', [ThData^.DbgGetMemInfo.Count]);
+            3: CellText := Format('%d', [ThData^.DbgGetMemInfoSize]);
+          end;
+      end;
+  end;
+end;
+
 procedure TMainForm.vstThreadsCollapsed(Sender: TBaseVirtualTree; Node: PVirtualNode);
 begin
   SyncNodes(Sender, Node);
@@ -1121,7 +1222,7 @@ begin
       Inc(W, C.Width);
   end;
 
-  vstThreads.Width := W;
+  Sender.Treeview.ClientWidth := W;
 end;
 
 procedure TMainForm.vstThreadsDrawText(Sender: TBaseVirtualTree;
@@ -1154,8 +1255,7 @@ begin
   SyncNodes(Sender, Node);
 end;
 
-procedure TMainForm.vstThreadsGetNodeDataSize(Sender: TBaseVirtualTree;
-  var NodeDataSize: Integer);
+procedure TMainForm.vstThreadsGetNodeDataSize(Sender: TBaseVirtualTree; var NodeDataSize: Integer);
 begin
   NodeDataSize := SizeOf(TLinkData);
 end;

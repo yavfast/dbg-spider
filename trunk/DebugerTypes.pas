@@ -253,6 +253,7 @@ type
     DbgPoints: TThreadPointList;
     //DbgMemInfo: TThreadMemInfoList;
     DbgGetMemInfo: TGetMemInfo;
+    DbgGetMemInfoSize: Cardinal;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -306,6 +307,7 @@ type
     CPUEllapsed: UInt64; // врем€ использовани€ CPU
     DbgPoints: TProcessPointList;
     DbgGetMemInfo: TGetMemInfo; // ”казатели с коллизи€ми
+    DbgGetMemInfoSize: Cardinal;
 
     CreatedProcessHandle: THandle;
     CreatedThreadHandle: THandle;

@@ -92,7 +92,7 @@ object MainForm: TMainForm
     Top = 73
     Width = 965
     Height = 464
-    ActivePage = tsThreads1
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 1
     object tsLog: TTabSheet
@@ -224,12 +224,12 @@ object MainForm: TMainForm
       end
     end
     object tsThreads1: TTabSheet
-      Caption = 'Threads'
+      Caption = 'Threads timeline'
       ImageIndex = 3
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 489
+        Width = 483
         Height = 436
         Align = alLeft
         BorderStyle = bsNone
@@ -296,9 +296,9 @@ object MainForm: TMainForm
           end>
       end
       object vdtTimeLine: TVirtualDrawTree
-        Left = 489
+        Left = 483
         Top = 0
-        Width = 468
+        Width = 474
         Height = 436
         Align = alClient
         BorderStyle = bsNone
@@ -340,18 +340,13 @@ object MainForm: TMainForm
           end>
       end
     end
-    object tsCodeView: TTabSheet
-      Caption = 'CodeView'
+    object tsMemInfo: TTabSheet
+      Caption = 'Memory Info'
       ImageIndex = 3
-      object spl1: TJvSplitter
-        Left = 257
-        Top = 0
-        Height = 436
-      end
-      object vstModules: TVirtualStringTree
+      object vstMemInfoThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 257
+        Width = 457
         Height = 436
         Align = alLeft
         Header.AutoSizeIndex = 0
@@ -360,53 +355,125 @@ object MainForm: TMainForm
         Header.Font.Height = -11
         Header.Font.Name = 'Tahoma'
         Header.Font.Style = []
-        Header.MainColumn = -1
+        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        Header.Style = hsFlatButtons
+        ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
-        Columns = <>
+        TreeOptions.AutoOptions = [toAutoDropExpand, toAutoTristateTracking, toAutoDeleteMovedNodes]
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        OnColumnResize = vstThreadsColumnResize
+        OnDrawText = vstThreadsDrawText
+        OnFocusChanged = vstMemInfoThreadsFocusChanged
+        OnGetText = vstMemInfoThreadsGetText
+        OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        Columns = <
+          item
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 0
+            Width = 250
+            WideText = 'Thread name'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 1
+            Width = 75
+            WideText = 'ID'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 2
+            WideText = 'Count'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 3
+            Width = 75
+            WideText = 'Size'
+          end>
       end
-      object hleCodeView: TJvWideHLEditor
-        Left = 260
+      object pnl1: TPanel
+        Left = 457
         Top = 0
-        Width = 697
+        Width = 500
         Height = 436
-        Cursor = crIBeam
-        RightMarginVisible = False
-        Completion.ItemHeight = 13
-        Completion.CRLF = '/n'
-        Completion.Separator = '='
-        TabStops = '3 5'
-        BracketHighlighting.StringEscape = #39#39
         Align = alClient
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -13
-        Font.Name = 'Courier New'
-        Font.Style = []
-        Colors.Comment.Style = [fsItalic]
-        Colors.Comment.ForeColor = clOlive
-        Colors.Comment.BackColor = clWindow
-        Colors.Number.ForeColor = clNavy
-        Colors.Number.BackColor = clWindow
-        Colors.Strings.ForeColor = clPurple
-        Colors.Strings.BackColor = clWindow
-        Colors.Symbol.ForeColor = clBlue
-        Colors.Symbol.BackColor = clWindow
-        Colors.Reserved.Style = [fsBold]
-        Colors.Reserved.ForeColor = clWindowText
-        Colors.Reserved.BackColor = clWindow
-        Colors.Identifier.ForeColor = clWindowText
-        Colors.Identifier.BackColor = clWindow
-        Colors.Preproc.ForeColor = clGreen
-        Colors.Preproc.BackColor = clWindow
-        Colors.FunctionCall.ForeColor = clWindowText
-        Colors.FunctionCall.BackColor = clWindow
-        Colors.Declaration.ForeColor = clWindowText
-        Colors.Declaration.BackColor = clWindow
-        Colors.Statement.Style = [fsBold]
-        Colors.Statement.ForeColor = clWindowText
-        Colors.Statement.BackColor = clWindow
-        Colors.PlainText.ForeColor = clWindowText
-        Colors.PlainText.BackColor = clWindow
+        BevelOuter = bvNone
+        TabOrder = 1
+        object vstMemList: TVirtualStringTree
+          Left = 0
+          Top = 0
+          Width = 273
+          Height = 436
+          Align = alLeft
+          Header.AutoSizeIndex = 0
+          Header.Font.Charset = DEFAULT_CHARSET
+          Header.Font.Color = clWindowText
+          Header.Font.Height = -11
+          Header.Font.Name = 'Tahoma'
+          Header.Font.Style = []
+          Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+          Header.Style = hsFlatButtons
+          ScrollBarOptions.AlwaysVisible = True
+          TabOrder = 0
+          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+          OnColumnResize = vstThreadsColumnResize
+          Columns = <
+            item
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 0
+              Width = 150
+              WideText = 'Class name'
+            end
+            item
+              Alignment = taRightJustify
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 1
+              WideText = 'Pointer'
+            end
+            item
+              Alignment = taRightJustify
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 2
+              WideText = 'Size'
+            end>
+        end
+        object vstMemStack: TVirtualStringTree
+          Left = 273
+          Top = 0
+          Width = 227
+          Height = 436
+          Align = alClient
+          Header.AutoSizeIndex = 0
+          Header.Font.Charset = DEFAULT_CHARSET
+          Header.Font.Color = clWindowText
+          Header.Font.Height = -11
+          Header.Font.Name = 'Tahoma'
+          Header.Font.Style = []
+          Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+          Header.Style = hsFlatButtons
+          ScrollBarOptions.AlwaysVisible = True
+          TabOrder = 1
+          Columns = <
+            item
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 0
+              Width = 400
+              WideText = 'Call Stack'
+            end>
+        end
       end
     end
   end
