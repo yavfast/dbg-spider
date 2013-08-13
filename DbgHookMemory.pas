@@ -144,40 +144,40 @@ end;
 
 procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; _Ptr: Pointer; const _Size: Cardinal);
 var
-  DbgMemInfo: PDbgMemInfo;
+  DbgMemInfo: TDbgMemInfo;
   //ObjClassName: ShortString;
 begin
   try
     // TODO: Переделать на многопоточный вызов
+
+    DbgMemInfo.Ptr := _Ptr;
+    DbgMemInfo.ThreadId := GetCurrentThreadId;
+    DbgMemInfo.MemInfoType := _MemInfoType;
+    case DbgMemInfo.MemInfoType of
+      miGetMem:
+      begin
+        DbgMemInfo.Size := _Size;
+        GetCallStack(DbgMemInfo.Stack);
+      end;
+      miFreeMem:
+      begin
+        DbgMemInfo.ObjClassType[0] := #0;
+        (*
+        if _GetObjClassType(_Ptr, ObjClassName) then
+        begin
+          Move(ObjClassName, DbgMemInfo^.ObjClassType[0], Length(ObjClassName) + 1);
+        end
+        else
+          DbgMemInfo^.ObjClassType[0] := #0;
+        *)
+      end;
+    end;
+
     MemInfoLock.Enter;
     try
       if MemInfoList = Nil then Exit;
 
-      DbgMemInfo := @MemInfoList^[MemInfoListCnt];
-
-      DbgMemInfo^.Ptr := _Ptr;
-      DbgMemInfo^.ThreadId := GetCurrentThreadId;
-      DbgMemInfo^.MemInfoType := _MemInfoType;
-      case DbgMemInfo^.MemInfoType of
-        miGetMem:
-        begin
-          DbgMemInfo^.Size := _Size;
-          //GetCallStack(DbgMemInfo^.Stack);
-        end;
-        miFreeMem:
-        begin
-          DbgMemInfo^.ObjClassType[0] := #0;
-          (*
-          if _GetObjClassType(_Ptr, ObjClassName) then
-          begin
-            Move(ObjClassName, DbgMemInfo^.ObjClassType[0], Length(ObjClassName) + 1);
-          end
-          else
-            DbgMemInfo^.ObjClassType[0] := #0;
-          *)
-        end;
-      end;
-
+      MemInfoList^[MemInfoListCnt] := DbgMemInfo;
       Inc(MemInfoListCnt);
 
       if MemInfoListCnt = _DbgMemListLength then
