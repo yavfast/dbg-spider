@@ -1385,14 +1385,14 @@ var
 begin
   // Выделяем место в памяти процесса, и записываем туда нашу функцию
   ThreadAddr := VirtualAllocEx(hProcess, nil, FuncSize, MEM_COMMIT, PAGE_READWRITE);
-  if not WriteProcessMemory(hProcess, ThreadAddr, Func, FuncSize, lpNumberOfBytes) then
+  if not WriteProcessMemory(hProcess, ThreadAddr, Func, FuncSize, Cardinal(lpNumberOfBytes)) then
     RaiseDebugCoreException();
 
   // Также запишем параметры к ней
   if (aParams <> nil) and (aParamsSize > 0) then
   begin
     ParamAddr := VirtualAllocEx(hProcess, nil, aParamsSize, MEM_COMMIT, PAGE_READWRITE);
-    if not WriteProcessMemory(hProcess, ParamAddr, aParams, aParamsSize, lpNumberOfBytes) then
+    if not WriteProcessMemory(hProcess, ParamAddr, aParams, aParamsSize, Cardinal(lpNumberOfBytes)) then
       RaiseDebugCoreException();
   end
   else
@@ -1640,7 +1640,7 @@ function TDebuger.ReadData(AddrPrt, ResultPtr: Pointer; DataSize: Integer): Bool
 var
   Dummy: NativeUInt;
 begin
-  Result := ReadProcessMemory(FProcessData.AttachedProcessHandle, AddrPrt, ResultPtr, DataSize, Dummy) and
+  Result := ReadProcessMemory(FProcessData.AttachedProcessHandle, AddrPrt, ResultPtr, DataSize, Cardinal(Dummy)) and
     (Integer(Dummy) = DataSize);
 end;
 
@@ -1777,13 +1777,13 @@ procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardina
 var
   Idx: Integer;
   DbgMemInfo: PDbgMemInfo;
-  CurPerfIdx: Cardinal;
+  //CurPerfIdx: Cardinal;
   ThData: PThreadData;
   Size: Cardinal;
 begin
   if ReadData(MemInfoPack, @_DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
   begin
-    CurPerfIdx := ProcessData.CurDbgPointIdx;
+    //CurPerfIdx := ProcessData.CurDbgPointIdx;
 
     // TODO: Можно вынести обработку в отдельный поток
     ThData := Nil;
@@ -1975,8 +1975,8 @@ begin
 
   Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_READWRITE, OldProtect));
   try
-    Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @Breakpoint.Int3.ByteCode, 1, Dummy));
-    Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
+    Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @Breakpoint.Int3.ByteCode, 1, Cardinal(Dummy)));
+    Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Cardinal(Dummy)));
   finally
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
   end;
@@ -2210,10 +2210,10 @@ begin
   Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, 1, PAGE_READWRITE, OldProtect));
   try
     if Active then
-      Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, @BPOpcode, 1, Dummy))
+      Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, @BPOpcode, 1, Cardinal(Dummy)))
     else
       Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, @FBreakpointList[Index].Int3.ByteCode, 1,
-          Dummy));
+          Cardinal(Dummy)));
   finally
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, 1, OldProtect, OldProtect));
   end;
@@ -2382,7 +2382,7 @@ var
   Dummy: NativeUInt;
 begin
   Result :=
-    WriteProcessMemory(FProcessData.AttachedProcessHandle, AddrPrt, DataPtr, DataSize, Dummy) and (Dummy = DataSize);
+    WriteProcessMemory(FProcessData.AttachedProcessHandle, AddrPrt, DataPtr, DataSize, Cardinal(Dummy)) and (Dummy = DataSize);
 
   if Result then
     Result := FlushInstructionCache(FProcessData.AttachedProcessHandle, AddrPrt, DataSize);

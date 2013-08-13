@@ -194,6 +194,7 @@ type
   end;
 
   TGetMemInfo = TDictionary<Pointer,Cardinal>;
+  TGetMemInfoItem = TPair<Pointer,Cardinal>;
 
   TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
 

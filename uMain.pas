@@ -13,7 +13,7 @@ uses
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
 
-  TLinkType = (ltProcess, ltThread);
+  TLinkType = (ltProcess, ltThread, ltMemInfo);
 
   PLinkData = ^TLinkData;
   TLinkData = record
@@ -23,6 +23,8 @@ type
         (ProcessData: PProcessData);
       ltThread:
         (ThreadData: PThreadData);
+      ltMemInfo:
+        (MemPtr: Pointer);
   end;
 
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -103,6 +105,7 @@ type
 
     procedure vstMemInfoThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstMemInfoThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstMemListGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
   private
     FPID: DWORD;
@@ -1150,20 +1153,42 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfo;
+  MItem: TGetMemInfoItem;
+  MemNode: PVirtualNode;
 begin
+  //if gvDebuger.DbgState <> dsStoped then Exit;
+
+  MemInfo := Nil;
   Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
     ltProcess:
     begin
       ProcData := Data^.ProcessData;
       MemInfo := ProcData^.DbgGetMemInfo;
-
     end;
     ltThread:
     begin
       ThData := Data^.ThreadData;
       MemInfo := ThData^.DbgGetMemInfo;
+    end;
+  end;
 
+  if MemInfo <> Nil then
+  begin
+    vstMemList.BeginUpdate;
+    try
+      vstMemList.Clear;
+
+      for MItem in MemInfo do
+      begin
+        MemNode := vstMemList.AddChild(nil);
+        Data := vstMemList.GetNodeData(MemNode);
+        Data^.SyncNode := Node;
+        Data^.LinkType := ltMemInfo;
+        Data^.MemPtr := MItem.Key;
+      end;
+    finally
+      vstMemList.EndUpdate;
     end;
   end;
 end;
@@ -1199,6 +1224,50 @@ begin
             2: CellText := Format('%d', [ThData^.DbgGetMemInfo.Count]);
             3: CellText := Format('%d', [ThData^.DbgGetMemInfoSize]);
           end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstMemListGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  ThNode: PVirtualNode;
+  ThLinkData: PLinkData;
+
+  ThData: PThreadData;
+  ProcData: PProcessData;
+  MemInfo: TGetMemInfo;
+  Size: Cardinal;
+begin
+  CellText := '';
+  Data := vstMemList.GetNodeData(Node);
+  case Column of
+    0: CellText := 'unknown';
+    1: CellText := Format('%p', [Data^.MemPtr]);
+    2:
+      begin
+        MemInfo := Nil;
+        ThNode := Data^.SyncNode;
+        if ThNode = Nil then Exit;
+
+        ThLinkData := vstMemInfoThreads.GetNodeData(ThNode);
+        if ThLinkData = Nil then Exit;
+        
+        case ThLinkData^.LinkType of
+          ltProcess:
+          begin
+            ProcData := ThLinkData^.ProcessData;
+            MemInfo := ProcData^.DbgGetMemInfo;
+          end;
+          ltThread:
+          begin
+            ThData := ThLinkData^.ThreadData;
+            MemInfo := ThData^.DbgGetMemInfo;
+          end;
+        end;
+
+        if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, Size) then
+          CellText := IntToStr(Size);
       end;
   end;
 end;
