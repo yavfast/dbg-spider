@@ -1379,7 +1379,7 @@ procedure TDebuger.InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Card
   aParamsSize: Cardinal; WaitAndFree: Boolean = True);
 var
   hThread: THandle;
-  lpNumberOfBytes: Cardinal;
+  lpNumberOfBytes: NativeUInt;
   lpThreadId: Cardinal;
   ThreadAddr, ParamAddr: Pointer;
 begin
@@ -1638,7 +1638,7 @@ end;
 
 function TDebuger.ReadData(AddrPrt, ResultPtr: Pointer; DataSize: Integer): Boolean;
 var
-  Dummy: DWORD;
+  Dummy: NativeUInt;
 begin
   Result := ReadProcessMemory(FProcessData.AttachedProcessHandle, AddrPrt, ResultPtr, DataSize, Dummy) and
     (Integer(Dummy) = DataSize);
@@ -1963,7 +1963,7 @@ function TDebuger.SetBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0;
 var
   Breakpoint: TBreakpoint;
   OldProtect: DWORD;
-  Dummy: DWORD;
+  Dummy: NativeUInt;
 begin
   ZeroMemory(@Breakpoint, SizeOf(TBreakpoint));
 
@@ -2197,7 +2197,7 @@ end;
 procedure TDebuger.ToggleInt3Breakpoint(Index: Integer; Active: Boolean);
 var
   OldProtect: DWORD;
-  Dummy: DWORD;
+  Dummy: NativeUInt;
 begin
   CheckBreakpointIndex(Index);
 
@@ -2379,7 +2379,7 @@ end;
 
 function TDebuger.WriteData(AddrPrt, DataPtr: Pointer; const DataSize: Cardinal): Boolean;
 var
-  Dummy: DWORD;
+  Dummy: NativeUInt;
 begin
   Result :=
     WriteProcessMemory(FProcessData.AttachedProcessHandle, AddrPrt, DataPtr, DataSize, Dummy) and (Dummy = DataSize);
