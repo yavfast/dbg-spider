@@ -486,15 +486,23 @@ Begin
             DstType.Members.Capacity := SrcList.Members.Count;
             For I := 0 To SrcList.Members.Count - 1 Do
             Begin
+                DstMember := Nil;
                 SrcMember := TJclMemberSymbolInfo(SrcList.Members[I]);
+
+                SrcMemberType := FImage.TD32Scanner.SymbolTypes[SrcMember.TypeIndex];
+
+                if SrcMemberType = Nil then
+                begin
+                  // TODO: Что-то здесь непонятное в XE4 появилось
+                  Continue;
+                end;
+
                 DstMember := TStructMember.Create;
                 Case SrcMember.Flags And 3 Of
                     0, 3 : DstMember.Scope := msPublic;
                     1    : DstMember.Scope := msPrivate;
                     2    : DstMember.Scope := msProtected;
                 End;
-
-                SrcMemberType := FImage.TD32Scanner.SymbolTypes[SrcMember.TypeIndex];
 
                 If SrcMemberType.Kind = stkClassRef Then
                     LoadType(UnitInfo, SrcMemberType.ElementType, DstMember.DataType);
