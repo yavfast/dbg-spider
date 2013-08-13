@@ -1325,14 +1325,16 @@ var
     _SystemUnit : String = 'system';
   var
     I: Integer;
+    UInfo: TUnitInfo;
   begin
     USystem := Nil;
     Result := False;
     for I := 0 to Units.Count - 1 do
     begin
-      if SameText(_SystemUnit, String(TUnitInfo(Units.Objects[I]).Name)) then
+      UInfo := TUnitInfo(Units.Objects[I]);
+      if SameText(_SystemUnit, String(UInfo.Name)) then
       begin
-        USystem := TUnitInfo(Units.Objects[I]);
+        USystem := UInfo;
         Result := True;
         Exit;
       end;
@@ -1355,7 +1357,7 @@ var
 
   function GetMemoryManagerVar: Pointer;
   const
-    _MemoryManagerStr: AnsiString = '@@MemoryManager';
+    _MemoryManagerStr: AnsiString = '@System@MemoryManager'; //'@@MemoryManager'; //@System@MemoryManager for XE4
   Var
     _MemoryManager: TVarInfo;
   begin
