@@ -1779,7 +1779,7 @@ var
   DbgMemInfo: PDbgMemInfo;
   //CurPerfIdx: Cardinal;
   ThData: PThreadData;
-  Size: Cardinal;
+  MemInfo: RGetMemInfo;
 begin
   if ReadData(MemInfoPack, @_DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
   begin
@@ -1798,31 +1798,34 @@ begin
           miGetMem:
           begin
             // Если такой указатель ещё есть, то это глобальная утечка
-            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, Size) then
+            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
             begin
               // Переносим инфу в процесс
-              Dec(ThData^.DbgGetMemInfoSize, Size);
+              Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
 
-              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, Size);
-              Inc(FProcessData.DbgGetMemInfoSize, Size);
+              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, MemInfo);
+              Inc(FProcessData.DbgGetMemInfoSize, MemInfo.Size);
             end;
 
-            ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, DbgMemInfo^.Size);
+            MemInfo.Size := DbgMemInfo^.Size;
+            MemInfo.Stack := DbgMemInfo^.Stack;
+
+            ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, MemInfo);
             Inc(ThData^.DbgGetMemInfoSize, DbgMemInfo^.Size);
           end;
           miFreeMem:
           begin
-            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, Size) then
+            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
             begin
+              Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
               ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-              Dec(ThData^.DbgGetMemInfoSize, Size);
             end
             else
             begin
-              if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, Size) then
+              if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
               begin
+                Dec(FProcessData.DbgGetMemInfoSize, MemInfo.Size);
                 ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-                Dec(FProcessData.DbgGetMemInfoSize, Size);
               end;
             end;
           end;

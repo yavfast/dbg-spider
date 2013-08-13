@@ -2,7 +2,7 @@ unit DebugerTypes;
 
 interface
 
-uses Windows, Classes, SysUtils, JclPeImage, SyncObjs, ClassUtils, Generics.Collections;
+uses Windows, Classes, SysUtils, JclPeImage, SyncObjs, ClassUtils, Generics.Collections, DbgHookTypes;
 
 const
   _SEGMENT_SIZE = 16 * 1024;
@@ -193,8 +193,13 @@ type
       );
   end;
 
-  TGetMemInfo = TDictionary<Pointer,Cardinal>;
-  TGetMemInfoItem = TPair<Pointer,Cardinal>;
+  RGetMemInfo = record
+    Size: Cardinal;
+    Stack: TDbgMemInfoStack;
+  end;
+
+  TGetMemInfo = TDictionary<Pointer,RGetMemInfo>;
+  TGetMemInfoItem = TPair<Pointer,RGetMemInfo>;
 
   TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
 

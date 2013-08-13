@@ -1237,7 +1237,7 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfo;
-  Size: Cardinal;
+  GetMemInfo: RGetMemInfo;
 begin
   CellText := '';
   Data := vstMemList.GetNodeData(Node);
@@ -1266,8 +1266,8 @@ begin
           end;
         end;
 
-        if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, Size) then
-          CellText := IntToStr(Size);
+        if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+          CellText := IntToStr(GetMemInfo.Size);
       end;
   end;
 end;
