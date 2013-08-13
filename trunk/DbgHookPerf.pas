@@ -54,7 +54,7 @@ end;
 
 procedure TPerfThread.Execute;
 var
-  DbgInfo: PDWORD;
+  DbgInfo: PUINT_PTR;
 begin
   NameThreadForDebugging('### Dbg control thread', GetCurrentThreadId);
 
