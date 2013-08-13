@@ -12,22 +12,33 @@ implementation
 uses Windows, SyncObjs, DbgHookTypes, JclWin32, JclBase, JclDebug, SysUtils;
 
 var
-  _MemoryMgr: PMemoryManagerEx = nil;
-  _BaseGetMem: function(Size: NativeInt): Pointer;
-  _BaseFreeMem: function(P: Pointer): Integer;
-  _BaseReallocMem: function(P: Pointer; Size: NativeInt): Pointer;
-  _BaseAllocMem: function(Size: NativeInt): Pointer;
-
   _BaseMemoryMgr: TMemoryManagerEx;
 
   MemInfoList: PDbgMemInfoList = nil;
   MemInfoListCnt: Integer = 0;
   MemInfoLock: TCriticalSection = nil;
 
-function _HookGetMem(Size: NativeInt): Pointer; forward;
+  _MemoryMgr: PMemoryManagerEx = nil;
+
+type
+{$IFDEF VER230}
+  TMemSize = NativeUInt;
+  TMemUSize = NativeUInt;
+{$ELSE}
+  TMemSize = Integer;
+  TMemUSize = Cardinal;
+{$ENDIF}
+
+var
+  _BaseGetMem: function(Size: TMemSize): Pointer;
+  _BaseFreeMem: function(P: Pointer): Integer;
+  _BaseReallocMem: function(P: Pointer; Size: TMemSize): Pointer;
+  _BaseAllocMem: function(Size: TMemUSize): Pointer;
+
+function _HookGetMem(Size: TMemSize): Pointer; forward;
 function _HookFreeMem(P: Pointer): Integer; forward;
-function _HookReallocMem(P: Pointer; Size: NativeInt): Pointer; forward;
-function _HookAllocMem(Size: NativeInt): Pointer; forward;
+function _HookReallocMem(P: Pointer; Size: TMemSize): Pointer; forward;
+function _HookAllocMem(Size: TMemUSize): Pointer; forward;
 
 
 procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: Cardinal);
@@ -179,7 +190,7 @@ begin
   end;
 end;
 
-function _HookGetMem(Size: NativeInt): Pointer;
+function _HookGetMem(Size: TMemSize): Pointer;
 begin
   Result := _BaseGetMem(Size);
 
@@ -193,7 +204,7 @@ begin
    Result := _BaseFreeMem(P);
 end;
 
-function _HookReallocMem(P: Pointer; Size: NativeInt): Pointer;
+function _HookReallocMem(P: Pointer; Size: TMemSize): Pointer;
 begin
   _AddMemInfo(miFreeMem, P, 0);
 
@@ -202,7 +213,7 @@ begin
   _AddMemInfo(miGetMem, Result, Size);
 end;
 
-function _HookAllocMem(Size: NativeInt): Pointer;
+function _HookAllocMem(Size: TMemUSize): Pointer;
 begin
    Result := _BaseAllocMem(Size);
 

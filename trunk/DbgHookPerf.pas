@@ -54,12 +54,12 @@ end;
 
 procedure TPerfThread.Execute;
 var
-  DbgInfo: PUINT_PTR;
+  DbgInfo: Pointer;
 begin
   NameThreadForDebugging('### Dbg control thread', GetCurrentThreadId);
 
-  DbgInfo := GetMemory(SizeOf(DWORD)); // для выравнивания по памяти
-  DbgInfo^ := DWORD(dstPerfomance);
+  DbgInfo := GetMemory(SizeOf(Pointer)); // для выравнивания по памяти
+  DWORD(DbgInfo^) := DWORD(dstPerfomance);
   try
     while not Terminated do
     begin

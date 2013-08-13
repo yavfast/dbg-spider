@@ -346,7 +346,7 @@ object MainForm: TMainForm
       object vstMemInfoThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 457
+        Width = 470
         Height = 436
         Align = alLeft
         Header.AutoSizeIndex = 0
@@ -401,9 +401,9 @@ object MainForm: TMainForm
           end>
       end
       object pnl1: TPanel
-        Left = 457
+        Left = 470
         Top = 0
-        Width = 500
+        Width = 487
         Height = 436
         Align = alClient
         BevelOuter = bvNone
@@ -411,7 +411,7 @@ object MainForm: TMainForm
         object vstMemList: TVirtualStringTree
           Left = 0
           Top = 0
-          Width = 273
+          Width = 305
           Height = 436
           Align = alLeft
           Header.AutoSizeIndex = 0
@@ -420,39 +420,48 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+          Header.Options = [hoColumnResize, hoDrag, hoVisible]
+          Header.SortDirection = sdDescending
           Header.Style = hsFlatButtons
           ScrollBarOptions.AlwaysVisible = True
           TabOrder = 0
-          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+          TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
+          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+          TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+          TreeOptions.SelectionOptions = [toFullRowSelect]
           OnColumnResize = vstThreadsColumnResize
+          OnGetText = vstMemListGetText
+          OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
               CaptionAlignment = taCenter
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
               Position = 0
               Width = 150
-              WideText = 'Class name'
+              WideText = 'Object type'
             end
             item
               Alignment = taRightJustify
               CaptionAlignment = taCenter
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
               Position = 1
+              Width = 70
               WideText = 'Pointer'
             end
             item
               Alignment = taRightJustify
               CaptionAlignment = taCenter
+              DefaultSortDirection = sdDescending
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
               Position = 2
+              Width = 65
               WideText = 'Size'
             end>
         end
         object vstMemStack: TVirtualStringTree
-          Left = 273
+          Left = 305
           Top = 0
-          Width = 227
+          Width = 182
           Height = 436
           Align = alClient
           Header.AutoSizeIndex = 0
