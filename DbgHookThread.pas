@@ -32,10 +32,13 @@ var
   ThRec: PThreadRec;
   Th: TObject;
   ParentId: Cardinal;
+  //ClassNamePtr: Pointer;
   Args: array[0..3] of Cardinal;
+  //ThName: array[0..255] of AnsiChar;
   ThName: ShortString;
 begin
   Th := Nil;
+  ThName := '';
 
   ThreadsLock.Enter;
   try
@@ -47,6 +50,9 @@ begin
       try
         Th := TObject(ThRec^.Parameter);
         ThName := PShortString(PPointer(Integer(Th.ClassType) + vmtClassName)^)^;
+        //ThName := PShortString(PPointer(Integer(Th.ClassType) + vmtClassName)^);
+        //ClassNamePtr := PPointer(Integer(Th.ClassType) + vmtClassName)^;
+        //Move(ClassNamePtr^, ThName, PByte(Cardinal(ClassNamePtr) - 1)^);
       except
         Th := Nil;
       end;
@@ -58,18 +64,17 @@ begin
     begin
       Args[0] := Cardinal(dstThreadInfo);
       Args[1] := ThreadId;
-      if (Th <> Nil) then
+      if (Th <> Nil) and (ThName <> '') then
         Args[2] := Cardinal(@ThName[1])
+        //Args[2] := Cardinal(ThName)
       else
         Args[2] := 0;
       Args[3] := ParentId;
 
-      try
-        RaiseException(DBG_EXCEPTION, 0, 4, @Args[0]);
-      except
-      end;
+      RaiseException(DBG_EXCEPTION, 0, 4, @Args[0]);
     end;
   finally
+    ThName := '';
     ThreadsLock.Leave;
   end;
 end;
