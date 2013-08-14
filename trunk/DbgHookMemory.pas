@@ -52,19 +52,23 @@ begin
   RaiseException(DBG_EXCEPTION, 0, 3, @DbgInfo[0]);
 end;
 
+threadvar
+  _Buf: TMemoryBasicInformation;
+
 function IsValidCodeAddr(const Addr: Pointer): Boolean;
-Var
-  mbi: TMemoryBasicInformation;
+const
+  _PAGE_CODE: Cardinal = (PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
+//Var
+//  Buf: TMemoryBasicInformation;
 Begin
-  Result := (VirtualQuery(Pointer(Addr), mbi, SizeOf(mbi)) <> 0) And
-    ((mbi.Protect And (PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY)) <> 0);
+  Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0) And ((_Buf.Protect And _PAGE_CODE) <> 0);
 end;
 
 function IsValidAddr(const Addr: Pointer): Boolean;
-Var
-  Buf: TMemoryBasicInformation;
+//Var
+//  Buf: TMemoryBasicInformation;
 Begin
-  Result := (VirtualQuery(Pointer(Addr), Buf, SizeOf(Buf)) <> 0);
+  Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0);
 end;
 
 function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): Boolean;
@@ -109,15 +113,24 @@ begin
   Result := True;
   try
     ZeroMemory(@Stack[0], Length(Stack) * SizeOf(Pointer));
-    Level := 0;
+    Level := -2; // это в нашей dll-ке
     StackFrame := GetFramePointer;
     BaseOfStack := TJclAddr(StackFrame) - 1;
     TopOfStack := GetStackTop;
-    while (Level < Length(Stack)) and (BaseOfStack < TJclAddr(StackFrame)) and (TJclAddr(StackFrame) < TopOfStack) and
-      IsValidAddr(StackFrame) and IsValidCodeAddr(Pointer(StackFrame^.CallerAddr))
+    while (Level < Length(Stack)) and (
+      (Level < 0) or (
+        (BaseOfStack < TJclAddr(StackFrame)) and
+        (TJclAddr(StackFrame) < TopOfStack) and
+        IsValidAddr(StackFrame) {and
+        IsValidCodeAddr(Pointer(StackFrame^.CallerAddr))}
+        )
+      )
     do begin
-      Stack[Level] := Pointer(StackFrame^.CallerAddr - 1);
+      if Level >= 0 then
+        Stack[Level] := Pointer(StackFrame^.CallerAddr - 1);
+
       StackFrame := PStackFrame(StackFrame^.CallerFrame);
+
       Inc(Level);
     end;
   except

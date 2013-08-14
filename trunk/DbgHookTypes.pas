@@ -10,7 +10,7 @@ type
 
   TDbgMemInfoType = (miGetMem = 0, miFreeMem);
 
-  TDbgMemInfoStack = array[0..7] of Pointer;
+  TDbgMemInfoStack = array[0..15] of Pointer;
   TObjClassTypeName = array[0..SizeOf(TDbgMemInfoStack) - 1] of AnsiChar;
 
   PDbgMemInfo = ^TDbgMemInfo;
@@ -28,7 +28,7 @@ type
   end;
 
 const
-  _DbgMemListLength = ($FFFF div SizeOf(TDbgMemInfo));
+  _DbgMemListLength = ($FFFFF div SizeOf(TDbgMemInfo));
 type
   PDbgMemInfoList = ^TDbgMemInfoList;
   TDbgMemInfoList = array[0.._DbgMemListLength - 1] of TDbgMemInfo;

@@ -210,6 +210,7 @@ Type
 
 {...............................................................................}
     TStackEntry = Class
+    Public
         DebugInfo: TDebugInfo;
         UnitInfo        : TUnitInfo;
         FuncInfo        : TFuncInfo;
@@ -217,7 +218,7 @@ Type
         EIP             : Pointer;
         RET             : Pointer;
         EBP             : Pointer;
-    Public
+
         Constructor Create(ADebugInfo: TDebugInfo);
         Function    GetInfo : String;
         Function    UpdateInfo(Const Addr: Pointer = nil) : TFindResult;

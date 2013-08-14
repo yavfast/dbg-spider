@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Top = 0
   Caption = 'Spider'
   ClientHeight = 556
-  ClientWidth = 965
+  ClientWidth = 1329
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -19,7 +19,7 @@ object MainForm: TMainForm
   object pActions: TPanel
     Left = 0
     Top = 0
-    Width = 965
+    Width = 1329
     Height = 73
     Align = alTop
     TabOrder = 0
@@ -90,7 +90,7 @@ object MainForm: TMainForm
   object PageControl1: TPageControl
     Left = 0
     Top = 73
-    Width = 965
+    Width = 1329
     Height = 464
     ActivePage = tsMemInfo
     Align = alClient
@@ -100,7 +100,7 @@ object MainForm: TMainForm
       object mLog: TMemo
         Left = 0
         Top = 0
-        Width = 957
+        Width = 1321
         Height = 436
         Align = alClient
         Lines.Strings = (
@@ -140,14 +140,14 @@ object MainForm: TMainForm
       object pUnitInfo: TPanel
         Left = 282
         Top = 0
-        Width = 675
+        Width = 1039
         Height = 436
         Align = alClient
         TabOrder = 1
         object PageControl2: TPageControl
           Left = 1
           Top = 1
-          Width = 673
+          Width = 1037
           Height = 434
           ActivePage = tsFunctions
           Align = alClient
@@ -157,7 +157,7 @@ object MainForm: TMainForm
             object mConsts: TMemo
               Left = 0
               Top = 0
-              Width = 665
+              Width = 1029
               Height = 406
               Align = alClient
               Lines.Strings = (
@@ -175,7 +175,7 @@ object MainForm: TMainForm
             object mTypes: TMemo
               Left = 0
               Top = 0
-              Width = 665
+              Width = 1029
               Height = 406
               Align = alClient
               Lines.Strings = (
@@ -193,7 +193,7 @@ object MainForm: TMainForm
             object mVars: TMemo
               Left = 0
               Top = 0
-              Width = 665
+              Width = 1029
               Height = 406
               Align = alClient
               Lines.Strings = (
@@ -210,7 +210,7 @@ object MainForm: TMainForm
             object mFunctions: TMemo
               Left = 0
               Top = 0
-              Width = 665
+              Width = 1029
               Height = 406
               Align = alClient
               Lines.Strings = (
@@ -298,7 +298,7 @@ object MainForm: TMainForm
       object vdtTimeLine: TVirtualDrawTree
         Left = 483
         Top = 0
-        Width = 474
+        Width = 838
         Height = 436
         Align = alClient
         BorderStyle = bsNone
@@ -403,7 +403,7 @@ object MainForm: TMainForm
       object pnl1: TPanel
         Left = 470
         Top = 0
-        Width = 487
+        Width = 851
         Height = 436
         Align = alClient
         BevelOuter = bvNone
@@ -430,6 +430,7 @@ object MainForm: TMainForm
           TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
           TreeOptions.SelectionOptions = [toFullRowSelect]
           OnColumnResize = vstThreadsColumnResize
+          OnFocusChanged = vstMemListFocusChanged
           OnGetText = vstMemListGetText
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
@@ -461,7 +462,7 @@ object MainForm: TMainForm
         object vstMemStack: TVirtualStringTree
           Left = 305
           Top = 0
-          Width = 182
+          Width = 546
           Height = 436
           Align = alClient
           Header.AutoSizeIndex = 0
@@ -470,17 +471,23 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
+          Header.MainColumn = 1
           Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
           Header.Style = hsFlatButtons
           ScrollBarOptions.AlwaysVisible = True
           TabOrder = 1
+          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+          TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+          OnGetText = vstMemStackGetText
+          OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
               CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
               Position = 0
-              Width = 400
-              WideText = 'Call Stack'
+              Width = 500
+              WideText = 'Function'
             end>
         end
       end
@@ -489,7 +496,7 @@ object MainForm: TMainForm
   object sbInfo: TJvStatusBar
     Left = 0
     Top = 537
-    Width = 965
+    Width = 1329
     Height = 19
     Panels = <
       item

@@ -59,6 +59,7 @@ type
     procedure SetPerfomanceMode(const Value: Boolean);
     procedure SetPerfCallStacks(const Value: Boolean);
 
+    function FindMemoryPointer(const Ptr: Pointer): PThreadData;
     procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
   protected
     // работа с данными о нит€х отлаживаемого приложени€
@@ -1773,6 +1774,23 @@ end;
 var
   _DbgMemInfoList: TDbgMemInfoList;
 
+function TDebuger.FindMemoryPointer(const Ptr: Pointer): PThreadData;
+var
+  Idx: Integer;
+begin
+  Idx := 0;
+  repeat
+    Result := GetThreadDataByIdx(Idx);
+    if Result <> Nil then
+    begin
+      if Result^.DbgGetMemInfo.ContainsKey(Ptr) then
+        Exit;
+
+      Inc(Idx);
+    end;
+  until Result = Nil;
+end;
+
 procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
 var
   Idx: Integer;
@@ -1797,7 +1815,7 @@ begin
         case DbgMemInfo^.MemInfoType of
           miGetMem:
           begin
-            // ≈сли такой указатель ещЄ есть, то это глобальна€ утечка
+            // ≈сли такой указатель ещЄ есть, то это потер€шка
             if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
             begin
               // ѕереносим инфу в процесс
@@ -1815,6 +1833,7 @@ begin
           end;
           miFreeMem:
           begin
+            // »щем в своем потоке
             if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
             begin
               Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
@@ -1822,10 +1841,24 @@ begin
             end
             else
             begin
-              if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
+              // »щем во всех потоках
+              ThData := FindMemoryPointer(DbgMemInfo^.Ptr);
+              if ThData <> Nil then
               begin
-                Dec(FProcessData.DbgGetMemInfoSize, MemInfo.Size);
-                ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+                if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
+                begin
+                  Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
+                  ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+                end
+                else
+                begin
+                  // »щем в потер€шках
+                  if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
+                  begin
+                    Dec(FProcessData.DbgGetMemInfoSize, MemInfo.Size);
+                    ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+                  end;
+                end;
               end;
             end;
           end;
