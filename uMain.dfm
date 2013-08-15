@@ -12,6 +12,7 @@ object MainForm: TMainForm
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
+  WindowState = wsMaximized
   OnCreate = FormCreate
   OnShow = FormShow
   PixelsPerInch = 96
@@ -229,7 +230,7 @@ object MainForm: TMainForm
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 483
+        Width = 491
         Height = 436
         Align = alLeft
         BorderStyle = bsNone
@@ -275,7 +276,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 1
-            Width = 70
+            Width = 75
             WideText = 'ID'
           end
           item
@@ -291,14 +292,14 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
             Position = 3
-            Width = 40
+            Width = 45
             WideText = 'Mem'
           end>
       end
       object vdtTimeLine: TVirtualDrawTree
-        Left = 483
+        Left = 491
         Top = 0
-        Width = 838
+        Width = 830
         Height = 436
         Align = alClient
         BorderStyle = bsNone
@@ -471,7 +472,6 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
-          Header.MainColumn = 1
           Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
           Header.Style = hsFlatButtons
           ScrollBarOptions.AlwaysVisible = True
@@ -483,11 +483,10 @@ object MainForm: TMainForm
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
-              CaptionAlignment = taCenter
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
               Position = 0
-              Width = 500
-              WideText = 'Function'
+              Width = 1000
+              WideText = 'Call Stack'
             end>
         end
       end

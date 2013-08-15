@@ -44,6 +44,7 @@ Type
         NameId : Integer;
 
         function Name: AnsiString; virtual; abstract;
+        function ShortName: String; virtual;
     End;
 
     TNameList = Class(TList)
@@ -274,6 +275,7 @@ Type
         Function  DumpLineInformation(Const Addr : Pointer) : String;
         Function  GetParamsStr(FuncInfo : TFuncInfo; Const EBP : Pointer; IsTopStack : Boolean) : String;
 
+        Function  GetClassName(ObjectPtr: Pointer): String; Virtual; abstract;
         Function  GetExceptionName   (ExceptionRecord: PExceptionRecord) : String; Virtual;
         Function  GetExceptionMessage(ExceptionRecord: PExceptionRecord; const ThreadId: TThreadId) : String; Virtual;
         Function  GetExceptionAddress(ExceptionRecord: PExceptionRecord) : Pointer; Virtual;
@@ -1055,10 +1057,13 @@ begin
     Result := Format('[$%p] ', [EIP]);
     If UnitInfo <> Nil Then
     Begin
-        If UnitInfo <> Nil Then
-            Result := Result + String(UnitInfo.Name);
+        // В XE4 имя модуля уже в названии функции
+        //If UnitInfo <> Nil Then
+        //    Result := Result + String(UnitInfo.Name);
         If FuncInfo <> Nil Then
-            Result := Result + '.' + String(FuncInfo.Name);
+        begin
+            Result := Result + FuncInfo.ShortName;
+        end;
         If LineInfo <> Nil Then
             Result := Result + Format(' (%d)', [LineInfo.LineNo]);
     End
@@ -1156,6 +1161,18 @@ begin
   end;
 
   Result := Nil;
+end;
+
+{ TNameInfo }
+
+function TNameInfo.ShortName: String;
+var
+  P: Integer;
+begin
+  Result := String(Name);
+  P := Pos('$', Result);
+  if P > 0 then
+    Result := Copy(Result, 1, P - 1);
 end;
 
 End.

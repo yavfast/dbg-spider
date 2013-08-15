@@ -937,7 +937,7 @@ begin
     for I := 0 to UnitInfo.Funcs.Count - 1 do
     begin
       F := TFuncInfo(UnitInfo.Funcs[I]);
-      mFunctions.Lines.Add(Format('%s(%s): %s', [F.Name, F.ParamsAsString, F.ResultType.Name]));
+      mFunctions.Lines.Add(Format('%s(%s): %s', [F.ShortName, F.ParamsAsString, F.ResultType.Name]));
     end;
   finally
     mFunctions.Lines.EndUpdate;
@@ -1179,23 +1179,25 @@ begin
     end;
   end;
 
-  if MemInfo <> Nil then
-  begin
-    vstMemList.BeginUpdate;
-    try
-      vstMemList.Clear;
+  vstMemStack.Clear;
 
-      for MItem in MemInfo do
-      begin
-        MemNode := vstMemList.AddChild(nil);
-        Data := vstMemList.GetNodeData(MemNode);
-        Data^.SyncNode := Node;
-        Data^.LinkType := ltMemInfo;
-        Data^.MemPtr := MItem.Key;
-      end;
-    finally
-      vstMemList.EndUpdate;
+  vstMemList.BeginUpdate;
+  try
+    if MemInfo <> Nil then
+    begin
+        vstMemList.Clear;
+
+        for MItem in MemInfo do
+        begin
+          MemNode := vstMemList.AddChild(nil);
+          Data := vstMemList.GetNodeData(MemNode);
+          Data^.SyncNode := Node;
+          Data^.LinkType := ltMemInfo;
+          Data^.MemPtr := MItem.Key;
+        end;
     end;
+  finally
+    vstMemList.EndUpdate;
   end;
 end;
 
@@ -1243,7 +1245,7 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfo;
-  GetMemInfo: RGetMemInfo;
+  GetMemInfo: PGetMemInfo;
 
   StackNode: PVirtualNode;
   StackData: PLinkData;
@@ -1303,35 +1305,40 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfo;
-  GetMemInfo: RGetMemInfo;
+  GetMemInfo: PGetMemInfo;
 begin
+  MemInfo := Nil;
   CellText := '';
+
   Data := vstMemList.GetNodeData(Node);
+  ThNode := Data^.SyncNode;
+  if ThNode = Nil then Exit;
+
+  ThLinkData := vstMemInfoThreads.GetNodeData(ThNode);
+  if ThLinkData = Nil then Exit;
+
+  case ThLinkData^.LinkType of
+    ltProcess:
+    begin
+      ProcData := ThLinkData^.ProcessData;
+      MemInfo := ProcData^.DbgGetMemInfo;
+    end;
+    ltThread:
+    begin
+      ThData := ThLinkData^.ThreadData;
+      MemInfo := ThData^.DbgGetMemInfo;
+    end;
+  end;
+
   case Column of
-    0: CellText := 'unknown';
+    0:
+      begin
+        if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+          CellText := GetMemInfo.GetObjectType(Data^.MemPtr);
+      end;
     1: CellText := Format('%p', [Data^.MemPtr]);
     2:
       begin
-        MemInfo := Nil;
-        ThNode := Data^.SyncNode;
-        if ThNode = Nil then Exit;
-
-        ThLinkData := vstMemInfoThreads.GetNodeData(ThNode);
-        if ThLinkData = Nil then Exit;
-        
-        case ThLinkData^.LinkType of
-          ltProcess:
-          begin
-            ProcData := ThLinkData^.ProcessData;
-            MemInfo := ProcData^.DbgGetMemInfo;
-          end;
-          ltThread:
-          begin
-            ThData := ThLinkData^.ThreadData;
-            MemInfo := ThData^.DbgGetMemInfo;
-          end;
-        end;
-
         if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
           CellText := IntToStr(GetMemInfo.Size);
       end;
