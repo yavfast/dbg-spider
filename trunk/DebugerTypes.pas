@@ -193,13 +193,21 @@ type
       );
   end;
 
+  PGetMemInfo = ^RGetMemInfo;
   RGetMemInfo = record
+    PerfIdx: Cardinal;
     Size: Cardinal;
     Stack: TDbgMemInfoStack;
+    ObjectType: ShortString;
+
+    function GetObjectType(const Ptr: Pointer): String;
   end;
 
-  TGetMemInfo = TDictionary<Pointer,RGetMemInfo>;
-  TGetMemInfoItem = TPair<Pointer,RGetMemInfo>;
+  TGetMemInfo = class(TDictionary<Pointer,PGetMemInfo>)
+  protected
+    procedure ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification); override;
+  end;
+  TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
   TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
 
@@ -257,15 +265,11 @@ type
     ThreadEllapsed: UInt64; // время использования CPU
     CPUTime: UInt64;
     DbgPoints: TThreadPointList;
-    //DbgMemInfo: TThreadMemInfoList;
     DbgGetMemInfo: TGetMemInfo;
     DbgGetMemInfoSize: Cardinal;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
-
-    function DbgMemInfoCount: Cardinal;
-    function DbgMemInfoByIdx(const Idx: Cardinal): PThreadPoint;
 
     procedure Clear;
   end;
@@ -339,6 +343,8 @@ type
 procedure RaiseDebugCoreException(const Msg: String = '');
 
 implementation
+
+uses Debuger, DebugInfo;
 
 procedure RaiseDebugCoreException(const Msg: String);
 begin
@@ -422,19 +428,6 @@ begin
   FreeMemory(Context);
 
   ThreadAdvInfo := Nil;
-end;
-
-function TThreadData.DbgMemInfoByIdx(const Idx: Cardinal): PThreadPoint;
-begin
-//  if Idx < DbgMemInfo.Count then
-//    Result := DbgMemInfo[Idx]
-//  else
-//    Result := Nil;
-end;
-
-function TThreadData.DbgMemInfoCount: Cardinal;
-begin
-//  Result := DbgMemInfo.Count;
 end;
 
 function TThreadData.DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -579,6 +572,30 @@ end;
 procedure TBaseCollectList.UnLock;
 begin
   FLock.Leave;
+end;
+
+{ TGetMemInfo }
+
+procedure TGetMemInfo.ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification);
+begin
+  inherited;
+
+  if Action = cnRemoved then
+    FreeMemory(Value);
+end;
+
+{ RGetMemInfo }
+
+function RGetMemInfo.GetObjectType(const Ptr: Pointer): String;
+begin
+  Result := '';
+  if ObjectType <> '' then
+    Result := String(ObjectType)
+  else
+  begin
+    if not (gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) then
+      Result := gvDebugInfo.GetClassName(Ptr);
+  end;
 end;
 
 end.

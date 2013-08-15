@@ -214,7 +214,7 @@ function _HookFreeMem(P: Pointer): Integer;
 begin
   _AddMemInfo(miFreeMem, P, 0);
 
-   Result := _BaseFreeMem(P);
+  Result := _BaseFreeMem(P);
 end;
 
 function _HookReallocMem(P: Pointer; Size: TMemSize): Pointer;

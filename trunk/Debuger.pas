@@ -61,6 +61,7 @@ type
 
     function FindMemoryPointer(const Ptr: Pointer): PThreadData;
     procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
+    procedure UpdateMemoryInfoObjectTypes;
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -805,8 +806,6 @@ var
 begin
   FDbgState := dsStarted;
 
-  LoadLibrary('DbgHook32.dll'); // Блокировка от преждевременной выгрузки
-
   FProcessData.State := psActive;
 
   // Сохраняем данные о процессе
@@ -826,6 +825,7 @@ begin
   AddProcessPointInfo(ptStart);
 
   // Инициализация хуков
+  //LoadLibrary('DbgHook32.dll'); // ??? Блокировка от преждевременной выгрузки
   if Assigned(gvDebugInfo) then
     gvDebugInfo.InitDebugHook;
 
@@ -1750,6 +1750,8 @@ begin
 
       if AddProcessPointInfo(ptThreadInfo) then
         AddThreadPointInfo(ThData, ptStop);
+
+      UpdateMemoryInfoObjectTypes;
     end;
   finally
     FThreadList.UnLock;
@@ -1795,13 +1797,14 @@ procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardina
 var
   Idx: Integer;
   DbgMemInfo: PDbgMemInfo;
-  //CurPerfIdx: Cardinal;
+  CurPerfIdx: Cardinal;
   ThData: PThreadData;
-  MemInfo: RGetMemInfo;
+  MemInfo: PGetMemInfo;
+  NewMemInfo: PGetMemInfo;
 begin
   if ReadData(MemInfoPack, @_DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
   begin
-    //CurPerfIdx := ProcessData.CurDbgPointIdx;
+    CurPerfIdx := ProcessData.CurDbgPointIdx;
 
     // TODO: Можно вынести обработку в отдельный поток
     ThData := Nil;
@@ -1821,22 +1824,33 @@ begin
               // Переносим инфу в процесс
               Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
 
-              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, MemInfo);
-              Inc(FProcessData.DbgGetMemInfoSize, MemInfo.Size);
+              NewMemInfo := GetMemory(SizeOf(RGetMemInfo));
+              NewMemInfo^.PerfIdx := MemInfo^.PerfIdx;
+              NewMemInfo^.Size := MemInfo^.Size;
+              NewMemInfo^.Stack := MemInfo^.Stack;
+              NewMemInfo^.ObjectType := MemInfo^.ObjectType;
+
+              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+
+              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
+              Inc(FProcessData.DbgGetMemInfoSize, NewMemInfo^.Size);
             end;
 
-            MemInfo.Size := DbgMemInfo^.Size;
-            MemInfo.Stack := DbgMemInfo^.Stack;
+            NewMemInfo := GetMemory(SizeOf(RGetMemInfo));
+            NewMemInfo^.PerfIdx := CurPerfIdx;
+            NewMemInfo^.Size := DbgMemInfo^.Size;
+            NewMemInfo^.Stack := DbgMemInfo^.Stack;
+            NewMemInfo^.ObjectType := ''; // На этот момент тип ещё может быть неопределен
 
-            ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, MemInfo);
-            Inc(ThData^.DbgGetMemInfoSize, DbgMemInfo^.Size);
+            ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
+            Inc(ThData^.DbgGetMemInfoSize, NewMemInfo^.Size);
           end;
           miFreeMem:
           begin
             // Ищем в своем потоке
             if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
             begin
-              Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
+              Dec(ThData^.DbgGetMemInfoSize, MemInfo^.Size);
               ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
             end
             else
@@ -1847,7 +1861,7 @@ begin
               begin
                 if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
                 begin
-                  Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
+                  Dec(ThData^.DbgGetMemInfoSize, MemInfo^.Size);
                   ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
                 end
                 else
@@ -1855,7 +1869,7 @@ begin
                   // Ищем в потеряшках
                   if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
                   begin
-                    Dec(FProcessData.DbgGetMemInfoSize, MemInfo.Size);
+                    Dec(FProcessData.DbgGetMemInfoSize, MemInfo^.Size);
                     ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
                   end;
                 end;
@@ -1916,81 +1930,88 @@ end;
 
 procedure TDebuger.ProcessDebugEvents;
 var
-  DebugEvent: TDebugEvent;
+  DebugEvent: PDebugEvent; // !!! Необходимо выравнивание по памяти
   ExceptionCode: DWORD;
   CallNextLoopIteration: Boolean;
 begin
-  repeat
-    ContinueStatus := DBG_CONTINUE;
+  DebugEvent := GetMemory(SizeOf(TDebugEvent));
+  try
+    ZeroMemory(DebugEvent, SizeOf(TDebugEvent));
 
-    FDbgState := dsWait;
-    FCurThreadData := nil;
-    FCurThreadId := 0;
+    repeat
+      ContinueStatus := DBG_CONTINUE;
 
-    if not WaitForDebugEvent(DebugEvent, INFINITE) then
-    begin
-      DoDebugerFailed;
-      Exit;
-    end;
+      FDbgState := dsWait;
+      FCurThreadData := nil;
+      FCurThreadId := 0;
 
-    FDbgState := dsEvent;
+      if not WaitForDebugEvent(DebugEvent^, INFINITE) then
+      begin
+        DoDebugerFailed;
+        Exit;
+      end;
 
-    FCurThreadData := nil;
-    FCurThreadId := TThreadId(DebugEvent.dwThreadId);
+      FDbgState := dsEvent;
 
-    case DebugEvent.dwDebugEventCode of
-      EXCEPTION_DEBUG_EVENT:
-        begin
-          ExceptionCode := DebugEvent.Exception.ExceptionRecord.ExceptionCode;
+      FCurThreadData := nil;
+      FCurThreadId := TThreadId(DebugEvent^.dwThreadId);
 
-          case ExceptionCode of
-            DBG_EXCEPTION:
-              ProcessDbgException(@DebugEvent);
+      case DebugEvent^.dwDebugEventCode of
+        EXCEPTION_DEBUG_EVENT:
+          begin
+            ExceptionCode := DebugEvent^.Exception.ExceptionRecord.ExceptionCode;
 
-            EXCEPTION_SINGLE_STEP:
-              ProcessExceptionSingleStep(@DebugEvent);
+            case ExceptionCode of
+              DBG_EXCEPTION:
+                ProcessDbgException(DebugEvent);
 
-            EXCEPTION_BREAKPOINT:
-              ProcessExceptionBreakPoint(@DebugEvent);
+              EXCEPTION_SINGLE_STEP:
+                ProcessExceptionSingleStep(DebugEvent);
 
-            EXCEPTION_SET_THREAD_NAME:
-              SetThreadName(@DebugEvent);
+              EXCEPTION_BREAKPOINT:
+                ProcessExceptionBreakPoint(DebugEvent);
 
-            EXCEPTION_GUARD_PAGE:
-              ProcessExceptionGuardPage(@DebugEvent);
-          else
-            CallUnhandledExceptionEvents(CodeDataToExceptionCode(ExceptionCode), @DebugEvent);
+              EXCEPTION_SET_THREAD_NAME:
+                SetThreadName(DebugEvent);
+
+              EXCEPTION_GUARD_PAGE:
+                ProcessExceptionGuardPage(DebugEvent);
+            else
+              CallUnhandledExceptionEvents(CodeDataToExceptionCode(ExceptionCode), DebugEvent);
+            end;
           end;
-        end;
 
-      CREATE_THREAD_DEBUG_EVENT:
-        DoCreateThread(@DebugEvent);
+        CREATE_THREAD_DEBUG_EVENT:
+          DoCreateThread(DebugEvent);
 
-      CREATE_PROCESS_DEBUG_EVENT:
-        DoCreateProcess(@DebugEvent);
+        CREATE_PROCESS_DEBUG_EVENT:
+          DoCreateProcess(DebugEvent);
 
-      EXIT_THREAD_DEBUG_EVENT:
-        DoExitThread(@DebugEvent);
+        EXIT_THREAD_DEBUG_EVENT:
+          DoExitThread(DebugEvent);
 
-      EXIT_PROCESS_DEBUG_EVENT:
-        DoExitProcess(@DebugEvent);
+        EXIT_PROCESS_DEBUG_EVENT:
+          DoExitProcess(DebugEvent);
 
-      LOAD_DLL_DEBUG_EVENT:
-        DoLoadDll(@DebugEvent);
+        LOAD_DLL_DEBUG_EVENT:
+          DoLoadDll(DebugEvent);
 
-      UNLOAD_DLL_DEBUG_EVENT:
-        DoUnLoadDll(@DebugEvent);
+        UNLOAD_DLL_DEBUG_EVENT:
+          DoUnLoadDll(DebugEvent);
 
-      OUTPUT_DEBUG_STRING_EVENT:
-        DoDebugString(@DebugEvent);
+        OUTPUT_DEBUG_STRING_EVENT:
+          DoDebugString(DebugEvent);
 
-      RIP_EVENT:
-        DoRip(@DebugEvent);
-    end;
+        RIP_EVENT:
+          DoRip(DebugEvent);
+      end;
 
-    CallNextLoopIteration := ContinueDebugEvent(DebugEvent.dwProcessId, DebugEvent.dwThreadId, ContinueStatus);
+      CallNextLoopIteration := ContinueDebugEvent(DebugEvent^.dwProcessId, DebugEvent^.dwThreadId, ContinueStatus);
 
-  until not(CallNextLoopIteration) or (DebugEvent.dwDebugEventCode = EXIT_PROCESS_DEBUG_EVENT);
+    until not(CallNextLoopIteration) or (DebugEvent^.dwDebugEventCode = EXIT_PROCESS_DEBUG_EVENT);
+  finally
+    FreeMemory(DebugEvent);
+  end;
 
   DoEndDebug;
 end;
@@ -2391,6 +2412,39 @@ begin
   end;
 
   Check(SetThreadContext(ThData^.ThreadHandle, Context));
+end;
+
+procedure TDebuger.UpdateMemoryInfoObjectTypes;
+var
+  Idx: Integer;
+  I: Integer;
+  ThData: PThreadData;
+  GetMemInfo: TGetMemInfo;
+  GetMemInfoItem: TGetMemInfoItem;
+begin
+  Idx := 0;
+  repeat
+    ThData := GetThreadDataByIdx(Idx);
+    if ThData <> Nil then
+    begin
+      GetMemInfo := ThData^.DbgGetMemInfo;
+      if GetMemInfo.Count > 0 then
+      begin
+        for GetMemInfoItem in GetMemInfo do
+          GetMemInfoItem.Value^.ObjectType := GetMemInfoItem.Value^.GetObjectType(GetMemInfoItem.Key);
+      end;
+
+      Inc(Idx);
+    end;
+  until ThData = Nil;
+
+  // Потеряшки
+  GetMemInfo := ProcessData.DbgGetMemInfo;
+  if GetMemInfo.Count > 0 then
+  begin
+    for GetMemInfoItem in GetMemInfo do
+      GetMemInfoItem.Value^.ObjectType := GetMemInfoItem.Value^.GetObjectType(GetMemInfoItem.Key);
+  end;
 end;
 
 function TDebuger.UpdateThreadContext(ThreadData: PThreadData): Boolean;

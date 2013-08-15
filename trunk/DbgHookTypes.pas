@@ -10,7 +10,7 @@ type
 
   TDbgMemInfoType = (miGetMem = 0, miFreeMem);
 
-  TDbgMemInfoStack = array[0..15] of Pointer;
+  TDbgMemInfoStack = array[0..31] of Pointer;
   TObjClassTypeName = array[0..SizeOf(TDbgMemInfoStack) - 1] of AnsiChar;
 
   PDbgMemInfo = ^TDbgMemInfo;

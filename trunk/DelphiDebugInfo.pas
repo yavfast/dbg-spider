@@ -61,7 +61,7 @@ Type
 
         Function  CheckAddr(Const Addr : Pointer) : Boolean; Override;
 
-        Function  GetClassName(ObjectPtr: Pointer): String;
+        Function  GetClassName(ObjectPtr: Pointer): String; Override;
         Function  GetExceptionName   (ExceptionRecord: PExceptionRecord) : String; Override;
         Function  GetExceptionMessage(ExceptionRecord: PExceptionRecord; Const ThreadId: TThreadId) : String; Override;
         Function  GetExceptionAddress(ExceptionRecord: PExceptionRecord) : Pointer; Override;
@@ -1110,15 +1110,23 @@ End;
 
 {...............................................................................}
 function TDelphiDebugInfo.GetClassName(ObjectPtr: Pointer): String;
+Const
+  _ValidChars = ['_','a'..'z','A'..'Z','0'..'9'];
 Var
   ObjTypePtr: Pointer;
   ClassNamePtr: Pointer;
   ClassName: ShortString;
+  I: Integer;
 begin
+  Result := '';
   if Debuger.ReadData(ObjectPtr, @ObjTypePtr, SizeOf(Pointer)) then
     if Debuger.ReadData(IncPointer(ObjTypePtr, vmtClassName), @ClassNamePtr, SizeOf(Pointer)) then
     begin
       ClassName := Debuger.ReadStringP(IncPointer(ClassNamePtr, SizeOf(Byte)));
+      for I := 1 to Length(ClassName) do
+        if not (ClassName[I] in _ValidChars) then
+          Exit;
+
       Result := String(ClassName);
     end;
 end;
