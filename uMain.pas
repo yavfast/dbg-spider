@@ -13,7 +13,7 @@ uses
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
 
-  TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack);
+  TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack);
 
   PLinkData = ^TLinkData;
   TLinkData = record
@@ -27,6 +27,10 @@ type
         (MemPtr: Pointer);
       ltMemStack:
         (MemStackPtr: Pointer);
+      ltExceptInfo:
+        (ExceptInfo: TExceptInfo);
+      ltExceptStack:
+        (ExceptStackEntry: TStackEntry);
   end;
 
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -75,6 +79,11 @@ type
     pnl1: TPanel;
     vstMemList: TVirtualStringTree;
     vstMemStack: TVirtualStringTree;
+    tsExceptions: TTabSheet;
+    vstExceptionThreads: TVirtualStringTree;
+    pnl2: TPanel;
+    vstExceptionList: TVirtualStringTree;
+    vstExceptionCallStack: TVirtualStringTree;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
 
@@ -113,12 +122,21 @@ type
 
     procedure vstMemStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
+    procedure vstExceptionThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstExceptionThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+
+    procedure vstExceptionListGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstExceptionListFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+
+    procedure vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+
   private
     FPID: DWORD;
     FAppName: String;
 
     function GetLineTimeOffset: Cardinal;
 
+    procedure ClearTrees;
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
 
@@ -249,8 +267,7 @@ begin
   acRun.Enabled := False;
 
   mLog.Clear;
-  vdtTimeLine.Clear;
-  vstThreads.Clear;
+  ClearTrees;
 
   FAppName := eAppPath.Text;
 
@@ -287,6 +304,13 @@ begin
   // Memory Info
   NameNode := vstMemInfoThreads.AddChild(Nil);
   LinkData := vstMemInfoThreads.GetNodeData(NameNode);
+  LinkData^.SyncNode := nil;
+  LinkData^.LinkType := ltProcess;
+  LinkData^.ProcessData := @gvDebuger.ProcessData;
+
+  // Exceptions
+  NameNode := vstExceptionThreads.AddChild(Nil);
+  LinkData := vstExceptionThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := nil;
   LinkData^.LinkType := ltProcess;
   LinkData^.ProcessData := @gvDebuger.ProcessData;
@@ -345,12 +369,10 @@ var
   ParentId: Cardinal;
   ParentNode: PVirtualNode;
   CurNode: PVirtualNode;
-  CurSelNode: PVirtualNode;
 begin
-  CurNode := vstThreads.FocusedNode;
-
   vstThreads.BeginUpdate;
   vdtTimeLine.BeginUpdate;
+  CurNode := vstThreads.FocusedNode;
   try
     ThData := gvDebuger.GetThreadData(ThreadID);
 
@@ -392,8 +414,16 @@ begin
     LinkData^.SyncNode := NameNode;
     LinkData^.LinkType := ltThread;
     LinkData^.ThreadData := ThData;
+  finally
+    vstThreads.FocusedNode := CurNode;
+    vstThreads.EndUpdate;
+    vdtTimeLine.EndUpdate;
+  end;
 
-    // Memory Info
+  // Memory Info
+  vstMemInfoThreads.BeginUpdate;
+  CurNode := vstMemInfoThreads.FocusedNode;
+  try
     ParentNode := Nil;
     if ParentId <> 0 then
     begin
@@ -415,15 +445,57 @@ begin
     LinkData^.LinkType := ltThread;
     LinkData^.ThreadData := ThData;
   finally
-    vstThreads.FocusedNode := CurNode;
-    vstThreads.EndUpdate;
-    vdtTimeLine.EndUpdate;
+    vstMemInfoThreads.FocusedNode := CurNode;
+    vstMemInfoThreads.EndUpdate;
+  end;
+
+  // Exceptions
+  vstExceptionThreads.BeginUpdate;
+  CurNode := vstExceptionThreads.FocusedNode;
+  try
+    ParentNode := Nil;
+    if ParentId <> 0 then
+    begin
+      if ParentThData = nil then
+        // Если родительский поток завершился раньше старта дочернего
+        ParentNode := FindThreadNodeById(vstExceptionThreads, ParentId)
+      else
+        ParentNode := FindThreadNode(vstExceptionThreads, ParentThData);
+    end;
+
+    if ParentNode = Nil then
+      ParentNode := vstExceptionThreads.RootNode^.FirstChild;
+
+    NameNode := vstExceptionThreads.AddChild(ParentNode);
+    vstExceptionThreads.Expanded[ParentNode] := True;
+
+    LinkData := vstExceptionThreads.GetNodeData(NameNode);
+    LinkData^.SyncNode := nil;
+    LinkData^.LinkType := ltThread;
+    LinkData^.ThreadData := ThData;
+  finally
+    vstExceptionThreads.FocusedNode := CurNode;
+    vstExceptionThreads.EndUpdate;
   end;
 end;
 
 procedure TMainForm.cbCPUTimeLineClick(Sender: TObject);
 begin
   UpdateTrees;
+end;
+
+procedure TMainForm.ClearTrees;
+begin
+  vstThreads.Clear;
+  vdtTimeLine.Clear;
+
+  vstMemInfoThreads.Clear;
+  vstMemList.Clear;
+  vstMemStack.Clear;
+
+  vstExceptionThreads.Clear;
+  vstExceptionList.Clear;
+  vstExceptionCallStack.Clear;
 end;
 
 procedure TMainForm.DoAction(Action: TacAction; Args: array of Variant);
@@ -1087,6 +1159,7 @@ begin
   vdtTimeLine.Header.Invalidate(nil);
 
   vstMemInfoThreads.Invalidate;
+  vstExceptionThreads.Invalidate;
 end;
 
 procedure TMainForm.vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader;
@@ -1153,6 +1226,147 @@ begin
   LoadUnits;
 end;
 
+procedure TMainForm.vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  StackEntry: TStackEntry;
+begin
+  Data := vstExceptionCallStack.GetNodeData(Node);
+  StackEntry := Data^.ExceptStackEntry;
+  if StackEntry <> nil then
+  begin
+    case Column of
+      0: CellText := StackEntry.GetInfo;
+    end;
+  end;
+end;
+
+procedure TMainForm.vstExceptionListFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+  Stack: TList;
+  I: Integer;
+  StackNode: PVirtualNode;
+  StackData: PLinkData;
+begin
+  Data := vstExceptionList.GetNodeData(Node);
+
+  vstExceptionCallStack.BeginUpdate;
+  try
+    vstExceptionCallStack.Clear;
+    Stack := Data^.ExceptInfo.Stack;
+    for I := 0 to Stack.Count - 1 do
+    begin
+      StackNode := vstExceptionCallStack.AddChild(nil);
+      StackData := vstExceptionCallStack.GetNodeData(StackNode);
+      StackData^.LinkType := ltExceptStack;
+      StackData^.ExceptStackEntry := TStackEntry(Stack[I]);
+    end;
+  finally
+    vstExceptionCallStack.EndUpdate;
+  end;
+end;
+
+procedure TMainForm.vstExceptionListGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+begin
+  Data := vstExceptionList.GetNodeData(Node);
+  case Column of
+    0: CellText := Format('%p', [Data^.ExceptInfo.Address]);
+    1: CellText := Data^.ExceptInfo.ExceptionName;
+    2: CellText := Data^.ExceptInfo.Message;
+  end;
+end;
+
+procedure TMainForm.vstExceptionThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+  ExceptList: TThreadList;
+  ExceptNode: PVirtualNode;
+  I: Integer;
+  L: TList;
+begin
+  vstExceptionCallStack.Clear;
+
+  ExceptList := Nil;
+  Data := Sender.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProcess:
+    begin
+      ProcData := Data^.ProcessData;
+      ExceptList := ProcData^.DbgExceptions;
+    end;
+    ltThread:
+    begin
+      ThData := Data^.ThreadData;
+      ExceptList := ThData^.DbgExceptions;
+    end;
+  end;
+
+  vstMemList.BeginUpdate;
+  try
+    if ExceptList <> Nil then
+    begin
+      vstExceptionList.Clear;
+
+      L := ExceptList.LockList;
+      try
+        for I := 0 to L.Count - 1 do
+        begin
+          ExceptNode := vstExceptionList.AddChild(nil);
+          Data := vstExceptionList.GetNodeData(ExceptNode);
+          Data^.SyncNode := Node;
+          Data^.LinkType := ltExceptInfo;
+          Data^.ExceptInfo := TExceptInfo(L[I]);
+        end;
+      finally
+        ExceptList.UnlockList;
+      end;
+    end;
+  finally
+    vstMemList.EndUpdate;
+  end;
+end;
+
+procedure TMainForm.vstExceptionThreadsGetText(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
+var
+  Data: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+begin
+  CellText := ' ';
+  Data := Sender.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProcess:
+      begin
+        ProcData := Data^.ProcessData;
+        if ProcData <> nil then
+          case Column of
+            0: CellText := ExtractFileName(FAppName);
+            1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
+            2: if ProcData^.DbgExceptionsCount > 0 then
+                 CellText := Format('%d', [ProcData^.DbgExceptionsCount]);
+          end;
+      end;
+    ltThread:
+      begin
+        ThData := Data^.ThreadData;
+        if ThData <> nil then
+          case Column of
+            0: CellText := ThData^.ThreadAdvInfo^.AsString;
+            1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
+            2: if ThData^.DbgExceptionsCount > 0 then
+                 CellText := Format('%d', [ThData^.DbgExceptionsCount]);
+          end;
+      end;
+  end;
+end;
+
 procedure TMainForm.vstMemInfoThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 var
   Data: PLinkData;
@@ -1162,8 +1376,6 @@ var
   MItem: TGetMemInfoItem;
   MemNode: PVirtualNode;
 begin
-  //if gvDebuger.DbgState <> dsStoped then Exit;
-
   MemInfo := Nil;
   Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
@@ -1209,6 +1421,8 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
 begin
+  CellText := ' ';
+
   Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
     ltProcess:
@@ -1218,8 +1432,10 @@ begin
           case Column of
             0: CellText := ExtractFileName(FAppName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
-            2: CellText := Format('%d', [ProcData^.DbgGetMemInfo.Count]);
-            3: CellText := Format('%d', [ProcData^.DbgGetMemInfoSize]);
+            2: if ProcData^.DbgGetMemInfo.Count > 0 then
+                 CellText := Format('%d', [ProcData^.DbgGetMemInfo.Count]);
+            3: if ProcData^.DbgGetMemInfo.Count > 0 then
+                 CellText := Format('%d', [ProcData^.DbgGetMemInfoSize]);
           end;
       end;
     ltThread:
@@ -1229,8 +1445,10 @@ begin
           case Column of
             0: CellText := ThData^.ThreadAdvInfo^.AsString;
             1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
-            2: CellText := Format('%d', [ThData^.DbgGetMemInfo.Count]);
-            3: CellText := Format('%d', [ThData^.DbgGetMemInfoSize]);
+            2: if ThData^.DbgGetMemInfo.Count > 0 then
+                 CellText := Format('%d', [ThData^.DbgGetMemInfo.Count]);
+            3: if ThData^.DbgGetMemInfo.Count > 0 then
+                 CellText := Format('%d', [ThData^.DbgGetMemInfoSize]);
           end;
       end;
   end;
@@ -1452,7 +1670,6 @@ begin
             0: CellText := ExtractFileName(FAppName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: CellText := EllapsedToTime(ProcData^.CPUTime);
-            3: CellText := Format('%d', [ProcData^.DbgGetMemInfo.Count]);
           end;
       end;
     ltThread:
@@ -1463,7 +1680,6 @@ begin
             0: CellText := ThData^.ThreadAdvInfo^.AsString;
             1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
             2: CellText := EllapsedToTime(ThData^.CPUTime);
-            3: CellText := Format('%d', [ThData^.DbgGetMemInfo.Count]);
           end;
       end;
   end;
@@ -1682,36 +1898,8 @@ begin
 end;
 
 procedure TDebugerThread.OnUnknownException(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
-var
-  StackItems: TList;
-  StackInfo: TStackEntry;
-  I: Integer;
-  ThData: PThreadData;
 begin
-  _AC.Log(gvDebugInfo.GetExceptionMessage(ExceptionRecord, ThreadId));
-
-  if gvDebuger.ProcessData.State = psActive then
-  begin
-    ThData := gvDebuger.GetThreadData(ThreadId);
-    if Assigned(ThData) and (ThData^.State <> tsFinished) then
-    begin
-      StackItems := TList.Create;
-      try
-        gvDebugInfo.GetCallStackItems(ThreadId,
-          gvDebugInfo.GetExceptionAddress(ExceptionRecord),
-          gvDebugInfo.GetExceptionFrame(ExceptionRecord),
-          StackItems);
-
-        for I := 0 to StackItems.Count - 1 do
-        begin
-          StackInfo := TStackEntry(StackItems[I]);
-          _AC.Log(StackInfo.GetInfo);
-        end;
-      finally
-        FreeList(StackItems);
-      end;
-    end;
-  end;
+  //_AC.Log(gvDebugInfo.GetExceptionMessage(ExceptionRecord, ThreadId));
 end;
 
 procedure TDebugerThread.OnUnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PUnloadDLLDebugInfo);

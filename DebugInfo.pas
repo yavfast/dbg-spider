@@ -538,7 +538,7 @@ Begin
         STATUS_STACK_OVERFLOW                : Result := 'ESTACK_OVERFLOW';
         STATUS_CONTROL_C_EXIT                : Result := 'ECONTROL_C_EXIT';
     else
-        Result := '';
+        Result := Format('$%x', [ExceptionRecord^.ExceptionCode]);
     end;
 End;
 {..............................................................................}
@@ -560,11 +560,12 @@ end;
 {..............................................................................}
 Function TDebugInfo.GetExceptionMessage(ExceptionRecord: PExceptionRecord; const ThreadId: TThreadId): String;
 Begin
-    Result := Format('Exception "%s($%x)" at $%p, TID = $%x', [
-         GetExceptionName(ExceptionRecord),
-         ExceptionRecord^.ExceptionCode,
-         GetExceptionAddress(ExceptionRecord),
-         ThreadId]);
+    Result := '';
+//    Result := Format('Exception "%s($%x)" at $%p, TID = $%x', [
+//         GetExceptionName(ExceptionRecord),
+//         ExceptionRecord^.ExceptionCode,
+//         GetExceptionAddress(ExceptionRecord),
+//         ThreadId]);
 End;
 {..............................................................................}
 

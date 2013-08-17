@@ -2,7 +2,7 @@ unit DebugerTypes;
 
 interface
 
-uses Windows, Classes, SysUtils, JclPeImage, SyncObjs, ClassUtils, Generics.Collections, DbgHookTypes;
+uses Windows, Classes, SysUtils, JclPeImage, SyncObjs, ClassUtils, Generics.Collections, DbgHookTypes, Contnrs;
 
 const
   _SEGMENT_SIZE = 16 * 1024;
@@ -171,10 +171,10 @@ type
     EBP: Pointer;
   end;
 
-  TStackPointList = class
-  public
-    List: array of TStackPoint;
-  end;
+//  TStackPointList = class
+//  public
+//    List: array of TStackPoint;
+//  end;
 
   TMemAction = (maGetMem = 0, maFreeMem);
 
@@ -209,6 +209,21 @@ type
   end;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
+  TStackPointList = Array of TStackPoint;
+
+  TExceptInfo = class
+  public
+    ThreadID: TThreadId;
+    Address: Pointer;
+    Frame: Pointer;
+    ExceptionName: String;
+    Message: String;
+    Stack: TList;
+
+    constructor Create(DebugEvent: PDebugEvent);
+    destructor Destroy; override;
+  end;
+
   TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
 
   PThreadPoint = ^TThreadPoint;
@@ -221,7 +236,7 @@ type
       ptStart: ();
       ptStop: ();
       ptException: (
-        Stack: TStackPointList;
+        ExceptInfo: TExceptInfo;
       );
       ptPerfomance: (
         DeltaTickCPU: UInt64;   // загрузка CPU
@@ -264,17 +279,24 @@ type
     Ellapsed: Int64;        // время выполнения
     ThreadEllapsed: UInt64; // время использования CPU
     CPUTime: UInt64;
+
     DbgPoints: TThreadPointList;
+
     DbgGetMemInfo: TGetMemInfo;
     DbgGetMemInfoSize: Cardinal;
+
+    DbgExceptions: TThreadList;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
 
+    function DbgExceptionsCount: Cardinal;
+    function DbgExceptionsByIdx(const Idx: Cardinal): TExceptInfo;
+
     procedure Clear;
   end;
 
-  TThreadList = TBaseCollectList; //TCollectList<TThreadData>;
+  TDbgThreadList = TBaseCollectList; //TCollectList<TThreadData>;
 
   PProcessPoint = ^TProcessPoint;
   TProcessPoint = packed record
@@ -315,9 +337,13 @@ type
     Ellapsed: Int64;
     CPUTime: UInt64;
     CPUEllapsed: UInt64; // время использования CPU
+
     DbgPoints: TProcessPointList;
+
     DbgGetMemInfo: TGetMemInfo; // Указатели с коллизиями
     DbgGetMemInfoSize: Cardinal;
+
+    DbgExceptions: TThreadList;
 
     CreatedProcessHandle: THandle;
     CreatedThreadHandle: THandle;
@@ -331,7 +357,11 @@ type
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PProcessPoint;
     function CurDbgPointIdx: Cardinal;
+
+    function DbgExceptionsCount: Cardinal;
+
     procedure Clear;
+
     procedure SetPEImage(APEImage: TJclPeImage);
   end;
 
@@ -360,6 +390,7 @@ begin
     FreeAndNil(DbgPoints);
 
   FreeAndNil(DbgGetMemInfo);
+  FreeAndNil(DbgExceptions);
 end;
 
 function TProcessData.CurDbgPointIdx: Cardinal;
@@ -369,6 +400,18 @@ begin
     Result := DbgPoints.Count - 1
   else
     RaiseDebugCoreException();
+end;
+
+function TProcessData.DbgExceptionsCount: Cardinal;
+var
+  L: TList;
+begin
+  L := DbgExceptions.LockList;
+  try
+    Result := Cardinal(L.Count);
+  finally
+    DbgExceptions.UnlockList;
+  end;
 end;
 
 function TProcessData.DbgPointByIdx(const Idx: Cardinal): PProcessPoint;
@@ -425,9 +468,38 @@ begin
 
   //FreeAndNil(DbgMemInfo);
   FreeAndNil(DbgGetMemInfo);
+  FreeAndNil(DbgExceptions);
+
   FreeMemory(Context);
 
   ThreadAdvInfo := Nil;
+end;
+
+function TThreadData.DbgExceptionsByIdx(const Idx: Cardinal): TExceptInfo;
+var
+  L: TList;
+begin
+  Result := nil;
+
+  L := DbgExceptions.LockList;
+  try
+    if (Idx < L.Count) then
+      Result := TExceptInfo(L[Idx]);
+  finally
+    DbgExceptions.UnlockList;
+  end;
+end;
+
+function TThreadData.DbgExceptionsCount: Cardinal;
+var
+  L: TList;
+begin
+  L := DbgExceptions.LockList;
+  try
+    Result := Cardinal(L.Count);
+  finally
+    DbgExceptions.UnlockList;
+  end;
 end;
 
 function TThreadData.DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -448,7 +520,7 @@ end;
 procedure TThreadPoint.Clear;
 begin
   if PointType = ptException then
-    FreeAndNil(Stack);
+    FreeAndNil(ExceptInfo);
 end;
 
 { TThreadAdvInfo }
@@ -596,6 +668,32 @@ begin
     if not (gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) then
       Result := gvDebugInfo.GetClassName(Ptr);
   end;
+end;
+
+{ TExceptInfo }
+
+constructor TExceptInfo.Create(DebugEvent: PDebugEvent);
+var
+  ER: PExceptionRecord;
+begin
+  inherited Create;
+
+  ThreadID := DebugEvent^.dwThreadId;
+  ER := @DebugEvent^.Exception.ExceptionRecord;
+  Address := gvDebugInfo.GetExceptionAddress(ER);
+  Frame := gvDebugInfo.GetExceptionFrame(ER);
+  ExceptionName := gvDebugInfo.GetExceptionName(ER);
+  Message := gvDebugInfo.GetExceptionMessage(ER, ThreadID);
+
+  Stack := TObjectList.Create;
+  gvDebugInfo.GetCallStackItems(ThreadID, Address, Frame, Stack);
+end;
+
+destructor TExceptInfo.Destroy;
+begin
+  FreeAndNil(Stack);
+
+  inherited;
 end;
 
 end.

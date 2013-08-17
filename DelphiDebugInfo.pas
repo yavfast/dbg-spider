@@ -1159,6 +1159,7 @@ Var
     ExceptMsgPtr   : TPointer;
     ExceptMsg      : String;
 Begin
+    Result := '';
     If ExceptionRecord^.ExceptionCode = cDelphiException Then
     Begin
         ExceptTypeAddr := Pointer(ExceptionRecord^.ExceptionInformation[1]);
@@ -1166,11 +1167,10 @@ Begin
         //ExceptMsgPtr   := ReadAddressValue(Debuger, TPointer(@Exception(ExceptTypeAddr).Message));
         //ExceptMsg      := String(ReadAnsiStringValue(Debuger, ExceptMsgPtr, False));
 
-        ExceptMsg := '';
         if Debuger.ReadData(@Exception(ExceptTypeAddr).Message, @ExceptMsgPtr, SizeOf(Pointer)) then
-            ExceptMsg := Debuger.ReadStringW(ExceptMsgPtr);
+            Result := Debuger.ReadStringW(ExceptMsgPtr);
 
-        Result := Format('Exception [%s] at $%p: %s', [GetExceptionName(ExceptionRecord), GetExceptionAddress(ExceptionRecord), ExceptMsg]);
+        //Result := Format('Exception [%s] at $%p: %s', [GetExceptionName(ExceptionRecord), GetExceptionAddress(ExceptionRecord), ExceptMsg]);
     End
     Else
         Result := Inherited GetExceptionMessage(ExceptionRecord, ThreadId);
@@ -1365,7 +1365,8 @@ var
 
   function GetMemoryManagerVar: Pointer;
   const
-    _MemoryManagerStr: AnsiString = '@System@MemoryManager'; //'@@MemoryManager'; //@System@MemoryManager for XE4
+    _MemoryManagerStrD10: AnsiString = '@@MemoryManager';
+    _MemoryManagerStrXE: AnsiString = '@System@MemoryManager';
   Var
     _MemoryManager: TVarInfo;
   begin
@@ -1373,7 +1374,10 @@ var
 
     if USystem = nil then Exit;
 
-    _MemoryManager := USystem.FindVarByName(_MemoryManagerStr);
+    _MemoryManager := USystem.FindVarByName(_MemoryManagerStrD10);
+    if _MemoryManager = nil then
+      _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE);
+
     If Assigned(_MemoryManager) Then
       //Debuger.ReadData(Pointer(_MemoryManager.Offset), @Result, SizeOf(Pointer));
       Result := Pointer(_MemoryManager.Offset);

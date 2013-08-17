@@ -121,8 +121,9 @@ begin
       (Level < 0) or (
         (BaseOfStack < TJclAddr(StackFrame)) and
         (TJclAddr(StackFrame) < TopOfStack) and
-        IsValidAddr(StackFrame) {and
-        IsValidCodeAddr(Pointer(StackFrame^.CallerAddr))}
+        IsValidAddr(StackFrame)
+        // TODO: ѕо какой-то причине эта проверка сильно тупит
+        // and IsValidCodeAddr(Pointer(StackFrame^.CallerAddr))
         )
       )
     do begin

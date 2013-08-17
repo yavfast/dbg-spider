@@ -93,7 +93,7 @@ object MainForm: TMainForm
     Top = 73
     Width = 1329
     Height = 464
-    ActivePage = tsMemInfo
+    ActivePage = tsThreads1
     Align = alClient
     TabOrder = 1
     object tsLog: TTabSheet
@@ -230,7 +230,7 @@ object MainForm: TMainForm
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 491
+        Width = 447
         Height = 436
         Align = alLeft
         BorderStyle = bsNone
@@ -286,20 +286,12 @@ object MainForm: TMainForm
             Position = 2
             Width = 70
             WideText = 'CPU time'
-          end
-          item
-            Alignment = taRightJustify
-            CaptionAlignment = taCenter
-            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-            Position = 3
-            Width = 45
-            WideText = 'Mem'
           end>
       end
       object vdtTimeLine: TVirtualDrawTree
-        Left = 491
+        Left = 447
         Top = 0
-        Width = 830
+        Width = 874
         Height = 436
         Align = alClient
         BorderStyle = bsNone
@@ -480,6 +472,147 @@ object MainForm: TMainForm
           TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
           TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
           OnGetText = vstMemStackGetText
+          OnGetNodeDataSize = vstThreadsGetNodeDataSize
+          Columns = <
+            item
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+              Position = 0
+              Width = 1000
+              WideText = 'Call Stack'
+            end>
+        end
+      end
+    end
+    object tsExceptions: TTabSheet
+      Caption = 'Exceptions'
+      ImageIndex = 4
+      object vstExceptionThreads: TVirtualStringTree
+        Left = 0
+        Top = 0
+        Width = 396
+        Height = 436
+        Align = alLeft
+        Header.AutoSizeIndex = 0
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'Tahoma'
+        Header.Font.Style = []
+        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        Header.Style = hsFlatButtons
+        ScrollBarOptions.AlwaysVisible = True
+        TabOrder = 0
+        TreeOptions.AutoOptions = [toAutoDropExpand, toAutoTristateTracking, toAutoDeleteMovedNodes]
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        OnColumnResize = vstThreadsColumnResize
+        OnDrawText = vstThreadsDrawText
+        OnFocusChanged = vstExceptionThreadsFocusChanged
+        OnGetText = vstExceptionThreadsGetText
+        OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        Columns = <
+          item
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 0
+            Width = 250
+            WideText = 'Thread name'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 1
+            Width = 75
+            WideText = 'ID'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 2
+            WideText = 'Count'
+          end>
+      end
+      object pnl2: TPanel
+        Left = 396
+        Top = 0
+        Width = 925
+        Height = 436
+        Align = alClient
+        BevelOuter = bvNone
+        TabOrder = 1
+        object vstExceptionList: TVirtualStringTree
+          Left = 0
+          Top = 0
+          Width = 511
+          Height = 436
+          Align = alLeft
+          Header.AutoSizeIndex = 0
+          Header.Font.Charset = DEFAULT_CHARSET
+          Header.Font.Color = clWindowText
+          Header.Font.Height = -11
+          Header.Font.Name = 'Tahoma'
+          Header.Font.Style = []
+          Header.Options = [hoColumnResize, hoDrag, hoVisible]
+          Header.SortDirection = sdDescending
+          Header.Style = hsFlatButtons
+          ScrollBarOptions.AlwaysVisible = True
+          TabOrder = 0
+          TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
+          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+          TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+          TreeOptions.SelectionOptions = [toFullRowSelect]
+          OnColumnResize = vstThreadsColumnResize
+          OnFocusChanged = vstExceptionListFocusChanged
+          OnGetText = vstExceptionListGetText
+          OnGetNodeDataSize = vstThreadsGetNodeDataSize
+          Columns = <
+            item
+              Alignment = taRightJustify
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 0
+              Width = 70
+              WideText = 'Pointer'
+            end
+            item
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 1
+              Width = 120
+              WideText = 'Exception type'
+            end
+            item
+              CaptionAlignment = taCenter
+              DefaultSortDirection = sdDescending
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+              Position = 2
+              Width = 300
+              WideText = 'Message'
+            end>
+        end
+        object vstExceptionCallStack: TVirtualStringTree
+          Left = 511
+          Top = 0
+          Width = 414
+          Height = 436
+          Align = alClient
+          Header.AutoSizeIndex = 0
+          Header.Font.Charset = DEFAULT_CHARSET
+          Header.Font.Color = clWindowText
+          Header.Font.Height = -11
+          Header.Font.Name = 'Tahoma'
+          Header.Font.Style = []
+          Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+          Header.Style = hsFlatButtons
+          ScrollBarOptions.AlwaysVisible = True
+          TabOrder = 1
+          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+          TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+          OnGetText = vstExceptionCallStackGetText
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
