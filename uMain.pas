@@ -8,7 +8,10 @@ uses
   Grids, JvExGrids, JvGrids, JvgStringGrid, VirtualTrees, JvComponentBase,
   JvNavigationPane, JvExExtCtrls, JvExtComponent, JvSplit,
   Debuger, DebugerTypes, DelphiDebugInfo, JvExComCtrls, JvStatusBar, JvExControls,
-  JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor, JvSplitter;
+  JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor, JvSplitter,
+  PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
+  RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
+  RibbonActnMenus, ImgList, JvImageList;
 
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
@@ -36,17 +39,11 @@ type
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
 
   TMainForm = class(TForm)
-    pActions: TPanel;
-    BitBtn1: TBitBtn;
-    eAppPath: TMaskEdit;
     AL: TActionList;
     acAppOpen: TAction;
     acRun: TAction;
     acStop: TAction;
-    BitBtn2: TBitBtn;
-    BitBtn3: TBitBtn;
     OD: TFileOpenDialog;
-    Button1: TButton;
     acDebugInfo: TAction;
     PageControl1: TPageControl;
     tsLog: TTabSheet;
@@ -66,14 +63,11 @@ type
     mVars: TMemo;
     mFunctions: TMemo;
     tmrThreadsUpdate: TTimer;
-    btnAttach: TBitBtn;
     tsThreads1: TTabSheet;
     vstThreads: TVirtualStringTree;
-    sm1: TJvNavPaneStyleManager;
     vdtTimeLine: TVirtualDrawTree;
     acAttachProcess: TAction;
     sbInfo: TJvStatusBar;
-    cbCPUTimeLine: TCheckBox;
     tsMemInfo: TTabSheet;
     vstMemInfoThreads: TVirtualStringTree;
     pnl1: TPanel;
@@ -84,6 +78,30 @@ type
     pnl2: TPanel;
     vstExceptionList: TVirtualStringTree;
     vstExceptionCallStack: TVirtualStringTree;
+    amMain: TActionManager;
+    rbnMain: TRibbon;
+    rbpMain: TRibbonPage;
+    rbambMain: TRibbonApplicationMenuBar;
+    rbgProject: TRibbonGroup;
+    rbqtbMain: TRibbonQuickAccessToolbar;
+    acNewProject: TAction;
+    acOpenProject: TAction;
+    acCloseProject: TAction;
+    acPause: TAction;
+    acOptions: TAction;
+    acExit: TAction;
+    acAbout: TAction;
+    imlMain: TJvImageList;
+    imlMainSmall: TJvImageList;
+    rbgApplication: TRibbonGroup;
+    rbngrpDebug: TRibbonGroup;
+    acSave: TAction;
+    acSaveCopy: TAction;
+    rbngrpTimeLineSettings: TRibbonGroup;
+    acCPUTimeLine: TAction;
+    acRealTimeLine: TAction;
+    acRunStop: TAction;
+
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
 
@@ -130,9 +148,20 @@ type
 
     procedure vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
+    procedure acOptionsExecute(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure acExitExecute(Sender: TObject);
+    procedure acCPUTimeLineExecute(Sender: TObject);
+    procedure acRealTimeLineExecute(Sender: TObject);
+
   private
     FPID: DWORD;
     FAppName: String;
+
+    FCloseApp: Boolean;
+    procedure WMClose(var Message: TWMClose); message WM_CLOSE;
+
+    procedure SetProjectName(const Name: String);
 
     function GetLineTimeOffset: Cardinal;
 
@@ -236,7 +265,7 @@ var
 procedure TMainForm.acAppOpenExecute(Sender: TObject);
 begin
   if OD.Execute then
-    eAppPath.Text := OD.FileName;
+    SetProjectName(OD.FileName);
 end;
 
 procedure TMainForm.acAttachProcessExecute(Sender: TObject);
@@ -248,18 +277,37 @@ begin
     if F.ShowModal = mrOk then
     begin
       FPID := TProcessId(F.GetSelProcessID);
-      eAppPath.Text := F.GetSelProcessName;
+      SetProjectName(F.GetSelProcessName);
     end;
   finally
     F.Release;
   end;
 end;
 
+procedure TMainForm.acCPUTimeLineExecute(Sender: TObject);
+begin
+  UpdateTrees;
+end;
+
 procedure TMainForm.acDebugInfoExecute(Sender: TObject);
 begin
-  FAppName := eAppPath.Text;
-
   _AC.RunDebug(FAppName, [doDebugInfo], FPID);
+end;
+
+procedure TMainForm.acExitExecute(Sender: TObject);
+begin
+  FCloseApp := True;
+  Close;
+end;
+
+procedure TMainForm.acOptionsExecute(Sender: TObject);
+begin
+  //
+end;
+
+procedure TMainForm.acRealTimeLineExecute(Sender: TObject);
+begin
+  UpdateTrees;
 end;
 
 procedure TMainForm.acRunExecute(Sender: TObject);
@@ -268,8 +316,6 @@ begin
 
   mLog.Clear;
   ClearTrees;
-
-  FAppName := eAppPath.Text;
 
   _AC.RunDebug(FAppName, [doDebugInfo, doRun, doProfiler], FPID);
 end;
@@ -504,16 +550,27 @@ begin
 
   case Action of
     acRunEnabled:
+    begin
       acRun.Enabled := Args[0];
+    end;
     acStopEnabled:
     begin
       acStop.Enabled := Args[0];
+
       tmrThreadsUpdate.Enabled := acStop.Enabled;
     end;
     acAddThread:
       AddThread(Args[0]);
     acCreateProcess:
       AddProcess(Args[0]);
+  end;
+
+  case Action of
+    acRunEnabled, acStopEnabled:
+      if acStop.Enabled then
+        acRunStop.Assign(acStop)
+      else
+        acRunStop.Assign(acRun);
   end;
 
   UpdateStatusInfo;
@@ -906,7 +963,7 @@ begin
 
     T := '';
 
-    if cbCPUTimeLine.Checked then
+    if acCPUTimeLine.Checked then
     begin
       if Assigned(gvDebuger) then
       begin
@@ -933,8 +990,16 @@ begin
   end;
 end;
 
+procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  CanClose := FCloseApp;
+end;
+
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
+  FAppName := '';
+  FCloseApp := False;
+
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
 
   LoadLibrary('DbgHook32.dll'); // Для дебага этой самой DLL
@@ -942,6 +1007,8 @@ end;
 
 procedure TMainForm.FormShow(Sender: TObject);
 begin
+  acRunStop.Assign(acRun);
+
   vstThreadsColumnResize(vstThreads.Header, 0);
   vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
 end;
@@ -958,7 +1025,7 @@ begin
   begin
     PW := vdtTimeLine.Header.Columns[0].Width - vdtTimeLine.ClientWidth;
     F := (-vdtTimeLine.OffsetX) / PW;
-    if cbCPUTimeLine.Checked then
+    if acCPUTimeLine.Checked then
       Result := (Trunc(gvDebugInfo.Debuger.ProcessData.CurDbgPointIdx * F) div 100) * 100
     else
       Result := Trunc((gvDebugInfo.Debuger.ProcessData.Ellapsed_MSec div 1000) * F);
@@ -1079,6 +1146,14 @@ begin
   mLog.Lines.Add(FormatDateTime('hh:nn:ss.zzz', Now) + ': ' + Msg);
 end;
 
+procedure TMainForm.SetProjectName(const Name: String);
+begin
+  FAppName := Name;
+  rbnMain.DocumentName := Name;
+
+  DoAction(acRunEnabled, [True]);
+end;
+
 procedure TMainForm.SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
 var
   Data: PLinkData;
@@ -1182,14 +1257,14 @@ begin
   case LinkData^.LinkType of
     ltProcess:
     begin
-      if cbCPUTimeLine.Checked then
+      if acCPUTimeLine.Checked then
         DrawProcessCPUTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ProcessData, GetLineTimeOffset)
       else
         DrawProcessTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ProcessData, GetLineTimeOffset);
     end;
     ltThread:
     begin
-      if cbCPUTimeLine.Checked then
+      if acCPUTimeLine.Checked then
         DrawThreadCPUTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ThreadData, GetLineTimeOffset)
       else
         DrawThreadTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ThreadData, GetLineTimeOffset);
@@ -1689,6 +1764,12 @@ procedure TMainForm.vstThreadsScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: I
 begin
   if DeltaY <> 0 then
     vdtTimeLine.OffsetY := vstThreads.OffsetY;
+end;
+
+procedure TMainForm.WMClose(var Message: TWMClose);
+begin
+  FCloseApp := True;
+  inherited;
 end;
 
 { TDebugerThread }
