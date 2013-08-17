@@ -24,6 +24,7 @@ begin
 
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
+  Application.Title := 'Spider';
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.
