@@ -9,7 +9,7 @@ type
   TDebuger = class
   private
     FProcessData: TProcessData;          // Служебная информация об отлаживаемом процессе
-    FThreadList: TThreadList;            // Данные о потоках отлаживаемого процесса
+    FThreadList: TDbgThreadList;            // Данные о потоках отлаживаемого процесса
     FThreadAdvInfoList: TThreadAdvInfoList; // Дополнительная информация о потоках
 
     FSetEntryPointBreakPoint: Boolean;   // Флаг указывающий отладчику, необходимо ли ставить ВР на ЕР
@@ -92,6 +92,8 @@ type
 
     // обработчики отладочных событий второй очереди
     procedure CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
+    procedure CallUnhandledBreakPointEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
+
     procedure ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
     procedure ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
     procedure ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
@@ -131,7 +133,7 @@ type
 
     function PerfomancePauseDebug: Boolean;
 
-    function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TPointType): Boolean;
+    function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TPointType; DebugEvent: PDebugEvent = nil): Boolean;
     function AddProcessPointInfo(const PointType: TPointType): Boolean;
 
     procedure ClearDbgInfo;
@@ -183,7 +185,7 @@ type
     Function IsValidCodeAddr(Const Addr: Pointer): Boolean;
     Function IsValidProcessCodeAddr(Const Addr: Pointer): Boolean;
 
-    procedure GetCallStack(ThData: PThreadData; Stack: TStackPointList);
+    procedure GetCallStack(ThData: PThreadData; var Stack: TStackPointList);
 
     function GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
     function CurThreadId: TThreadId;
@@ -405,7 +407,7 @@ begin
   end;
 end;
 
-function TDebuger.AddThreadPointInfo(ThreadData: PThreadData; const PointType: TPointType): Boolean;
+function TDebuger.AddThreadPointInfo(ThreadData: PThreadData; const PointType: TPointType; DebugEvent: PDebugEvent = nil): Boolean;
 var
   Cur: Int64;
   Prev: UInt64;
@@ -477,13 +479,10 @@ begin
           end;
         ptException:
           begin
-            if UpdateThreadContext(ThreadData) then
-            begin
-              ThPoint^.Stack := TStackPointList.Create;
-              GetCallStack(ThreadData, ThPoint^.Stack);
-            end
-            else
-              ThPoint^.Stack := Nil;
+            ThPoint^.ExceptInfo := TExceptInfo.Create(DebugEvent);
+            ThreadData^.DbgExceptions.Add(ThPoint^.ExceptInfo);
+
+            FProcessData.DbgExceptions.Add(ThPoint^.ExceptInfo);
           end;
         ptPerfomance:
           begin
@@ -603,6 +602,7 @@ begin
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
     //Result^.DbgMemInfo := TCollectList<TMemInfo>.Create;
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
+    Result^.DbgExceptions := TThreadList.Create;
 
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(Result, ptStart);
@@ -657,12 +657,20 @@ begin
   Result := FBreakpointList[Index];
 end;
 
+procedure TDebuger.CallUnhandledBreakPointEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
+begin
+  ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
+
+  if Assigned(FExceptioEvents[Code]) then
+    FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
+end;
+
 procedure TDebuger.CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 begin
   ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
 
   if AddProcessPointInfo(ptException) then
-    AddThreadPointInfo(CurThreadData, ptException);
+    AddThreadPointInfo(CurThreadData, ptException, DebugEvent);
 
   if Assigned(FExceptioEvents[Code]) then
     FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
@@ -820,6 +828,8 @@ begin
   QueryPerformanceCounter(FProcessData.Started);
   FProcessData.DbgPoints := TCollectList<TProcessPoint>.Create;
   FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1000);
+
+  FProcessData.DbgExceptions := TThreadList.Create;
 
   // Метка старта процесса
   AddProcessPointInfo(ptStart);
@@ -1055,20 +1065,20 @@ begin
   Result := -1;
 end;
 
-procedure TDebuger.GetCallStack(ThData: PThreadData; Stack: TStackPointList);
+procedure TDebuger.GetCallStack(ThData: PThreadData; var Stack: TStackPointList);
 
     Function AddStackEntry(Const Addr, EBP: Pointer) : PStackPoint;
     Begin
         Result := Nil;
 
-        if Length(Stack.List) > 0 then
-          if @Stack.List[High(Stack.List)].EBP = EBP then
+        if Length(Stack) > 0 then
+          if Stack[High(Stack)].EBP = EBP then
               Exit;
 
         If not IsBadCodePtr(Addr) Then
         Begin
-            SetLength(Stack.List, Length(Stack.List) + 1);
-            Result := @Stack.List[High(Stack.List)];
+            SetLength(Stack, Length(Stack) + 1);
+            Result := @Stack[High(Stack)];
 
             Result.EIP := Addr;
             Result.EBP := EBP;
@@ -1314,17 +1324,31 @@ end;
 
 function TDebuger.IsValidAddr(const Addr: Pointer): Boolean;
 Var
-  Buf: TMemoryBasicInformation;
+  mbi: PMemoryBasicInformation;
 Begin
-  Result := (VirtualQuery(Pointer(Addr), Buf, SizeOf(Buf)) <> 0);
+  Result := False;
+  mbi := GetMemory(SizeOf(TMemoryBasicInformation));
+  try
+    Result := (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0);
+  finally
+    FreeMemory(mbi);
+  end;
 end;
 
 function TDebuger.IsValidCodeAddr(const Addr: Pointer): Boolean;
+Const
+  _PAGE_CODE: Cardinal = PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY;
 Var
-  mbi: TMemoryBasicInformation;
+  mbi: PMemoryBasicInformation;
 Begin
-  Result := (VirtualQuery(Pointer(Addr), mbi, SizeOf(mbi)) <> 0) And
-    ((mbi.Protect And (PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY)) <> 0);
+  Result := False;
+  mbi := GetMemory(SizeOf(TMemoryBasicInformation));
+  try
+    if (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0) then
+      Result := ((mbi^.Protect And _PAGE_CODE) <> 0);
+  finally
+    FreeMemory(mbi);
+  end;
 end;
 
 function TDebuger.IsValidProcessCodeAddr(const Addr: Pointer): Boolean;
@@ -1438,7 +1462,7 @@ begin
     if Assigned(FBreakPoint) then
       FBreakPoint(Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord, BreakPointIndex, ReleaseBP)
     else
-      CallUnhandledExceptionEvents(ecBreakpoint, DebugEvent);
+      CallUnhandledBreakPointEvents(ecBreakpoint, DebugEvent);
 
     ToggleInt3Breakpoint(BreakPointIndex, False);
     SetSingleStepMode(DebugEvent^.dwThreadId, True);
@@ -1448,7 +1472,7 @@ begin
       FRestoreBPIndex := BreakPointIndex;
   end
   else
-    CallUnhandledExceptionEvents(ecBreakpoint, DebugEvent);
+    CallUnhandledBreakPointEvents(ecBreakpoint, DebugEvent);
 end;
 
 procedure TDebuger.ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
