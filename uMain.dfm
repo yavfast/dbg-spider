@@ -23,7 +23,7 @@ object MainForm: TMainForm
     Top = 143
     Width = 1329
     Height = 596
-    ActivePage = tsThreads1
+    ActivePage = tsDebugInfo
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -1121,8 +1121,7 @@ object MainForm: TMainForm
       000000000003C000000000000003FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}
     ApplicationMenu.IconSize = isLarge
     ApplicationMenu.Menu = rbambMain
-    Caption = 'Spider'
-    DocumentName = 'Empty'
+    Caption = 'Empty'
     QuickAccessToolbar.ActionBar = rbqtbMain
     ShowHelpButton = False
     Tabs = <
@@ -1130,6 +1129,7 @@ object MainForm: TMainForm
         Caption = 'Menu'
         Page = rbpMain
       end>
+    UseCustomFrame = False
     DesignSize = (
       1329
       143)
@@ -1201,8 +1201,8 @@ object MainForm: TMainForm
   end
   object AL: TActionList
     Images = imlMainSmall
-    Left = 176
-    Top = 480
+    Left = 912
+    Top = 88
     object acAppOpen: TAction
       Category = 'Project'
       Caption = 'Open application'
@@ -1307,15 +1307,15 @@ object MainForm: TMainForm
     FavoriteLinks = <>
     FileTypes = <>
     Options = []
-    Left = 64
-    Top = 480
+    Left = 808
+    Top = 88
   end
   object tmrThreadsUpdate: TTimer
     Enabled = False
     Interval = 500
     OnTimer = tmrThreadsUpdateTimer
-    Left = 56
-    Top = 296
+    Left = 808
+    Top = 32
   end
   object amMain: TActionManager
     ActionBars = <
@@ -1347,6 +1347,7 @@ object MainForm: TMainForm
               end
               item
                 Action = acCloseProject
+                Caption = '&Close'
                 ImageIndex = 8
               end
               item
@@ -1420,6 +1421,7 @@ object MainForm: TMainForm
           end
           item
             Action = acCloseProject
+            Caption = '&Close'
             ImageIndex = 8
           end
           item
@@ -1468,6 +1470,7 @@ object MainForm: TMainForm
         Items = <
           item
             Action = acRunStop
+            Caption = '&Run'
             ImageIndex = 4
             CommandProperties.ButtonSize = bsLarge
           end
@@ -1512,8 +1515,8 @@ object MainForm: TMainForm
         Caption = 'AL'
       end>
     Images = imlMainSmall
-    Left = 240
-    Top = 480
+    Left = 976
+    Top = 88
     StyleName = 'Ribbon - Silver'
   end
   object imlMain: TJvImageList
@@ -1524,8 +1527,8 @@ object MainForm: TMainForm
     Items = <>
     Height = 32
     Width = 32
-    Left = 176
-    Top = 320
+    Left = 912
+    Top = 32
     Bitmap = {
       494C01010E001100040020002000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000800000008000000001002000000000000000
@@ -3652,8 +3655,8 @@ object MainForm: TMainForm
     PixelFormat = pf32bit
     TransparentMode = tmAuto
     Items = <>
-    Left = 240
-    Top = 320
+    Left = 976
+    Top = 32
     Bitmap = {
       494C01010E001100040010001000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000004000000001002000000000000040
@@ -4189,5 +4192,12 @@ object MainForm: TMainForm
       00000000C003C00100000000C003C001000000008001C00100000000C003C003
       00000000EC37C00700010000FC3FC00F00000000000000000000000000000000
       000000000000}
+  end
+  object scm1: TStandardColorMap
+    HighlightColor = clBtnHighlight
+    UnusedColor = 13882323
+    MenuColor = clMenu
+    Left = 736
+    Top = 88
   end
 end
