@@ -11,7 +11,7 @@ uses
   JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor, JvSplitter,
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
-  RibbonActnMenus, ImgList, JvImageList;
+  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps;
 
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
@@ -101,6 +101,7 @@ type
     acCPUTimeLine: TAction;
     acRealTimeLine: TAction;
     acRunStop: TAction;
+    scm1: TStandardColorMap;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -165,7 +166,9 @@ type
 
     function GetLineTimeOffset: Cardinal;
 
+    procedure ClearProject;
     procedure ClearTrees;
+
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
 
@@ -528,6 +531,11 @@ end;
 procedure TMainForm.cbCPUTimeLineClick(Sender: TObject);
 begin
   UpdateTrees;
+end;
+
+procedure TMainForm.ClearProject;
+begin
+  ClearTrees;
 end;
 
 procedure TMainForm.ClearTrees;
@@ -1148,8 +1156,10 @@ end;
 
 procedure TMainForm.SetProjectName(const Name: String);
 begin
+  ClearProject;
+
   FAppName := Name;
-  rbnMain.DocumentName := Name;
+  rbnMain.Caption := Name;
 
   DoAction(acRunEnabled, [True]);
 end;
