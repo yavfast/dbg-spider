@@ -15,13 +15,13 @@ procedure FreeList(var L: TList);
 
 function IncPointer(Ptr: Pointer; Offset: Integer): Pointer; inline;
 
-function FileTimeToDateTime(var FileTime: TFileTime): TDateTime;
-function FileTimeToInt64(var FileTime: TFileTime): UInt64;
+function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
+function FileTimeToInt64(const FileTime: TFileTime): UInt64;
 function Int64ToFileTime(const Value: UInt64): TFileTime;
 
 implementation
 
-function FileTimeToDateTime(var FileTime: TFileTime): TDateTime;
+function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
 var
   ModifiedTime: TFileTime;
   SystemTime: TSystemTime;
@@ -35,7 +35,7 @@ begin
       Result := SystemTimeToDateTime(SystemTime);
 end;
 
-function FileTimeToInt64(var FileTime: TFileTime): UInt64;
+function FileTimeToInt64(const FileTime: TFileTime): UInt64;
 begin
   Result := UInt64(UInt64(FileTime.dwHighDateTime) shl 32) or FileTime.dwLowDateTime;
 end;

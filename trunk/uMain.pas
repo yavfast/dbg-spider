@@ -196,7 +196,7 @@ type
     function FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
   public
     procedure Log(const Msg: String);
-    procedure DoAction(Action: TacAction; Args: array of Variant);
+    procedure DoAction(Action: TacAction; const Args: array of Variant);
     procedure ViewDebugInfo(DebugInfo: TDebugInfo);
   end;
 
@@ -221,9 +221,9 @@ type
     class procedure PauseDebug; static;
 
     class procedure Log(const Msg: String); overload; static;
-    class procedure Log(const Msg: String; Args: array of const); overload; static;
+    class procedure Log(const Msg: String; const Args: array of const); overload; static;
 
-    class procedure DoAction(const Action: TacAction; Args: array of Variant); static;
+    class procedure DoAction(const Action: TacAction; const Args: array of Variant); static;
     class procedure ViewDebugInfo(DebugInfo: TDebugInfo); static;
   end;
 
@@ -552,7 +552,7 @@ begin
   vstExceptionCallStack.Clear;
 end;
 
-procedure TMainForm.DoAction(Action: TacAction; Args: array of Variant);
+procedure TMainForm.DoAction(Action: TacAction; const Args: array of Variant);
 begin
   if not Visible then Exit;
 
@@ -2017,7 +2017,7 @@ begin
     );
 end;
 
-class procedure TActionController.DoAction(const Action: TacAction; Args: array of Variant);
+class procedure TActionController.DoAction(const Action: TacAction; const Args: array of Variant);
 var
   _Action: TacAction;
   _Args: array of Variant;
@@ -2040,7 +2040,7 @@ begin
   end;
 end;
 
-class procedure TActionController.Log(const Msg: String; Args: array of const);
+class procedure TActionController.Log(const Msg: String; const Args: array of const);
 begin
   Log(Format(Msg, Args));
 end;

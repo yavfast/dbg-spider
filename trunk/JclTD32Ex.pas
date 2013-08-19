@@ -1365,57 +1365,57 @@ type
     FSymbolTypes: TList;
     FValidData: Boolean;
     FIsVarTypesExist: Boolean;
-    function GetName(Idx: Integer): AnsiString;
+    function GetName(const Idx: Integer): AnsiString;
     function GetNameCount: Integer;
-    function GetSymbol(Idx: Integer): TJclTD32SymbolInfo;
+    function GetSymbol(const Idx: Integer): TJclTD32SymbolInfo;
     function GetSymbolCount: Integer;
-    function GetSymbolType(Idx: Integer): TJclSymbolTypeInfo;
+    function GetSymbolType(const Idx: Integer): TJclSymbolTypeInfo;
     function GetSymbolTypeCount: Integer;
-    function GetProcSymbol(Idx: Integer): TJclTD32ProcSymbolInfo;
+    function GetProcSymbol(const Idx: Integer): TJclTD32ProcSymbolInfo;
     function GetProcSymbolCount: Integer;
-    function GetModule(Idx: Integer): TJclTD32ModuleInfo;
+    function GetModule(const Idx: Integer): TJclTD32ModuleInfo;
     function GetModuleCount: Integer;
-    function GetSourceModule(Idx: Integer): TJclTD32SourceModuleInfo;
+    function GetSourceModule(const Idx: Integer): TJclTD32SourceModuleInfo;
     function GetSourceModuleCount: Integer;
     function GetIndexOfName(Const Name: AnsiString): Integer;
   protected
     procedure Analyse;
-    procedure AnalyseNames(const pSubsection: Pointer; const Size: DWORD); virtual;
-    procedure AnalyseGlobalTypes(const pTypes: Pointer; const Size: DWORD); virtual;
-    procedure AnalyseAlignSymbols(pSymbols: PSymbolInfos; const Size: DWORD; ModuleIndex: Integer); virtual;
-    procedure AnalyseModules(pModInfo: PModuleInfo; const Size: DWORD); virtual;
-    procedure AnalyseSourceModules(pSrcModInfo: PSourceModuleInfo; const Size: DWORD; ModuleIndex: Integer); virtual;
-    procedure AnalyseUnknownSubSection(const pSubsection: Pointer; const Size: DWORD); virtual;
-    procedure AnalyzeUses(pSymbols: PSymbolInfo; Module: TJclTD32ModuleInfo); virtual;
-    function LfaToVa(Lfa: DWORD): Pointer;
-    function CreateTypeInfo(Kind: TJclSymbolTypeKind; Size: DWORD = 0; NameIndex: DWORD = 0): TJclSymbolTypeInfo; virtual;
-    function CreatePrimitiveTypeInfo(Idx: DWORD): TJclSymbolTypeInfo; virtual;
-    function CreateArgListTypeInfo(pInfo: PSymbolTypeInfo): TJclSymbolTypeInfo; virtual;
-    function CreateFieldListTypeInfo(pInfo: PSymbolTypeInfo): TJclSymbolTypeInfo; virtual;
-    procedure FixVariantTypes; virtual;
+    procedure AnalyseNames(const pSubsection: Pointer; const Size: DWORD); //virtual;
+    procedure AnalyseGlobalTypes(const pTypes: Pointer; const Size: DWORD); //virtual;
+    procedure AnalyseAlignSymbols(pSymbols: PSymbolInfos; const Size: DWORD; ModuleIndex: Integer); //virtual;
+    procedure AnalyseModules(pModInfo: PModuleInfo; const Size: DWORD); //virtual;
+    procedure AnalyseSourceModules(pSrcModInfo: PSourceModuleInfo; const Size: DWORD; ModuleIndex: Integer); //virtual;
+    procedure AnalyseUnknownSubSection(const pSubsection: Pointer; const Size: DWORD); //virtual;
+    procedure AnalyzeUses(pSymbols: PSymbolInfo; Module: TJclTD32ModuleInfo); //virtual;
+    function LfaToVa(const Lfa: DWORD): Pointer;
+    function CreateTypeInfo(const Kind: TJclSymbolTypeKind; const Size: DWORD = 0; const NameIndex: DWORD = 0): TJclSymbolTypeInfo; //virtual;
+    function CreatePrimitiveTypeInfo(const Idx: DWORD): TJclSymbolTypeInfo; //virtual;
+    function CreateArgListTypeInfo(pInfo: PSymbolTypeInfo): TJclSymbolTypeInfo; //virtual;
+    function CreateFieldListTypeInfo(pInfo: PSymbolTypeInfo): TJclSymbolTypeInfo; //virtual;
+    procedure FixVariantTypes; //virtual;
   public
     constructor Create(const ATD32Data: TCustomMemoryStream); // Data mustn't be freed before the class is destroyed
     destructor Destroy; override;
     function FindModule(const AAddr: DWORD; var AMod: TJclTD32ModuleInfo): Boolean; overload;
-    function FindModule(const Section: Word; Offset: DWORD): TJclTD32ModuleInfo; overload;
-    function ModuleByNameIndex(NameIndex: Cardinal): TJclTD32ModuleInfo; virtual;
+    function FindModule(const Section: Word; const Offset: DWORD): TJclTD32ModuleInfo; overload;
+    function ModuleByNameIndex(const NameIndex: Cardinal): TJclTD32ModuleInfo; //virtual;
     function FindSourceModule(const AAddr: DWORD; var ASrcMod: TJclTD32SourceModuleInfo): Boolean;
     function FindProc(const AAddr: DWORD; var AProc: TJclTD32ProcSymbolInfo): Boolean;
     class function IsTD32Sign(const Sign: TJclTD32FileSignature): Boolean;
     class function IsTD32DebugInfoValid(const DebugData: Pointer; const DebugDataSize: LongWord): Boolean;
     property Data: TCustomMemoryStream read FData;
-    property Names[Idx: Integer]: AnsiString read GetName;
+    property Names[const Idx: Integer]: AnsiString read GetName;
     property NameCount: Integer read GetNameCount;
     property IndexOfName[Const Name: AnsiString]: Integer read GetIndexOfName;
-    property Symbols[Idx: Integer]: TJclTD32SymbolInfo read GetSymbol;
+    property Symbols[const Idx: Integer]: TJclTD32SymbolInfo read GetSymbol;
     property SymbolCount: Integer read GetSymbolCount;
-    property SymbolTypes[Idx: Integer]: TJclSymbolTypeInfo read GetSymbolType;
+    property SymbolTypes[const Idx: Integer]: TJclSymbolTypeInfo read GetSymbolType;
     property SymbolTypeCount: Integer read GetSymbolTypeCount;
-    property ProcSymbols[Idx: Integer]: TJclTD32ProcSymbolInfo read GetProcSymbol;
+    property ProcSymbols[const Idx: Integer]: TJclTD32ProcSymbolInfo read GetProcSymbol;
     property ProcSymbolCount: Integer read GetProcSymbolCount;
-    property Modules[Idx: Integer]: TJclTD32ModuleInfo read GetModule;
+    property Modules[const Idx: Integer]: TJclTD32ModuleInfo read GetModule;
     property ModuleCount: Integer read GetModuleCount;
-    property SourceModules[Idx: Integer]: TJclTD32SourceModuleInfo read GetSourceModule;
+    property SourceModules[const Idx: Integer]: TJclTD32SourceModuleInfo read GetSourceModule;
     property SourceModuleCount: Integer read GetSourceModuleCount;
     property ValidData: Boolean read FValidData;
   end;
@@ -1423,12 +1423,12 @@ type
   // TD32 scanner with source location methods
   TJclTD32InfoScanner = class(TJclTD32InfoParser)
   public
-    function LineNumberFromAddr(AAddr: DWORD; var Offset: Integer): Integer; overload;
-    function LineNumberFromAddr(AAddr: DWORD): Integer; overload;
-    function ProcNameFromAddr(AAddr: DWORD): AnsiString; overload;
-    function ProcNameFromAddr(AAddr: DWORD; var Offset: Integer): AnsiString; overload;
-    function ModuleNameFromAddr(AAddr: DWORD): AnsiString;
-    function SourceNameFromAddr(AAddr: DWORD): AnsiString;
+    function LineNumberFromAddr(const AAddr: DWORD; var Offset: Integer): Integer; overload;
+    function LineNumberFromAddr(const AAddr: DWORD): Integer; overload;
+    function ProcNameFromAddr(const AAddr: DWORD): AnsiString; overload;
+    function ProcNameFromAddr(const AAddr: DWORD; var Offset: Integer): AnsiString; overload;
+    function ModuleNameFromAddr(const AAddr: DWORD): AnsiString;
+    function SourceNameFromAddr(const AAddr: DWORD): AnsiString;
   end;
 
   // PE Image with TD32 information and source location support
@@ -2241,7 +2241,7 @@ begin
     Module.FUsedModuleNameIndices.Add(Pointer(pSymbols.Use.Names[I]));
 end;
 
-function TJclTD32InfoParser.GetModule(Idx: Integer): TJclTD32ModuleInfo;
+function TJclTD32InfoParser.GetModule(const Idx: Integer): TJclTD32ModuleInfo;
 begin
   Result := TJclTD32ModuleInfo(FModules.Items[Idx]);
 end;
@@ -2251,7 +2251,7 @@ begin
   Result := FModules.Count;
 end;
 
-function TJclTD32InfoParser.GetName(Idx: Integer): AnsiString;
+function TJclTD32InfoParser.GetName(const Idx: Integer): AnsiString;
 begin
   Result := PAnsiChar(FNames.Items[Idx]);
 end;
@@ -2261,7 +2261,7 @@ begin
   Result := FNames.Count;
 end;
 
-function TJclTD32InfoParser.GetSourceModule(Idx: Integer): TJclTD32SourceModuleInfo;
+function TJclTD32InfoParser.GetSourceModule(const Idx: Integer): TJclTD32SourceModuleInfo;
 begin
   Result := TJclTD32SourceModuleInfo(FSourceModules.Items[Idx]);
 end;
@@ -2292,7 +2292,7 @@ begin
   Result := -1;
 end;
 
-function TJclTD32InfoParser.GetSymbol(Idx: Integer): TJclTD32SymbolInfo;
+function TJclTD32InfoParser.GetSymbol(const Idx: Integer): TJclTD32SymbolInfo;
 begin
   Result := TJclTD32SymbolInfo(FSymbols.Items[Idx]);
 end;
@@ -2302,7 +2302,7 @@ begin
   Result := FSymbols.Count;
 end;
 
-function TJclTD32InfoParser.GetSymbolType(Idx: Integer): TJclSymbolTypeInfo;
+function TJclTD32InfoParser.GetSymbolType(const Idx: Integer): TJclSymbolTypeInfo;
 begin
   if (Idx > -1) and (Idx < $1000) and (FSymbolTypes[Idx] = nil) then
     FSymbolTypes[Idx] := CreatePrimitiveTypeInfo(Idx);
@@ -2314,7 +2314,7 @@ begin
   Result := FSymbolTypes.Count;
 end;
 
-function TJclTD32InfoParser.GetProcSymbol(Idx: Integer): TJclTD32ProcSymbolInfo;
+function TJclTD32InfoParser.GetProcSymbol(const Idx: Integer): TJclTD32ProcSymbolInfo;
 begin
   Result := TJclTD32ProcSymbolInfo(FProcSymbols.Items[Idx]);
 end;
@@ -2324,8 +2324,7 @@ begin
   Result := FProcSymbols.Count;
 end;
 
-function TJclTD32InfoParser.FindModule(const AAddr: DWORD;
-  var AMod: TJclTD32ModuleInfo): Boolean;
+function TJclTD32InfoParser.FindModule(const AAddr: DWORD; var AMod: TJclTD32ModuleInfo): Boolean;
 var
   I, J: Integer;
 begin
@@ -2345,7 +2344,7 @@ begin
   AMod := nil;
 end;
 
-function TJclTD32InfoParser.FindModule(const Section: Word; Offset: DWORD): TJclTD32ModuleInfo;
+function TJclTD32InfoParser.FindModule(const Section: Word; const Offset: DWORD): TJclTD32ModuleInfo;
 var
   M, S: Integer;
 begin
@@ -2361,7 +2360,7 @@ begin
   Result := nil;
 end;
 
-function TJclTD32InfoParser.ModuleByNameIndex(NameIndex: Cardinal): TJclTD32ModuleInfo;
+function TJclTD32InfoParser.ModuleByNameIndex(const NameIndex: Cardinal): TJclTD32ModuleInfo;
 var
   I: Integer;
 begin
@@ -2375,8 +2374,7 @@ begin
   Result := nil;
 end;
 
-function TJclTD32InfoParser.FindSourceModule(const AAddr: DWORD;
-  var ASrcMod: TJclTD32SourceModuleInfo): Boolean;
+function TJclTD32InfoParser.FindSourceModule(const AAddr: DWORD; var ASrcMod: TJclTD32SourceModuleInfo): Boolean;
 var
   I, J: Integer;
 begin
@@ -2417,19 +2415,19 @@ end;
 class function TJclTD32InfoParser.IsTD32DebugInfoValid(
   const DebugData: Pointer; const DebugDataSize: LongWord): Boolean;
 var
-  Sign: TJclTD32FileSignature;
+  Sign: PJclTD32FileSignature;
   EndOfDebugData: LongWord;
 begin
   Assert(not IsBadReadPtr(DebugData, DebugDataSize));
   Result := False;
   EndOfDebugData := LongWord(DebugData) + DebugDataSize;
-  if DebugDataSize > SizeOf(Sign) then
+  if DebugDataSize > SizeOf(TJclTD32FileSignature) then
   begin
-    Sign := PJclTD32FileSignature(EndOfDebugData - SizeOf(Sign))^;
-    if IsTD32Sign(Sign) and (Sign.Offset <= DebugDataSize) then
+    Sign := PJclTD32FileSignature(EndOfDebugData - SizeOf(TJclTD32FileSignature));
+    if IsTD32Sign(Sign^) and (Sign^.Offset <= DebugDataSize) then
     begin
-      Sign := PJclTD32FileSignature(EndOfDebugData - Sign.Offset)^;
-      Result := IsTD32Sign(Sign);
+      Sign := PJclTD32FileSignature(EndOfDebugData - Sign^.Offset);
+      Result := IsTD32Sign(Sign^);
     end;
   end;
 end;
@@ -2440,12 +2438,12 @@ begin
     (Sign.Signature = Borland32BitSymbolFileSignatureForBCB);
 end;
 
-function TJclTD32InfoParser.LfaToVa(Lfa: DWORD): Pointer;
+function TJclTD32InfoParser.LfaToVa(const Lfa: DWORD): Pointer;
 begin
   Result := Pointer(DWORD(FBase) + Lfa)
 end;
 
-function TJclTD32InfoParser.CreateTypeInfo(Kind: TJclSymbolTypeKind; Size: DWORD = 0; NameIndex: DWORD = 0): TJclSymbolTypeInfo;
+function TJclTD32InfoParser.CreateTypeInfo(const Kind: TJclSymbolTypeKind; const Size: DWORD = 0; const NameIndex: DWORD = 0): TJclSymbolTypeInfo;
 begin
   Result := TJclSymbolTypeInfo.Create;
   Result.Kind := Kind;
@@ -2453,7 +2451,7 @@ begin
   Result.NameIndex := NameIndex;
 end;
 
-function TJclTD32InfoParser.CreatePrimitiveTypeInfo(Idx: DWORD): TJclSymbolTypeInfo;
+function TJclTD32InfoParser.CreatePrimitiveTypeInfo(const Idx: DWORD): TJclSymbolTypeInfo;
 var
   Kind: Byte;
   Size: Byte;
@@ -2572,7 +2570,7 @@ end;
 
 procedure TJclTD32InfoParser.FixVariantTypes;
 
-  function CheckNameIndex(Value: AnsiString): Integer;
+  function CheckNameIndex(const Value: AnsiString): Integer;
   begin
     if Value <> '' then
     begin
@@ -2584,7 +2582,7 @@ procedure TJclTD32InfoParser.FixVariantTypes;
       Result := 0;
   end;
 
-  function CreateMember(MemberName: AnsiString; Offset: Word; BaseType: DWORD): TJclMemberSymbolInfo;
+  function CreateMember(const MemberName: AnsiString; const Offset: Word; const BaseType: DWORD): TJclMemberSymbolInfo;
   var
     Member: TFieldListElement;
   begin
@@ -2597,7 +2595,7 @@ procedure TJclTD32InfoParser.FixVariantTypes;
     Result := TJclMemberSymbolInfo.Create(pFieldListElement(@Member));
   end;
 
-  function CreatePointer(ElementType: Integer): Integer;
+  function CreatePointer(const ElementType: Integer): Integer;
   var
     TypeInfo: TJclSymbolTypeInfo;
   begin
@@ -2606,7 +2604,7 @@ procedure TJclTD32InfoParser.FixVariantTypes;
     Result := FSymbolTypes.Add(TypeInfo);
   end;
 
-  function CreateSubRange(SubRangeName: AnsiString; IndexType, MinValue, MaxValue: Integer; DataSize: UInt64): Integer;
+  function CreateSubRange(const SubRangeName: AnsiString; const IndexType, MinValue, MaxValue: Integer; const DataSize: UInt64): Integer;
   var
     TypeInfo: TJclSymbolTypeInfo;
   begin
@@ -2618,7 +2616,7 @@ procedure TJclTD32InfoParser.FixVariantTypes;
     Result := FSymbolTypes.Add(TypeInfo);
   end;
 
-  function CreateArray(ArrayName: AnsiString; ElementType, IndexType, DataSize, ElementCount: Integer): Integer;
+  function CreateArray(const ArrayName: AnsiString; const ElementType, IndexType, DataSize, ElementCount: Integer): Integer;
   var
     TypeInfo: TJclSymbolTypeInfo;
   begin
@@ -2630,7 +2628,7 @@ procedure TJclTD32InfoParser.FixVariantTypes;
     Result := FSymbolTypes.Add(TypeInfo);
   end;
 
-  function CreateStruct(StructName: AnsiString; Length, Members: Integer): Integer;
+  function CreateStruct(const StructName: AnsiString; const Length, Members: Integer): Integer;
   var
     TypeInfo: TJclSymbolTypeInfo;
   begin
@@ -2644,6 +2642,7 @@ type
     Leaf: Word;
     Member: TMemberTypeInfo;
   end;
+
 var
   I, NameIndex, FieldListIndex, VoidIndex: Integer;
   FieldList : TJclSymbolTypeInfo;
@@ -2711,14 +2710,14 @@ end;
 
 //=== { TJclTD32InfoScanner } ================================================
 
-function TJclTD32InfoScanner.LineNumberFromAddr(AAddr: DWORD): Integer;
+function TJclTD32InfoScanner.LineNumberFromAddr(const AAddr: DWORD): Integer;
 var
   Dummy: Integer;
 begin
   Result := LineNumberFromAddr(AAddr, Dummy);
 end;
 
-function TJclTD32InfoScanner.LineNumberFromAddr(AAddr: DWORD; var Offset: Integer): Integer;
+function TJclTD32InfoScanner.LineNumberFromAddr(const AAddr: DWORD; var Offset: Integer): Integer;
 var
   ASrcMod: TJclTD32SourceModuleInfo;
   ALine: TJclTD32LineInfo;
@@ -2735,7 +2734,7 @@ begin
   end;
 end;
 
-function TJclTD32InfoScanner.ModuleNameFromAddr(AAddr: DWORD): AnsiString;
+function TJclTD32InfoScanner.ModuleNameFromAddr(const AAddr: DWORD): AnsiString;
 var
   AMod: TJclTD32ModuleInfo;
 begin
@@ -2745,14 +2744,14 @@ begin
     Result := '';
 end;
 
-function TJclTD32InfoScanner.ProcNameFromAddr(AAddr: DWORD): AnsiString;
+function TJclTD32InfoScanner.ProcNameFromAddr(const AAddr: DWORD): AnsiString;
 var
   Dummy: Integer;
 begin
   Result := ProcNameFromAddr(AAddr, Dummy);
 end;
 
-function TJclTD32InfoScanner.ProcNameFromAddr(AAddr: DWORD; var Offset: Integer): AnsiString;
+function TJclTD32InfoScanner.ProcNameFromAddr(const AAddr: DWORD; var Offset: Integer): AnsiString;
 var
   AProc: TJclTD32ProcSymbolInfo;
 
@@ -2793,7 +2792,7 @@ begin
   end;
 end;
 
-function TJclTD32InfoScanner.SourceNameFromAddr(AAddr: DWORD): AnsiString;
+function TJclTD32InfoScanner.SourceNameFromAddr(const AAddr: DWORD): AnsiString;
 var
   ASrcMod: TJclTD32SourceModuleInfo;
 begin

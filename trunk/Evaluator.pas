@@ -115,7 +115,7 @@ Uses
     //System.Debug,
     //System.Strings,
     EvaluateConsts,
-    EvaluateProcs;
+    EvaluateProcs, ClassUtils;
     //Logger;
 {..............................................................................}
 

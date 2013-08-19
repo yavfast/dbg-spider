@@ -75,8 +75,6 @@ Function  ConvertToInteger(Const Value : Variant) : Integer;
 Function  ConvertToType   (Const Value : Variant; TypeInfo : TTypeInfo) : Variant;
 {..............................................................................}
 
-function IncPointer(Ptr: Pointer; Offset: Integer): Pointer;
-
 Procedure RaiseInternalError(Const Message : String);
 
 {..............................................................................}
@@ -90,7 +88,8 @@ Uses
     //System.Debug,
     EvaluateConsts,
     //APIConsts,
-    Math;
+    Math,
+    ClassUtils;
 {..............................................................................}
 
 {..............................................................................}
@@ -109,11 +108,6 @@ type
 Procedure RaiseInternalError(Const Message : String);
 begin
   raise EEvaluateInternalError.Create(Message);
-end;
-
-function IncPointer(Ptr: Pointer; Offset: Integer): Pointer;
-begin
-  Result := Pointer(Integer(Ptr) + Offset);
 end;
 
 {..............................................................................}
