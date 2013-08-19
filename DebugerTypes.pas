@@ -171,11 +171,6 @@ type
     EBP: Pointer;
   end;
 
-//  TStackPointList = class
-//  public
-//    List: array of TStackPoint;
-//  end;
-
   TMemAction = (maGetMem = 0, maFreeMem);
 
   PMemInfo = ^TMemInfo;

@@ -332,6 +332,8 @@ function TCollectList<T>.GetItem(const Index: Cardinal): PData;
 var
   Seg, Offset: Integer;
 begin
+  Result := nil;
+
   if IndexToSegment(Index, Seg, Offset) then
     Result := @FSegList[Seg][Offset]
   else
@@ -728,6 +730,8 @@ constructor TDebuger.Create();
   end;
 
 begin
+  inherited Create;
+
   if not SetDebugPriv then
     RaiseLastOSError;
 
@@ -871,19 +875,19 @@ begin
 end;
 
 procedure TDebuger.DoDebugString(DebugEvent: PDebugEvent);
-var
-  Data: POutputDebugStringInfo;
-  DbgStr: String;
+//var
+//  Data: POutputDebugStringInfo;
+//  DbgStr: String;
 begin
-  Data := @DebugEvent^.DebugString;
-  if Data^.fUnicode = 1 then
-    DbgStr := String(PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
-  else
-    DbgStr := String(PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
+//  Data := @DebugEvent^.DebugString;
+//  if Data^.fUnicode = 1 then
+//    DbgStr := String(PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
+//  else
+//    DbgStr := String(PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
 
   if Assigned(FDebugString) then
   begin
-    FDebugString(Self, DebugEvent.dwThreadId, Data);
+    FDebugString(Self, DebugEvent.dwThreadId, @DebugEvent^.DebugString);
     //DoResumeAction(DebugEvent.dwThreadId);
   end;
 end;
@@ -1114,6 +1118,8 @@ var
   DllNameAddr: Pointer;
   MappedName: array [0 .. MAX_PATH - 1] of AnsiChar;
 begin
+  Result := '';
+
   if ReadData(lpImageName, @DllNameAddr, 4) then
   begin
     SetLength(Result, MAX_PATH shl 1);
@@ -1797,9 +1803,6 @@ begin
   end;
 end;
 
-var
-  _DbgMemInfoList: TDbgMemInfoList;
-
 function TDebuger.FindMemoryPointer(const Ptr: Pointer): PThreadData;
 var
   Idx: Integer;
@@ -1817,7 +1820,10 @@ begin
   until Result = Nil;
 end;
 
-procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
+var
+  _DbgMemInfoList: PDbgMemInfoList = Nil;
+
+  procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
 var
   Idx: Integer;
   DbgMemInfo: PDbgMemInfo;
@@ -1826,7 +1832,7 @@ var
   MemInfo: PGetMemInfo;
   NewMemInfo: PGetMemInfo;
 begin
-  if ReadData(MemInfoPack, @_DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
+  if ReadData(MemInfoPack, _DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
   begin
     CurPerfIdx := ProcessData.CurDbgPointIdx;
 
@@ -1834,7 +1840,7 @@ begin
     ThData := Nil;
     for Idx := 0 to Count - 1 do
     begin
-      DbgMemInfo := @_DbgMemInfoList[Idx];
+      DbgMemInfo := @_DbgMemInfoList^[Idx];
       if (ThData = Nil) or (ThData^.ThreadID <> DbgMemInfo^.ThreadId) then
         ThData := GetThreadData(DbgMemInfo^.ThreadId, True);
 
@@ -2118,7 +2124,7 @@ end;
 function TDebuger.SetMemoryBreakpoint(Address: Pointer; Size: Cardinal; BreakOnWrite: Boolean; const Description: string): Boolean;
 var
   Breakpoint: TBreakpoint;
-  MBI: TMemoryBasicInformation;
+  MBI: TMemoryBasicInformation; // TODO: GetMemory
   Index: Integer;
 begin
   Index := GetMBPIndex(Address);
@@ -2506,5 +2512,11 @@ end;
 initialization
   QueryPerformanceFrequency(_FreqPerSec);
   _FreqPerMSec := _FreqPerSec div 1000;
+
+  _DbgMemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
+
+finalization
+  FreeMemory(_DbgMemInfoList);
+  _DbgMemInfoList := nil;
 
 end.
