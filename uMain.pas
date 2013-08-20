@@ -67,7 +67,6 @@ type
     vstThreads: TVirtualStringTree;
     vdtTimeLine: TVirtualDrawTree;
     acAttachProcess: TAction;
-    sbInfo: TJvStatusBar;
     tsMemInfo: TTabSheet;
     vstMemInfoThreads: TVirtualStringTree;
     pnl1: TPanel;
@@ -110,6 +109,11 @@ type
     acTabMemoryInfo: TAction;
     acTabExceptions: TAction;
     acTabLog: TAction;
+    cbStatusInfo: TCoolBar;
+    actbStatusInfo: TActionToolBar;
+    acStatusDebuger: TAction;
+    acStatusDbgInfo: TAction;
+    acStausEventCount: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -1241,9 +1245,9 @@ begin
   if Assigned(gvDebuger) then
   begin
     if Assigned(gvDebugInfo) and (gvDebugInfo.DebugInfoLoaded) then
-      sbInfo.Panels[0].Text := 'DBG_INFO'
+      actbStatusInfo.ActionClient.Items[0].Caption := 'DBG_INFO'
     else
-      sbInfo.Panels[0].Text := 'NO_DBG_INFO';
+      actbStatusInfo.ActionClient.Items[0].Caption := 'NO_DBG_INFO';
 
     case gvDebuger.DbgState of
       dsNone: Msg := 'NONE';
@@ -1258,18 +1262,18 @@ begin
       else
         Msg := '';
     end;
-    sbInfo.Panels[1].Text := Msg;
+    actbStatusInfo.ActionClient.Items[2].Caption := Msg;
 
     if gvDebuger.PerfomanceMode and not(gvDebuger.DbgState in [dsNone]) then
-      sbInfo.Panels[2].Text := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
+      actbStatusInfo.ActionClient.Items[4].Caption := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
     else
-      sbInfo.Panels[2].Text := 'NO_PERF';
+      actbStatusInfo.ActionClient.Items[4].Caption := 'NO_PERF';
   end
   else
   begin
-    sbInfo.Panels[0].Text := 'NO_DBG_INFO';
-    sbInfo.Panels[1].Text := 'NONE';
-    sbInfo.Panels[2].Text := 'NO_PERF';
+    actbStatusInfo.ActionClient.Items[0].Caption := 'NO_DBG_INFO';
+    actbStatusInfo.ActionClient.Items[2].Caption := 'NONE';
+    actbStatusInfo.ActionClient.Items[4].Caption := 'NO_PERF';
   end;
 end;
 
