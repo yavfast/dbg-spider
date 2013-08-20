@@ -11,7 +11,7 @@ uses
   JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor, JvSplitter,
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
-  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps;
+  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps, Vcl.XPMan;
 
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
@@ -45,7 +45,7 @@ type
     acStop: TAction;
     OD: TFileOpenDialog;
     acDebugInfo: TAction;
-    PageControl1: TPageControl;
+    pcMain: TPageControl;
     tsLog: TTabSheet;
     tsDebugInfo: TTabSheet;
     mLog: TMemo;
@@ -102,6 +102,14 @@ type
     acRealTimeLine: TAction;
     acRunStop: TAction;
     scm1: TStandardColorMap;
+    cbMainTabs: TCoolBar;
+    actbMainTabs: TActionToolBar;
+    xpmnfst1: TXPManifest;
+    acTabDebugInfo: TAction;
+    acTabTimeline: TAction;
+    acTabMemoryInfo: TAction;
+    acTabExceptions: TAction;
+    acTabLog: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -154,6 +162,7 @@ type
     procedure acExitExecute(Sender: TObject);
     procedure acCPUTimeLineExecute(Sender: TObject);
     procedure acRealTimeLineExecute(Sender: TObject);
+    procedure acMainTabExecute(Sender: TObject);
 
   private
     FPID: DWORD;
@@ -165,6 +174,8 @@ type
     procedure SetProjectName(const Name: String);
 
     function GetLineTimeOffset: Cardinal;
+
+    procedure HidePCTabs(PC: TPageControl);
 
     procedure ClearProject;
     procedure ClearTrees;
@@ -328,6 +339,29 @@ begin
   acStop.Enabled := False;
 
   _AC.StopDebug;
+end;
+
+procedure TMainForm.HidePCTabs(PC: TPageControl);
+var
+  I: Integer;
+begin
+  for I := 0 to PC.PageCount - 1 do
+    PC.Pages[I].TabVisible := False;
+end;
+
+procedure TMainForm.acMainTabExecute(Sender: TObject);
+var
+  CurTag: Integer;
+begin
+  CurTag := TAction(Sender).Tag;
+
+  acTabLog.Checked := (CurTag = acTabLog.Tag);
+  acTabDebugInfo.Checked := (CurTag = acTabDebugInfo.Tag);
+  acTabTimeline.Checked := (CurTag = acTabTimeline.Tag);
+  acTabMemoryInfo.Checked := (CurTag = acTabMemoryInfo.Tag);
+  acTabExceptions.Checked := (CurTag = acTabExceptions.Tag);
+
+  pcMain.ActivePageIndex := CurTag;
 end;
 
 procedure TMainForm.AddProcess(const ProcessID: Cardinal);
@@ -1010,7 +1044,10 @@ begin
 
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
 
-  LoadLibrary('DbgHook32.dll'); // Для дебага этой самой DLL
+  HidePCTabs(pcMain);
+  acTabLog.Execute;
+
+  //LoadLibrary('DbgHook32.dll'); // Для дебага этой самой DLL
 end;
 
 procedure TMainForm.FormShow(Sender: TObject);

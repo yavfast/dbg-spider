@@ -4,7 +4,7 @@ object MainForm: TMainForm
   Caption = 'Spider'
   ClientHeight = 758
   ClientWidth = 1329
-  Color = clBtnFace
+  Color = clWindow
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -18,12 +18,12 @@ object MainForm: TMainForm
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
-  object PageControl1: TPageControl
+  object pcMain: TPageControl
     Left = 0
-    Top = 143
+    Top = 167
     Width = 1329
-    Height = 596
-    ActivePage = tsDebugInfo
+    Height = 572
+    ActivePage = tsLog
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -32,7 +32,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 1321
-        Height = 568
+        Height = 544
         Align = alClient
         Lines.Strings = (
           'mLog')
@@ -48,20 +48,20 @@ object MainForm: TMainForm
       object Splitter1: TSplitter
         Left = 279
         Top = 0
-        Height = 568
+        Height = 544
       end
       object pUnits: TPanel
         Left = 0
         Top = 0
         Width = 279
-        Height = 568
+        Height = 544
         Align = alLeft
         TabOrder = 0
         object lbUnits: TListBox
           Left = 1
           Top = 1
           Width = 277
-          Height = 566
+          Height = 542
           Align = alClient
           ItemHeight = 13
           TabOrder = 0
@@ -72,14 +72,14 @@ object MainForm: TMainForm
         Left = 282
         Top = 0
         Width = 1039
-        Height = 568
+        Height = 544
         Align = alClient
         TabOrder = 1
         object PageControl2: TPageControl
           Left = 1
           Top = 1
           Width = 1037
-          Height = 566
+          Height = 542
           ActivePage = tsFunctions
           Align = alClient
           TabOrder = 0
@@ -89,7 +89,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 1029
-              Height = 538
+              Height = 514
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -107,7 +107,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 1029
-              Height = 538
+              Height = 514
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -125,7 +125,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 1029
-              Height = 538
+              Height = 514
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -142,7 +142,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 1029
-              Height = 538
+              Height = 514
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -161,7 +161,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 447
-        Height = 568
+        Height = 544
         Align = alLeft
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
@@ -222,7 +222,7 @@ object MainForm: TMainForm
         Left = 447
         Top = 0
         Width = 874
-        Height = 568
+        Height = 544
         Align = alClient
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
@@ -270,7 +270,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 470
-        Height = 568
+        Height = 544
         Align = alLeft
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
@@ -327,7 +327,7 @@ object MainForm: TMainForm
         Left = 470
         Top = 0
         Width = 851
-        Height = 568
+        Height = 544
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
@@ -335,7 +335,7 @@ object MainForm: TMainForm
           Left = 0
           Top = 0
           Width = 305
-          Height = 568
+          Height = 544
           Align = alLeft
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -386,7 +386,7 @@ object MainForm: TMainForm
           Left = 305
           Top = 0
           Width = 546
-          Height = 568
+          Height = 544
           Align = alClient
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -420,7 +420,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 396
-        Height = 568
+        Height = 544
         Align = alLeft
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
@@ -469,7 +469,7 @@ object MainForm: TMainForm
         Left = 396
         Top = 0
         Width = 925
-        Height = 568
+        Height = 544
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
@@ -477,7 +477,7 @@ object MainForm: TMainForm
           Left = 0
           Top = 0
           Width = 511
-          Height = 568
+          Height = 544
           Align = alLeft
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -527,7 +527,7 @@ object MainForm: TMainForm
           Left = 511
           Top = 0
           Width = 414
-          Height = 568
+          Height = 544
           Align = alClient
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -1199,6 +1199,43 @@ object MainForm: TMainForm
       ActionManager = amMain
     end
   end
+  object cbMainTabs: TCoolBar
+    Left = 0
+    Top = 143
+    Width = 1329
+    Height = 24
+    AutoSize = True
+    Bands = <
+      item
+        Control = actbMainTabs
+        ImageIndex = -1
+        MinHeight = 24
+        Width = 1327
+      end>
+    EdgeBorders = []
+    object actbMainTabs: TActionToolBar
+      Left = 11
+      Top = 0
+      Width = 1318
+      Height = 24
+      ActionManager = amMain
+      AllowHiding = False
+      Caption = 'actbMainTabs'
+      Color = clMenuBar
+      ColorMap.DisabledFontColor = 7171437
+      ColorMap.HighlightColor = 11579568
+      ColorMap.BtnSelectedFont = clBlack
+      ColorMap.UnusedColor = 11579568
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clBlack
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentBackground = True
+      ParentFont = False
+      Spacing = 0
+    end
+  end
   object AL: TActionList
     Images = imlMainSmall
     Left = 912
@@ -1300,6 +1337,36 @@ object MainForm: TMainForm
       Caption = 'Real timeline'
       GroupIndex = 1
       OnExecute = acRealTimeLineExecute
+    end
+    object acTabLog: TAction
+      Category = 'MainTabs'
+      Caption = 'Log'
+      Checked = True
+      OnExecute = acMainTabExecute
+    end
+    object acTabDebugInfo: TAction
+      Tag = 1
+      Category = 'MainTabs'
+      Caption = 'Debug Info'
+      OnExecute = acMainTabExecute
+    end
+    object acTabTimeline: TAction
+      Tag = 2
+      Category = 'MainTabs'
+      Caption = 'Process Timeline'
+      OnExecute = acMainTabExecute
+    end
+    object acTabMemoryInfo: TAction
+      Tag = 3
+      Category = 'MainTabs'
+      Caption = 'Memory Info'
+      OnExecute = acMainTabExecute
+    end
+    object acTabExceptions: TAction
+      Tag = 4
+      Category = 'MainTabs'
+      Caption = 'Exceptions'
+      OnExecute = acMainTabExecute
     end
   end
   object OD: TFileOpenDialog
@@ -1505,6 +1572,30 @@ object MainForm: TMainForm
             CommandProperties.Width = -1
           end>
         ActionBar = rbngrpTimeLineSettings
+      end
+      item
+        Items = <
+          item
+            Action = acTabLog
+            Caption = '&Log'
+          end
+          item
+            Action = acTabDebugInfo
+            Caption = '&Debug Info'
+          end
+          item
+            Action = acTabTimeline
+            Caption = '&Process Timeline'
+          end
+          item
+            Action = acTabMemoryInfo
+            Caption = '&Memory Info'
+          end
+          item
+            Action = acTabExceptions
+            Caption = '&Exceptions'
+          end>
+        ActionBar = actbMainTabs
       end>
     DisabledImages = imlMainSmall
     LargeDisabledImages = imlMain
@@ -4198,6 +4289,10 @@ object MainForm: TMainForm
     UnusedColor = 13882323
     MenuColor = clMenu
     Left = 736
+    Top = 88
+  end
+  object xpmnfst1: TXPManifest
+    Left = 664
     Top = 88
   end
 end

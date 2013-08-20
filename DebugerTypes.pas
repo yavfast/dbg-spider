@@ -8,6 +8,8 @@ const
   _SEGMENT_SIZE = 16 * 1024;
 
 type
+  TSysUInt = NativeUInt;
+
   TSegment<T> = Array of T;
 
   TSegList<T> = Array of TSegment<T>;
