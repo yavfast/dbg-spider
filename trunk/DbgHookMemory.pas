@@ -207,6 +207,7 @@ end;
 function _HookGetMem(Size: TMemSize): Pointer;
 begin
   Result := _BaseGetMem(Size);
+  PCardinal(Result)^ := $00000000; // Очистка для TObject
 
   _AddMemInfo(miGetMem, Result, Size);
 end;
@@ -214,6 +215,7 @@ end;
 function _HookFreeMem(P: Pointer): Integer;
 begin
   _AddMemInfo(miFreeMem, P, 0);
+  PCardinal(P)^ := $00000000; // Очистка для TObject
 
   Result := _BaseFreeMem(P);
 end;

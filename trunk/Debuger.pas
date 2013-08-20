@@ -635,6 +635,8 @@ end;
 
 function TDebuger.AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: Boolean): Boolean;
 begin
+  LoadLibrary('DbgHook32.dll'); // Для быстрой загрузки в процессе
+
   Result := False;
 
   if FProcessData.State = psActive then
@@ -777,6 +779,8 @@ var
   PI: TProcessInformation;
   SI: TStartupInfo;
 begin
+  LoadLibrary('DbgHook32.dll'); // Для быстрой загрузки в процессе
+
   Result := False;
   if FProcessData.State = psActive then
     Exit;
@@ -832,6 +836,9 @@ begin
   QueryPerformanceCounter(FProcessData.Started);
   FProcessData.DbgPoints := TCollectList<TProcessPoint>.Create;
   FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1000);
+
+  FProcessData.ProcessGetMemCount := 0;
+  FProcessData.ProcessGetMemSize := 0;
 
   FProcessData.DbgExceptions := TThreadList.Create;
 
@@ -1430,7 +1437,13 @@ begin
     ParamAddr := Nil;
 
   // Создаем поток, в котором все это будет выполняться.
-  hThread := CreateRemoteThread(hProcess, nil, 0, ThreadAddr, ParamAddr, 0, lpThreadId);
+  hThread := CreateRemoteThread(hProcess, nil, 0, ThreadAddr, ParamAddr, CREATE_SUSPENDED, lpThreadId);
+
+  if not SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL) then
+    RaiseDebugCoreException();
+
+  if ResumeThread(hThread) = -1 then
+    RaiseDebugCoreException();
 
   if WaitAndFree then
   begin
@@ -1854,16 +1867,22 @@ begin
               // Переносим инфу в процесс
               Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
 
+              Dec(FProcessData.ProcessGetMemCount);
+              Dec(FProcessData.ProcessGetMemSize, MemInfo.Size);
+
+              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+
               NewMemInfo := GetMemory(SizeOf(RGetMemInfo));
               NewMemInfo^.PerfIdx := MemInfo^.PerfIdx;
               NewMemInfo^.Size := MemInfo^.Size;
               NewMemInfo^.Stack := MemInfo^.Stack;
               NewMemInfo^.ObjectType := MemInfo^.ObjectType;
 
-              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-
               ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
               Inc(FProcessData.DbgGetMemInfoSize, NewMemInfo^.Size);
+
+              Inc(FProcessData.ProcessGetMemCount);
+              Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
             end;
 
             NewMemInfo := GetMemory(SizeOf(RGetMemInfo));
@@ -1874,6 +1893,9 @@ begin
 
             ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
             Inc(ThData^.DbgGetMemInfoSize, NewMemInfo^.Size);
+
+            Inc(FProcessData.ProcessGetMemCount);
+            Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
           end;
           miFreeMem:
           begin
@@ -1881,6 +1903,10 @@ begin
             if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
             begin
               Dec(ThData^.DbgGetMemInfoSize, MemInfo^.Size);
+
+              Dec(FProcessData.ProcessGetMemCount);
+              Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
+
               ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
             end
             else
@@ -1892,6 +1918,10 @@ begin
                 if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
                 begin
                   Dec(ThData^.DbgGetMemInfoSize, MemInfo^.Size);
+
+                  Dec(FProcessData.ProcessGetMemCount);
+                  Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
+
                   ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
                 end
                 else
@@ -1900,6 +1930,10 @@ begin
                   if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
                   begin
                     Dec(FProcessData.DbgGetMemInfoSize, MemInfo^.Size);
+
+                    Dec(FProcessData.ProcessGetMemCount);
+                    Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
+
                     ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
                   end;
                 end;
