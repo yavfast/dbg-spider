@@ -8,7 +8,11 @@ const
   _SEGMENT_SIZE = 16 * 1024;
 
 type
+  {$IFDEF VER_230}
   TSysUInt = NativeUInt;
+  {$ELSE}
+  TSysUInt = Cardinal;
+  {$ENDIF}
 
   TSegment<T> = Array of T;
 
@@ -339,6 +343,9 @@ type
 
     DbgGetMemInfo: TGetMemInfo; // ”казатели с коллизи€ми
     DbgGetMemInfoSize: Cardinal;
+
+    ProcessGetMemCount: Cardinal;
+    ProcessGetMemSize: Cardinal;
 
     DbgExceptions: TThreadList;
 

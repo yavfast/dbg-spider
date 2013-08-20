@@ -6,12 +6,12 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Buttons, Mask, ExtCtrls, ComCtrls, ActnList, DebugInfo,
   Grids, JvExGrids, JvGrids, JvgStringGrid, VirtualTrees, JvComponentBase,
-  JvNavigationPane, JvExExtCtrls, JvExtComponent, JvSplit,
-  Debuger, DebugerTypes, DelphiDebugInfo, JvExComCtrls, JvStatusBar, JvExControls,
-  JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor, JvSplitter,
+  JvExExtCtrls, JvExtComponent, JvSplit,
+  Debuger, DebugerTypes, DelphiDebugInfo, JvExComCtrls, JvExControls,
+  JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor,
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
-  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps, Vcl.XPMan;
+  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps, XPMan;
 
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
@@ -1558,10 +1558,10 @@ begin
           case Column of
             0: CellText := ExtractFileName(FAppName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
-            2: if ProcData^.DbgGetMemInfo.Count > 0 then
-                 CellText := Format('%d', [ProcData^.DbgGetMemInfo.Count]);
-            3: if ProcData^.DbgGetMemInfo.Count > 0 then
-                 CellText := Format('%d', [ProcData^.DbgGetMemInfoSize]);
+            2: if ProcData^.ProcessGetMemCount > 0 then
+                 CellText := Format('%d', [ProcData^.ProcessGetMemCount]);
+            3: if ProcData^.ProcessGetMemCount > 0 then
+                 CellText := Format('%d', [ProcData^.ProcessGetMemSize]);
           end;
       end;
     ltThread:

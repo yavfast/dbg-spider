@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Top = 0
   Caption = 'Spider'
   ClientHeight = 562
-  ClientWidth = 1329
+  ClientWidth = 1163
   Color = clWindow
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -21,9 +21,9 @@ object MainForm: TMainForm
   object pcMain: TPageControl
     Left = 0
     Top = 167
-    Width = 1329
+    Width = 1163
     Height = 367
-    ActivePage = tsLog
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -31,7 +31,7 @@ object MainForm: TMainForm
       object mLog: TMemo
         Left = 0
         Top = 0
-        Width = 1321
+        Width = 1155
         Height = 339
         Align = alClient
         Lines.Strings = (
@@ -71,14 +71,14 @@ object MainForm: TMainForm
       object pUnitInfo: TPanel
         Left = 282
         Top = 0
-        Width = 1039
+        Width = 873
         Height = 339
         Align = alClient
         TabOrder = 1
         object PageControl2: TPageControl
           Left = 1
           Top = 1
-          Width = 1037
+          Width = 871
           Height = 337
           ActivePage = tsFunctions
           Align = alClient
@@ -88,7 +88,7 @@ object MainForm: TMainForm
             object mConsts: TMemo
               Left = 0
               Top = 0
-              Width = 1029
+              Width = 863
               Height = 309
               Align = alClient
               Lines.Strings = (
@@ -106,7 +106,7 @@ object MainForm: TMainForm
             object mTypes: TMemo
               Left = 0
               Top = 0
-              Width = 1029
+              Width = 863
               Height = 309
               Align = alClient
               Lines.Strings = (
@@ -124,7 +124,7 @@ object MainForm: TMainForm
             object mVars: TMemo
               Left = 0
               Top = 0
-              Width = 1029
+              Width = 863
               Height = 309
               Align = alClient
               Lines.Strings = (
@@ -141,7 +141,7 @@ object MainForm: TMainForm
             object mFunctions: TMemo
               Left = 0
               Top = 0
-              Width = 1029
+              Width = 863
               Height = 309
               Align = alClient
               Lines.Strings = (
@@ -221,7 +221,7 @@ object MainForm: TMainForm
       object vdtTimeLine: TVirtualDrawTree
         Left = 447
         Top = 0
-        Width = 874
+        Width = 708
         Height = 339
         Align = alClient
         BorderStyle = bsNone
@@ -326,7 +326,7 @@ object MainForm: TMainForm
       object pnl1: TPanel
         Left = 470
         Top = 0
-        Width = 851
+        Width = 685
         Height = 339
         Align = alClient
         BevelOuter = bvNone
@@ -385,7 +385,7 @@ object MainForm: TMainForm
         object vstMemStack: TVirtualStringTree
           Left = 305
           Top = 0
-          Width = 546
+          Width = 380
           Height = 339
           Align = alClient
           Header.AutoSizeIndex = 0
@@ -468,7 +468,7 @@ object MainForm: TMainForm
       object pnl2: TPanel
         Left = 396
         Top = 0
-        Width = 925
+        Width = 759
         Height = 339
         Align = alClient
         BevelOuter = bvNone
@@ -526,7 +526,7 @@ object MainForm: TMainForm
         object vstExceptionCallStack: TVirtualStringTree
           Left = 511
           Top = 0
-          Width = 414
+          Width = 248
           Height = 339
           Align = alClient
           Header.AutoSizeIndex = 0
@@ -558,7 +558,7 @@ object MainForm: TMainForm
   object rbnMain: TRibbon
     Left = 0
     Top = 0
-    Width = 1329
+    Width = 1163
     Height = 143
     ActionManager = amMain
     ApplicationMenu.Caption = 'Recent projects'
@@ -1106,13 +1106,13 @@ object MainForm: TMainForm
       end>
     UseCustomFrame = False
     DesignSize = (
-      1329
+      1163
       143)
     StyleName = 'Ribbon - Silver'
     object rbpMain: TRibbonPage
       Left = 0
       Top = 50
-      Width = 1328
+      Width = 1162
       Height = 93
       Caption = 'Menu'
       Index = 0
@@ -1177,7 +1177,7 @@ object MainForm: TMainForm
   object cbMainTabs: TCoolBar
     Left = 0
     Top = 143
-    Width = 1329
+    Width = 1163
     Height = 24
     AutoSize = True
     Bands = <
@@ -1185,22 +1185,19 @@ object MainForm: TMainForm
         Control = actbMainTabs
         ImageIndex = -1
         MinHeight = 24
-        Width = 1327
+        Width = 1161
       end>
     EdgeBorders = []
     object actbMainTabs: TActionToolBar
       Left = 11
       Top = 0
-      Width = 1318
+      Width = 1152
       Height = 24
       ActionManager = amMain
       AllowHiding = False
       Caption = 'actbMainTabs'
-      Color = clMenuBar
-      ColorMap.DisabledFontColor = 7171437
-      ColorMap.HighlightColor = 11579568
-      ColorMap.BtnSelectedFont = clBlack
-      ColorMap.UnusedColor = 11579568
+      ColorMap.BtnSelectedColor = clBtnFace
+      ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
@@ -1214,7 +1211,7 @@ object MainForm: TMainForm
   object cbStatusInfo: TCoolBar
     Left = 0
     Top = 534
-    Width = 1329
+    Width = 1163
     Height = 28
     Align = alBottom
     AutoSize = True
@@ -1223,12 +1220,12 @@ object MainForm: TMainForm
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 1323
+        Width = 1157
       end>
     object actbStatusInfo: TActionToolBar
       Left = 11
       Top = 0
-      Width = 1314
+      Width = 1148
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1236,11 +1233,8 @@ object MainForm: TMainForm
       Margins.Bottom = 1
       ActionManager = amMain
       Caption = 'actbStatusInfo'
-      Color = clMenuBar
-      ColorMap.DisabledFontColor = 7171437
-      ColorMap.HighlightColor = 11579568
-      ColorMap.BtnSelectedFont = clBlack
-      ColorMap.UnusedColor = 11579568
+      ColorMap.BtnSelectedColor = clBtnFace
+      ColorMap.UnusedColor = 13684944
       EdgeInner = esNone
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
@@ -1640,7 +1634,7 @@ object MainForm: TMainForm
       item
         Items = <
           item
-            Caption = 'NONE'
+            Caption = '&NONE'
             CommandStyle = csText
             CommandProperties.Width = -1
             CommandProperties.Font.Charset = DEFAULT_CHARSET
@@ -1654,7 +1648,7 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
-            Caption = 'NONE'
+            Caption = 'N&ONE'
             CommandStyle = csText
             CommandProperties.Width = -1
             CommandProperties.Font.Charset = DEFAULT_CHARSET
@@ -1662,12 +1656,13 @@ object MainForm: TMainForm
             CommandProperties.Font.Height = -11
             CommandProperties.Font.Name = 'Tahoma'
             CommandProperties.Font.Style = []
+            CommandProperties.ParentFont = False
           end
           item
             Caption = '-'
           end
           item
-            Caption = 'NONE'
+            Caption = 'NON&E'
             CommandStyle = csText
             CommandProperties.Width = -1
             CommandProperties.Font.Charset = DEFAULT_CHARSET
@@ -1675,6 +1670,7 @@ object MainForm: TMainForm
             CommandProperties.Font.Height = -11
             CommandProperties.Font.Name = 'Tahoma'
             CommandProperties.Font.Style = []
+            CommandProperties.ParentFont = False
           end
           item
             Caption = '-'
