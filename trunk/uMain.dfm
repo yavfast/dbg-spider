@@ -2,8 +2,8 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'Spider'
-  ClientHeight = 562
-  ClientWidth = 1163
+  ClientHeight = 565
+  ClientWidth = 1173
   Color = clWindow
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -21,9 +21,9 @@ object MainForm: TMainForm
   object pcMain: TPageControl
     Left = 0
     Top = 167
-    Width = 1163
-    Height = 367
-    ActivePage = tsMemInfo
+    Width = 1173
+    Height = 374
+    ActivePage = tsDebugInfo2
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -31,8 +31,8 @@ object MainForm: TMainForm
       object mLog: TMemo
         Left = 0
         Top = 0
-        Width = 1155
-        Height = 339
+        Width = 1165
+        Height = 346
         Align = alClient
         Lines.Strings = (
           'mLog')
@@ -48,20 +48,20 @@ object MainForm: TMainForm
       object Splitter1: TSplitter
         Left = 279
         Top = 0
-        Height = 339
+        Height = 346
       end
       object pUnits: TPanel
         Left = 0
         Top = 0
         Width = 279
-        Height = 339
+        Height = 346
         Align = alLeft
         TabOrder = 0
         object lbUnits: TListBox
           Left = 1
           Top = 1
           Width = 277
-          Height = 337
+          Height = 344
           Align = alClient
           ItemHeight = 13
           TabOrder = 0
@@ -71,15 +71,15 @@ object MainForm: TMainForm
       object pUnitInfo: TPanel
         Left = 282
         Top = 0
-        Width = 873
-        Height = 339
+        Width = 883
+        Height = 346
         Align = alClient
         TabOrder = 1
         object PageControl2: TPageControl
           Left = 1
           Top = 1
-          Width = 871
-          Height = 337
+          Width = 881
+          Height = 344
           ActivePage = tsFunctions
           Align = alClient
           TabOrder = 0
@@ -88,8 +88,8 @@ object MainForm: TMainForm
             object mConsts: TMemo
               Left = 0
               Top = 0
-              Width = 863
-              Height = 309
+              Width = 873
+              Height = 316
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -106,8 +106,8 @@ object MainForm: TMainForm
             object mTypes: TMemo
               Left = 0
               Top = 0
-              Width = 863
-              Height = 309
+              Width = 873
+              Height = 316
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -124,8 +124,8 @@ object MainForm: TMainForm
             object mVars: TMemo
               Left = 0
               Top = 0
-              Width = 863
-              Height = 309
+              Width = 873
+              Height = 316
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -141,8 +141,8 @@ object MainForm: TMainForm
             object mFunctions: TMemo
               Left = 0
               Top = 0
-              Width = 863
-              Height = 309
+              Width = 873
+              Height = 316
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -161,7 +161,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 447
-        Height = 339
+        Height = 346
         Align = alLeft
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
@@ -221,8 +221,8 @@ object MainForm: TMainForm
       object vdtTimeLine: TVirtualDrawTree
         Left = 447
         Top = 0
-        Width = 708
-        Height = 339
+        Width = 718
+        Height = 346
         Align = alClient
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
@@ -270,7 +270,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 470
-        Height = 339
+        Height = 346
         Align = alLeft
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
@@ -326,8 +326,8 @@ object MainForm: TMainForm
       object pnl1: TPanel
         Left = 470
         Top = 0
-        Width = 685
-        Height = 339
+        Width = 695
+        Height = 346
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
@@ -335,7 +335,7 @@ object MainForm: TMainForm
           Left = 0
           Top = 0
           Width = 305
-          Height = 339
+          Height = 346
           Align = alLeft
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -385,8 +385,8 @@ object MainForm: TMainForm
         object vstMemStack: TVirtualStringTree
           Left = 305
           Top = 0
-          Width = 380
-          Height = 339
+          Width = 390
+          Height = 346
           Align = alClient
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -420,7 +420,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 396
-        Height = 339
+        Height = 346
         Align = alLeft
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
@@ -468,8 +468,8 @@ object MainForm: TMainForm
       object pnl2: TPanel
         Left = 396
         Top = 0
-        Width = 759
-        Height = 339
+        Width = 769
+        Height = 346
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
@@ -477,7 +477,7 @@ object MainForm: TMainForm
           Left = 0
           Top = 0
           Width = 511
-          Height = 339
+          Height = 346
           Align = alLeft
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -526,8 +526,8 @@ object MainForm: TMainForm
         object vstExceptionCallStack: TVirtualStringTree
           Left = 511
           Top = 0
-          Width = 248
-          Height = 339
+          Width = 258
+          Height = 346
           Align = alClient
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -554,11 +554,318 @@ object MainForm: TMainForm
         end
       end
     end
+    object tsDebugInfo2: TTabSheet
+      Caption = 'DebugInfo2'
+      Highlighted = True
+      ImageIndex = 5
+      object vstDbgInfoUnits: TVirtualStringTree
+        Left = 0
+        Top = 0
+        Width = 347
+        Height = 346
+        Align = alLeft
+        BevelEdges = []
+        BevelInner = bvNone
+        BevelOuter = bvNone
+        BorderStyle = bsNone
+        Header.AutoSizeIndex = 0
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'Tahoma'
+        Header.Font.Style = []
+        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        ScrollBarOptions.AlwaysVisible = True
+        TabOrder = 0
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+        TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        OnColumnResize = vstThreadsColumnResize
+        OnGetText = vstDbgInfoUnitsGetText
+        OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        Columns = <
+          item
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+            Position = 0
+            Width = 210
+            WideText = 'Unit name'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 1
+            Width = 60
+            WideText = 'Code size'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 2
+            Width = 60
+            WideText = 'Data size'
+          end>
+      end
+      object pDbgInfoDetail: TPanel
+        Left = 347
+        Top = 0
+        Width = 818
+        Height = 346
+        Align = alClient
+        BevelEdges = []
+        BevelOuter = bvNone
+        DoubleBuffered = True
+        ParentDoubleBuffered = False
+        TabOrder = 1
+        object pcDbgInfoDetail: TPageControl
+          Left = 0
+          Top = 0
+          Width = 818
+          Height = 346
+          ActivePage = tsDbgUnitFunctions
+          Align = alClient
+          HotTrack = True
+          TabOrder = 0
+          object tsDbgUnitConsts: TTabSheet
+            Caption = 'Consts'
+            object vstDbgInfoConsts: TVirtualStringTree
+              Left = 0
+              Top = 0
+              Width = 810
+              Height = 318
+              Align = alClient
+              BevelEdges = []
+              BevelInner = bvNone
+              BevelOuter = bvNone
+              BorderStyle = bsNone
+              Header.AutoSizeIndex = 0
+              Header.Font.Charset = DEFAULT_CHARSET
+              Header.Font.Color = clWindowText
+              Header.Font.Height = -11
+              Header.Font.Name = 'Tahoma'
+              Header.Font.Style = []
+              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              ScrollBarOptions.AlwaysVisible = True
+              TabOrder = 0
+              TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+              TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              Columns = <
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                  Position = 0
+                  Width = 210
+                  WideText = 'Name'
+                end
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 1
+                  Width = 100
+                  WideText = 'Value'
+                end
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 2
+                  Width = 300
+                  WideText = 'Type'
+                end>
+            end
+          end
+          object tsDbgUnitTypes: TTabSheet
+            Caption = 'Types'
+            ImageIndex = 1
+            object vstDbgInfoTypes: TVirtualStringTree
+              Left = 0
+              Top = 0
+              Width = 810
+              Height = 318
+              Align = alClient
+              BevelEdges = []
+              BevelInner = bvNone
+              BevelOuter = bvNone
+              BorderStyle = bsNone
+              Header.AutoSizeIndex = 0
+              Header.Font.Charset = DEFAULT_CHARSET
+              Header.Font.Color = clWindowText
+              Header.Font.Height = -11
+              Header.Font.Name = 'Tahoma'
+              Header.Font.Style = []
+              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              ScrollBarOptions.AlwaysVisible = True
+              TabOrder = 0
+              TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+              TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              Columns = <
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                  Position = 0
+                  Width = 210
+                  WideText = 'Name'
+                end
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 1
+                  Width = 400
+                  WideText = 'Parent type'
+                end>
+            end
+          end
+          object tsDbgUnitVars: TTabSheet
+            Caption = 'Vars'
+            ImageIndex = 2
+            object vstDbgInfoVars: TVirtualStringTree
+              Left = 0
+              Top = 0
+              Width = 810
+              Height = 318
+              Align = alClient
+              BevelEdges = []
+              BevelInner = bvNone
+              BevelOuter = bvNone
+              BorderStyle = bsNone
+              Header.AutoSizeIndex = 0
+              Header.Font.Charset = DEFAULT_CHARSET
+              Header.Font.Color = clWindowText
+              Header.Font.Height = -11
+              Header.Font.Name = 'Tahoma'
+              Header.Font.Style = []
+              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              ScrollBarOptions.AlwaysVisible = True
+              TabOrder = 0
+              TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+              TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              Columns = <
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                  Position = 0
+                  Width = 210
+                  WideText = 'Name'
+                end
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 1
+                  Width = 400
+                  WideText = 'Type'
+                end>
+            end
+          end
+          object tsDbgUnitFunctions: TTabSheet
+            Caption = 'Functions'
+            ImageIndex = 3
+            object vstDbgInfoFunctions: TVirtualStringTree
+              Left = 0
+              Top = 0
+              Width = 387
+              Height = 318
+              Align = alLeft
+              BevelEdges = []
+              BevelInner = bvNone
+              BevelOuter = bvNone
+              BorderStyle = bsNone
+              Header.AutoSizeIndex = 0
+              Header.Font.Charset = DEFAULT_CHARSET
+              Header.Font.Color = clWindowText
+              Header.Font.Height = -11
+              Header.Font.Name = 'Tahoma'
+              Header.Font.Style = []
+              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              ScrollBarOptions.AlwaysVisible = True
+              TabOrder = 0
+              TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+              TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnColumnResize = vstThreadsColumnResize
+              OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              Columns = <
+                item
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus]
+                  Position = 0
+                  Width = 60
+                  WideText = 'Address'
+                end
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                  Position = 1
+                  Width = 250
+                  WideText = 'Name'
+                end
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 2
+                  Width = 60
+                  WideText = 'Code size'
+                end>
+            end
+            object vstDbgInfoFuncVars: TVirtualStringTree
+              Left = 387
+              Top = 0
+              Width = 423
+              Height = 318
+              Align = alClient
+              BevelEdges = []
+              BevelInner = bvNone
+              BevelOuter = bvNone
+              BorderStyle = bsNone
+              Header.AutoSizeIndex = 0
+              Header.Font.Charset = DEFAULT_CHARSET
+              Header.Font.Color = clWindowText
+              Header.Font.Height = -11
+              Header.Font.Name = 'Tahoma'
+              Header.Font.Style = []
+              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              ScrollBarOptions.AlwaysVisible = True
+              TabOrder = 1
+              TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+              TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              Columns = <
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                  Position = 0
+                  Width = 150
+                  WideText = 'Name'
+                end
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 1
+                  Width = 150
+                  WideText = 'Type'
+                end
+                item
+                  Position = 2
+                  Width = 70
+                  WideText = 'Param type'
+                end>
+            end
+          end
+        end
+      end
+    end
   end
   object rbnMain: TRibbon
     Left = 0
     Top = 0
-    Width = 1163
+    Width = 1173
     Height = 143
     ActionManager = amMain
     ApplicationMenu.Caption = 'Recent projects'
@@ -1106,13 +1413,13 @@ object MainForm: TMainForm
       end>
     UseCustomFrame = False
     DesignSize = (
-      1163
+      1173
       143)
     StyleName = 'Ribbon - Silver'
     object rbpMain: TRibbonPage
       Left = 0
       Top = 50
-      Width = 1162
+      Width = 1172
       Height = 93
       Caption = 'Menu'
       Index = 0
@@ -1177,7 +1484,7 @@ object MainForm: TMainForm
   object cbMainTabs: TCoolBar
     Left = 0
     Top = 143
-    Width = 1163
+    Width = 1173
     Height = 24
     AutoSize = True
     Bands = <
@@ -1185,13 +1492,13 @@ object MainForm: TMainForm
         Control = actbMainTabs
         ImageIndex = -1
         MinHeight = 24
-        Width = 1161
+        Width = 1171
       end>
     EdgeBorders = []
     object actbMainTabs: TActionToolBar
       Left = 11
       Top = 0
-      Width = 1152
+      Width = 1162
       Height = 24
       ActionManager = amMain
       AllowHiding = False
@@ -1210,22 +1517,26 @@ object MainForm: TMainForm
   end
   object cbStatusInfo: TCoolBar
     Left = 0
-    Top = 534
-    Width = 1163
-    Height = 28
+    Top = 541
+    Width = 1173
+    Height = 24
     Align = alBottom
     AutoSize = True
+    BandBorderStyle = bsNone
     Bands = <
       item
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 1157
+        Width = 1171
       end>
+    EdgeBorders = []
+    EdgeInner = esNone
+    EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
       Left = 11
       Top = 0
-      Width = 1148
+      Width = 1162
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1240,7 +1551,8 @@ object MainForm: TMainForm
       Font.Color = clBlack
       Font.Height = -11
       Font.Name = 'Tahoma'
-      Font.Style = [fsBold]
+      Font.Style = []
+      Orientation = boRightToLeft
       ParentBackground = True
       ParentFont = False
       Spacing = 0
@@ -1355,7 +1667,7 @@ object MainForm: TMainForm
       OnExecute = acMainTabExecute
     end
     object acTabDebugInfo: TAction
-      Tag = 1
+      Tag = 5
       Category = 'MainTabs'
       Caption = 'Debug Info'
       OnExecute = acMainTabExecute
@@ -1632,9 +1944,10 @@ object MainForm: TMainForm
         ActionBar = actbMainTabs
       end
       item
+        Items.AutoHotKeys = False
         Items = <
           item
-            Caption = '&NONE'
+            Caption = 'none'
             CommandStyle = csText
             CommandProperties.Width = -1
             CommandProperties.Font.Charset = DEFAULT_CHARSET
@@ -1645,10 +1958,7 @@ object MainForm: TMainForm
             CommandProperties.ParentFont = False
           end
           item
-            Caption = '-'
-          end
-          item
-            Caption = 'N&ONE'
+            Caption = 'DbgInfo:'
             CommandStyle = csText
             CommandProperties.Width = -1
             CommandProperties.Font.Charset = DEFAULT_CHARSET
@@ -1662,7 +1972,43 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
-            Caption = 'NON&E'
+            Caption = 'none'
+            CommandStyle = csText
+            CommandProperties.Width = -1
+            CommandProperties.Font.Charset = DEFAULT_CHARSET
+            CommandProperties.Font.Color = clWindowText
+            CommandProperties.Font.Height = -11
+            CommandProperties.Font.Name = 'Tahoma'
+            CommandProperties.Font.Style = []
+            CommandProperties.ParentFont = False
+          end
+          item
+            Caption = 'DbgStatus:'
+            CommandStyle = csText
+            CommandProperties.Width = -1
+            CommandProperties.Font.Charset = DEFAULT_CHARSET
+            CommandProperties.Font.Color = clWindowText
+            CommandProperties.Font.Height = -11
+            CommandProperties.Font.Name = 'Tahoma'
+            CommandProperties.Font.Style = []
+            CommandProperties.ParentFont = False
+          end
+          item
+            Caption = '-'
+          end
+          item
+            Caption = '0'
+            CommandStyle = csText
+            CommandProperties.Width = -1
+            CommandProperties.Font.Charset = DEFAULT_CHARSET
+            CommandProperties.Font.Color = clWindowText
+            CommandProperties.Font.Height = -11
+            CommandProperties.Font.Name = 'Tahoma'
+            CommandProperties.Font.Style = []
+            CommandProperties.ParentFont = False
+          end
+          item
+            Caption = 'Events:'
             CommandStyle = csText
             CommandProperties.Width = -1
             CommandProperties.Font.Charset = DEFAULT_CHARSET

@@ -15,6 +15,7 @@ Type
 
 {...............................................................................}
     TLineInfo = Class
+    public
         LineNo  : Integer;
         Address : Pointer;
     End;
@@ -48,6 +49,7 @@ Type
     End;
 
     TNameList = Class(TList)
+    public
         function FindByName(Const Name: AnsiString): TNameInfo;
     End;
 
@@ -97,6 +99,7 @@ Type
 
 {..............................................................................}
     TRegInfo = Class
+    public
         StartOffset   : Cardinal;
         EndOffset     : Cardinal;
         RegisterIndex : Integer;
@@ -105,6 +108,7 @@ Type
 
 {..............................................................................}
     TVarInfo = Class(TNameInfo)
+    public
         DataType       : TTypeInfo;
         IsPointer      : Boolean;
         ByRef          : Boolean;
@@ -128,6 +132,7 @@ Type
 
 {..............................................................................}
     TStructMember = Class
+    public
         DataType      : TTypeInfo;
         BitOffset     : Integer;
         BitLength     : Integer;
@@ -140,9 +145,13 @@ Type
 {..............................................................................}
 
 {..............................................................................}
+    TUnitSegmentType = (ustData = $0000, ustCode = $0001);
+
     TUnitSegmentInfo = Class
+    public
         Offset : Cardinal;
         Size   : Cardinal;
+        SegType: TUnitSegmentType;
     End;
 {..............................................................................}
 
@@ -152,6 +161,7 @@ Type
     TSegmentCodeInfo = Class(TNameInfo)
     public
         Address     : Pointer;
+        CodeSize    : Cardinal;
 
         Consts      : TNameList;
         Types       : TNameList;
@@ -172,7 +182,6 @@ Type
     End;
 
     TFuncInfo = Class(TSegmentCodeInfo)
-        Size       : Cardinal;
         ResultType : TTypeInfo;
 
         UnitInfo   : TUnitInfo;
@@ -195,6 +204,9 @@ Type
         Segments    : TList;
         UsedUnits   : TStringList;
         FullUnitName: String;
+
+        CodeSize    : Cardinal;
+        DataSize    : Cardinal;
 
         Constructor Create(ADebugInfo: TDebugInfo);
         Destructor  Destroy; Override;
@@ -1021,6 +1033,9 @@ begin
 
     UsedUnits := TStringList.Create;
     Segments  := TList.Create;
+
+    CodeSize := 0;
+    DataSize := 0;
 end;
 
 destructor TUnitInfo.Destroy;
