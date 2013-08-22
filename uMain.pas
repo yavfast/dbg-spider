@@ -16,7 +16,7 @@ uses
 type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
 
-  TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack);
+  TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack, ltDbgUnitInfo);
 
   PLinkData = ^TLinkData;
   TLinkData = record
@@ -34,6 +34,8 @@ type
         (ExceptInfo: TExceptInfo);
       ltExceptStack:
         (ExceptStackEntry: TStackEntry);
+      ltDbgUnitInfo:
+        (DbgUnitInfo: TUnitInfo);
   end;
 
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -114,6 +116,19 @@ type
     acStatusDebuger: TAction;
     acStatusDbgInfo: TAction;
     acStausEventCount: TAction;
+    tsDebugInfo2: TTabSheet;
+    vstDbgInfoUnits: TVirtualStringTree;
+    pDbgInfoDetail: TPanel;
+    pcDbgInfoDetail: TPageControl;
+    tsDbgUnitConsts: TTabSheet;
+    tsDbgUnitTypes: TTabSheet;
+    tsDbgUnitVars: TTabSheet;
+    tsDbgUnitFunctions: TTabSheet;
+    vstDbgInfoConsts: TVirtualStringTree;
+    vstDbgInfoTypes: TVirtualStringTree;
+    vstDbgInfoVars: TVirtualStringTree;
+    vstDbgInfoFunctions: TVirtualStringTree;
+    vstDbgInfoFuncVars: TVirtualStringTree;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -161,12 +176,15 @@ type
 
     procedure vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
+    procedure vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+
     procedure acOptionsExecute(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure acExitExecute(Sender: TObject);
     procedure acCPUTimeLineExecute(Sender: TObject);
     procedure acRealTimeLineExecute(Sender: TObject);
     procedure acMainTabExecute(Sender: TObject);
+
 
   private
     FPID: DWORD;
@@ -1155,8 +1173,26 @@ end;
 procedure TMainForm.LoadUnits;
 var
   I: Integer;
-  UnitInfo: TUnitInfo;
+  UnitNode: PVirtualNode;
+  LinkData: PLinkData;
 begin
+  vstDbgInfoUnits.BeginUpdate;
+  try
+    vstDbgInfoUnits.Clear;
+
+    for I := 0 to gvDebugInfo.Units.Count - 1 do
+    begin
+      UnitNode := vstDbgInfoUnits.AddChild(nil);
+      LinkData := vstDbgInfoUnits.GetNodeData(UnitNode);
+
+      LinkData^.LinkType := ltDbgUnitInfo;
+      LinkData^.DbgUnitInfo := TUnitInfo(gvDebugInfo.Units.Objects[I]);
+    end;
+  finally
+    vstDbgInfoUnits.EndUpdate;
+  end;
+
+  (*
   lbUnits.Items.BeginUpdate;
   try
     lbUnits.Clear;
@@ -1170,6 +1206,7 @@ begin
   finally
     lbUnits.Items.EndUpdate;
   end;
+  *)
 end;
 
 procedure TMainForm.LoadVars(UnitInfo: TUnitInfo);
@@ -1239,41 +1276,45 @@ begin
 end;
 
 procedure TMainForm.UpdateStatusInfo;
+Const
+  _DBG_INFO_IDX = 0;
+  _DBG_STATE_IDX = 3;
+  _DBG_EVENTS_IDX = 6;
 var
   Msg: String;
 begin
   if Assigned(gvDebuger) then
   begin
     if Assigned(gvDebugInfo) and (gvDebugInfo.DebugInfoLoaded) then
-      actbStatusInfo.ActionClient.Items[0].Caption := 'DBG_INFO'
+      actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := 'Internal'
     else
-      actbStatusInfo.ActionClient.Items[0].Caption := 'NO_DBG_INFO';
+      actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := 'Not found';
 
     case gvDebuger.DbgState of
-      dsNone: Msg := 'NONE';
-      dsStarted: Msg := 'STARTED';
-      dsWait: Msg := 'ACTIVE';
-      dsPerfomance: Msg := 'ACTIVE';
-      dsTrace: Msg := 'TRACE';
-      dsEvent: Msg := 'ACTIVE';
-      dsStoping: Msg := 'STOPING';
-      dsStoped: Msg := 'STOPED';
-      dsDbgFail: Msg := 'DBG_FAIL';
+      dsNone: Msg := 'none';
+      dsStarted: Msg := 'Started';
+      dsWait: Msg := 'Active';
+      dsPerfomance: Msg := 'Active';
+      dsTrace: Msg := 'Trace';
+      dsEvent: Msg := 'Active';
+      dsStoping: Msg := 'Stoping';
+      dsStoped: Msg := 'Stoped';
+      dsDbgFail: Msg := 'Debug Fail';
       else
         Msg := '';
     end;
-    actbStatusInfo.ActionClient.Items[2].Caption := Msg;
+    actbStatusInfo.ActionClient.Items[_DBG_STATE_IDX].Caption := Msg;
 
     if gvDebuger.PerfomanceMode and not(gvDebuger.DbgState in [dsNone]) then
-      actbStatusInfo.ActionClient.Items[4].Caption := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
+      actbStatusInfo.ActionClient.Items[_DBG_EVENTS_IDX].Caption := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
     else
-      actbStatusInfo.ActionClient.Items[4].Caption := 'NO_PERF';
+      actbStatusInfo.ActionClient.Items[_DBG_EVENTS_IDX].Caption := '0';
   end
   else
   begin
-    actbStatusInfo.ActionClient.Items[0].Caption := 'NO_DBG_INFO';
-    actbStatusInfo.ActionClient.Items[2].Caption := 'NONE';
-    actbStatusInfo.ActionClient.Items[4].Caption := 'NO_PERF';
+    actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := 'None';
+    actbStatusInfo.ActionClient.Items[_DBG_STATE_IDX].Caption := 'None';
+    actbStatusInfo.ActionClient.Items[_DBG_EVENTS_IDX].Caption := '0';
   end;
 end;
 
@@ -1350,6 +1391,20 @@ begin
   gvDebugInfo := DebugInfo;
 
   LoadUnits;
+end;
+
+procedure TMainForm.vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  UnitInfo: TUnitInfo;
+begin
+  Data := vstDbgInfoUnits.GetNodeData(Node);
+  UnitInfo := Data^.DbgUnitInfo;
+  case Column of
+    0: CellText := UnitInfo.Name;
+    1: CellText := Format('%d', [UnitInfo.CodeSize]);
+    2: CellText := Format('%d', [UnitInfo.DataSize]);
+  end;
 end;
 
 procedure TMainForm.vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
@@ -1730,6 +1785,11 @@ begin
   end;
 
   Sender.Treeview.ClientWidth := W;
+
+//  if Sender.Treeview.Parent is TPanel then
+//  begin
+//    TPanel(Sender.Treeview.Parent).Width := Sender.Treeview.Width;
+//  end;
 end;
 
 procedure TMainForm.vstThreadsDrawText(Sender: TBaseVirtualTree;

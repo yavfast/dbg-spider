@@ -248,6 +248,12 @@ Begin
         S := TUnitSegmentInfo.Create;
         S.Offset := SegmentInfo.Offset + FImage.ImageSectionHeaders[SegmentInfo.Segment - 1].VirtualAddress + ImageBase;
         S.Size := SegmentInfo.Size;
+        S.SegType := TUnitSegmentType(SegmentInfo.Flags);
+
+        case S.SegType of
+          ustData: Inc(UnitInfo.DataSize, S.Size);
+          ustCode: Inc(UnitInfo.CodeSize, S.Size);
+        end;
 
         UnitInfo.Segments.Add(S);
     End;
@@ -859,7 +865,7 @@ Begin
     FuncInfo := TFuncInfo.Create;
     FuncInfo.NameId := FuncSymbol.NameIndex;
     FuncInfo.Address := Pointer(FuncSymbol.Offset + FImage.ImageSectionHeaders[FuncSymbol.Segment - 1].VirtualAddress + ImageBase);
-    FuncInfo.Size := FuncSymbol.Size;
+    FuncInfo.CodeSize := FuncSymbol.Size;
     FuncInfo.UnitInfo := UnitInfo;
     FuncInfo.ID := FuncSymbol;
     FuncInfo.ParentID := FuncSymbol.Parent;
@@ -974,7 +980,7 @@ Begin
     For I := 0 To UnitInfo.Funcs.Count - 1 Do
     Begin
         Result := TFuncInfo(UnitInfo.Funcs[I]);
-        If InRange(Cardinal(Addr) - Cardinal(Result.Address), 0, Result.Size - 1) Then
+        If InRange(Cardinal(Addr) - Cardinal(Result.Address), 0, Result.CodeSize - 1) Then
             Exit;
     End;
     Result := Nil;
@@ -1318,7 +1324,7 @@ end;
 
 function TDelphiDebugInfo.ImageNames(const Index: Integer): AnsiString;
 begin
-    if (Index >= 0) then
+    if (Index >= 0) and (FImage <> Nil) and (FImage.TD32Scanner <> Nil) and (Index < FImage.TD32Scanner.NameCount) then
         Result := FImage.TD32Scanner.Names[Index]
     else
         Result := '';
