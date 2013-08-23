@@ -2552,4 +2552,6 @@ finalization
   FreeMemory(_DbgMemInfoList);
   _DbgMemInfoList := nil;
 
+  if gvDebuger <> Nil then
+    FreeAndNil(gvDebuger);
 end.
