@@ -3,7 +3,7 @@ Unit DebugInfo;
 Interface
 
 Uses
-    Windows, Classes, Debuger, SysUtils, DebugerTypes;
+    SysUtils, Windows, Classes, Debuger, DebugerTypes;
 {..............................................................................}
 
 Type
@@ -238,6 +238,8 @@ Type
     End;
 {..............................................................................}
 
+    TDebugInfoProgressCallback = procedure(const Action: String; const Progress: Integer) of object;
+
     TDebugInfoClass = Class Of TDebugInfo;
 
     TDebugInfo = Class
@@ -248,7 +250,10 @@ Type
 
         FExeFileName : String;
         FDebugInfoLoaded : Boolean;
+
+        FDebugInfoProgressCallback: TDebugInfoProgressCallback;
     Protected
+        procedure DoProgress(const Action: String; const Progress: Integer); virtual;
         Function DoReadDebugInfo(Const FileName : String; ALoadDebugInfo : Boolean) : Boolean; Virtual; abstract;
     Public
         Constructor Create(ADebuger: TDebuger);
@@ -310,6 +315,7 @@ Type
         Property Units     : TStringList Read FUnits;
 
         property DebugInfoLoaded: Boolean read FDebugInfoLoaded;
+        property DebugInfoProgressCallback: TDebugInfoProgressCallback read FDebugInfoProgressCallback write FDebugInfoProgressCallback;
     End;
 {...............................................................................}
 
@@ -347,6 +353,8 @@ Begin
 
     FExeFileName := '';
     FDebugInfoLoaded := False;
+
+    FDebugInfoProgressCallback := Nil;
 End;
 {..............................................................................}
 
@@ -360,6 +368,12 @@ Begin
 
     Inherited;
 End;
+procedure TDebugInfo.DoProgress(const Action: String; const Progress: Integer);
+begin
+  if Assigned(FDebugInfoProgressCallback) then
+    FDebugInfoProgressCallback(Action, Progress);
+end;
+
 {..............................................................................}
 
 {..............................................................................}

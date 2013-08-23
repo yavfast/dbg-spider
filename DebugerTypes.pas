@@ -2,7 +2,7 @@ unit DebugerTypes;
 
 interface
 
-uses Windows, Classes, SysUtils, JclPeImage, SyncObjs, ClassUtils, Generics.Collections, DbgHookTypes, Contnrs;
+uses SysUtils, Windows, Classes, JclPeImage, SyncObjs, ClassUtils, Generics.Collections, DbgHookTypes, Contnrs;
 
 const
   _SEGMENT_SIZE = 16 * 1024;

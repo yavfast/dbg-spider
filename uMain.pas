@@ -11,11 +11,10 @@ uses
   JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor,
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
-  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps, XPMan;
+  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps, XPMan,
+  uActionController;
 
 type
-  TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo);
-
   TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack, ltDbgUnitInfo);
 
   PLinkData = ^TLinkData;
@@ -129,6 +128,9 @@ type
     vstDbgInfoVars: TVirtualStringTree;
     vstDbgInfoFunctions: TVirtualStringTree;
     vstDbgInfoFuncVars: TVirtualStringTree;
+    actbStatusInfo2: TActionToolBar;
+    pbProgress: TProgressBar;
+    pStatusAction: TPanel;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -195,6 +197,8 @@ type
 
     procedure SetProjectName(const Name: String);
 
+    procedure ProgressAction(const Action: String; const Progress: Integer);
+
     function GetLineTimeOffset: Cardinal;
 
     procedure HidePCTabs(PC: TPageControl);
@@ -204,6 +208,8 @@ type
 
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
+
+    procedure UpdateActions;
 
     procedure LoadUnits;
     procedure LoadConsts(UnitInfo: TUnitInfo);
@@ -240,63 +246,11 @@ implementation
 
 {$R *.dfm}
 
-uses Math, EvaluateTypes, ClassUtils, uProcessList;
+uses Math, EvaluateTypes, ClassUtils, uProcessList, uDebugerThread;
 
 
 type
-  TDbgOption = (doDebugInfo, doRun, doProfiler, doMemLeaks);
-  TDbgOptions = set of TDbgOption;
-
-  TActionController = class
-  public
-    class procedure RunDebug(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0); static;
-    class procedure StopDebug; static;
-    class procedure PauseDebug; static;
-
-    class procedure Log(const Msg: String); overload; static;
-    class procedure Log(const Msg: String; const Args: array of const); overload; static;
-
-    class procedure DoAction(const Action: TacAction; const Args: array of Variant); static;
-    class procedure ViewDebugInfo(DebugInfo: TDebugInfo); static;
-  end;
-
-  TDebugerThread = class(TThread)
-  private
-    FAppName: String;
-    FProcessID: TProcessId;
-    FDbgOptions: TDbgOptions;
-
-    FDbgInfoLoaded: Boolean;
-    FDbgStarted: Boolean;
-
-    procedure OnEndDebug(Sender: TObject);
-    procedure OnRip(Sender: TObject; ThreadId: TThreadId; Data: PRIPInfo);
-    procedure OnCreateThread(Sender: TObject; ThreadId: TThreadId; Data: PCreateThreadDebugInfo);
-    procedure OnExitThread(Sender: TObject; ThreadId: TThreadId; Data: PExitThreadDebugInfo);
-    procedure OnCreateProcess(Sender: TObject; ProcessId: TProcessId; Data: PCreateProcessDebugInfo);
-    procedure OnExitProcess(Sender: TObject; ProcessId: TProcessId; Data: PExitProcessDebugInfo);
-    procedure OnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PLoadDLLDebugInfo);
-    procedure OnUnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PUnloadDLLDebugInfo);
-    procedure OnDebugString(Sender: TObject; ThreadId: TThreadId; Data: POutputDebugStringInfo);
-    procedure OnUnknownException(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
-    procedure OnUnknownBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
-    procedure OnBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord; BreakPointIndex: Integer; var ReleaseBreakpoint: Boolean);
-
-    procedure InitDebuger;
-    procedure LoadDebugInfo;
-  protected
-    procedure Execute; override;
-    procedure DoTerminate; override;
-  public
-    constructor Create(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0);
-    destructor Destroy; override;
-  end;
-
   THookBaseVirtualTree = class(TBaseVirtualTree);
-
-var
-  _DbgThread: TDebugerThread = nil;
-  _AC: TActionController = nil;
 
 procedure TMainForm.acAppOpenExecute(Sender: TObject);
 begin
@@ -591,7 +545,12 @@ end;
 
 procedure TMainForm.ClearProject;
 begin
+  FAppName := '';
+  rbnMain.Caption := 'Empty';
+
   ClearTrees;
+  UpdateStatusInfo;
+  UpdateActions;
 end;
 
 procedure TMainForm.ClearTrees;
@@ -627,6 +586,8 @@ begin
       AddThread(Args[0]);
     acCreateProcess:
       AddProcess(Args[0]);
+    acProgress:
+      ProgressAction(Args[0], Args[1]);
   end;
 
   case Action of
@@ -1066,8 +1027,14 @@ begin
 
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
 
+  actbMainTabs.ParentBackground := True;
+  actbStatusInfo.ParentBackground := True;
+  actbStatusInfo2.ParentBackground := True;
+
   HidePCTabs(pcMain);
   acTabLog.Execute;
+
+  ProgressAction('', 0);
 
   //LoadLibrary('DbgHook32.dll'); // Для дебага этой самой DLL
 end;
@@ -1232,6 +1199,19 @@ begin
   mLog.Lines.Add(FormatDateTime('hh:nn:ss.zzz', Now) + ': ' + Msg);
 end;
 
+procedure TMainForm.ProgressAction(const Action: String; const Progress: Integer);
+begin
+  pbProgress.Visible := (Progress > 0);
+  pbProgress.Position := Progress;
+
+  if Action <> '' then
+    //actbStatusInfo2.ActionClient.Items[1].Caption := Action
+    pStatusAction.Caption := Action
+  else
+    //actbStatusInfo2.ActionClient.Items[1].Caption := ' ';
+    pStatusAction.Caption := '';
+end;
+
 procedure TMainForm.SetProjectName(const Name: String);
 begin
   ClearProject;
@@ -1239,7 +1219,7 @@ begin
   FAppName := Name;
   rbnMain.Caption := Name;
 
-  DoAction(acRunEnabled, [True]);
+  _AC.RunDebug(FAppName, [doDebugInfo]); // Загрузка DebugInfo
 end;
 
 procedure TMainForm.SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
@@ -1273,6 +1253,11 @@ begin
   UpdateTrees;
 
   tmrThreadsUpdate.Enabled := True;
+end;
+
+procedure TMainForm.UpdateActions;
+begin
+
 end;
 
 procedure TMainForm.UpdateStatusInfo;
@@ -1882,307 +1867,5 @@ begin
   FCloseApp := True;
   inherited;
 end;
-
-{ TDebugerThread }
-
-constructor TDebugerThread.Create(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0);
-begin
-  inherited Create(True);
-  FreeOnTerminate := True;
-
-  FAppName := AppName;
-  FDbgOptions := ADbgOptions;
-  FProcessID := AProcessID;
-
-  FDbgInfoLoaded := False;
-  FDbgStarted := False;
-
-  Priority := tpHighest;
-
-  Suspended := False;
-end;
-
-destructor TDebugerThread.Destroy;
-begin
-  _DbgThread := nil;
-  inherited;
-end;
-
-procedure TDebugerThread.DoTerminate;
-begin
-  inherited;
-
-  _DbgThread := Nil;
-end;
-
-procedure TDebugerThread.Execute;
-var
-  FRun: Boolean;
-begin
-  NameThreadForDebugging(AnsiString(ClassName), ThreadId);
-
-  InitDebuger;
-
-  if doDebugInfo in FDbgOptions then
-    LoadDebugInfo
-  else
-    FreeAndNil(gvDebugInfo);
-
-  if doRun in FDbgOptions then
-  begin
-    if FProcessID = 0 then
-    begin
-      _AC.Log('Run application "%s"', [FAppName]);
-      FRun := gvDebuger.DebugNewProcess(FAppName, False);
-    end
-    else
-    begin
-      _AC.Log('Attach to process [%d]', [FProcessID]);
-      FRun := gvDebuger.AttachToProcess(FProcessID, False);
-    end;
-
-    if FRun then
-    begin
-      gvDebuger.PerfomanceMode := (doProfiler in FDbgOptions);
-
-      _AC.Log('Start debug process');
-      try
-        gvDebuger.ProcessDebugEvents;
-      except
-        on E: Exception do
-          _AC.Log('Fail debug process: "%s"', [E.Message]);
-      end;
-    end;
-  end;
-end;
-
-procedure TDebugerThread.InitDebuger;
-begin
-  if gvDebuger <> nil then
-    FreeAndNil(gvDebuger);
-
-  _AC.Log('Init debuger for "%s"', [FAppName]);
-
-  gvDebuger := TDebuger.Create();
-
-  gvDebuger.OnEndDebug := OnEndDebug;
-  gvDebuger.OnRip := OnRip;
-  gvDebuger.OnCreateProcess := OnCreateProcess;
-  gvDebuger.OnExitProcess := OnExitProcess;
-  gvDebuger.OnCreateThread := OnCreateThread;
-  gvDebuger.OnExitThread := OnExitThread;
-  gvDebuger.OnLoadDll := OnLoadDll;
-  gvDebuger.OnUnloadDll := OnUnLoadDll;
-  gvDebuger.OnDebugString := OnDebugString;
-  gvDebuger.OnUnknownException := OnUnknownException;
-  gvDebuger.OnUnknownBreakPoint := OnUnknownBreakPoint;
-  gvDebuger.OnBreakPoint := OnBreakPoint;
-end;
-
-procedure TDebugerThread.LoadDebugInfo;
-begin
-  if gvDebugInfo <> nil then
-    FreeAndNil(gvDebugInfo);
-
-  _AC.Log('Load debug info for "%s"', [FAppName]);
-
-  gvDebugInfo := TDelphiDebugInfo.Create(gvDebuger);
-  FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(FAppName, nil);
-
-  if FDbgInfoLoaded then
-  begin
-    _AC.Log('Loaded debug info for "%s"', [FAppName]);
-    _AC.ViewDebugInfo(gvDebugInfo);
-  end
-  else
-    _AC.Log('No debug info for "%s"', [FAppName]);
-
-  _AC.DoAction(acUpdateInfo, []);
-end;
-
-procedure TDebugerThread.OnBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord;
-      BreakPointIndex: Integer; var ReleaseBreakpoint: Boolean);
-begin
-  if BreakPointIndex = -1 then
-    _AC.Log('Perfomance ThreadID: %d', [ThreadId]);
-end;
-
-procedure TDebugerThread.OnCreateProcess(Sender: TObject; ProcessId: TProcessId; Data: PCreateProcessDebugInfo);
-begin
-  _AC.Log('Process Start ID: %d', [ProcessId]);
-
-  _AC.DoAction(acStopEnabled, [True]);
-  _AC.DoAction(acCreateProcess, [ProcessId]);
-end;
-
-procedure TDebugerThread.OnCreateThread(Sender: TObject; ThreadId: TThreadId; Data: PCreateThreadDebugInfo);
-begin
-  _AC.Log('Thread Create ID: %d', [ThreadID]);
-  _AC.DoAction(acAddThread, [ThreadID]);
-end;
-
-procedure TDebugerThread.OnDebugString(Sender: TObject; ThreadId: TThreadId; Data: POutputDebugStringInfo);
-begin
-  if Data^.fUnicode = 1 then
-    _AC.Log('Debug String: ' + PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
-  else
-    _AC.Log('Debug String: ' + PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
-
-  _AC.DoAction(acUpdateInfo, []);
-end;
-
-procedure TDebugerThread.OnExitProcess(Sender: TObject; ProcessId: TProcessId; Data: PExitProcessDebugInfo);
-begin
-  _AC.Log('Process Exit ID: %d', [ProcessID]);
-
-  _AC.DoAction(acUpdateInfo, []);
-end;
-
-procedure TDebugerThread.OnExitThread(Sender: TObject; ThreadId: TThreadId; Data: PExitThreadDebugInfo);
-begin
-  if Data <> Nil then
-    _AC.Log('Thread Exit ID: %d (%d)', [ThreadID, Data^.dwExitCode])
-  else
-    _AC.Log('Thread Exit ID: %d', [ThreadID]);
-
-  _AC.DoAction(acUpdateInfo, []);
-end;
-
-procedure TDebugerThread.OnEndDebug(Sender: TObject);
-begin
-  _AC.Log('Finish debug');
-
-  _AC.DoAction(acStopEnabled, [False]);
-  _AC.DoAction(acRunEnabled, [True]);
-end;
-
-procedure TDebugerThread.OnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PLoadDLLDebugInfo);
-const
-  FormatStrKnownDLL = 'Load Dll at instance %p handle %d "%s"';
-  FormatStrUnknownDLL = 'Load unknown Dll at instance %p handle %d';
-var
-  DllName: AnsiString;
-  IsUnicodeData: Boolean;
-begin
-  //FDebuger.ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
-  IsUnicodeData := Data^.fUnicode = 1;
-  DllName := gvDebuger.GetDllName(Data^.lpImageName, Data^.lpBaseOfDll, IsUnicodeData);
-  if DllName <> '' then
-  begin
-    if IsUnicodeData then
-      _AC.Log(FormatStrKnownDLL, [Data^.lpBaseOfDll, Data^.hFile, PWideChar(@DllName[1])])
-    else
-      _AC.Log(Format(FormatStrKnownDLL, [Data^.lpBaseOfDll, Data^.hFile, PAnsiChar(@DllName[1])]));
-  end
-  else
-    _AC.Log(Format(FormatStrUnknownDLL, [Data^.lpBaseOfDll, Data^.hFile]));
-end;
-
-procedure TDebugerThread.OnRip(Sender: TObject; ThreadId: TThreadId; Data: PRIPInfo);
-begin
-  _AC.Log('Debug fail [error: %d; type: %d]', [Data^.dwError, Data^.dwType]);
-  _AC.DoAction(acUpdateInfo, []);
-end;
-
-procedure TDebugerThread.OnUnknownBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
-begin
-  _AC.Log('OnUnknownBreakPoint ThreadID: %d', [ThreadId]);
-end;
-
-procedure TDebugerThread.OnUnknownException(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
-begin
-  //_AC.Log(gvDebugInfo.GetExceptionMessage(ExceptionRecord, ThreadId));
-end;
-
-procedure TDebugerThread.OnUnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PUnloadDLLDebugInfo);
-const
-  FormatStrDLL = 'UnLoad Dll at instance %p';
-begin
-  _AC.Log(FormatStrDLL, [Data^.lpBaseOfDll]);
-end;
-
-{ TActionController }
-
-class procedure TActionController.Log(const Msg: String);
-var
-  _Msg: String;
-begin
-  _Msg := Msg;
-  if Assigned(MainForm) then
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        if Assigned(MainForm) and MainForm.Visible then
-          MainForm.Log(_Msg);
-      end
-    );
-end;
-
-class procedure TActionController.DoAction(const Action: TacAction; const Args: array of Variant);
-var
-  _Action: TacAction;
-  _Args: array of Variant;
-  i: Integer;
-begin
-  _Action := Action;
-
-  SetLength(_Args, Length(Args));
-  for i := 0 to High(Args) do
-    _Args[i] := Args[i];
-
-  if Assigned(MainForm) then
-  begin
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        MainForm.DoAction(_Action, _Args);
-      end
-    );
-  end;
-end;
-
-class procedure TActionController.Log(const Msg: String; const Args: array of const);
-begin
-  Log(Format(Msg, Args));
-end;
-
-class procedure TActionController.PauseDebug;
-begin
-  //
-end;
-
-class procedure TActionController.RunDebug(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0);
-begin
-  if not Assigned(_DbgThread) then
-    _DbgThread := TDebugerThread.Create(AppName, ADbgOptions, AProcessID);
-end;
-
-class procedure TActionController.StopDebug;
-begin
-  if Assigned(gvDebuger) then
-    gvDebuger.StopDebug;
-end;
-
-class procedure TActionController.ViewDebugInfo(DebugInfo: TDebugInfo);
-var
-  DI: TDebugInfo;
-begin
-  DI := DebugInfo;
-  TThread.Synchronize(nil,
-    procedure
-    begin
-      MainForm.ViewDebugInfo(DI);
-    end
-  );
-end;
-
-initialization
-
-finalization
-//  if FDebugInfo <> Nil then
-//    FreeAndNil(FDebugInfo);
-
-  if gvDebuger <> Nil then
-    FreeAndNil(gvDebuger);
 
 end.

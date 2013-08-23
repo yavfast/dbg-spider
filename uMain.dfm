@@ -22,7 +22,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 167
     Width = 1173
-    Height = 374
+    Height = 373
     ActivePage = tsDebugInfo2
     Align = alClient
     TabOrder = 0
@@ -32,7 +32,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 1165
-        Height = 346
+        Height = 345
         Align = alClient
         Lines.Strings = (
           'mLog')
@@ -48,20 +48,20 @@ object MainForm: TMainForm
       object Splitter1: TSplitter
         Left = 279
         Top = 0
-        Height = 346
+        Height = 345
       end
       object pUnits: TPanel
         Left = 0
         Top = 0
         Width = 279
-        Height = 346
+        Height = 345
         Align = alLeft
         TabOrder = 0
         object lbUnits: TListBox
           Left = 1
           Top = 1
           Width = 277
-          Height = 344
+          Height = 343
           Align = alClient
           ItemHeight = 13
           TabOrder = 0
@@ -72,14 +72,14 @@ object MainForm: TMainForm
         Left = 282
         Top = 0
         Width = 883
-        Height = 346
+        Height = 345
         Align = alClient
         TabOrder = 1
         object PageControl2: TPageControl
           Left = 1
           Top = 1
           Width = 881
-          Height = 344
+          Height = 343
           ActivePage = tsFunctions
           Align = alClient
           TabOrder = 0
@@ -89,7 +89,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 873
-              Height = 316
+              Height = 315
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -107,7 +107,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 873
-              Height = 316
+              Height = 315
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -125,7 +125,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 873
-              Height = 316
+              Height = 315
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -142,7 +142,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 873
-              Height = 316
+              Height = 315
               Align = alClient
               Lines.Strings = (
                 'mConsts')
@@ -161,7 +161,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 447
-        Height = 346
+        Height = 345
         Align = alLeft
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
@@ -222,7 +222,7 @@ object MainForm: TMainForm
         Left = 447
         Top = 0
         Width = 718
-        Height = 346
+        Height = 345
         Align = alClient
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
@@ -270,7 +270,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 470
-        Height = 346
+        Height = 345
         Align = alLeft
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
@@ -327,7 +327,7 @@ object MainForm: TMainForm
         Left = 470
         Top = 0
         Width = 695
-        Height = 346
+        Height = 345
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
@@ -335,7 +335,7 @@ object MainForm: TMainForm
           Left = 0
           Top = 0
           Width = 305
-          Height = 346
+          Height = 345
           Align = alLeft
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -386,7 +386,7 @@ object MainForm: TMainForm
           Left = 305
           Top = 0
           Width = 390
-          Height = 346
+          Height = 345
           Align = alClient
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -420,7 +420,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 396
-        Height = 346
+        Height = 345
         Align = alLeft
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
@@ -469,7 +469,7 @@ object MainForm: TMainForm
         Left = 396
         Top = 0
         Width = 769
-        Height = 346
+        Height = 345
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
@@ -477,7 +477,7 @@ object MainForm: TMainForm
           Left = 0
           Top = 0
           Width = 511
-          Height = 346
+          Height = 345
           Align = alLeft
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -527,7 +527,7 @@ object MainForm: TMainForm
           Left = 511
           Top = 0
           Width = 258
-          Height = 346
+          Height = 345
           Align = alClient
           Header.AutoSizeIndex = 0
           Header.Font.Charset = DEFAULT_CHARSET
@@ -562,7 +562,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 347
-        Height = 346
+        Height = 345
         Align = alLeft
         BevelEdges = []
         BevelInner = bvNone
@@ -612,7 +612,7 @@ object MainForm: TMainForm
         Left = 347
         Top = 0
         Width = 818
-        Height = 346
+        Height = 345
         Align = alClient
         BevelEdges = []
         BevelOuter = bvNone
@@ -623,10 +623,9 @@ object MainForm: TMainForm
           Left = 0
           Top = 0
           Width = 818
-          Height = 346
+          Height = 345
           ActivePage = tsDbgUnitFunctions
           Align = alClient
-          HotTrack = True
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
             Caption = 'Consts'
@@ -634,7 +633,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 810
-              Height = 318
+              Height = 317
               Align = alClient
               BevelEdges = []
               BevelInner = bvNone
@@ -685,7 +684,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 810
-              Height = 318
+              Height = 317
               Align = alClient
               BevelEdges = []
               BevelInner = bvNone
@@ -728,7 +727,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 810
-              Height = 318
+              Height = 317
               Align = alClient
               BevelEdges = []
               BevelInner = bvNone
@@ -771,7 +770,7 @@ object MainForm: TMainForm
               Left = 0
               Top = 0
               Width = 387
-              Height = 318
+              Height = 317
               Align = alLeft
               BevelEdges = []
               BevelInner = bvNone
@@ -817,7 +816,7 @@ object MainForm: TMainForm
               Left = 387
               Top = 0
               Width = 423
-              Height = 318
+              Height = 317
               Align = alClient
               BevelEdges = []
               BevelInner = bvNone
@@ -1445,7 +1444,7 @@ object MainForm: TMainForm
       object rbngrpDebug: TRibbonGroup
         Left = 327
         Top = 3
-        Width = 146
+        Width = 121
         Height = 86
         ActionManager = amMain
         Caption = 'Debug'
@@ -1453,7 +1452,7 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpTimeLineSettings: TRibbonGroup
-        Left = 475
+        Left = 450
         Top = 3
         Width = 97
         Height = 86
@@ -1510,33 +1509,39 @@ object MainForm: TMainForm
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
-      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
   end
   object cbStatusInfo: TCoolBar
     Left = 0
-    Top = 541
+    Top = 540
     Width = 1173
-    Height = 24
+    Height = 25
     Align = alBottom
     AutoSize = True
     BandBorderStyle = bsNone
     Bands = <
       item
+        Break = False
+        Control = actbStatusInfo2
+        ImageIndex = -1
+        Width = 555
+      end
+      item
+        Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 1171
+        Width = 614
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 11
+      Left = 568
       Top = 0
-      Width = 1162
+      Width = 605
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1552,10 +1557,50 @@ object MainForm: TMainForm
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
+      HorzSeparator = False
       Orientation = boRightToLeft
-      ParentBackground = True
       ParentFont = False
       Spacing = 0
+    end
+    object actbStatusInfo2: TActionToolBar
+      Left = 11
+      Top = 0
+      Width = 542
+      Height = 25
+      ActionManager = amMain
+      Align = alNone
+      AllowHiding = False
+      Caption = 'actbStatusInfo2'
+      ColorMap.BtnSelectedColor = clBtnFace
+      ColorMap.UnusedColor = 13684944
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clBlack
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      HorzSeparator = False
+      ParentFont = False
+      Spacing = 0
+      object pbProgress: TProgressBar
+        Left = 5
+        Top = 2
+        Width = 200
+        Height = 17
+        Position = 20
+        Smooth = True
+        TabOrder = 0
+      end
+      object pStatusAction: TPanel
+        Left = 209
+        Top = 2
+        Width = 316
+        Height = 17
+        Alignment = taLeftJustify
+        BevelEdges = []
+        BevelOuter = bvNone
+        Caption = 'Action'
+        TabOrder = 1
+      end
     end
   end
   object AL: TActionList
@@ -1879,12 +1924,6 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
-            Action = acDebugInfo
-            Caption = '&Debug Info'
-            ImageIndex = 5
-            NewCol = True
-          end
-          item
             Action = acPause
             Caption = '&Pause'
             ImageIndex = 6
@@ -2022,6 +2061,36 @@ object MainForm: TMainForm
             Caption = '-'
           end>
         ActionBar = actbStatusInfo
+      end
+      item
+      end
+      item
+        ChangesAllowed = []
+        Items.AutoHotKeys = False
+        Items.Customizable = False
+        Items.HideUnused = False
+        Items.CaptionOptions = coNone
+        Items = <
+          item
+            Items.HideUnused = False
+            Items = <>
+            Caption = ' '
+            CommandStyle = csControl
+            ShowGlyph = False
+            ShowShortCut = False
+            CommandProperties.Width = 204
+            CommandProperties.ContainedControl = pbProgress
+            CommandProperties.Text = ' '
+          end
+          item
+            Items.HideUnused = False
+            Items = <>
+            Caption = ' '
+            CommandStyle = csControl
+            CommandProperties.Width = 320
+            CommandProperties.ContainedControl = pStatusAction
+          end>
+        ActionBar = actbStatusInfo2
       end>
     DisabledImages = imlMainSmall
     LargeDisabledImages = imlMain

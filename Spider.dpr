@@ -15,7 +15,9 @@ uses
   JclTD32Ex in 'JclTD32Ex.pas',
   DebugHook in 'DebugHook.pas',
   DbgHookTypes in 'DbgHookTypes.pas',
-  DebugerTypes in 'DebugerTypes.pas';
+  DebugerTypes in 'DebugerTypes.pas',
+  uActionController in 'uActionController.pas',
+  uDebugerThread in 'uDebugerThread.pas';
 
 {$R *.res}
 

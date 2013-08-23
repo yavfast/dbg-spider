@@ -3,7 +3,7 @@ unit DelphiDebugInfo;
 Interface
 
 Uses
-    Windows, Classes, SysUtils, DebugInfo, Debuger, DebugerTypes, JclTD32Ex;
+    SysUtils, Windows, Classes, DebugInfo, Debuger, DebugerTypes, JclTD32Ex;
 {..............................................................................}
 
 {..............................................................................}
@@ -903,7 +903,12 @@ Var
     UInfo: TUnitInfo;
     TInfo: TTypeInfo;
     FuncJ, FuncU: TFuncInfo;
+    Delta : Double;
 Begin
+    if Units.Count = 0 then Exit;
+    
+    Delta := 10 / Units.Count;
+
     For I := 0 To Units.Count - 1 Do
     Begin
         UInfo := TUnitInfo(Units.Objects[I]);
@@ -937,6 +942,8 @@ Begin
                     FuncU.Parent := FuncJ;
             end;
         end;
+
+        DoProgress(Format('Check unit "%s"', [UInfo.Name]), 90 + Round((I + 1) * Delta));
     End;
 End;
 
@@ -1014,29 +1021,39 @@ End;
 {...............................................................................}
 Function TDelphiDebugInfo.DoReadDebugInfo(Const FileName : String; ALoadDebugInfo : Boolean) : Boolean;
 Var
-    I     : Integer;
+    I : Integer;
     Module : TJclTD32ModuleInfo;
+    Delta : Double;
 Begin
     Result := FileExists(FileName);
     If Result Then
     Begin
+        DoProgress('Prepare', 1);
         if Assigned(FImage) then
           FreeAndNil(FImage);
 
+        DoProgress('Init image', 5);
         FImage := TJclPeBorTD32Image.Create(True);
+        DoProgress('Load image', 5);
 
         FImage.FileName := FileName;
+        DoProgress('Load debug info', 10);
         Result := FImage.IsTD32DebugPresent;
-        If Result And ALoadDebugInfo Then
+        If Result And ALoadDebugInfo and (FImage.TD32Scanner.ModuleCount > 0) Then
         Begin
+            Delta := 80 / FImage.TD32Scanner.ModuleCount;
             For I := 0 To FImage.TD32Scanner.ModuleCount - 1 Do
             Begin
                 Module := FImage.TD32Scanner.Modules[I];
                 ParseUnit(Module);
+
+                DoProgress('Load debug info', 10 + Round((I + 1) * Delta));
             End;
 
+            DoProgress('Check debug info', 90);
             ResolveUnits;
         End;
+        DoProgress('Debug info loaded', 99);
     End;
 End;
 {...............................................................................}
