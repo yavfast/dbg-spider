@@ -42,9 +42,10 @@ Type
 
     TNameId = type Integer;
 
-    TNameInfo = Class
+    TNameInfo = Class(TObject)
     public
         NameId : Integer;
+        SymbolInfo : TObject; // Указатель на TJclTD32SymbolInfo
 
         function Name: AnsiString; virtual; abstract;
         function ShortName: String; virtual;
@@ -55,6 +56,8 @@ Type
     TNameList = Class(TList)
     private
         FNameIdList: TNameIdList;
+        FFreeItems: Boolean;
+    function GetNameInfoItem(const Index: Integer): TNameInfo;
     protected
         procedure Notify(Ptr: Pointer; Action: TListNotification); override;
         procedure CheckNameIdList;
@@ -66,8 +69,10 @@ Type
 
         function FindByName(Const Name: AnsiString): TNameInfo;
         function FindByNameId(Const NameId: TNameId): TNameInfo;
-    End;
 
+        property NameInfoItems[const Index: Integer]: TNameInfo read GetNameInfoItem; default;
+        property FreeItems: Boolean read FFreeItems write FFreeItems;
+    End;
 
 {..............................................................................}
     TTypeInfo = Class(TNameInfo)
@@ -79,8 +84,8 @@ Type
         MaxValue : Integer;
         IndexType : TTypeInfo;
 
-        Members  : TStringList;
-        Elements : TStringList;
+        Members  : TNameList;
+        Elements : TNameList;
 
         UnitInfo: TUnitInfo;
         TypeInfoIdx: Integer; // Index in UnitInfo.Types
@@ -94,6 +99,15 @@ Type
         function ElementsToString: String;
     end;
 {..............................................................................}
+
+    TEnumInfo = Class(TNameInfo)
+    public
+      TypeInfo: TTypeInfo;
+      OrderValue: Integer;
+
+      function Name : AnsiString; override;
+    End;
+
 
 {..............................................................................}
     TConstInfo = Class(TNameInfo)
@@ -906,8 +920,8 @@ end;
 
 destructor TTypeInfo.Destroy;
 begin
-    FreeStringList(Members);
-    FreeAndNil(Elements); // Не освобождать объекты!!!
+    FreeAndNil(Members);
+    FreeAndNil(Elements);
 
     Inherited;
 end;
@@ -925,7 +939,7 @@ begin
       if Result <> '' then
         Result := Result + ', ';
 
-      Result := Result + Elements.Strings[I];
+      Result := Result + Elements[I].Name;
     end;
   end;
 end;
@@ -1223,11 +1237,25 @@ begin
 end;
 
 procedure TNameList.Clear;
+var
+  I: Integer;
+  Obj: TObject;
 begin
   if Assigned(FNameIdList) then
     FreeAndNil(FNameIdList);
 
-  ClearList(Self);
+  if FFreeItems then
+  begin
+    for I := 0 to Count - 1 do
+    begin
+      Obj := List[I];
+      if Obj <> nil then
+      begin
+        List[I] := nil;
+        FreeAndNil(Obj);
+      end;
+    end;
+  end;
 
   inherited;
 end;
@@ -1237,6 +1265,7 @@ begin
   inherited;
 
   FNameIdList := Nil;
+  FFreeItems := True;
 end;
 
 destructor TNameList.Destroy;
@@ -1266,6 +1295,11 @@ begin
 
   if not FNameIdList.TryGetValue(NameId, Result) then
     Result := Nil;
+end;
+
+function TNameList.GetNameInfoItem(const Index: Integer): TNameInfo;
+begin
+  Result := TNameInfo(Items[Index]);
 end;
 
 procedure TNameList.Notify(Ptr: Pointer; Action: TListNotification);
@@ -1307,6 +1341,13 @@ end;
 function TStructMember.Name: AnsiString;
 begin
   Result := DataType.UnitInfo.DebugInfo.GetNameById(NameId);
+end;
+
+{ TEnumInfo }
+
+function TEnumInfo.Name: AnsiString;
+begin
+  Result := TypeInfo.UnitInfo.DebugInfo.GetNameById(NameId);
 end;
 
 End.

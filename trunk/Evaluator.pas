@@ -685,7 +685,7 @@ Begin
             Begin
                 For I := 0 To TypeInfo.Members.Count - 1 Do
                 Begin
-                    Member := TStructMember(TypeInfo.Members.Objects[I]);
+                    Member := TStructMember(TypeInfo.Members[I]);
                     InitResultMemory(Member.DataType, IncPointer(Address, Member.BitOffset Div 8));
                 End;
             End;
