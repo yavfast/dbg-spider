@@ -581,6 +581,7 @@ object MainForm: TMainForm
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
         OnColumnResize = vstThreadsColumnResize
+        OnFocusChanged = vstDbgInfoUnitsFocusChanged
         OnGetText = vstDbgInfoUnitsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
         Columns = <
@@ -624,7 +625,7 @@ object MainForm: TMainForm
           Top = 0
           Width = 818
           Height = 345
-          ActivePage = tsDbgUnitFunctions
+          ActivePage = tsDbgUnitConsts
           Align = alClient
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
@@ -651,13 +652,14 @@ object MainForm: TMainForm
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetText = vstDbgInfoConstsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
               Columns = <
                 item
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                   Position = 0
-                  Width = 210
+                  Width = 250
                   WideText = 'Name'
                 end
                 item
@@ -665,14 +667,14 @@ object MainForm: TMainForm
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                   Position = 1
-                  Width = 100
+                  Width = 200
                   WideText = 'Value'
                 end
                 item
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                   Position = 2
-                  Width = 300
+                  Width = 150
                   WideText = 'Type'
                 end>
             end
@@ -702,6 +704,7 @@ object MainForm: TMainForm
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetText = vstDbgInfoTypesGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
               Columns = <
                 item
@@ -745,20 +748,21 @@ object MainForm: TMainForm
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetText = vstDbgInfoVarsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
               Columns = <
                 item
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                   Position = 0
-                  Width = 210
+                  Width = 250
                   WideText = 'Name'
                 end
                 item
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                   Position = 1
-                  Width = 400
+                  Width = 200
                   WideText = 'Type'
                 end>
             end
@@ -769,7 +773,7 @@ object MainForm: TMainForm
             object vstDbgInfoFunctions: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 387
+              Width = 449
               Height = 317
               Align = alLeft
               BevelEdges = []
@@ -789,22 +793,26 @@ object MainForm: TMainForm
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
               OnColumnResize = vstThreadsColumnResize
+              OnGetText = vstDbgInfoFunctionsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
               Columns = <
                 item
-                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus]
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                   Position = 0
-                  Width = 60
+                  Width = 70
                   WideText = 'Address'
                 end
                 item
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                   Position = 1
-                  Width = 250
+                  Width = 300
                   WideText = 'Name'
                 end
                 item
+                  Alignment = taRightJustify
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                   Position = 2
@@ -813,9 +821,9 @@ object MainForm: TMainForm
                 end>
             end
             object vstDbgInfoFuncVars: TVirtualStringTree
-              Left = 387
+              Left = 449
               Top = 0
-              Width = 423
+              Width = 361
               Height = 317
               Align = alClient
               BevelEdges = []
@@ -1526,22 +1534,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 555
+        Width = 559
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 614
+        Width = 610
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 568
+      Left = 572
       Top = 0
-      Width = 605
+      Width = 601
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1565,7 +1573,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 542
+      Width = 546
       Height = 25
       ActionManager = amMain
       Align = alNone
