@@ -1258,7 +1258,7 @@ type
     property Value: Word read FValue;
   end;
 
-  TJclMemberSymbolInfo = class(TJclTD32NamedSymbol)
+  TJclTD32MemberSymbolInfo = class(TJclTD32NamedSymbol)
   private
     FFlags: Word;
     FOffset: Word;
@@ -1828,7 +1828,7 @@ begin
   end;
 end;
 
-constructor TJclMemberSymbolInfo.Create(pSymInfo: PFieldListElement);
+constructor TJclTD32MemberSymbolInfo.Create(pSymInfo: PFieldListElement);
 begin
   // Adjust PFieldListElement to PSymbolInfo for TJclSymbolInfo.Create
   inherited Create(PSymbolInfo(DWORD(pSymInfo) - 2), 0);
@@ -2555,7 +2555,7 @@ begin
       end;
       LF_MEMBER:
       begin
-        Result.Members.Add(TJclMemberSymbolInfo.Create(pFieldListElement(Offset)));
+        Result.Members.Add(TJclTD32MemberSymbolInfo.Create(pFieldListElement(Offset)));
         Size := SizeOf(TMemberTypeInfo);
       end;
       LF_STMEMBER: Size := 14;           // Static member - skip
@@ -2582,7 +2582,7 @@ procedure TJclTD32InfoParser.FixVariantTypes;
       Result := 0;
   end;
 
-  function CreateMember(const MemberName: AnsiString; const Offset: Word; const BaseType: DWORD): TJclMemberSymbolInfo;
+  function CreateMember(const MemberName: AnsiString; const Offset: Word; const BaseType: DWORD): TJclTD32MemberSymbolInfo;
   var
     Member: TFieldListElement;
   begin
@@ -2592,7 +2592,7 @@ procedure TJclTD32InfoParser.FixVariantTypes;
     Member.LeafMember.NameIndex := CheckNameIndex(MemberName);
     Member.LeafMember.Reserved := 0;
     Member.LeafMember.Offset := Offset;
-    Result := TJclMemberSymbolInfo.Create(pFieldListElement(@Member));
+    Result := TJclTD32MemberSymbolInfo.Create(pFieldListElement(@Member));
   end;
 
   function CreatePointer(const ElementType: Integer): Integer;

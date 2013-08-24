@@ -623,11 +623,11 @@ Begin
             Begin
                 For I := 0 To TypeInfo.Members.Count - 1 Do
                 Begin
-                    MemberName := TypeInfo.Members[I];
+                    MemberName := TypeInfo.Members[I].Name;
                     If (MemberName = '') Or Not CharInSet(MemberName[1], ['a'..'z', 'A'..'Z']) Then
                         Continue;
 
-                    Member := TStructMember(TypeInfo.Members.Objects[I]);
+                    Member := TStructMember(TypeInfo.Members[I]);
 
                     If (Member = Nil) Or (Member.Alias <> '') Or (Member.MethodName <> '') Then
                         Continue;
@@ -905,9 +905,10 @@ Var
     Index    : Integer;
     TypeInfo : TTypeInfo;
 Begin
+    (*
     For I := 0 To Types.Count - 1 Do
     Begin
-        TypeInfo := Types[I];
+        TypeInfo := TTypeInfo(Types[I]);
         If (TypeInfo <> Nil) And (TypeInfo.Kind = tkEnum) And (TypeInfo.Elements <> Nil) Then
         Begin
             Index := TypeInfo.Elements.IndexOf(String(VarName));
@@ -920,6 +921,7 @@ Begin
         End;
     End;
     Result := False;
+    *)
 End;
 {..............................................................................}
 

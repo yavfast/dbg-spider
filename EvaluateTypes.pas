@@ -481,12 +481,14 @@ Function IntToEnumValue(TypeInfo : TTypeInfo; Value : Integer) : String;
 Var
     Index : Integer;
 Begin
+    (*
     Index := TypeInfo.Elements.IndexOfObject(TObject(Value));
 
     If Index >= 0 Then
         Result := TypeInfo.Elements[Index]
     Else
         Result := Format('%s(%d)', [TypeInfo.Name, Value]);
+    *)
 End;
 {..............................................................................}
 
@@ -595,6 +597,7 @@ Var
     ClassType   : TTypeInfo;
     MethodName  : AnsiString;
 Begin
+    (*
     CurTypeInfo := TypeInfo;
     Repeat
         Result := (CurTypeInfo.Members <> Nil) And CurTypeInfo.Members.Find(String(ItemName), Index);
@@ -626,6 +629,7 @@ Begin
             Result := TryFindClassMethod(CalculateData, Address, CalculateData.DebugInfo.MakeFuncDbgFullName(CurTypeInfo.Name, ItemName), Value);
         CurTypeInfo := CurTypeInfo.BaseType;
     Until Result Or (CurTypeInfo = Nil);
+    *)
 End;
 {..............................................................................}
 
@@ -678,10 +682,10 @@ Begin
         If Info.Members <> Nil Then
         Begin
             I := Info.Members.Count - 1;
-            While (I > -1) And Not TStructMember(Info.Members.Objects[I]).IsDefault Do
+            While (I > -1) And Not TStructMember(Info.Members[I]).IsDefault Do
                 Dec(I);
             If I > -1 Then
-                Result := TStructMember(Info.Members.Objects[I]).MethodName;
+                Result := TStructMember(Info.Members[I]).MethodName;
         End;
         If Result = '' Then
             Info := Info.BaseType;
