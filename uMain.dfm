@@ -23,23 +23,53 @@ object MainForm: TMainForm
     Top = 167
     Width = 1173
     Height = 373
-    ActivePage = tsDebugInfo2
+    ActivePage = tsLog
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
       Caption = 'Log'
-      object mLog: TMemo
+      object vstLog: TVirtualStringTree
         Left = 0
         Top = 0
         Width = 1165
         Height = 345
         Align = alClient
-        Lines.Strings = (
-          'mLog')
-        ReadOnly = True
-        ScrollBars = ssBoth
+        BevelEdges = []
+        BevelInner = bvNone
+        BevelOuter = bvNone
+        BorderStyle = bsNone
+        Header.AutoSizeIndex = 0
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'Tahoma'
+        Header.Font.Style = []
+        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        Indent = 0
+        ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
-        WordWrap = False
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+        TreeOptions.PaintOptions = [toShowDropmark, toShowHorzGridLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        OnColumnResize = vstLogColumnResize
+        OnGetText = vstLogGetText
+        OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnResize = vstLogResize
+        Columns = <
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+            Position = 0
+            Width = 150
+            WideText = 'Event time'
+          end
+          item
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 1
+            Width = 800
+            WideText = 'Message'
+          end>
       end
     end
     object tsDebugInfo2: TTabSheet

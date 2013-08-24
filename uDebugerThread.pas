@@ -30,6 +30,7 @@ type
     procedure OnProgress(const Action: String; const Progress: Integer);
 
     procedure InitDebuger;
+    procedure InitDebugInfo;
     procedure LoadDebugInfo;
   protected
     procedure Execute; override;
@@ -82,14 +83,13 @@ procedure TDebugerThread.Execute;
 var
   FRun: Boolean;
 begin
-  NameThreadForDebugging(AnsiString(ClassName), ThreadId);
+  //NameThreadForDebugging(AnsiString(ClassName), ThreadId);
 
   InitDebuger;
+  InitDebugInfo;
 
   if doDebugInfo in FDbgOptions then
-    LoadDebugInfo
-  else
-    FreeAndNil(gvDebugInfo);
+    LoadDebugInfo;
 
   if doRun in FDbgOptions then
   begin
@@ -116,7 +116,9 @@ begin
           _AC.Log('Fail debug process: "%s"', [E.Message]);
       end;
     end;
-  end;
+  end
+  else
+    _AC.DoAction(acRunEnabled, [True]);
 end;
 
 procedure TDebugerThread.InitDebuger;
@@ -142,18 +144,22 @@ begin
   gvDebuger.OnBreakPoint := OnBreakPoint;
 end;
 
+procedure TDebugerThread.InitDebugInfo;
+begin
+  if gvDebugInfo = nil then
+    gvDebugInfo := TDelphiDebugInfo.Create(gvDebuger);
+
+  gvDebugInfo.DebugInfoProgressCallback := OnProgress;
+end;
+
 procedure TDebugerThread.LoadDebugInfo;
 begin
+  gvDebugInfo.ClearDebugInfo;
+  _AC.DoAction(acUpdateInfo, []);
+
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
-    if gvDebugInfo <> nil then
-      FreeAndNil(gvDebugInfo);
-
-    _AC.Log('Load debug info for "%s"', [FAppName]);
-
-    gvDebugInfo := TDelphiDebugInfo.Create(gvDebuger);
-    gvDebugInfo.DebugInfoProgressCallback := OnProgress;
-
+    _AC.Log('Load debug info for "%s"...', [FAppName]);
     FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(FAppName, nil);
 
     if FDbgInfoLoaded then

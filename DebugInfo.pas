@@ -281,6 +281,7 @@ Type
         FDebuger   : TDebuger;
         FDirs      : TStringList;
         FUnits     : TStringList;
+        FDbgLog    : TDbgLog;
 
         FExeFileName : String;
         FDebugInfoLoaded : Boolean;
@@ -348,6 +349,8 @@ Type
         Property Dirs      : TStringList Read FDirs;
         Property Units     : TStringList Read FUnits;
 
+        Property DbgLog    : TDbgLog read FDbgLog;
+
         property DebugInfoLoaded: Boolean read FDebugInfoLoaded;
         property DebugInfoProgressCallback: TDebugInfoProgressCallback read FDebugInfoProgressCallback write FDebugInfoProgressCallback;
     End;
@@ -385,6 +388,8 @@ Begin
     FDirs := TStringList.Create;
     FUnits := TStringList.Create;
 
+    FDbgLog := TDbgLog.Create;
+
     FExeFileName := '';
     FDebugInfoLoaded := False;
 
@@ -400,14 +405,16 @@ Begin
     FreeAndNil(FUnits);
     FreeAndNil(FDirs);
 
+    FreeAndNil(FDbgLog);
+
     Inherited;
 End;
+
 procedure TDebugInfo.DoProgress(const Action: String; const Progress: Integer);
 begin
   if Assigned(FDebugInfoProgressCallback) then
     FDebugInfoProgressCallback(Action, Progress);
 end;
-
 {..............................................................................}
 
 {..............................................................................}
@@ -444,6 +451,8 @@ Begin
 
         FDirs.Clear;
         ClearStringList(FUnits);
+
+        FDbgLog.ClearLog;
 
         FExeFileName := '';
     End;
