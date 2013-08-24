@@ -374,6 +374,28 @@ type
 
   TDbgState = (dsNone, dsStarted, dsWait, dsPerfomance, dsTrace, dsEvent, dsStoping, dsStoped, dsDbgFail);
 
+  TDbgLogItem = Class
+    DateTime: TDateTime;
+    LogMessage: String;
+  End;
+
+  TDbgLog = class(TThreadList)
+  private
+    function GetItem(const Index: Integer): TDbgLogItem;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure ClearLog;
+
+    function Count: Integer;
+
+    procedure Add(const Msg: String); overload;
+    procedure Add(const FmtMsg: String; const Args: array of Const); overload;
+
+    property Items[const Index: Integer]: TDbgLogItem read GetItem; default;
+  end;
+
 procedure RaiseDebugCoreException(const Msg: String = '');
 
 implementation
@@ -698,6 +720,75 @@ begin
   FreeAndNil(Stack);
 
   inherited;
+end;
+
+{ TDbgLog }
+
+procedure TDbgLog.Add(const Msg: String);
+var
+  LogItem: TDbgLogItem;
+begin
+  LogItem := TDbgLogItem.Create;
+  LogItem.DateTime := Now;
+  LogItem.LogMessage := Msg;
+
+  inherited Add(LogItem);
+end;
+
+procedure TDbgLog.Add(const FmtMsg: String; const Args: array of Const);
+begin
+  Add(Format(FmtMsg, Args));
+end;
+
+procedure TDbgLog.ClearLog;
+var
+  L: TList;
+begin
+  L := LockList;
+  try
+    ClearList(L);
+  finally
+    UnlockList;
+  end;
+end;
+
+function TDbgLog.Count: Integer;
+var
+  L: TList;
+begin
+  L := LockList;
+  Result := L.Count;
+  UnlockList;
+end;
+
+constructor TDbgLog.Create;
+var
+  L: TList;
+begin
+  inherited Create;
+
+  L := LockList;
+  L.Capacity := 1000;
+  UnlockList;
+end;
+
+destructor TDbgLog.Destroy;
+begin
+  ClearLog;
+
+  inherited;
+end;
+
+function TDbgLog.GetItem(const Index: Integer): TDbgLogItem;
+var
+  L: TList;
+begin
+  L := LockList;
+  try
+    Result := L[Index];
+  finally
+    UnlockList;
+  end;
 end;
 
 end.

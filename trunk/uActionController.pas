@@ -32,9 +32,15 @@ uses SysUtils, uMain, Debuger, uDebugerThread;
 { TActionController }
 
 class procedure TActionController.Log(const Msg: String);
-var
-  _Msg: String;
+//var
+//  _Msg: String;
 begin
+  if Assigned(gvDebugInfo) then
+    gvDebugInfo.DbgLog.Add(Msg);
+
+  DoAction(acUpdateInfo, []);
+
+  (*
   _Msg := Msg;
   if Assigned(MainForm) then
     TThread.Synchronize(nil,
@@ -44,6 +50,7 @@ begin
           MainForm.Log(_Msg);
       end
     );
+  *)
 end;
 
 class procedure TActionController.DoAction(const Action: TacAction; const Args: array of Variant);

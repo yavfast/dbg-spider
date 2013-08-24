@@ -15,14 +15,16 @@ uses
   uActionController;
 
 type
-  TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
+  TLinkType = (ltProject, ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
     ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
-    ltDbgFuncParamInfo);
+    ltDbgFuncParamInfo, ltDbgLogItem);
 
   PLinkData = ^TLinkData;
   TLinkData = record
     SyncNode: PVirtualNode;
     case LinkType: TLinkType of
+      ltProject:
+        ();
       ltProcess:
         (ProcessData: PProcessData);
       ltThread:
@@ -49,6 +51,8 @@ type
         (DbgStructMemberInfo: TStructMember);
       ltDbgFuncParamInfo:
         (DbgFuncParamInfo: TVarInfo);
+      ltDbgLogItem:
+        (DbgLogItem: TDbgLogItem);
   end;
 
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -62,7 +66,6 @@ type
     acDebugInfo: TAction;
     pcMain: TPageControl;
     tsLog: TTabSheet;
-    mLog: TMemo;
     tmrThreadsUpdate: TTimer;
     tsThreads1: TTabSheet;
     vstThreads: TVirtualStringTree;
@@ -131,6 +134,7 @@ type
     actbStatusInfo2: TActionToolBar;
     pbProgress: TProgressBar;
     pStatusAction: TPanel;
+    vstLog: TVirtualStringTree;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -190,12 +194,16 @@ type
 
     procedure vstDbgInfoFuncVarsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
+    procedure vstLogGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+
     procedure acOptionsExecute(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure acExitExecute(Sender: TObject);
     procedure acCPUTimeLineExecute(Sender: TObject);
     procedure acRealTimeLineExecute(Sender: TObject);
     procedure acMainTabExecute(Sender: TObject);
+    procedure vstLogResize(Sender: TObject);
+    procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
 
 
   private
@@ -215,9 +223,13 @@ type
 
     procedure ClearProject;
     procedure ClearTrees;
+    procedure ClearDbgTrees;
+    procedure ClearDbgInfoTrees;
 
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
+    procedure UpdateLog;
+    procedure InitLog(const RootMsg: String);
 
     procedure UpdateActions;
 
@@ -315,10 +327,9 @@ procedure TMainForm.acRunExecute(Sender: TObject);
 begin
   acRun.Enabled := False;
 
-  mLog.Clear;
-  ClearTrees;
+  ClearDbgTrees;
 
-  _AC.RunDebug(FAppName, [doDebugInfo, doRun, doProfiler], FPID);
+  _AC.RunDebug(FAppName, [{doDebugInfo, }doRun, doProfiler], FPID);
 end;
 
 procedure TMainForm.acStopExecute(Sender: TObject);
@@ -334,6 +345,19 @@ var
 begin
   for I := 0 to PC.PageCount - 1 do
     PC.Pages[I].TabVisible := False;
+end;
+
+procedure TMainForm.InitLog(const RootMsg: String);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+begin
+  vstLog.Clear;
+
+  Node := vstLog.AddChild(nil);
+  Data := vstLog.GetNodeData(Node);
+
+  Data^.LinkType := ltProject;
 end;
 
 procedure TMainForm.acMainTabExecute(Sender: TObject);
@@ -554,6 +578,30 @@ begin
   UpdateTrees;
 end;
 
+procedure TMainForm.ClearDbgInfoTrees;
+begin
+  vstDbgInfoUnits.Clear;
+  vstDbgInfoConsts.Clear;
+  vstDbgInfoTypes.Clear;
+  vstDbgInfoVars.Clear;
+  vstDbgInfoFunctions.Clear;
+  vstDbgInfoFuncVars.Clear;
+end;
+
+procedure TMainForm.ClearDbgTrees;
+begin
+  vstThreads.Clear;
+  vdtTimeLine.Clear;
+
+  vstMemInfoThreads.Clear;
+  vstMemList.Clear;
+  vstMemStack.Clear;
+
+  vstExceptionThreads.Clear;
+  vstExceptionList.Clear;
+  vstExceptionCallStack.Clear;
+end;
+
 procedure TMainForm.ClearProject;
 begin
   FAppName := '';
@@ -566,23 +614,10 @@ end;
 
 procedure TMainForm.ClearTrees;
 begin
-  vstThreads.Clear;
-  vdtTimeLine.Clear;
+  vstLog.Clear;
 
-  vstMemInfoThreads.Clear;
-  vstMemList.Clear;
-  vstMemStack.Clear;
-
-  vstExceptionThreads.Clear;
-  vstExceptionList.Clear;
-  vstExceptionCallStack.Clear;
-
-  vstDbgInfoUnits.Clear;
-  vstDbgInfoConsts.Clear;
-  vstDbgInfoTypes.Clear;
-  vstDbgInfoVars.Clear;
-  vstDbgInfoFunctions.Clear;
-  vstDbgInfoFuncVars.Clear;
+  ClearDbgTrees;
+  ClearDbgInfoTrees;
 end;
 
 procedure TMainForm.DoAction(Action: TacAction; const Args: array of Variant);
@@ -1325,7 +1360,7 @@ end;
 
 procedure TMainForm.Log(const Msg: String);
 begin
-  mLog.Lines.Add(FormatDateTime('hh:nn:ss.zzz', Now) + ': ' + Msg);
+  //mLog.Lines.Add(FormatDateTime('hh:nn:ss.zzz', Now) + ': ' + Msg);
 end;
 
 procedure TMainForm.ProgressAction(const Action: String; const Progress: Integer);
@@ -1347,6 +1382,8 @@ begin
 
   FAppName := Name;
   rbnMain.Caption := Name;
+
+  InitLog(Name);
 
   _AC.RunDebug(FAppName, [doDebugInfo]); // Загрузка DebugInfo
 end;
@@ -1387,6 +1424,41 @@ end;
 procedure TMainForm.UpdateActions;
 begin
 
+end;
+
+procedure TMainForm.UpdateLog;
+var
+  CurCount: Integer;
+  LogCount: Integer;
+  I: Integer;
+  Node: PVirtualNode;
+  Data: PLinkData;
+begin
+  if gvDebugInfo = nil then Exit;
+
+  if vstLog.RootNode.FirstChild = nil then
+    InitLog(FAppName);
+
+  CurCount := vstLog.RootNode.FirstChild.ChildCount;
+  LogCount := gvDebugInfo.DbgLog.Count;
+  if CurCount <> LogCount then
+  begin
+    vstLog.BeginUpdate;
+    try
+      for I := CurCount to LogCount - 1 do
+      begin
+        Node := vstLog.AddChild(vstLog.RootNode.FirstChild);
+        Data := vstLog.GetNodeData(Node);
+
+        Data^.LinkType := ltDbgLogItem;
+        Data^.DbgLogItem := gvDebugInfo.DbgLog[I];
+      end;
+
+      vstLog.Expanded[vstLog.RootNode.FirstChild] := True;
+    finally
+      vstLog.EndUpdate;
+    end;
+  end;
 end;
 
 procedure TMainForm.UpdateStatusInfo;
@@ -1434,6 +1506,8 @@ end;
 
 procedure TMainForm.UpdateTrees;
 begin
+  UpdateLog;
+
   vstThreads.Invalidate;
 
   vdtTimeLine.Invalidate;
@@ -1843,6 +1917,42 @@ begin
           end;
       end;
   end;
+end;
+
+procedure TMainForm.vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
+begin
+  vstLogResize(Sender);
+end;
+
+procedure TMainForm.vstLogGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  Item: TDbgLogItem;
+begin
+  Data := vstLog.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProject:
+      begin
+        case Column of
+          1: CellText := FAppName;
+        else
+          CellText := 'Project:';
+        end;
+      end;
+    ltDbgLogItem:
+      begin
+        Item := Data^.DbgLogItem;
+        case Column of
+          0: CellText := FormatDateTime('yyyy.dd.mm hh:nn:ss.zzz', Item.DateTime);
+          1: CellText := Item.LogMessage;
+        end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstLogResize(Sender: TObject);
+begin
+  vstLog.Header.Columns[1].Width := vstLog.ClientWidth - vstLog.Header.Columns[0].Width - 1;
 end;
 
 procedure TMainForm.vstMemInfoThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
