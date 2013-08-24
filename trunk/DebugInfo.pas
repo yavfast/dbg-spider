@@ -3,7 +3,7 @@ Unit DebugInfo;
 Interface
 
 Uses
-    SysUtils, Windows, Classes, Debuger, DebugerTypes;
+    SysUtils, Windows, Classes, Debuger, DebugerTypes, Generics.Collections;
 {..............................................................................}
 
 Type
@@ -40,6 +40,8 @@ Type
 
 {..............................................................................}
 
+    TNameId = type Integer;
+
     TNameInfo = Class
     public
         NameId : Integer;
@@ -48,9 +50,22 @@ Type
         function ShortName: String; virtual;
     End;
 
+    TNameIdList = TDictionary<TNameId,TNameInfo>;
+
     TNameList = Class(TList)
+    private
+        FNameIdList: TNameIdList;
+    protected
+        procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+        procedure CheckNameIdList;
     public
+        constructor Create;
+        destructor Destroy; override;
+
+        procedure Clear; override;
+
         function FindByName(Const Name: AnsiString): TNameInfo;
+        function FindByNameId(Const NameId: TNameId): TNameInfo;
     End;
 
 
@@ -131,16 +146,20 @@ Type
 {..............................................................................}
 
 {..............................................................................}
-    TStructMember = Class
+    TStructMember = Class(TNameInfo)
     public
         DataType      : TTypeInfo;
         BitOffset     : Integer;
         BitLength     : Integer;
         Scope         : TMemberScope;
-        Alias         : AnsiString; // read field for properties
-        MethodName    : AnsiString; // read function name for properties
+        AliasNameId   : TNameId;
+        MethodNameId  : TNameId;
         Method        : TFuncInfo;  // read function for properties
         IsDefault     : Boolean;    // true for default property
+
+        function Alias : AnsiString; // read field for properties
+        function MethodName : AnsiString; // read function name for properties
+        function Name: AnsiString; override;
     end;
 {..............................................................................}
 
@@ -177,6 +196,7 @@ Type
 
         function FindTypeByName(const TypeName: AnsiString): TTypeInfo;
         function FindFuncByName(const FuncName: AnsiString): TFuncInfo;
+        function FindFuncByNameId(const FuncNameId: Integer): TFuncInfo;
         function FindConstByName(const ConstName: AnsiString): TConstInfo;
         function FindVarByName(const VarName: AnsiString): TVarInfo;
     End;
@@ -286,7 +306,7 @@ Type
 
         Procedure InitDebugHook; Virtual; abstract;
 
-        Function GetNameById(const Idx: Integer): AnsiString; virtual; abstract;
+        Function GetNameById(const Idx: TNameId): AnsiString; virtual; abstract;
 
         Function  CheckAddr(Const Addr : Pointer) : Boolean; Virtual;
         Function  DumpLineInformation(Const Addr : Pointer) : String;
@@ -1123,13 +1143,12 @@ end;
 
 procedure TSegmentCodeInfo.Clear;
 begin
-  ClearList(Consts);
-  ClearList(Types);
-  ClearList(Vars);
-  ClearList(Funcs);
+  Consts.Clear;
+  Types.Clear;
+  Vars.Clear;
+  Funcs.Clear;
 
-  if Assigned(Lines) then
-    Lines.Clear;
+  Lines.Clear;
 end;
 
 constructor TSegmentCodeInfo.Create;
@@ -1152,6 +1171,7 @@ begin
   FreeAndNil(Types);
   FreeAndNil(Vars);
   FreeAndNil(Funcs);
+
   FreeAndNil(Lines);
 
   inherited;
@@ -1167,6 +1187,11 @@ begin
   Result := TFuncInfo(Funcs.FindByName(FuncName));
 end;
 
+function TSegmentCodeInfo.FindFuncByNameId(const FuncNameId: Integer): TFuncInfo;
+begin
+  Result := TFuncInfo(Funcs.FindByNameId(FuncNameId));
+end;
+
 function TSegmentCodeInfo.FindTypeByName(const TypeName: AnsiString): TTypeInfo;
 begin
   Result := TTypeInfo(Types.FindByName(TypeName));
@@ -1178,6 +1203,48 @@ begin
 end;
 
 { TNameList }
+
+procedure TNameList.CheckNameIdList;
+var
+  I: Integer;
+  NameInfo: TNameInfo;
+begin
+  if FNameIdList = nil then
+  begin
+    FNameIdList := TNameIdList.Create(Capacity);
+
+    for I := 0 to Count - 1 do
+    begin
+      NameInfo := TNameInfo(List[I]);
+
+      FNameIdList.AddOrSetValue(NameInfo.NameId, NameInfo);
+    end;
+  end;
+end;
+
+procedure TNameList.Clear;
+begin
+  if Assigned(FNameIdList) then
+    FreeAndNil(FNameIdList);
+
+  ClearList(Self);
+
+  inherited;
+end;
+
+constructor TNameList.Create;
+begin
+  inherited;
+
+  FNameIdList := Nil;
+end;
+
+destructor TNameList.Destroy;
+begin
+  Clear;
+
+  inherited;
+end;
 
 function TNameList.FindByName(const Name: AnsiString): TNameInfo;
 var
@@ -1193,16 +1260,53 @@ begin
   Result := Nil;
 end;
 
+function TNameList.FindByNameId(const NameId: TNameId): TNameInfo;
+begin
+  CheckNameIdList;
+
+  if not FNameIdList.TryGetValue(NameId, Result) then
+    Result := Nil;
+end;
+
+procedure TNameList.Notify(Ptr: Pointer; Action: TListNotification);
+var
+  NameInfo: TNameInfo;
+begin
+  if Assigned(FNameIdList) then
+  begin
+    NameInfo := TNameInfo(Ptr);
+
+    case Action of
+      lnAdded:
+        FNameIdList.AddOrSetValue(NameInfo.NameId, NameInfo);
+      lnDeleted:
+        FNameIdList.Remove(NameInfo.NameId);
+    end;
+  end;
+end;
+
 { TNameInfo }
 
 function TNameInfo.ShortName: String;
-var
-  P: Integer;
 begin
   Result := String(Name);
-  P := Pos('$', Result);
-  if P > 0 then
-    Result := Copy(Result, 1, P - 1);
+end;
+
+{ TStructMember }
+
+function TStructMember.Alias: AnsiString;
+begin
+  Result := DataType.UnitInfo.DebugInfo.GetNameById(AliasNameId);
+end;
+
+function TStructMember.MethodName: AnsiString;
+begin
+  Result := DataType.UnitInfo.DebugInfo.GetNameById(MethodNameId);
+end;
+
+function TStructMember.Name: AnsiString;
+begin
+  Result := DataType.UnitInfo.DebugInfo.GetNameById(NameId);
 end;
 
 End.

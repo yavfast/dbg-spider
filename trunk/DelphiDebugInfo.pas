@@ -13,7 +13,7 @@ Type
         FImage : TJclPeBorTD32Image;
 
         Function ImageBase : Cardinal;
-        Function ImageNames(const Index: Integer): AnsiString;
+        Function ImageNames(const Index: TNameId): AnsiString;
         function LoadVar(UnitInfo: TUnitInfo; VarSymbol: TJclTD32NamedSymbol; Func: TFuncInfo): TVarInfo;
         procedure LoadFunc(UnitInfo: TUnitInfo; FuncSymbol: TJclTD32ProcSymbolInfo);
         procedure LoadSymbols(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
@@ -40,7 +40,7 @@ Type
         Constructor Create(ADebuger: TDebuger);
         Destructor  Destroy; Override;
 
-        Function GetNameById(const Idx: Integer): AnsiString; override;
+        Function GetNameById(const Idx: TNameId): AnsiString; override;
 
         Procedure ClearDebugInfo; Override;
         Function  HasDebugInfo(Const FileName : String) : Boolean; Override;
@@ -230,7 +230,7 @@ Begin
     End;
 End;
 
-function TDelphiDebugInfo.GetNameById(const Idx: Integer): AnsiString;
+function TDelphiDebugInfo.GetNameById(const Idx: TNameId): AnsiString;
 begin
   Result := ImageNames(Idx);
 end;
@@ -304,6 +304,7 @@ Var
     SrcMember     : TJclMemberSymbolInfo;
     SrcMemberType : TJclSymbolTypeInfo;
     DstMember     : TStructMember;
+    DstTypeMember : TStructMember;
     SrcEnum       : TJclEnumerateSymbolInfo;
     I, J          : Integer;
 Begin
@@ -312,7 +313,7 @@ Begin
     If (SrcType <> Nil) and (SrcType.UnitInfo = UnitInfo) Then
     begin
         Result := SrcType.UnitInfoIndex;
-        DstType := UnitInfo.Types[Result];
+        DstType := TTypeInfo(UnitInfo.Types[Result]);
         Exit;
     end;
 
@@ -504,6 +505,8 @@ Begin
                 end;
 
                 DstMember := TStructMember.Create;
+                DstMember.NameId := SrcMember.NameIndex;
+
                 Case SrcMember.Flags And 3 Of
                     0, 3 : DstMember.Scope := msPublic;
                     1    : DstMember.Scope := msPrivate;
@@ -523,24 +526,31 @@ Begin
                 Else
                 Begin
                     LoadType(UnitInfo, SrcMemberType.ElementType, DstMember.DataType);
-                    DstMember.IsDefault := SrcMemberType.Flags And 1 = 1;
-                    If SrcMemberType.Flags And 2 = 2 Then
-                        DstMember.MethodName := ImageNames(SrcMemberType.MinValue)
+
+                    DstMember.IsDefault := (SrcMemberType.Flags And 1) = 1;
+
+                    If (SrcMemberType.Flags And 2) = 2 Then
+                        DstMember.MethodNameId := SrcMemberType.MinValue
                     Else
                     Begin
                         DstMember.BitOffset := SrcMemberType.MinValue * 8;
                         DstMember.BitLength := DstMember.DataType.DataSize * 8;
                     End;
+
                     For J := 0 To DstType.Members.Count - 1 Do
-                        If TStructMember(DstType.Members.Objects[J]).BitOffset Div 8 = SrcMemberType.MinValue Then
+                    Begin
+                        DstTypeMember := TStructMember(DstType.Members.Objects[J]);
+                        If (DstTypeMember.BitOffset Div 8) = SrcMemberType.MinValue Then
                         Begin
-                            DstMember.Alias := AnsiString(DstType.Members[J]);
+                            // TODO: Возможно, надо здесь надо указывать на всю структуру DstTypeMember
+                            DstMember.AliasNameId := DstTypeMember.NameId;
                             Break;
                         End;
+                    End;
                 End;
 
                 If DstMember <> Nil Then
-                    DstType.Members.AddObject(String(ImageNames(SrcMember.NameIndex)), DstMember);
+                    DstType.Members.AddObject(String(DstMember.Name), DstMember);
             End;
         End;
         stkStructure :
@@ -548,18 +558,24 @@ Begin
             DstType.Kind := tkStructure;
             DstType.DataSize := SrcType.DataSize;
             SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
+
             DstType.Members := TStringList.Create;
             DstType.Members.Duplicates := dupAccept;
             DstType.Members.Capacity := SrcList.Members.Count;
             For I := 0 To SrcList.Members.Count - 1 Do
             Begin
                 SrcMember := TJclMemberSymbolInfo(SrcList.Members[I]);
+
                 DstMember := TStructMember.Create;
+                DstMember.NameId := SrcMember.NameIndex;
                 DstMember.Scope := msPublic;
+
                 LoadType(UnitInfo, SrcMember.TypeIndex, DstMember.DataType);
+
                 DstMember.BitOffset := SrcMember.Offset * 8;
                 DstMember.BitLength := DstMember.DataType.DataSize * 8;
-                DstType.Members.AddObject(String(ImageNames(SrcMember.NameIndex)), DstMember);
+
+                DstType.Members.AddObject(String(DstMember.Name), DstMember);
             End;
         End;
         stkEnum :
@@ -569,6 +585,7 @@ Begin
             DstType.DataSize := FImage.TD32Scanner.SymbolTypes[SrcType.ElementType].DataSize;
             DstType.MinValue := High(DstType.MinValue);
             DstType.MaxValue := Low(DstType.MaxValue);
+
             SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
             DstType.Elements.Capacity := SrcList.Members.Count;
             For I := 0 To SrcList.Members.Count - 1 Do
@@ -909,9 +926,14 @@ Begin
     
     Delta := 10 / Units.Count;
 
+    Units.Sorted := True;
+
     For I := 0 To Units.Count - 1 Do
     Begin
         UInfo := TUnitInfo(Units.Objects[I]);
+
+        DoProgress(Format('Check unit "%s"', [UInfo.Name]), 90 + Round((I + 1) * Delta));
+
         For J := 0 To UInfo.UsedUnits.Count - 1 Do
         Begin
             U := Units.IndexOf(UInfo.UsedUnits[J]);
@@ -926,8 +948,8 @@ Begin
                 For U := 0 To TInfo.Members.Count - 1 Do
                 Begin
                     Member := TStructMember(TInfo.Members.Objects[U]);
-                    If (Member.MethodName <> '') then
-                      Member.Method := UInfo.FindFuncByName(Member.MethodName);
+                    If (Member.MethodNameId <> 0) then
+                      Member.Method := UInfo.FindFuncByNameId(Member.MethodNameId);
                 End;
         End;
 
@@ -942,8 +964,6 @@ Begin
                     FuncU.Parent := FuncJ;
             end;
         end;
-
-        DoProgress(Format('Check unit "%s"', [UInfo.Name]), 90 + Round((I + 1) * Delta));
     End;
 End;
 
@@ -1339,7 +1359,7 @@ begin
   Result := FImage.OptionalHeader32.ImageBase;
 end;
 
-function TDelphiDebugInfo.ImageNames(const Index: Integer): AnsiString;
+function TDelphiDebugInfo.ImageNames(const Index: TNameId): AnsiString;
 begin
     if (Index >= 0) and (FImage <> Nil) and (FImage.TD32Scanner <> Nil) and (Index < FImage.TD32Scanner.NameCount) then
         Result := FImage.TD32Scanner.Names[Index]

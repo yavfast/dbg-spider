@@ -15,7 +15,8 @@ uses
   uActionController;
 
 type
-  TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack, ltDbgUnitInfo);
+  TLinkType = (ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
+    ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo);
 
   PLinkData = ^TLinkData;
   TLinkData = record
@@ -35,6 +36,14 @@ type
         (ExceptStackEntry: TStackEntry);
       ltDbgUnitInfo:
         (DbgUnitInfo: TUnitInfo);
+      ltDbgConstInfo:
+        (DbgConstInfo: TConstInfo);
+      ltDbgTypeInfo:
+        (DbgTypeInfo: TTypeInfo);
+      ltDbgVarInfo:
+        (DbgVarInfo: TVarInfo);
+      ltDbgFuncInfo:
+        (DbgFuncInfo: TFuncInfo);
   end;
 
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -179,6 +188,12 @@ type
     procedure vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
     procedure vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstDbgInfoUnitsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+
+    procedure vstDbgInfoConstsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstDbgInfoTypesGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstDbgInfoVarsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstDbgInfoFunctionsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
     procedure acOptionsExecute(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -212,10 +227,10 @@ type
     procedure UpdateActions;
 
     procedure LoadUnits;
-    procedure LoadConsts(UnitInfo: TUnitInfo);
-    procedure LoadTypes(UnitInfo: TUnitInfo);
-    procedure LoadVars(UnitInfo: TUnitInfo);
-    procedure LoadFunctions(UnitInfo: TUnitInfo);
+    procedure LoadConsts(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
+    procedure LoadTypes(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
+    procedure LoadVars(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
+    procedure LoadFunctions(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 
     procedure DrawTimeLineHeader(C: TCanvas; const R: TRect; const Offset: Integer);
     procedure DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
@@ -565,6 +580,13 @@ begin
   vstExceptionThreads.Clear;
   vstExceptionList.Clear;
   vstExceptionCallStack.Clear;
+
+  vstDbgInfoUnits.Clear;
+  vstDbgInfoConsts.Clear;
+  vstDbgInfoTypes.Clear;
+  vstDbgInfoVars.Clear;
+  vstDbgInfoFunctions.Clear;
+  vstDbgInfoFuncVars.Clear;
 end;
 
 procedure TMainForm.DoAction(Action: TacAction; const Args: array of Variant);
@@ -1070,6 +1092,7 @@ procedure TMainForm.lbUnitsClick(Sender: TObject);
 var
   UnitInfo: TUnitInfo;
 begin
+  (*
   if lbUnits.ItemIndex >= 0 then
   begin
     UnitInfo := TUnitInfo(lbUnits.Items.Objects[lbUnits.ItemIndex]);
@@ -1079,13 +1102,36 @@ begin
     LoadVars(UnitInfo);
     LoadFunctions(UnitInfo);
   end;
+  *)
 end;
 
-procedure TMainForm.LoadConsts(UnitInfo: TUnitInfo);
+procedure TMainForm.LoadConsts(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 var
   I: Integer;
   C: TConstInfo;
+  Node: PVirtualNode;
+  Data: PLinkData;
 begin
+  vstDbgInfoConsts.BeginUpdate;
+  try
+    vstDbgInfoConsts.Clear;
+
+    for I := 0 to UnitInfo.Consts.Count - 1 do
+    begin
+      C := TConstInfo(UnitInfo.Consts[I]);
+
+      Node := vstDbgInfoConsts.AddChild(nil);
+      Data := vstDbgInfoConsts.GetNodeData(Node);
+
+      Data^.SyncNode := UnitNode;
+      Data^.LinkType := ltDbgConstInfo;
+      Data^.DbgConstInfo := C;
+    end;
+  finally
+    vstDbgInfoConsts.EndUpdate;
+  end;
+
+  (*
   mConsts.Lines.BeginUpdate;
   try
     mConsts.Clear;
@@ -1097,13 +1143,36 @@ begin
   finally
     mConsts.Lines.EndUpdate;
   end;
+  *)
 end;
 
-procedure TMainForm.LoadFunctions(UnitInfo: TUnitInfo);
+procedure TMainForm.LoadFunctions(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 var
   I: Integer;
   F: TFuncInfo;
+  Node: PVirtualNode;
+  Data: PLinkData;
 begin
+  vstDbgInfoFunctions.BeginUpdate;
+  try
+    vstDbgInfoFunctions.Clear;
+
+    for I := 0 to UnitInfo.Funcs.Count - 1 do
+    begin
+      F := TFuncInfo(UnitInfo.Funcs[I]);
+
+      Node := vstDbgInfoFunctions.AddChild(nil);
+      Data := vstDbgInfoFunctions.GetNodeData(Node);
+
+      Data^.SyncNode := UnitNode;
+      Data^.LinkType := ltDbgFuncInfo;
+      Data^.DbgFuncInfo := F;
+    end;
+  finally
+    vstDbgInfoFunctions.EndUpdate;
+  end;
+
+  (*
   mFunctions.Lines.BeginUpdate;
   try
     mFunctions.Clear;
@@ -1115,13 +1184,36 @@ begin
   finally
     mFunctions.Lines.EndUpdate;
   end;
+  *)
 end;
 
-procedure TMainForm.LoadTypes(UnitInfo: TUnitInfo);
+procedure TMainForm.LoadTypes(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 var
   I: Integer;
   T: TTypeInfo;
+  Node: PVirtualNode;
+  Data: PLinkData;
 begin
+  vstDbgInfoTypes.BeginUpdate;
+  try
+    vstDbgInfoTypes.Clear;
+
+    for I := 0 to UnitInfo.Types.Count - 1 do
+    begin
+      T := TTypeInfo(UnitInfo.Types[I]);
+
+      Node := vstDbgInfoTypes.AddChild(nil);
+      Data := vstDbgInfoTypes.GetNodeData(Node);
+
+      Data^.SyncNode := UnitNode;
+      Data^.LinkType := ltDbgTypeInfo;
+      Data^.DbgTypeInfo := T;
+    end;
+  finally
+    vstDbgInfoTypes.EndUpdate;
+  end;
+
+  (*
   mTypes.Lines.BeginUpdate;
   try
     mTypes.Clear;
@@ -1135,6 +1227,7 @@ begin
   finally
     mTypes.Lines.EndUpdate;
   end;
+  *)
 end;
 
 procedure TMainForm.LoadUnits;
@@ -1176,11 +1269,33 @@ begin
   *)
 end;
 
-procedure TMainForm.LoadVars(UnitInfo: TUnitInfo);
+procedure TMainForm.LoadVars(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 var
   I: Integer;
   V: TVarInfo;
+  Node: PVirtualNode;
+  Data: PLinkData;
 begin
+  vstDbgInfoVars.BeginUpdate;
+  try
+    vstDbgInfoVars.Clear;
+
+    for I := 0 to UnitInfo.Vars.Count - 1 do
+    begin
+      V := TVarInfo(UnitInfo.Vars[I]);
+
+      Node := vstDbgInfoVars.AddChild(nil);
+      Data := vstDbgInfoVars.GetNodeData(Node);
+
+      Data^.SyncNode := UnitNode;
+      Data^.LinkType := ltDbgVarInfo;
+      Data^.DbgVarInfo := V;
+    end;
+  finally
+    vstDbgInfoVars.EndUpdate;
+  end;
+
+  (*
   mVars.Lines.BeginUpdate;
   try
     mVars.Clear;
@@ -1192,6 +1307,7 @@ begin
   finally
     mVars.Lines.EndUpdate;
   end;
+  *)
 end;
 
 procedure TMainForm.Log(const Msg: String);
@@ -1378,6 +1494,64 @@ begin
   LoadUnits;
 end;
 
+procedure TMainForm.vstDbgInfoConstsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  ConstInfo: TConstInfo;
+begin
+  Data := vstDbgInfoConsts.GetNodeData(Node);
+  ConstInfo := Data^.DbgConstInfo;
+
+  case Column of
+    0: CellText := ConstInfo.Name;
+    1: CellText := ConstInfo.ValueAsString;
+    2: CellText := String(ConstInfo.TypeInfo.Name);
+  end;
+end;
+
+procedure TMainForm.vstDbgInfoFunctionsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+begin
+  Data := vstDbgInfoConsts.GetNodeData(Node);
+  FuncInfo := Data^.DbgFuncInfo;
+
+  case Column of
+    0: CellText := Format('%p', [FuncInfo.Address]);
+    1: CellText := FuncInfo.Name;
+    2: CellText := Format('%d', [FuncInfo.CodeSize]);
+  end;
+end;
+
+procedure TMainForm.vstDbgInfoTypesGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  TypeInfo: TTypeInfo;
+begin
+  Data := vstDbgInfoConsts.GetNodeData(Node);
+  TypeInfo := Data^.DbgTypeInfo;
+
+  case Column of
+    0: CellText := TypeInfo.Name;
+    1: CellText := TypeInfo.TypeOf;
+  end;
+end;
+
+procedure TMainForm.vstDbgInfoUnitsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+  UnitInfo: TUnitInfo;
+begin
+  Data := vstDbgInfoUnits.GetNodeData(Node);
+  UnitInfo := Data^.DbgUnitInfo;
+
+  LoadConsts(UnitInfo, Node);
+  LoadTypes(UnitInfo, Node);
+  LoadVars(UnitInfo, Node);
+  LoadFunctions(UnitInfo, Node);
+end;
+
 procedure TMainForm.vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 var
   Data: PLinkData;
@@ -1389,6 +1563,20 @@ begin
     0: CellText := UnitInfo.Name;
     1: CellText := Format('%d', [UnitInfo.CodeSize]);
     2: CellText := Format('%d', [UnitInfo.DataSize]);
+  end;
+end;
+
+procedure TMainForm.vstDbgInfoVarsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  VarInfo: TVarInfo;
+begin
+  Data := vstDbgInfoConsts.GetNodeData(Node);
+  VarInfo := Data^.DbgVarInfo;
+
+  case Column of
+    0: CellText := VarInfo.Name;
+    1: CellText := VarInfo.DataType.Name;
   end;
 end;
 

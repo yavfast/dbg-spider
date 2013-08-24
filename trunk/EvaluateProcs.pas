@@ -899,7 +899,7 @@ End;
 {..............................................................................}
 
 {..............................................................................}
-Function FindGetEnumValue(Types : TList; Const VarName : AnsiString; Out Value : Variant) : Boolean;
+Function FindGetEnumValue(Types : TNameList; Const VarName : AnsiString; Out Value : Variant) : Boolean;
 Var
     I        : Integer;
     Index    : Integer;
