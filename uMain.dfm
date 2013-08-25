@@ -1462,22 +1462,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 559
+        Width = 561
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 610
+        Width = 608
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 572
+      Left = 574
       Top = 0
-      Width = 601
+      Width = 599
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1501,7 +1501,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 546
+      Width = 548
       Height = 25
       ActionManager = amMain
       Align = alNone
@@ -1590,11 +1590,13 @@ object MainForm: TMainForm
       Category = 'Project'
       Caption = 'Open'
       ImageIndex = 1
+      OnExecute = acOpenProjectExecute
     end
     object acCloseProject: TAction
       Category = 'Project'
       Caption = 'Close'
       ImageIndex = 8
+      OnExecute = acCloseProjectExecute
     end
     object acPause: TAction
       Category = 'Debug'
@@ -1685,10 +1687,25 @@ object MainForm: TMainForm
     end
   end
   object OD: TFileOpenDialog
-    DefaultExtension = '*.exe'
     FavoriteLinks = <>
-    FileTypes = <>
-    Options = []
+    FileTypes = <
+      item
+        DisplayName = 'All supported'
+        FileMask = '*.spider;*.exe;*.tds'
+      end
+      item
+        DisplayName = 'Spider project (*.spider)'
+        FileMask = '*.spider'
+      end
+      item
+        DisplayName = 'Application (*.exe)'
+        FileMask = '*.exe'
+      end
+      item
+        DisplayName = 'External debug info (*.tds)'
+        FileMask = '*.tds'
+      end>
+    Options = [fdoFileMustExist]
     Left = 808
     Top = 88
   end

@@ -1082,6 +1082,13 @@ Begin
         Result := FImage.IsTD32DebugPresent;
         If Result And ALoadDebugInfo and (FImage.TD32Scanner.ModuleCount > 0) Then
         Begin
+            case FImage.TD32DebugDataType of
+              ddtInImage:
+                FDebugInfoType := 'Internal';
+              ddtTDS:
+                FDebugInfoType := 'External(TDS)';
+            end;
+
             Delta := 80 / FImage.TD32Scanner.ModuleCount;
             For I := 0 To FImage.TD32Scanner.ModuleCount - 1 Do
             Begin

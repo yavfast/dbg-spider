@@ -1431,10 +1431,13 @@ type
     function SourceNameFromAddr(const AAddr: DWORD): AnsiString;
   end;
 
+  TTD32DebugDataType = (ddtNone, ddtInImage, ddtTDS);
+
   // PE Image with TD32 information and source location support
   TJclPeBorTD32Image = class(TJclPeBorImage)
   private
     FIsTD32DebugPresent: Boolean;
+    FTD32DebugDataType: TTD32DebugDataType;
     FTD32DebugData: TCustomMemoryStream;
     FTD32Scanner: TJclTD32InfoScanner;
   protected
@@ -1446,6 +1449,7 @@ type
     function IsDebugInfoInTds(var DataStream: TCustomMemoryStream): Boolean;
   public
     property IsTD32DebugPresent: Boolean read FIsTD32DebugPresent;
+    property TD32DebugDataType: TTD32DebugDataType read FTD32DebugDataType;
     property TD32DebugData: TCustomMemoryStream read FTD32DebugData;
     property TD32Scanner: TJclTD32InfoScanner read FTD32Scanner;
   end;
@@ -2810,9 +2814,17 @@ end;
 
 procedure TJclPeBorTD32Image.CheckDebugData;
 begin
+  FTD32DebugDataType := ddtNone;
   FIsTD32DebugPresent := IsDebugInfoInImage(FTD32DebugData);
-  if not FIsTD32DebugPresent then
+  if FIsTD32DebugPresent then
+    FTD32DebugDataType := ddtInImage
+  else
+  begin
     FIsTD32DebugPresent := IsDebugInfoInTds(FTD32DebugData);
+    if FIsTD32DebugPresent then
+      FTD32DebugDataType := ddtTDS;
+  end;
+
   if FIsTD32DebugPresent then
   begin
     FTD32Scanner := TJclTD32InfoScanner.Create(FTD32DebugData);
