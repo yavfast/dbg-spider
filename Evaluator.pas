@@ -873,6 +873,7 @@ Begin
     FPreparedParams := TObjectList.Create;
 
     {$MESSAGE WARN 'Add type validation check'}
+    (*
     For I:= 0 To ParamsLength - 1 Do
     Begin
         FuncParam := TVarInfo(FFuncInfo.Params[I]);
@@ -935,6 +936,7 @@ Begin
             FPreparedParams.Insert(0, Param);
         end;
     End;
+    *)
 End;
 {..............................................................................}
 

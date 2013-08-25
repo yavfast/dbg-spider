@@ -86,8 +86,9 @@ begin
   //NameThreadForDebugging(AnsiString(ClassName), ThreadId);
 
   InitDebuger;
-  InitDebugInfo;
+  gvDebuger.ClearDbgInfo;
 
+  InitDebugInfo;
   if doDebugInfo in FDbgOptions then
     LoadDebugInfo;
 
@@ -123,12 +124,8 @@ end;
 
 procedure TDebugerThread.InitDebuger;
 begin
-  if gvDebuger <> nil then
-    FreeAndNil(gvDebuger);
-
-  _AC.Log('Init debuger for "%s"', [FAppName]);
-
-  gvDebuger := TDebuger.Create();
+  if gvDebuger = nil then
+    gvDebuger := TDebuger.Create();
 
   gvDebuger.OnEndDebug := OnEndDebug;
   gvDebuger.OnRip := OnRip;

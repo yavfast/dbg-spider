@@ -832,6 +832,7 @@ Begin
         Raise Exception.Create('Invalid var kind');
     End;
 
+    (*
     If VarInfo.ByRef Then
     Begin
         If IsPointer Then
@@ -839,6 +840,7 @@ Begin
         Else
             IsPointer := True;
     End;
+    *)
 End;
 {..............................................................................}
 
