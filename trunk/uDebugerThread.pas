@@ -161,7 +161,7 @@ begin
 
     if FDbgInfoLoaded then
     begin
-      _AC.Log('Loaded debug info for "%s"', [FAppName]);
+      _AC.Log('Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, FAppName]);
       _AC.ViewDebugInfo(gvDebugInfo);
     end
     else

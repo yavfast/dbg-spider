@@ -281,6 +281,7 @@ Type
 
         FDebugInfoProgressCallback: TDebugInfoProgressCallback;
     Protected
+        FDebugInfoType : String;
         procedure DoProgress(const Action: String; const Progress: Integer); virtual;
         Function DoReadDebugInfo(Const FileName : String; ALoadDebugInfo : Boolean) : Boolean; Virtual; abstract;
     Public
@@ -345,6 +346,7 @@ Type
         Property DbgLog    : TDbgLog read FDbgLog;
 
         property DebugInfoLoaded: Boolean read FDebugInfoLoaded;
+        property DebugInfoType: String read FDebugInfoType;
         property DebugInfoProgressCallback: TDebugInfoProgressCallback read FDebugInfoProgressCallback write FDebugInfoProgressCallback;
     End;
 {...............................................................................}
@@ -385,6 +387,7 @@ Begin
 
     FExeFileName := '';
     FDebugInfoLoaded := False;
+    FDebugInfoType := '';
 
     FDebugInfoProgressCallback := Nil;
 End;

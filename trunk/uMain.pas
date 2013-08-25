@@ -15,6 +15,8 @@ uses
   uActionController;
 
 type
+  TProgectType = (ptEmpty, ptSpider, ptApplication);
+
   TLinkType = (ltProject, ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
     ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
     ltDbgFuncParamInfo, ltDbgLogItem);
@@ -204,9 +206,13 @@ type
 
     procedure vstLogResize(Sender: TObject);
     procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
+    procedure acOpenProjectExecute(Sender: TObject);
+    procedure acCloseProjectExecute(Sender: TObject);
   private
+    FProjectFileName: String;
+    FProjectType: TProgectType;
+
     FPID: DWORD;
-    FAppName: String;
 
     FCloseApp: Boolean;
     procedure WMClose(var Message: TWMClose); message WM_CLOSE;
@@ -295,6 +301,11 @@ begin
   end;
 end;
 
+procedure TMainForm.acCloseProjectExecute(Sender: TObject);
+begin
+  ClearProject;
+end;
+
 procedure TMainForm.acCPUTimeLineExecute(Sender: TObject);
 begin
   UpdateTrees;
@@ -302,13 +313,19 @@ end;
 
 procedure TMainForm.acDebugInfoExecute(Sender: TObject);
 begin
-  _AC.RunDebug(FAppName, [doDebugInfo], FPID);
+  _AC.RunDebug(FProjectFileName, [doDebugInfo], FPID);
 end;
 
 procedure TMainForm.acExitExecute(Sender: TObject);
 begin
   FCloseApp := True;
   Close;
+end;
+
+procedure TMainForm.acOpenProjectExecute(Sender: TObject);
+begin
+  if OD.Execute then
+    SetProjectName(OD.FileName);
 end;
 
 procedure TMainForm.acOptionsExecute(Sender: TObject);
@@ -327,7 +344,7 @@ begin
 
   ClearDbgTrees;
 
-  _AC.RunDebug(FAppName, [{doDebugInfo, }doRun, doProfiler], FPID);
+  _AC.RunDebug(FProjectFileName, [{doDebugInfo, }doRun, doProfiler], FPID);
 end;
 
 procedure TMainForm.acStopExecute(Sender: TObject);
@@ -602,7 +619,8 @@ end;
 
 procedure TMainForm.ClearProject;
 begin
-  FAppName := '';
+  FProjectFileName := '';
+  FProjectType := ptEmpty;
   rbnMain.Caption := 'Empty';
 
   ClearTrees;
@@ -1073,7 +1091,7 @@ end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  FAppName := '';
+  FProjectFileName := '';
   FCloseApp := False;
 
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
@@ -1375,15 +1393,31 @@ begin
 end;
 
 procedure TMainForm.SetProjectName(const Name: String);
+var
+  Ext: String;
 begin
   ClearProject;
 
-  FAppName := Name;
-  rbnMain.Caption := Name;
+  Ext := ExtractFileExt(Name);
+  if SameText(Ext, '.spider') then
+    FProjectType := ptSpider
+  else
+  if SameText(Ext, '.exe') then
+    FProjectType := ptApplication
+  else
+    Exit;
 
+  rbnMain.Caption := Name;
   InitLog(Name);
 
-  _AC.RunDebug(FAppName, [doDebugInfo]); // Загрузка DebugInfo
+  FProjectFileName := Name;
+  case FProjectType of
+    ptSpider:;
+    ptApplication:
+      _AC.RunDebug(FProjectFileName, [doDebugInfo]); // Загрузка DebugInfo
+  end;
+
+  UpdateActions;
 end;
 
 procedure TMainForm.SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
@@ -1421,7 +1455,21 @@ end;
 
 procedure TMainForm.UpdateActions;
 begin
+  if FProjectType = ptEmpty then
+  begin
+    acRun.Enabled := False;
+    acStop.Enabled := False;
+    acRunStop.Enabled := False;
+    acPause.Enabled := False;
 
+    acCloseProject.Enabled := False;
+    acSave.Enabled := False;
+    acSaveCopy.Enabled := False;
+  end
+  else
+  begin
+    acCloseProject.Enabled := True;
+  end;
 end;
 
 procedure TMainForm.UpdateLog;
@@ -1435,7 +1483,7 @@ begin
   if gvDebugInfo = nil then Exit;
 
   if vstLog.RootNode.FirstChild = nil then
-    InitLog(FAppName);
+    InitLog(FProjectFileName);
 
   CurCount := vstLog.RootNode.FirstChild.ChildCount;
   LogCount := gvDebugInfo.DbgLog.Count;
@@ -1470,7 +1518,7 @@ begin
   if Assigned(gvDebuger) then
   begin
     if Assigned(gvDebugInfo) and (gvDebugInfo.DebugInfoLoaded) then
-      actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := 'Internal'
+      actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := gvDebugInfo.DebugInfoType
     else
       actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := 'Not found';
 
@@ -1910,7 +1958,7 @@ begin
         ProcData := Data^.ProcessData;
         if ProcData <> nil then
           case Column of
-            0: CellText := ExtractFileName(FAppName);
+            0: CellText := ExtractFileName(FProjectFileName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: if ProcData^.DbgExceptionsCount > 0 then
                  CellText := Format('%d', [ProcData^.DbgExceptionsCount]);
@@ -1945,7 +1993,7 @@ begin
     ltProject:
       begin
         case Column of
-          1: CellText := FAppName;
+          1: CellText := FProjectFileName;
         else
           CellText := 'Project:';
         end;
@@ -2029,7 +2077,7 @@ begin
         ProcData := Data^.ProcessData;
         if ProcData <> nil then
           case Column of
-            0: CellText := ExtractFileName(FAppName);
+            0: CellText := ExtractFileName(FProjectFileName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: if ProcData^.ProcessGetMemCount > 0 then
                  CellText := Format('%d', [ProcData^.ProcessGetMemCount]);
@@ -2271,7 +2319,7 @@ begin
         ProcData := Data^.ProcessData;
         if ProcData <> nil then
           case Column of
-            0: CellText := ExtractFileName(FAppName);
+            0: CellText := ExtractFileName(FProjectFileName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: CellText := EllapsedToTime(ProcData^.CPUTime);
           end;
