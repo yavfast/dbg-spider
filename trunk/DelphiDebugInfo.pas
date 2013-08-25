@@ -804,6 +804,8 @@ Function TDelphiDebugInfo.LoadVar(UnitInfo: TUnitInfo; VarSymbol : TJclTD32Named
     begin
         VarInfo.VarKind := vkRegister;
         VarInfo.Offset := RegisterIndex(TJclTD32RegisterSymbolInfo(VarSymbol).Registers);
+        VarInfo.RegisterRanges := TList.Create;
+
         For I := 0 To TJclTD32RegisterSymbolInfo(VarSymbol).RangeCount - 1 Do
         begin
             RegRange := TJclTD32RegisterSymbolInfo(VarSymbol).Range[I];
@@ -856,14 +858,16 @@ Begin
         LoadType(UnitInfo, VarSymbol.TypeIndex, Result.DataType);
     End;
 
-    Result.UnitInfo := UnitInfo;
     If Func <> Nil Then
     begin
-        Result.FuncInfo := Func;
+        Result.Owner := Func;
         Func.Vars.Add(Result)
     end
     Else
+    begin
+        Result.Owner := UnitInfo;
         UnitInfo.Vars.Add(Result);
+    end;
 End;
 
 
@@ -949,7 +953,7 @@ Begin
     Begin
         UInfo := TUnitInfo(Units.Objects[I]);
 
-        DoProgress(Format('Check unit "%s"', [UInfo.Name]), 90 + Round((I + 1) * Delta));
+        //DoProgress(Format('Check unit "%s"', [UInfo.Name]), 90 + Round((I + 1) * Delta));
 
         For J := 0 To UInfo.UsedUnits.Count - 1 Do
         Begin

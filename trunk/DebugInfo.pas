@@ -11,7 +11,10 @@ Type
 
 {..............................................................................}
 Type
+    TSegmentCodeInfo = Class;
     TUnitInfo = Class;
+    TFuncInfo = Class;
+    TTypeInfo = Class;
 
 {...............................................................................}
     TLineInfo = Class
@@ -21,15 +24,7 @@ Type
     End;
 {..............................................................................}
 
-{..............................................................................}
-    TTypeInfo = Class;
-
-    TFuncInfo = Class;
-
 {...............................................................................}
-
-{...............................................................................}
-
   TTypeKind = (tkBoolean, tkWordBool, tkLongBool, tkShortInt,
     tkSmallInt, tkInteger, tkInt64, tkByte, tkWord, tkCardinal, tkUInt64,
     tkSingle, tkReal48, tkReal, tkExtended, tkCurrency, tkComplex, tkPString,
@@ -37,7 +32,6 @@ Type
     tkStructure, tkClass, tkSet, tkVariant, tkProperty, tkFieldList, tkClosure,
     tkClassRef, tkWideChar, tkProcedure, tkArgList, tkMFunction, tkVoid,
     tkObject, tkDynamicArray);
-
 {..............................................................................}
 
     TNameId = type Integer;
@@ -123,10 +117,6 @@ Type
 {..............................................................................}
 
 {..............................................................................}
-    TVarKind = (vkGlobal, vkStack, vkRegister, vkLink);
-{..............................................................................}
-
-{..............................................................................}
     TRegInfo = Class
     public
         StartOffset   : Cardinal;
@@ -136,16 +126,19 @@ Type
 {..............................................................................}
 
 {..............................................................................}
+    TVarKind = (vkGlobal, vkStack, vkRegister, vkLink);
+{..............................................................................}
+
+{..............................................................................}
     TVarInfo = Class(TNameInfo)
     public
         DataType       : TTypeInfo;
-        IsPointer      : Boolean;
-        ByRef          : Boolean;
-        Offset         : Integer;
+        Owner          : TSegmentCodeInfo;
         VarKind        : TVarKind;
+        //IsPointer      : Boolean;
+        //ByRef          : Boolean;
+        Offset         : Integer;
         RegisterRanges : TList;
-        UnitInfo       : TUnitInfo;
-        FuncInfo       : TFuncInfo;
 
         Constructor Create;
         Destructor  Destroy; Override;
@@ -219,7 +212,7 @@ Type
         ResultType : TTypeInfo;
 
         UnitInfo   : TUnitInfo;
-        Params     : TNameList;
+        Params     : TNameList; // TODO: Отделить параметры от Vars
 
         Parent     : TFuncInfo;
         ID         : TObject;
@@ -861,6 +854,7 @@ Begin
     Inherited;
 
     Params := TNameList.Create;
+    Params.FreeItems := False;
 End;
 {...............................................................................}
 
@@ -925,6 +919,8 @@ begin
   Inherited;
 
   NameId := -1;
+  Members := Nil;
+  Elements := Nil;
 end;
 
 destructor TTypeInfo.Destroy;
@@ -1051,21 +1047,33 @@ Constructor TVarInfo.Create;
 Begin
     inherited;
 
-    RegisterRanges := TList.Create;
-    UnitInfo := Nil;
-    FuncInfo := Nil;
+    // Будет создаваться по необходимости
+    //RegisterRanges := TList.Create;
+    RegisterRanges := Nil;
 End;
 
 Destructor TVarInfo.Destroy;
 Begin
-    FreeList(RegisterRanges);
+    if Assigned(RegisterRanges) then
+      FreeList(RegisterRanges);
 
     inherited;
 End;
 
 function TVarInfo.Name: AnsiString;
+var
+  UnitInfo: TUnitInfo;
 begin
-  Result := UnitInfo.DebugInfo.GetNameById(NameId);
+  UnitInfo := Nil;
+
+  if Owner is TFuncInfo then
+    UnitInfo := TFuncInfo(Owner).UnitInfo
+  else
+  if Owner is TUnitInfo then
+    UnitInfo := TUnitInfo(Owner);
+
+  if Assigned(UnitInfo) then
+    Result := UnitInfo.DebugInfo.GetNameById(NameId);
 end;
 
 { TUnitInfo }
@@ -1266,7 +1274,7 @@ begin
     end;
   end;
 
-  inherited;
+  inherited Clear;
 end;
 
 constructor TNameList.Create;

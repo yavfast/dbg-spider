@@ -44,7 +44,7 @@ object MainForm: TMainForm
         Header.Font.Height = -11
         Header.Font.Name = 'Tahoma'
         Header.Font.Style = []
-        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
         Indent = 0
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
@@ -92,7 +92,7 @@ object MainForm: TMainForm
         Header.Font.Height = -11
         Header.Font.Name = 'Tahoma'
         Header.Font.Style = []
-        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
@@ -164,7 +164,7 @@ object MainForm: TMainForm
               Header.Font.Height = -11
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
-              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
@@ -216,7 +216,7 @@ object MainForm: TMainForm
               Header.Font.Height = -11
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
-              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
@@ -260,7 +260,7 @@ object MainForm: TMainForm
               Header.Font.Height = -11
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
-              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
@@ -282,6 +282,14 @@ object MainForm: TMainForm
                   Position = 1
                   Width = 200
                   WideText = 'Var type'
+                end
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 2
+                  Width = 70
+                  WideText = 'Var address'
                 end>
             end
           end
@@ -304,7 +312,7 @@ object MainForm: TMainForm
               Header.Font.Height = -11
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
-              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
@@ -325,7 +333,7 @@ object MainForm: TMainForm
                 item
                   Alignment = taRightJustify
                   CaptionAlignment = taCenter
-                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                   Position = 1
                   Width = 70
                   WideText = 'Address'
@@ -355,7 +363,7 @@ object MainForm: TMainForm
               Header.Font.Height = -11
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
-              Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+              Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 1
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
@@ -410,7 +418,7 @@ object MainForm: TMainForm
         Header.Font.Height = -11
         Header.Font.Name = 'Tahoma'
         Header.Font.Style = []
-        Header.Options = [hoColumnResize, hoDrag, hoVisible]
+        Header.Options = [hoColumnResize, hoVisible]
         Header.Style = hsPlates
         ScrollBarOptions.AlwaysVisible = True
         ScrollBarOptions.ScrollBars = ssHorizontal
@@ -512,7 +520,7 @@ object MainForm: TMainForm
         Header.Font.Height = -11
         Header.Font.Name = 'Tahoma'
         Header.Font.Style = []
-        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
         Header.Style = hsFlatButtons
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
@@ -577,7 +585,7 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoDrag, hoVisible]
+          Header.Options = [hoColumnResize, hoVisible]
           Header.SortDirection = sdDescending
           Header.Style = hsFlatButtons
           ScrollBarOptions.AlwaysVisible = True
@@ -628,7 +636,7 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+          Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
           Header.Style = hsFlatButtons
           ScrollBarOptions.AlwaysVisible = True
           TabOrder = 1
@@ -662,7 +670,7 @@ object MainForm: TMainForm
         Header.Font.Height = -11
         Header.Font.Name = 'Tahoma'
         Header.Font.Style = []
-        Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+        Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
         Header.Style = hsFlatButtons
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
@@ -719,7 +727,7 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoDrag, hoVisible]
+          Header.Options = [hoColumnResize, hoVisible]
           Header.SortDirection = sdDescending
           Header.Style = hsFlatButtons
           ScrollBarOptions.AlwaysVisible = True
@@ -769,7 +777,7 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
+          Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
           Header.Style = hsFlatButtons
           ScrollBarOptions.AlwaysVisible = True
           TabOrder = 1

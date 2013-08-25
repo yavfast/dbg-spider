@@ -136,13 +136,13 @@ type
     function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TPointType; DebugEvent: PDebugEvent = nil): Boolean;
     function AddProcessPointInfo(const PointType: TPointType): Boolean;
 
-    procedure ClearDbgInfo;
-
     function GetProcessCPUTime: UInt64;
     function GetThreadCPUTime(ThreadData: PThreadData): UInt64;
   public
     constructor Create();
     destructor Destroy; override;
+
+    procedure ClearDbgInfo;
 
     // запуск/остановка отладки
     function AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: Boolean): Boolean;

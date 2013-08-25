@@ -138,12 +138,18 @@ type
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 
     procedure acAppOpenExecute(Sender: TObject);
     procedure acAttachProcessExecute(Sender: TObject);
     procedure acRunExecute(Sender: TObject);
     procedure acStopExecute(Sender: TObject);
     procedure acDebugInfoExecute(Sender: TObject);
+    procedure acOptionsExecute(Sender: TObject);
+    procedure acExitExecute(Sender: TObject);
+    procedure acCPUTimeLineExecute(Sender: TObject);
+    procedure acRealTimeLineExecute(Sender: TObject);
+    procedure acMainTabExecute(Sender: TObject);
 
     procedure tmrThreadsUpdateTimer(Sender: TObject);
     procedure cbCPUTimeLineClick(Sender: TObject);
@@ -196,16 +202,8 @@ type
 
     procedure vstLogGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
-    procedure acOptionsExecute(Sender: TObject);
-    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure acExitExecute(Sender: TObject);
-    procedure acCPUTimeLineExecute(Sender: TObject);
-    procedure acRealTimeLineExecute(Sender: TObject);
-    procedure acMainTabExecute(Sender: TObject);
     procedure vstLogResize(Sender: TObject);
     procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
-
-
   private
     FPID: DWORD;
     FAppName: String;
@@ -1675,7 +1673,19 @@ begin
         case Column of
           0: CellText := VarInfo.Name;
           1: CellText := VarInfo.DataType.Name;
-          2: CellText := ' ';
+          2:
+            begin
+              case VarInfo.VarKind of
+                vkGlobal:
+                  CellText := 'Global';
+                vkStack:
+                  CellText := 'Stack';
+                vkRegister:
+                  CellText := 'Reg';
+                vkLink:
+                  CellText := 'Link';
+              end;
+            end;
         end;
       end;
   end;
@@ -1773,6 +1783,7 @@ begin
         case Column of
           0: CellText := VarInfo.Name;
           1: CellText := VarInfo.DataType.Name;
+          2: CellText := Format('%p', [Pointer(VarInfo.Offset)]);
         end;
       end;
   end;
