@@ -1462,22 +1462,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 561
+        Width = 562
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 608
+        Width = 607
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 574
+      Left = 575
       Top = 0
-      Width = 599
+      Width = 598
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1501,7 +1501,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 548
+      Width = 549
       Height = 25
       ActionManager = amMain
       Align = alNone
@@ -1559,7 +1559,6 @@ object MainForm: TMainForm
       Category = 'Debug'
       Caption = 'Debug Info'
       ImageIndex = 5
-      OnExecute = acDebugInfoExecute
     end
     object acRunStop: TAction
       Category = 'Debug'
@@ -1585,6 +1584,7 @@ object MainForm: TMainForm
       Category = 'Project'
       Caption = 'New'
       ImageIndex = 0
+      OnExecute = acNewProjectExecute
     end
     object acOpenProject: TAction
       Category = 'Project'
@@ -1824,14 +1824,14 @@ object MainForm: TMainForm
             ImageIndex = 8
           end
           item
-            Action = acSaveCopy
-            Caption = 'S&ave copy'
-            ImageIndex = 10
-          end
-          item
             Action = acSave
             Caption = '&Save'
             ImageIndex = 9
+          end
+          item
+            Action = acSaveCopy
+            Caption = 'S&ave copy'
+            ImageIndex = 10
           end>
         ActionBar = rbgProject
       end
