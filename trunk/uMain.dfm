@@ -536,7 +536,7 @@ object MainForm: TMainForm
         Columns = <
           item
             CaptionAlignment = taCenter
-            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
             Position = 0
             Width = 250
             WideText = 'Thread name'
@@ -601,7 +601,7 @@ object MainForm: TMainForm
           Columns = <
             item
               CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
               Position = 0
               Width = 150
               WideText = 'Object type'
@@ -647,7 +647,7 @@ object MainForm: TMainForm
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
               Position = 0
               Width = 1000
               WideText = 'Call Stack'
@@ -686,7 +686,7 @@ object MainForm: TMainForm
         Columns = <
           item
             CaptionAlignment = taCenter
-            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
             Position = 0
             Width = 250
             WideText = 'Thread name'
@@ -744,14 +744,14 @@ object MainForm: TMainForm
             item
               Alignment = taRightJustify
               CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
               Position = 0
               Width = 70
               WideText = 'Pointer'
             end
             item
               CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
               Position = 1
               Width = 120
               WideText = 'Exception type'
@@ -788,7 +788,7 @@ object MainForm: TMainForm
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
               Position = 0
               Width = 1000
               WideText = 'Call Stack'

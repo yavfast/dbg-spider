@@ -1283,6 +1283,7 @@ begin
 
   FNameIdList := Nil;
   FFreeItems := True;
+  //Capacity := 16;
 end;
 
 destructor TNameList.Destroy;
