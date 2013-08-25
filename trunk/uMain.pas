@@ -12,7 +12,7 @@ uses
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
   RibbonActnMenus, ImgList, JvImageList, ActnColorMaps, XPMan,
-  uActionController;
+  uActionController, uSpiderOptions;
 
 type
   TProgectType = (ptEmpty, ptSpider, ptApplication);
@@ -146,7 +146,6 @@ type
     procedure acAttachProcessExecute(Sender: TObject);
     procedure acRunExecute(Sender: TObject);
     procedure acStopExecute(Sender: TObject);
-    procedure acDebugInfoExecute(Sender: TObject);
     procedure acOptionsExecute(Sender: TObject);
     procedure acExitExecute(Sender: TObject);
     procedure acCPUTimeLineExecute(Sender: TObject);
@@ -208,8 +207,9 @@ type
     procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
     procedure acOpenProjectExecute(Sender: TObject);
     procedure acCloseProjectExecute(Sender: TObject);
+    procedure acNewProjectExecute(Sender: TObject);
   private
-    FProjectFileName: String;
+    FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
 
     FPID: DWORD;
@@ -217,7 +217,7 @@ type
     FCloseApp: Boolean;
     procedure WMClose(var Message: TWMClose); message WM_CLOSE;
 
-    procedure SetProjectName(const Name: String);
+    procedure SetProjectName(const ProjectName: String);
 
     procedure ProgressAction(const Action: String; const Progress: Integer);
 
@@ -260,6 +260,10 @@ type
     function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
     function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
     function FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
+    procedure OnException(Sender: TObject; E: Exception);
+
+    procedure LoadGUIOptions;
+    procedure LoadRecentProjects;
   public
     procedure Log(const Msg: String);
     procedure DoAction(Action: TacAction; const Args: array of Variant);
@@ -273,7 +277,8 @@ implementation
 
 {$R *.dfm}
 
-uses Math, EvaluateTypes, ClassUtils, uProcessList, uDebugerThread;
+uses Math, EvaluateTypes, ClassUtils, uProcessList, uDebugerThread,
+  uProjectOptions;
 
 
 type
@@ -311,11 +316,6 @@ begin
   UpdateTrees;
 end;
 
-procedure TMainForm.acDebugInfoExecute(Sender: TObject);
-begin
-  _AC.RunDebug(FProjectFileName, [doDebugInfo], FPID);
-end;
-
 procedure TMainForm.acExitExecute(Sender: TObject);
 begin
   FCloseApp := True;
@@ -344,7 +344,7 @@ begin
 
   ClearDbgTrees;
 
-  _AC.RunDebug(FProjectFileName, [{doDebugInfo, }doRun, doProfiler], FPID);
+  _AC.RunDebug(gvProjectOptions.ApplicationName, [doRun, doProfiler], FPID);
 end;
 
 procedure TMainForm.acStopExecute(Sender: TObject);
@@ -388,6 +388,31 @@ begin
   acTabExceptions.Checked := (CurTag = acTabExceptions.Tag);
 
   pcMain.ActivePageIndex := CurTag;
+end;
+
+procedure TMainForm.acNewProjectExecute(Sender: TObject);
+var
+  F: TfmProjectOptions;
+begin
+  Application.CreateForm(TfmProjectOptions, F);
+  try
+    if F.ShowModal = mrOk then
+    begin
+      ChangeFileExt(F.ProjectName, '.spider');
+      gvProjectOptions.Open(F.ProjectName);
+      gvProjectOptions.BeginUpdate;
+      try
+        gvProjectOptions.ApplicationName := F.ApplicationName;
+        gvProjectOptions.ProjectStorage := F.ProjectStorage;
+      finally
+        gvProjectOptions.EndUpdate;
+      end;
+
+      SetProjectName(gvProjectOptions.ProjectName);
+    end;
+  finally
+    F.Release;
+  end;
 end;
 
 procedure TMainForm.AddProcess(const ProcessID: Cardinal);
@@ -619,9 +644,9 @@ end;
 
 procedure TMainForm.ClearProject;
 begin
-  FProjectFileName := '';
   FProjectType := ptEmpty;
   rbnMain.Caption := 'Empty';
+  gvProjectOptions.Clear;
 
   ClearTrees;
   UpdateStatusInfo;
@@ -1089,9 +1114,43 @@ begin
   CanClose := FCloseApp;
 end;
 
+procedure TMainForm.OnException(Sender: TObject; E: Exception);
+begin
+  OutputDebugString(PWideChar(E.Message));
+end;
+
+procedure TMainForm.LoadRecentProjects;
+var
+  RL: TStringList;
+  I: Integer;
+  Item: TOptionItem;
+begin
+  RL := TStringList.Create;
+  try
+    FSpiderOptions.GetRecentProjects(RL);
+
+    for I := 0 to RL.Count - 1 do
+    begin
+      Item := rbambMain.RecentItems.Add;
+      Item.Caption := RL.Strings[I];
+    end;
+  finally
+    FreeAndNil(RL);
+  end;
+end;
+
+procedure TMainForm.LoadGUIOptions;
+begin
+  LoadRecentProjects;
+end;
+
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  FProjectFileName := '';
+  //Application.OnException := OnException;
+
+  FSpiderOptions := TSpiderOptions.Create(ChangeFileExt(Application.ExeName, '.xcfg'));
+  LoadGUIOptions;
+
   FCloseApp := False;
 
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
@@ -1392,13 +1451,14 @@ begin
     pStatusAction.Caption := '';
 end;
 
-procedure TMainForm.SetProjectName(const Name: String);
+procedure TMainForm.SetProjectName(const ProjectName: String);
 var
   Ext: String;
 begin
-  ClearProject;
+  if gvProjectOptions.ProjectName <> ProjectName then
+    ClearProject;
 
-  Ext := ExtractFileExt(Name);
+  Ext := ExtractFileExt(ProjectName);
   if SameText(Ext, '.spider') then
     FProjectType := ptSpider
   else
@@ -1407,17 +1467,25 @@ begin
   else
     Exit;
 
-  rbnMain.Caption := Name;
-  InitLog(Name);
+  rbnMain.Caption := ProjectName;
+  InitLog(ProjectName);
 
-  FProjectFileName := Name;
   case FProjectType of
-    ptSpider:;
+    ptSpider:
+        gvProjectOptions.Open(ProjectName);
     ptApplication:
-      _AC.RunDebug(FProjectFileName, [doDebugInfo]); // Загрузка DebugInfo
+      begin
+        gvProjectOptions.Open(_DEFAULT_PROJECT);
+        gvProjectOptions.ApplicationName := ProjectName;
+      end;
   end;
 
+  _AC.RunDebug(gvProjectOptions.ApplicationName, [doDebugInfo]);
+
   UpdateActions;
+
+  FSpiderOptions.AddRecentProject(ProjectName);
+  LoadRecentProjects;
 end;
 
 procedure TMainForm.SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
@@ -1483,7 +1551,7 @@ begin
   if gvDebugInfo = nil then Exit;
 
   if vstLog.RootNode.FirstChild = nil then
-    InitLog(FProjectFileName);
+    InitLog(gvProjectOptions.ApplicationName);
 
   CurCount := vstLog.RootNode.FirstChild.ChildCount;
   LogCount := gvDebugInfo.DbgLog.Count;
@@ -1958,7 +2026,7 @@ begin
         ProcData := Data^.ProcessData;
         if ProcData <> nil then
           case Column of
-            0: CellText := ExtractFileName(FProjectFileName);
+            0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: if ProcData^.DbgExceptionsCount > 0 then
                  CellText := Format('%d', [ProcData^.DbgExceptionsCount]);
@@ -1993,9 +2061,9 @@ begin
     ltProject:
       begin
         case Column of
-          1: CellText := FProjectFileName;
+          1: CellText := gvProjectOptions.ApplicationName;
         else
-          CellText := 'Project:';
+          CellText := 'Application:';
         end;
       end;
     ltDbgLogItem:
@@ -2077,7 +2145,7 @@ begin
         ProcData := Data^.ProcessData;
         if ProcData <> nil then
           case Column of
-            0: CellText := ExtractFileName(FProjectFileName);
+            0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: if ProcData^.ProcessGetMemCount > 0 then
                  CellText := Format('%d', [ProcData^.ProcessGetMemCount]);
@@ -2319,7 +2387,7 @@ begin
         ProcData := Data^.ProcessData;
         if ProcData <> nil then
           case Column of
-            0: CellText := ExtractFileName(FProjectFileName);
+            0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
             1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
             2: CellText := EllapsedToTime(ProcData^.CPUTime);
           end;

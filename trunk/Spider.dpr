@@ -17,7 +17,9 @@ uses
   DbgHookTypes in 'DbgHookTypes.pas',
   DebugerTypes in 'DebugerTypes.pas',
   uActionController in 'uActionController.pas',
-  uDebugerThread in 'uDebugerThread.pas';
+  uDebugerThread in 'uDebugerThread.pas',
+  uProjectOptions in 'uProjectOptions.pas' {fmProjectOptions},
+  uSpiderOptions in 'uSpiderOptions.pas';
 
 {$R *.res}
 
