@@ -137,6 +137,17 @@ type
     pbProgress: TProgressBar;
     pStatusAction: TPanel;
     vstLog: TVirtualStringTree;
+    ALRecent: TActionList;
+    acRecent1: TAction;
+    acRecent2: TAction;
+    acRecent3: TAction;
+    acRecent4: TAction;
+    acRecent5: TAction;
+    acRecent6: TAction;
+    acRecent7: TAction;
+    acRecent8: TAction;
+    acRecent9: TAction;
+    acRecent0: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -208,6 +219,7 @@ type
     procedure acOpenProjectExecute(Sender: TObject);
     procedure acCloseProjectExecute(Sender: TObject);
     procedure acNewProjectExecute(Sender: TObject);
+    procedure acRecentExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -336,6 +348,18 @@ end;
 procedure TMainForm.acRealTimeLineExecute(Sender: TObject);
 begin
   UpdateTrees;
+end;
+
+procedure TMainForm.acRecentExecute(Sender: TObject);
+var
+  PName: String;
+begin
+  if Sender is TAction then
+  begin
+    PName := TAction(Sender).Caption;
+    UniqueString(PName);
+    SetProjectName(PName);
+  end;
 end;
 
 procedure TMainForm.acRunExecute(Sender: TObject);
@@ -644,6 +668,11 @@ end;
 
 procedure TMainForm.ClearProject;
 begin
+  if gvProjectOptions.ProjectName <> '' then
+    FSpiderOptions.AddRecentProject(gvProjectOptions.ProjectName);
+
+  LoadRecentProjects;
+
   FProjectType := ptEmpty;
   rbnMain.Caption := 'Empty';
   gvProjectOptions.Clear;
@@ -1124,15 +1153,29 @@ var
   RL: TStringList;
   I: Integer;
   Item: TOptionItem;
+  Action: TContainedAction;
 begin
   RL := TStringList.Create;
   try
     FSpiderOptions.GetRecentProjects(RL);
 
-    for I := 0 to RL.Count - 1 do
+    for I := 0 to ALRecent.ActionCount - 1 do
     begin
-      Item := rbambMain.RecentItems.Add;
-      Item.Caption := RL.Strings[I];
+      Action := ALRecent.Actions[I];
+      if I < RL.Count then
+      begin
+        TAction(Action).Enabled := True;
+        TAction(Action).Visible := True;
+        TAction(Action).Caption := RL[I];
+
+        Item := rbambMain.RecentItems[I];
+        Item.Caption := Format('&%d: %s', [I, RL[I]]);
+      end
+      else
+      begin
+        TAction(Action).Enabled := False;
+        TAction(Action).Visible := False;
+      end;
     end;
   finally
     FreeAndNil(RL);
@@ -1455,14 +1498,16 @@ procedure TMainForm.SetProjectName(const ProjectName: String);
 var
   Ext: String;
 begin
-  if gvProjectOptions.ProjectName <> ProjectName then
-    ClearProject;
+  if AnsiSameText(gvProjectOptions.ProjectName, ProjectName) then
+    Exit;
+
+  ClearProject;
 
   Ext := ExtractFileExt(ProjectName);
-  if SameText(Ext, '.spider') then
+  if AnsiSameText(Ext, '.spider') then
     FProjectType := ptSpider
   else
-  if SameText(Ext, '.exe') then
+  if AnsiSameText(Ext, '.exe') then
     FProjectType := ptApplication
   else
     Exit;
@@ -1483,9 +1528,6 @@ begin
   _AC.RunDebug(gvProjectOptions.ApplicationName, [doDebugInfo]);
 
   UpdateActions;
-
-  FSpiderOptions.AddRecentProject(ProjectName);
-  LoadRecentProjects;
 end;
 
 procedure TMainForm.SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
