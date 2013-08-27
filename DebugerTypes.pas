@@ -8,7 +8,7 @@ const
   _SEGMENT_SIZE = 16 * 1024;
 
 type
-  {$IFDEF VER_230}
+  {$IFDEF VER230}
   TSysUInt = NativeUInt;
   {$ELSE}
   TSysUInt = Cardinal;
