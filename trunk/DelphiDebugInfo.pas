@@ -283,7 +283,7 @@ Begin
 
         L := TLineInfo.Create;
         L.LineNo := LineInfo.LineNo; // - 1; ???
-        L.Address := Pointer(LineInfo.Offset + FImage.ImageSectionHeaders[LineInfo.Segment - 1].VirtualAddress + ImageBase);
+        L.Address := Pointer(LineInfo.Offset + FImage.ImageSectionHeaders[LineInfo.Segment{ - 1}].VirtualAddress + ImageBase);
         UnitInfo.Lines.Add(L);
 
         F := FindFuncByAddr(UnitInfo, L.Address);
@@ -1027,9 +1027,10 @@ Begin
     Begin
         Result := TFuncInfo(UnitInfo.Funcs[I]);
 
-        if (Cardinal(Result.Address) >= Cardinal(Addr)) then
-          if (Cardinal(Addr) < Cardinal(Result.Address) + Result.CodeSize) then
-            Exit;
+        if (Cardinal(Result.Address) >= Cardinal(Addr)) and
+          (Cardinal(Addr) < Cardinal(Result.Address) + Result.CodeSize)
+        then
+          Exit;
     End;
     Result := Nil;
 End;
