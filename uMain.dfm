@@ -1113,22 +1113,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 565
+        Width = 574
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 604
+        Width = 595
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 578
+      Left = 587
       Top = 0
-      Width = 595
+      Width = 586
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1152,7 +1152,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 552
+      Width = 561
       Height = 25
       ActionManager = amMain
       Align = alNone
@@ -1285,7 +1285,7 @@ object MainForm: TMainForm
       Caption = 'CPU timeline'
       Checked = True
       GroupIndex = 1
-      OnExecute = acCPUTimeLineExecute
+      OnExecute = acRealTimeLineExecute
     end
     object acRealTimeLine: TAction
       Category = 'Debug'
@@ -1537,14 +1537,14 @@ object MainForm: TMainForm
       item
         Items = <
           item
-            Action = acRealTimeLine
-            Caption = '&Real timeline'
+            Action = acCPUTimeLine
+            Caption = '&CPU timeline'
             CommandStyle = csRadioButton
             CommandProperties.Width = -1
           end
           item
-            Action = acCPUTimeLine
-            Caption = '&CPU timeline'
+            Action = acRealTimeLine
+            Caption = '&Real timeline'
             CommandStyle = csRadioButton
             CommandProperties.Width = -1
           end>
