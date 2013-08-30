@@ -745,9 +745,9 @@ type
     FLineNo: DWORD;
     FOffset: DWORD;
     FSegment: Word;
-  protected
-    constructor Create(ALineNo, AOffset: DWORD; ASegment: Word);
   public
+    constructor Create(const ALineNo, AOffset: DWORD; const ASegment: Word);
+
     property LineNo: DWORD read FLineNo;
     property Offset: DWORD read FOffset;
     property Segment: Word read FSegment;
@@ -763,7 +763,7 @@ type
     function GetLineCount: Integer;
     function GetSegment(const Idx: Integer): TOffsetPair;
   protected
-    constructor Create(pSrcFile: PSourceFileEntry; Base: DWORD);
+    constructor Create(pSrcFile: PSourceFileEntry; const Base: DWORD);
   public
     destructor Destroy; override;
     function FindLine(const AAddr: DWORD; var ALine: TJclTD32LineInfo): Boolean;
@@ -781,7 +781,7 @@ type
     FParent: TJclTD32SymbolInfo;
     FSymbolType: Word;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); virtual;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); virtual;
     property ID: DWORD read FID;
     property ParentID: DWORD read FParentID;
     property Parent: TJclTD32SymbolInfo read FParent;
@@ -816,7 +816,7 @@ type
     function GetSymbol(const Idx: Integer): TJclTD32SymbolInfo;
     function GetSymbolCount: Integer;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     destructor Destroy; override;
     property DebugStart: DWORD read FDebugStart;
     property DebugEnd: DWORD read FDebugEnd;
@@ -829,14 +829,14 @@ type
 
   TJclTD32WithSymbolInfo = class(TJclTD32Scope)
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
   end;
 
   TJclTD32BPRel32SymbolInfo = class(TJclTD32NamedSymbol)
   private
     FOffset: Integer;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     property Offset: Integer read FOffset;
   end;
 
@@ -844,14 +844,14 @@ type
   private
     FRegisters: Word;
     FRanges: array of PRegisterRange;
-    function GetRange(Index: Integer): PRegisterRange;
+    function GetRange(const Index: Integer): PRegisterRange;
     function GetRangeCount: Integer;
   protected
     procedure AnalizeRanges(pSymInfo: PSymbolInfo);
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     property Registers: Word read FRegisters;
-    property Range[Index: Integer]: PRegisterRange read GetRange;
+    property Range[const Index: Integer]: PRegisterRange read GetRange;
     property RangeCount: Integer read GetRangeCount;
   end;
 
@@ -861,7 +861,7 @@ type
     FSignature: DWORD;
     FNameIndex: DWORD;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     property NameIndex: DWORD read FNameIndex;
     property Signature: DWORD read FSignature;
   end;
@@ -871,7 +871,7 @@ type
     FSegment: Word;
     FOffset: DWORD;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     property Segment: Word read FSegment;
     property Offset: DWORD read FOffset;
   end;
@@ -883,7 +883,7 @@ type
   private
     FProperties: Word;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     property Properties: Word read FProperties;
   end;
 
@@ -895,7 +895,7 @@ type
     FDataCount: Word;
     FFirstData: DWORD;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     property Segment: Word read FSegment;
     property Offset: DWORD read FOffset;
     property CodeCount: Word read FCodeCount;
@@ -909,7 +909,7 @@ type
   private
     FOffset: DWORD;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     property Offset: DWORD read FOffset;
   end;
 
@@ -918,7 +918,7 @@ type
     FSize: Word;
     FValue: Pointer;
   public
-    constructor Create(pSymInfo: PSymbolInfo; aID: DWORD); override;
+    constructor Create(pSymInfo: PSymbolInfo; const aID: DWORD); override;
     destructor Destroy; override;
     property Flags: Word read FFlags;
     property Size: Word read FSize;
@@ -1382,9 +1382,9 @@ type
     procedure Analyse;
     procedure AnalyseNames(const pSubsection: Pointer; const Size: DWORD); //virtual;
     procedure AnalyseGlobalTypes(const pTypes: Pointer; const Size: DWORD); //virtual;
-    procedure AnalyseAlignSymbols(pSymbols: PSymbolInfos; const Size: DWORD; ModuleIndex: Integer); //virtual;
+    procedure AnalyseAlignSymbols(pSymbols: PSymbolInfos; const Size: DWORD; const ModuleIndex: Integer); //virtual;
     procedure AnalyseModules(pModInfo: PModuleInfo; const Size: DWORD); //virtual;
-    procedure AnalyseSourceModules(pSrcModInfo: PSourceModuleInfo; const Size: DWORD; ModuleIndex: Integer); //virtual;
+    procedure AnalyseSourceModules(pSrcModInfo: PSourceModuleInfo; const Size: DWORD; const ModuleIndex: Integer); //virtual;
     procedure AnalyseUnknownSubSection(const pSubsection: Pointer; const Size: DWORD); //virtual;
     procedure AnalyzeUses(pSymbols: PSymbolInfo; Module: TJclTD32ModuleInfo); //virtual;
     function LfaToVa(const Lfa: DWORD): Pointer;
@@ -1540,11 +1540,12 @@ var
   P: Integer;
 begin
   for P := 0 to ProcSymbolCount - 1 do
-    if (ProcSymbols[P].Offset <= Offset) and (ProcSymbols[P].Offset + ProcSymbols[P].Size >= Offset) then
-    begin
-      Result := ProcSymbols[P];
+  begin
+    Result := ProcSymbols[P];
+    if (Result.Offset <= Offset) and (Result.Offset + Result.Size >= Offset) then
       Exit;
-    end;
+  end;
+
   Result := nil;
 end;
 
@@ -1560,7 +1561,7 @@ end;
 
 //=== { TJclLineInfo } =======================================================
 
-constructor TJclTD32LineInfo.Create(ALineNo, AOffset: DWORD; ASegment: Word);
+constructor TJclTD32LineInfo.Create(const ALineNo, AOffset: DWORD; const ASegment: Word);
 begin
   inherited Create;
   FLineNo := ALineNo;
@@ -1570,33 +1571,38 @@ end;
 
 //=== { TJclSourceModuleInfo } ===============================================
 
-constructor TJclTD32SourceModuleInfo.Create(pSrcFile: PSourceFileEntry; Base: DWORD);
+constructor TJclTD32SourceModuleInfo.Create(pSrcFile: PSourceFileEntry; const Base: DWORD);
 type
-  PArrayOfWord = ^TArrayOfWord;
-  TArrayOfWord = array [0..0] of Word;
+  PArrayOfOffsets = ^TArrayOfOffsets;
+  TArrayOfOffsets = array[0..0] of Word;
 var
   I, J: Integer;
   pLineEntry: PLineMappingEntry;
+  LineInfo: TJclTD32LineInfo;
+  Offsets: PArrayOfOffsets;
 begin
   Assert(Assigned(pSrcFile));
   inherited Create;
+
   FNameIndex := pSrcFile.NameIndex;
   FLines := TObjectList.Create;
-  {$RANGECHECKS OFF}
+
   for I := 0 to pSrcFile.SegmentCount - 1 do
   begin
     pLineEntry := PLineMappingEntry(Base + pSrcFile.BaseSrcLines[I]);
+
+    Offsets := @pLineEntry.Offsets[pLineEntry.PairCount];
+
+    FLines.Capacity := FLines.Capacity + pLineEntry.PairCount;
     for J := 0 to pLineEntry.PairCount - 1 do
-      FLines.Add(TJclTD32LineInfo.Create(
-        PArrayOfWord(@pLineEntry.Offsets[pLineEntry.PairCount])^[J],
-        pLineEntry.Offsets[J], pLineEntry.SegmentIndex));
+    begin
+      LineInfo := TJclTD32LineInfo.Create(Offsets^[J], pLineEntry.Offsets[J], pLineEntry.SegmentIndex);
+      FLines.Add(LineInfo);
+    end;
   end;
 
   FSegments := @pSrcFile.BaseSrcLines[pSrcFile.SegmentCount];
   FSegmentCount := pSrcFile.SegmentCount;
-  {$IFDEF RANGECHECKS_ON}
-  {$RANGECHECKS ON}
-  {$ENDIF RANGECHECKS_ON}
 end;
 
 destructor TJclTD32SourceModuleInfo.Destroy;
@@ -1648,7 +1654,7 @@ end;
 
 //=== { TJclSymbolInfo } =====================================================
 
-constructor TJclTD32SymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32SymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   Assert(Assigned(pSymInfo));
   inherited Create;
@@ -1658,7 +1664,7 @@ end;
 
 //=== { TJclProcSymbolInfo } =================================================
 
-constructor TJclTD32ProcSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32ProcSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   FSymbols := TList.Create;
@@ -1694,7 +1700,7 @@ end;
 
 //=== { TJclDataSymbolInfo } =================================================
 
-constructor TJclTD32DataSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32DataSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
@@ -1708,7 +1714,7 @@ end;
 
 //=== { TJclWithSymbolInfo } =================================================
 
-constructor TJclTD32WithSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32WithSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
@@ -1725,7 +1731,7 @@ end;
 
 //=== { TJclUdtSymbolInfo } ==================================================
 
-constructor TJclTD32UdtSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32UdtSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
@@ -1736,7 +1742,7 @@ begin
   end;
 end;
 
-constructor TJclTD32StartSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32StartSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
@@ -1749,7 +1755,7 @@ begin
   end;
 end;
 
-constructor TJclTD32BPRel32SymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32BPRel32SymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
@@ -1760,7 +1766,7 @@ begin
   end;
 end;
 
-constructor TJclTD32RegisterSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32RegisterSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
@@ -1783,7 +1789,7 @@ begin
   end;
 end;
 
-function TJclTD32RegisterSymbolInfo.GetRange(Index: Integer): PRegisterRange;
+function TJclTD32RegisterSymbolInfo.GetRange(const Index: Integer): PRegisterRange;
 begin
   Result := FRanges[Index];
 end;
@@ -1793,14 +1799,14 @@ begin
   Result := Length(FRanges);
 end;
 
-constructor TJclTD32LinkSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32LinkSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
     FOffset := Link.Offset;
 end;
 
-constructor TJclTD32ConstantSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32ConstantSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   inherited;
   with pSymInfo^ do
@@ -1984,7 +1990,7 @@ var
   TypeInfo: TJclSymbolTypeInfo;
   Data: Pointer;
 begin
-  FSymbolTypes.Capacity := PGlobalTypeInfo(pTypes).Count;
+  FSymbolTypes.Capacity := FSymbolTypes.Capacity + PGlobalTypeInfo(pTypes).Count;
   for I := 0 To PGlobalTypeInfo(pTypes).Count - 1 do
   begin
     TypeInfo := Nil;
@@ -2120,7 +2126,7 @@ begin
   end;
 end;
 
-procedure TJclTD32InfoParser.AnalyseAlignSymbols(pSymbols: PSymbolInfos; const Size: DWORD; ModuleIndex: Integer);
+procedure TJclTD32InfoParser.AnalyseAlignSymbols(pSymbols: PSymbolInfos; const Size: DWORD; const ModuleIndex: Integer);
 var
   I: Integer;
   Offset, ID: DWORD;
@@ -2128,10 +2134,20 @@ var
   Symbol: TJclTD32SymbolInfo;
   Module: TJclTD32ModuleInfo;
   ProcSymbol: TJclTD32ProcSymbolInfo;
+  ModuleProcSymbol: TJclTD32ProcSymbolInfo;
 begin
   Module := Modules[ModuleIndex];
   ProcSymbol := nil;
   Offset := DWORD(@pSymbols.Symbols[0]) - DWORD(pSymbols);
+
+  if FSymbols.Capacity = 0 then
+    FSymbols.Capacity := 4096;
+
+  if FProcSymbols.Capacity = 0 then
+    FProcSymbols.Capacity := 4096;
+
+  if Module.FSymbols.Capacity = 0 then
+    Module.FSymbols.Capacity := 256;
 
   while Offset < Size do
   begin
@@ -2192,12 +2208,15 @@ begin
 
           if Symbol.ParentID <> 0 then
             for I := Module.ProcSymbolCount - 1 downto 0 do
-              if Module.ProcSymbols[I].ID = Symbol.ParentID then
+            begin
+              ModuleProcSymbol := Module.ProcSymbols[I];
+              if ModuleProcSymbol.ID = Symbol.ParentID then
               begin
-                Symbol.FParent := Module.ProcSymbols[I];
-                Module.ProcSymbols[I].FSymbols.Add(Symbol);
+                Symbol.FParent := ModuleProcSymbol;
+                ModuleProcSymbol.FSymbols.Add(Symbol);
                 Break;
               end;
+            end;
         end;
       end;
     end;
@@ -2210,13 +2229,17 @@ begin
   FModules.Add(TJclTD32ModuleInfo.Create(pModInfo));
 end;
 
-procedure TJclTD32InfoParser.AnalyseSourceModules(pSrcModInfo: PSourceModuleInfo; const Size: DWORD; ModuleIndex: Integer);
+procedure TJclTD32InfoParser.AnalyseSourceModules(pSrcModInfo: PSourceModuleInfo; const Size: DWORD; const ModuleIndex: Integer);
 var
   I: Integer;
   pSrcFile: PSourceFileEntry;
   SrcModule: TJclTD32SourceModuleInfo;
+  ModuleInfo: TJclTD32ModuleInfo;
 begin
-  {$RANGECHECKS OFF}
+  ModuleInfo := Modules[ModuleIndex];
+
+  FSourceModules.Capacity := FSourceModules.Capacity + pSrcModInfo.FileCount;
+  ModuleInfo.FSourceModules.Capacity := ModuleInfo.FSourceModules.Capacity + pSrcModInfo.FileCount;
   for I := 0 to pSrcModInfo.FileCount - 1 do
   begin
     pSrcFile := PSourceFileEntry(DWORD(pSrcModInfo) + pSrcModInfo.BaseSrcFiles[I]);
@@ -2224,12 +2247,9 @@ begin
     begin
       SrcModule := TJclTD32SourceModuleInfo.Create(pSrcFile, DWORD(pSrcModInfo));
       FSourceModules.Add(SrcModule);
-      Modules[ModuleIndex].FSourceModules.Add(SrcModule);
+      ModuleInfo.FSourceModules.Add(SrcModule);
     end;
   end;
-  {$IFDEF RANGECHECKS_ON}
-  {$RANGECHECKS ON}
-  {$ENDIF RANGECHECKS_ON}
 end;
 
 procedure TJclTD32InfoParser.AnalyseUnknownSubSection(const pSubsection: Pointer; const Size: DWORD);
@@ -2240,8 +2260,11 @@ end;
 procedure TJclTD32InfoParser.AnalyzeUses(pSymbols: PSymbolInfo; Module: TJclTD32ModuleInfo);
 var
   I: Integer;
+  Count: Integer;
 begin
-  for I := 0 to (pSymbols.Size - SizeOf(pSymbols.SymbolType)) div SizeOf(DWORD) - 1 do
+  Count := (pSymbols.Size - SizeOf(pSymbols.SymbolType)) div SizeOf(DWORD);
+  Module.FUsedModuleNameIndices.Capacity := Module.FUsedModuleNameIndices.Capacity + Count;
+  for I := 0 to Count - 1 do
     Module.FUsedModuleNameIndices.Add(Pointer(pSymbols.Use.Names[I]));
 end;
 
@@ -2331,19 +2354,25 @@ end;
 function TJclTD32InfoParser.FindModule(const AAddr: DWORD; var AMod: TJclTD32ModuleInfo): Boolean;
 var
   I, J: Integer;
+  ModuleInfo: TJclTD32ModuleInfo;
+  SegmentInfo: PSegmentInfo;
 begin
   if ValidData then
     for I := 0 to ModuleCount - 1 do
-    with Modules[I] do
-      for J := 0 to SegmentCount - 1 do
+    begin
+      ModuleInfo := Modules[I];
+      for J := 0 to ModuleInfo.SegmentCount - 1 do
       begin
-        if (FSegments[J].Flags = 1) and (AAddr >= FSegments[J].Offset) and (AAddr - FSegments[J].Offset <= Segment[J].Size) then
+        SegmentInfo := @ModuleInfo.FSegments[J];
+        if (SegmentInfo^.Flags = 1) and (AAddr >= SegmentInfo^.Offset) and
+          (AAddr - SegmentInfo^.Offset <= SegmentInfo^.Size) then
         begin
           Result := True;
-          AMod := Modules[I];
+          AMod := ModuleInfo;
           Exit;
         end;
       end;
+    end;
   Result := False;
   AMod := nil;
 end;
@@ -2352,6 +2381,7 @@ function TJclTD32InfoParser.FindModule(const Section: Word; const Offset: DWORD)
 var
   M, S: Integer;
 begin
+  //TODO:
   if ValidData then
     for M := 0 to ModuleCount - 1 do
     with Modules[M] do
@@ -2523,6 +2553,7 @@ var
   I: Integer;
 begin
   Result := CreateTypeInfo(stkArgList, 0);
+  Result.Args.Capacity := pInfo.LeafArgList.Count;
   for I := 0 to pInfo.LeafArgList.Count - 1 do
     Result.Args.Add(Pointer(pInfo.LeafArgList.Args[I]));
 end;
@@ -2544,6 +2575,7 @@ begin
   Size := Integer(@PSymbolTypeInfo(0).LeafFieldList);
   IncOffset;
 
+  Result.Members.Capacity := 16;
   while Integer(@pInfo.Leaf) + pInfo.Length > Offset do
   begin
     case pFieldListElement(Offset).Leaf of
@@ -2650,6 +2682,7 @@ type
 var
   I, NameIndex, FieldListIndex, VoidIndex: Integer;
   FieldList : TJclSymbolTypeInfo;
+  SymbolType: TJclSymbolTypeInfo;
 begin
   // Create debug info for TVarData type
   if FIsVarTypesExist then
@@ -2703,12 +2736,15 @@ begin
     FieldListIndex := FSymbolTypes.Add(FieldList);
 
     for I := 0 to SymbolTypeCount - 1 do
-      if (SymbolTypes[I] <> nil) and (SymbolTypes[I].Kind = stkVariant) then
+    begin
+      SymbolType := SymbolTypes[I];
+      if (SymbolType <> nil) and (SymbolType.Kind = stkVariant) then
       begin
-        SymbolTypes[I].Kind := stkStructure;
-        SymbolTypes[I].NameIndex := NameIndex;
-        SymbolTypes[I].Elements := FieldListIndex;
+        SymbolType.Kind := stkStructure;
+        SymbolType.NameIndex := NameIndex;
+        SymbolType.Elements := FieldListIndex;
       end;
+    end;
   end;
 end;
 
@@ -2932,7 +2968,7 @@ end;
 
 { TJclTD32ObjNameSymbolInfo }
 
-constructor TJclTD32ObjNameSymbolInfo.Create(pSymInfo: PSymbolInfo; aID: DWORD);
+constructor TJclTD32ObjNameSymbolInfo.Create(pSymInfo: PSymbolInfo; const aID: DWORD);
 begin
   Assert(Assigned(pSymInfo));
   inherited Create(pSymInfo, aID);
