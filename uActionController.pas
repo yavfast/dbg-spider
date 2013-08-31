@@ -4,14 +4,15 @@ interface
   uses Classes, DebugInfo, DebugerTypes, XMLDoc, XMLIntf;
 
 type
-  TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo, acProgress);
+  TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo, acProgress,
+    acSetProjectName);
 
   TDbgOption = (doDebugInfo, doRun, doProfiler, doMemLeaks);
   TDbgOptions = set of TDbgOption;
 
   TActionController = class
   public
-    class procedure RunDebug(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0); static;
+    class procedure RunDebug(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0); static;
     class procedure StopDebug; static;
     class procedure PauseDebug; static;
 
@@ -28,11 +29,21 @@ type
     FProjectXML: IXMLDocument;
     FUpdateCount: Integer;
 
+    function GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String; overload;
+    procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String); overload;
+
+    function GetXMLValue(const NodeName: String): String; overload;
+    procedure SetXMLValue(const NodeName, NodeValue: String); overload;
+
     procedure SetApplicationName(const Value: String);
     procedure SetProjectStorage(const Value: String);
     function GetApplicationName: String;
     function GetProjectName: String;
     function GetProjectStorage: String;
+    function GetDelphiSource: String;
+    function GetProjectSource: String;
+    procedure SetDelphiSource(const Value: String);
+    procedure SetProjectSource(const Value: String);
   public
     constructor Create;
     destructor Destroy; override;
@@ -49,6 +60,8 @@ type
     property ProjectName: String read GetProjectName;
     property ApplicationName: String read GetApplicationName write SetApplicationName;
     property ProjectStorage: String read GetProjectStorage write SetProjectStorage;
+    property ProjectSource: String read GetProjectSource write SetProjectSource;
+    property DelphiSource: String read GetDelphiSource write SetDelphiSource;
   end;
 
 const
@@ -119,10 +132,10 @@ begin
   //
 end;
 
-class procedure TActionController.RunDebug(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0);
+class procedure TActionController.RunDebug(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
 begin
   if not Assigned(_DbgThread) then
-    _DbgThread := TDebugerThread.Create(AppName, ADbgOptions, AProcessID);
+    _DbgThread := TDebugerThread.Create(ADbgOptions, AProcessID);
 end;
 
 class procedure TActionController.StopDebug;
@@ -219,34 +232,78 @@ end;
 
 function TProjectOptions.GetApplicationName: String;
 begin
-  Result := '';
-  if Assigned(FProjectXML) then
-    Result := FProjectXML.DocumentElement.ChildValues['application_name'];
+  Result := GetXMLValue('application_name');
 end;
 
 procedure TProjectOptions.SetApplicationName(const Value: String);
 begin
-  if not Assigned(FProjectXML) then Exit;
+  SetXMLValue('application_name', Value);
+end;
 
-  BeginUpdate;
-  FProjectXML.DocumentElement.ChildValues['application_name'] := Value;
-  EndUpdate;
+function TProjectOptions.GetDelphiSource: String;
+begin
+  Result := GetXMLValue('delphi_source');
+end;
+
+procedure TProjectOptions.SetDelphiSource(const Value: String);
+begin
+  SetXMLValue('delphi_source', Value);
+end;
+
+function TProjectOptions.GetProjectSource: String;
+begin
+  Result := GetXMLValue('project_source');
+end;
+
+procedure TProjectOptions.SetProjectSource(const Value: String);
+begin
+  SetXMLValue('project_source', Value);
 end;
 
 function TProjectOptions.GetProjectStorage: String;
 begin
-  Result := '';
-  if Assigned(FProjectXML) then
-    Result := FProjectXML.DocumentElement.ChildValues['project_storage'];
+  Result := GetXMLValue('project_storage');
 end;
 
 procedure TProjectOptions.SetProjectStorage(const Value: String);
 begin
-  if not Assigned(FProjectXML) then Exit;
+  SetXMLValue('project_storage', Value);
+end;
 
-  BeginUpdate;
-  FProjectXML.DocumentElement.ChildValues['project_storage'] := Value;
-  EndUpdate;
+function TProjectOptions.GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String;
+var
+  ResNode: IXMLNode;
+begin
+  Result := '';
+  if Assigned(ParentNode) then
+  begin
+    ResNode := ParentNode.ChildNodes.FindNode(NodeName);
+    if Assigned(ResNode) and ResNode.IsTextElement then
+      Result := ResNode.Text;
+  end;
+end;
+
+function TProjectOptions.GetXMLValue(const NodeName: String): String;
+begin
+  Result := '';
+  if Assigned(FProjectXML) then
+    Result := GetXMLValue(FProjectXML.DocumentElement, NodeName);
+end;
+
+procedure TProjectOptions.SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String);
+begin
+  if Assigned(ParentNode) then
+    ParentNode.ChildValues[NodeName] := NodeValue;
+end;
+
+procedure TProjectOptions.SetXMLValue(const NodeName, NodeValue: String);
+begin
+  if Assigned(FProjectXML) then
+  begin
+    BeginUpdate;
+    SetXMLValue(FProjectXML.DocumentElement, NodeName, NodeValue);
+    EndUpdate;
+  end;
 end;
 
 initialization

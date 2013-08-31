@@ -4,23 +4,27 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Grids, ExtCtrls, ActnList, StdCtrls, Buttons;
+  Dialogs, Grids, ExtCtrls, ActnList, StdCtrls, Buttons,
+  PlatformDefaultStyleActnCtrls, ActnMan, ActnCtrls, ToolWin, ComCtrls,
+  RibbonSilverStyleActnCtrls;
 
 type
   TfrmProcessList = class(TForm)
     sgProcessList: TStringGrid;
-    pnl1: TPanel;
-    btnOK: TBitBtn;
-    btnCancel: TBitBtn;
     AL: TActionList;
     acOk: TAction;
     acCancel: TAction;
     acRefresh: TAction;
-    btnRefresh: TBitBtn;
+    actmgrProcessList: TActionManager;
+    cbTop: TCoolBar;
+    cbActions: TCoolBar;
+    actbTop: TActionToolBar;
+    actbActions: TActionToolBar;
     procedure acRefreshExecute(Sender: TObject);
     procedure acOkExecute(Sender: TObject);
     procedure acCancelExecute(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
   public
@@ -33,7 +37,7 @@ var
 
 implementation
 
-uses PsAPI;
+uses PsAPI, uShareData;
 
 procedure GetProcessList(List: TStringList);
 var
@@ -70,12 +74,12 @@ end;
 
 procedure TfrmProcessList.acCancelExecute(Sender: TObject);
 begin
-  ActiveControl := btnCancel;
+  ModalResult := mrCancel;
 end;
 
 procedure TfrmProcessList.acOkExecute(Sender: TObject);
 begin
-  ActiveControl := btnOK;
+  ModalResult := mrOk;
 end;
 
 procedure TfrmProcessList.acRefreshExecute(Sender: TObject);
@@ -98,6 +102,12 @@ begin
   finally
     FreeAndNil(PL);
   end;
+end;
+
+procedure TfrmProcessList.FormCreate(Sender: TObject);
+begin
+  actbTop.ParentBackground := True;
+  actbActions.ParentBackground := True;
 end;
 
 procedure TfrmProcessList.FormShow(Sender: TObject);

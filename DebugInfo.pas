@@ -230,7 +230,6 @@ Type
         DebugInfo   : TDebugInfo;
         Segments    : TList;
         UsedUnits   : TStringList;
-        FullUnitName: String;
 
         CodeSize    : Cardinal;
         DataSize    : Cardinal;
@@ -241,6 +240,8 @@ Type
         Procedure   Clear; Override;
 
         function Name : AnsiString; Override;
+        function ShortName: String; Override;
+        function FullUnitName: String;
     end;
 
     TDLLInfo = Class(TSegmentCodeInfo)
@@ -267,12 +268,15 @@ Type
 
     TDebugInfoProgressCallback = procedure(const Action: String; const Progress: Integer) of object;
 
+    TDbgSourceDirs = TDictionary<String,String>;
+
     TDebugInfoClass = Class Of TDebugInfo;
 
     TDebugInfo = Class
     Private
         FDebuger   : TDebuger;
-        FDirs      : TStringList;
+        FSourceDirs: String;
+        FDirs      : TDbgSourceDirs;
         FUnits     : TStringList;
         FDbgLog    : TDbgLog;
 
@@ -290,7 +294,7 @@ Type
 
         Procedure ClearDebugInfo; Virtual;
         Function  HasDebugInfo(Const FileName : String) : Boolean; Virtual; abstract;
-        Function  ReadDebugInfo(Const FileName : String; SourceDirs : TStringList) : Boolean; Virtual;
+        Function  ReadDebugInfo(Const FileName : String; const SourceDirs : String = '') : Boolean; Virtual;
         Function  GetFileCount : Integer; Virtual;
         Function  GetFile(Index : Integer) : String; Virtual;
         Function  GetTypeInfo(Const TypeName : String) : TTypeInfo; Virtual;
@@ -301,6 +305,10 @@ Type
           Var FuncInfo : TFuncInfo; Var LineInfo : TLineInfo; GetPrevLine : Boolean) : TFindResult; Virtual; abstract;
         Function  GetLineInformation(Addr : Pointer; Var UnitName : String;
           Var FuncName : String; Var Line : LongInt; GetPrevLine : Boolean) : TFindResult; Virtual; abstract;
+
+        procedure UpdateSourceDirs; virtual;
+        procedure AddSourceDir(const Dir: String; const Recursive: Boolean = True); virtual;
+        function FullUnitName(const UnitName: String): String;
 
         Function  MakeFuncDbgFullName(Const ClassName, MethodName : AnsiString) : AnsiString; Virtual; abstract;
         Function  MakeFuncShortName(Const MethodName : AnsiString) : AnsiString; Virtual; abstract;
@@ -340,10 +348,11 @@ Type
         Function  IsValidDataAddr (Const Addr: Pointer; const ThreadID: TThreadId) : Boolean;
 
         property Debuger: TDebuger read FDebuger;
-        Property Dirs      : TStringList Read FDirs;
-        Property Units     : TStringList Read FUnits;
+        Property SourceDirs: String read FSourceDirs;
+        Property Dirs: TDbgSourceDirs Read FDirs;
+        Property Units: TStringList Read FUnits;
 
-        Property DbgLog    : TDbgLog read FDbgLog;
+        Property DbgLog: TDbgLog read FDbgLog;
 
         property DebugInfoLoaded: Boolean read FDebugInfoLoaded;
         property DebugInfoType: String read FDebugInfoType;
@@ -362,7 +371,7 @@ Uses
     //ApiConsts,
     //EvaluateProcs,
     //EvaluateTypes,
-    Variants;
+    Variants, IOUtils, Types;
 {...............................................................................}
 
 function IncPointer(Ptr: Pointer; Offset: Integer): Pointer; inline;
@@ -380,7 +389,8 @@ Begin
 
     FDebuger := ADebuger;
 
-    FDirs := TStringList.Create;
+    FDirs := TDbgSourceDirs.Create(4096);
+
     FUnits := TStringList.Create;
 
     FDbgLog := TDbgLog.Create;
@@ -414,6 +424,36 @@ end;
 {..............................................................................}
 
 {..............................................................................}
+procedure TDebugInfo.AddSourceDir(const Dir: String; const Recursive: Boolean);
+const
+  _PAS_EXTS: array[0..2] of String = ('*.pas', '*.inc', '*.dpr');
+var
+  ChildDirs: TStringDynArray;
+  Files: TStringDynArray;
+  J, I: Integer;
+  FileName: String;
+  ShortFileName: String;
+begin
+  for J := 0 to High(_PAS_EXTS) do
+  begin
+    Files := TDirectory.GetFiles(Dir, _PAS_EXTS[J]);
+
+    if Length(Files) > 0 then
+      for I := 0 to High(Files) do
+      begin
+        FileName := Files[I];
+        ShortFileName := AnsiLowerCase(ExtractFileName(FileName));
+
+        FDirs.AddOrSetValue(ShortFileName, FileName);
+      end;
+  end;
+
+  ChildDirs := TDirectory.GetDirectories(Dir);
+  if Length(ChildDirs) > 0 then
+    for I := 0 to High(ChildDirs) do
+      AddSourceDir(ChildDirs[I], True);
+end;
+
 Function TDebugInfo.CheckAddr(Const Addr : Pointer): Boolean;
 Var
     UnitInfo : TUnitInfo;
@@ -456,15 +496,14 @@ End;
 {..............................................................................}
 
 {..............................................................................}
-Function TDebugInfo.ReadDebugInfo(Const FileName : String; SourceDirs : TStringList) : Boolean;
+Function TDebugInfo.ReadDebugInfo(Const FileName : String; const SourceDirs : String = '') : Boolean;
 Begin
     Result := True;
 
     If Not(FDebugInfoLoaded And SameText(FExeFileName, FileName)) Then
     Begin
         FDirs.Clear;
-        if Assigned(SourceDirs) then
-          FDirs.Assign(SourceDirs);
+        FSourceDirs := SourceDirs;
 
         Result := DoReadDebugInfo(FileName, True);
 
@@ -472,9 +511,42 @@ Begin
         Begin
             FExeFileName := FileName;
             FDebugInfoLoaded := True;
+
+            UpdateSourceDirs;
         End;
     End;
 End;
+
+procedure TDebugInfo.UpdateSourceDirs;
+var
+  SL: TStringList;
+  I: Integer;
+  S: String;
+begin
+  FDirs.Clear;
+
+  SL := TStringList.Create;
+  try
+    SL.Delimiter := ';';
+    SL.StrictDelimiter := True;
+    SL.Duplicates := dupIgnore;
+
+    SL.DelimitedText := FSourceDirs;
+
+    for I := 0 to SL.Count - 1 do
+    begin
+      S := Trim(SL[I]);
+      if (S <> '') then
+      begin
+        S := ExcludeTrailingPathDelimiter(S);
+        if DirectoryExists(S) then
+          AddSourceDir(S, True);
+      end;
+    end;
+  finally
+    FreeAndNil(SL);
+  end;
+end;
 {..............................................................................}
 
 {..............................................................................}
@@ -490,6 +562,23 @@ Begin
         Result := Format('%p: no source info', [Pointer(Addr)]);
 End;
 
+
+function TDebugInfo.FullUnitName(const UnitName: String): String;
+var
+  ShortUnitName: String;
+begin
+  ShortUnitName := AnsiLowerCase(ExtractFileName(UnitName));
+
+  if not FDirs.TryGetValue(ShortUnitName, Result) then
+  begin
+    if ExtractFileExt(ShortUnitName) <> '.pas' then
+    begin
+      ShortUnitName := ShortUnitName + '.pas';
+      if not FDirs.TryGetValue(ShortUnitName, Result) then
+        Result := ShortUnitName;
+    end;
+  end;
+end;
 
 function TDebugInfo.FuncByName(const FuncName: AnsiString): TFuncInfo;
 var
@@ -1116,9 +1205,19 @@ begin
     Inherited;
 end;
 
+function TUnitInfo.FullUnitName: String;
+begin
+  Result := DebugInfo.FullUnitName(Name);
+end;
+
 function TUnitInfo.Name: AnsiString;
 begin
     Result := DebugInfo.GetNameById(NameId);
+end;
+
+function TUnitInfo.ShortName: String;
+begin
+  Result := AnsiLowerCase(ExtractFileName(Name));
 end;
 
 { TStackEntry }

@@ -3,16 +3,14 @@ unit uMain;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Windows, uShareData, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Buttons, Mask, ExtCtrls, ComCtrls, ActnList, DebugInfo,
-  Grids, JvExGrids, JvGrids, JvgStringGrid, VirtualTrees, JvComponentBase,
-  JvExExtCtrls, JvExtComponent, JvSplit,
-  Debuger, DebugerTypes, DelphiDebugInfo, JvExComCtrls, JvExControls,
-  JvEditorCommon, JvUnicodeEditor, JvUnicodeHLEditor,
+  Grids, VirtualTrees, 
+  Debuger, DebugerTypes, DelphiDebugInfo, 
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
-  RibbonActnMenus, ImgList, JvImageList, ActnColorMaps, XPMan,
-  uActionController, uSpiderOptions;
+  RibbonActnMenus, ImgList, ActnColorMaps, XPMan,
+  uActionController, uSpiderOptions, SynEdit, SynMemo;
 
 type
   TProgectType = (ptEmpty, ptSpider, ptApplication);
@@ -96,8 +94,6 @@ type
     acOptions: TAction;
     acExit: TAction;
     acAbout: TAction;
-    imlMain: TJvImageList;
-    imlMainSmall: TJvImageList;
     rbgApplication: TRibbonGroup;
     rbngrpDebug: TRibbonGroup;
     acSave: TAction;
@@ -106,10 +102,8 @@ type
     acCPUTimeLine: TAction;
     acRealTimeLine: TAction;
     acRunStop: TAction;
-    scm1: TStandardColorMap;
     cbMainTabs: TCoolBar;
     actbMainTabs: TActionToolBar;
-    xpmnfst1: TXPManifest;
     acTabDebugInfo: TAction;
     acTabTimeline: TAction;
     acTabMemoryInfo: TAction;
@@ -132,7 +126,6 @@ type
     vstDbgInfoTypes: TVirtualStringTree;
     vstDbgInfoVars: TVirtualStringTree;
     vstDbgInfoFunctions: TVirtualStringTree;
-    vstDbgInfoFuncVars: TVirtualStringTree;
     actbStatusInfo2: TActionToolBar;
     pbProgress: TProgressBar;
     pStatusAction: TPanel;
@@ -148,6 +141,13 @@ type
     acRecent8: TAction;
     acRecent9: TAction;
     acRecent0: TAction;
+    acEditProject: TAction;
+    tsDbgUnitSource: TTabSheet;
+    pDbgInfoFuncAdv: TPanel;
+    vstDbgInfoFuncVars: TVirtualStringTree;
+    splDbgInfoFuncAdv: TSplitter;
+    synmDbgInfoUnitSource: TSynMemo;
+    synmDbgInfoFuncAdv: TSynMemo;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -220,6 +220,8 @@ type
     procedure acCloseProjectExecute(Sender: TObject);
     procedure acNewProjectExecute(Sender: TObject);
     procedure acRecentExecute(Sender: TObject);
+    procedure acEditProjectExecute(Sender: TObject);
+    procedure acSaveCopyExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -255,6 +257,8 @@ type
     procedure LoadVars(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
     procedure LoadFunctions(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
     procedure LoadFunctionParams(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
+    procedure LoadFunctionSource(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
+    procedure LoadUnitSource(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 
     procedure DrawTimeLineHeader(C: TCanvas; const R: TRect; const Offset: Integer);
     procedure DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
@@ -289,7 +293,7 @@ implementation
 
 {$R *.dfm}
 
-uses Math, EvaluateTypes, ClassUtils, uProcessList, uDebugerThread,
+uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
   uProjectOptions;
 
 
@@ -326,6 +330,11 @@ end;
 procedure TMainForm.acCPUTimeLineExecute(Sender: TObject);
 begin
   UpdateTrees;
+end;
+
+procedure TMainForm.acEditProjectExecute(Sender: TObject);
+begin
+  OpenProjectOptions(otEdit);
 end;
 
 procedure TMainForm.acExitExecute(Sender: TObject);
@@ -368,7 +377,12 @@ begin
 
   ClearDbgTrees;
 
-  _AC.RunDebug(gvProjectOptions.ApplicationName, [doRun, doProfiler], FPID);
+  _AC.RunDebug([doRun, doProfiler], FPID);
+end;
+
+procedure TMainForm.acSaveCopyExecute(Sender: TObject);
+begin
+  OpenProjectOptions(otSaveAs);
 end;
 
 procedure TMainForm.acStopExecute(Sender: TObject);
@@ -415,28 +429,8 @@ begin
 end;
 
 procedure TMainForm.acNewProjectExecute(Sender: TObject);
-var
-  F: TfmProjectOptions;
 begin
-  Application.CreateForm(TfmProjectOptions, F);
-  try
-    if F.ShowModal = mrOk then
-    begin
-      ChangeFileExt(F.ProjectName, '.spider');
-      gvProjectOptions.Open(F.ProjectName);
-      gvProjectOptions.BeginUpdate;
-      try
-        gvProjectOptions.ApplicationName := F.ApplicationName;
-        gvProjectOptions.ProjectStorage := F.ProjectStorage;
-      finally
-        gvProjectOptions.EndUpdate;
-      end;
-
-      SetProjectName(gvProjectOptions.ProjectName);
-    end;
-  finally
-    F.Release;
-  end;
+  OpenProjectOptions(otNew);
 end;
 
 procedure TMainForm.AddProcess(const ProcessID: Cardinal);
@@ -711,6 +705,8 @@ begin
       AddProcess(Args[0]);
     acProgress:
       ProgressAction(Args[0], Args[1]);
+    acSetProjectName:
+      SetProjectName(Args[0]);
   end;
 
   case Action of
@@ -1195,6 +1191,7 @@ begin
   LoadGUIOptions;
 
   FCloseApp := False;
+  FProjectType := ptEmpty;
 
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
 
@@ -1213,6 +1210,7 @@ end;
 procedure TMainForm.FormShow(Sender: TObject);
 begin
   acRunStop.Assign(acRun);
+  UpdateActions;
 
   vstThreadsColumnResize(vstThreads.Header, 0);
   vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
@@ -1355,6 +1353,42 @@ begin
   end;
 end;
 
+procedure TMainForm.LoadFunctionSource(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
+var
+  StartLine: TLineInfo;
+  LineIdx: Integer;
+  PrevLine: TLineInfo;
+  LineNo: Integer;
+begin
+  synmDbgInfoFuncAdv.Clear;
+
+  if FileExists(FuncInfo.UnitInfo.FullUnitName) then
+  begin
+    synmDbgInfoFuncAdv.BeginUpdate;
+    try
+      synmDbgInfoFuncAdv.Lines.LoadFromFile(FuncInfo.UnitInfo.FullUnitName);
+
+      if FuncInfo.Lines.Count > 0 then
+      begin
+        StartLine := FuncInfo.Lines[0];
+        LineIdx := FuncInfo.UnitInfo.Lines.IndexOf(StartLine) - 1;
+        if LineIdx >= 0 then
+        begin
+          PrevLine := FuncInfo.UnitInfo.Lines[LineIdx];
+          LineNo := PrevLine.LineNo + 1;
+        end
+        else
+          LineNo := StartLine.LineNo - 2;
+
+        synmDbgInfoFuncAdv.CaretY := LineNo;
+        synmDbgInfoFuncAdv.TopLine := LineNo;
+      end;
+    finally
+      synmDbgInfoFuncAdv.EndUpdate;
+    end;
+  end;
+end;
+
 procedure TMainForm.LoadTypes(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 var
   I, J: Integer;
@@ -1434,6 +1468,21 @@ begin
     end;
   finally
     vstDbgInfoUnits.EndUpdate;
+  end;
+end;
+
+procedure TMainForm.LoadUnitSource(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
+begin
+  synmDbgInfoUnitSource.Clear;
+
+  if FileExists(UnitInfo.FullUnitName) then
+  begin
+    synmDbgInfoUnitSource.BeginUpdate;
+    try
+      synmDbgInfoUnitSource.Lines.LoadFromFile(UnitInfo.FullUnitName);
+    finally
+      synmDbgInfoUnitSource.EndUpdate;
+    end;
   end;
 end;
 
@@ -1525,7 +1574,7 @@ begin
       end;
   end;
 
-  _AC.RunDebug(gvProjectOptions.ApplicationName, [doDebugInfo]);
+  _AC.RunDebug([doDebugInfo]);
 
   UpdateActions;
 end;
@@ -1573,12 +1622,16 @@ begin
     acPause.Enabled := False;
 
     acCloseProject.Enabled := False;
+    acEditProject.Enabled := False;
     acSave.Enabled := False;
     acSaveCopy.Enabled := False;
   end
   else
   begin
     acCloseProject.Enabled := True;
+    acSave.Enabled := True;
+    acSaveCopy.Enabled := True;
+    acEditProject.Enabled := True;
   end;
 end;
 
@@ -1773,9 +1826,13 @@ var
   FuncInfo: TFuncInfo;
 begin
   Data := vstDbgInfoFunctions.GetNodeData(Node);
-  FuncInfo := Data^.DbgFuncInfo;
+  if Data^.LinkType = ltDbgFuncInfo then
+  begin
+    FuncInfo := Data^.DbgFuncInfo;
 
-  LoadFunctionParams(FuncInfo, Node);
+    LoadFunctionParams(FuncInfo, Node);
+    LoadFunctionSource(FuncInfo, Node);
+  end;
 end;
 
 procedure TMainForm.vstDbgInfoFunctionsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
@@ -1901,6 +1958,7 @@ begin
   LoadTypes(UnitInfo, Node);
   LoadVars(UnitInfo, Node);
   LoadFunctions(UnitInfo, Node);
+  LoadUnitSource(UnitInfo, Node);
 end;
 
 procedure TMainForm.vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
