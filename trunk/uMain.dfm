@@ -143,7 +143,7 @@ object MainForm: TMainForm
           Top = 0
           Width = 863
           Height = 517
-          ActivePage = tsDbgUnitSource
+          ActivePage = tsDbgUnitFunctions
           Align = alClient
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
@@ -698,34 +698,100 @@ object MainForm: TMainForm
               WideText = 'Size'
             end>
         end
-        object vstMemStack: TVirtualStringTree
+        object pMemoryInfoAdv: TPanel
           Left = 305
           Top = 0
           Width = 435
           Height = 517
           Align = alClient
-          Header.AutoSizeIndex = 0
-          Header.Font.Charset = DEFAULT_CHARSET
-          Header.Font.Color = clWindowText
-          Header.Font.Height = -11
-          Header.Font.Name = 'Tahoma'
-          Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
-          Header.Style = hsFlatButtons
-          ScrollBarOptions.AlwaysVisible = True
+          BevelOuter = bvNone
+          Caption = 'pMemoryInfoAdv'
+          ShowCaption = False
           TabOrder = 1
-          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-          TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-          OnGetText = vstMemStackGetText
-          OnGetNodeDataSize = vstThreadsGetNodeDataSize
-          Columns = <
-            item
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
-              Position = 0
-              Width = 1000
-              WideText = 'Call Stack'
-            end>
+          object splMemInfoAdv: TSplitter
+            Left = 0
+            Top = 225
+            Width = 435
+            Height = 3
+            Cursor = crVSplit
+            Align = alTop
+          end
+          object vstMemStack: TVirtualStringTree
+            Left = 0
+            Top = 0
+            Width = 435
+            Height = 225
+            Align = alTop
+            Header.AutoSizeIndex = 0
+            Header.Font.Charset = DEFAULT_CHARSET
+            Header.Font.Color = clWindowText
+            Header.Font.Height = -11
+            Header.Font.Name = 'Tahoma'
+            Header.Font.Style = []
+            Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+            Header.Style = hsFlatButtons
+            ScrollBarOptions.AlwaysVisible = True
+            TabOrder = 0
+            TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            OnFocusChanged = vstMemStackFocusChanged
+            OnGetText = vstMemStackGetText
+            OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            Columns = <
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+                Position = 0
+                Width = 70
+                WideText = 'Address'
+              end
+              item
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 1
+                Width = 120
+                WideText = 'Unit'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 2
+                WideText = 'Line'
+              end
+              item
+                Position = 3
+                Width = 500
+                WideText = 'Function'
+              end>
+          end
+          object synmMemInfoSource: TSynMemo
+            Left = 0
+            Top = 228
+            Width = 435
+            Height = 289
+            Align = alClient
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -13
+            Font.Name = 'Courier New'
+            Font.Style = []
+            TabOrder = 1
+            Gutter.AutoSize = True
+            Gutter.Font.Charset = DEFAULT_CHARSET
+            Gutter.Font.Color = clWindowText
+            Gutter.Font.Height = -11
+            Gutter.Font.Name = 'Courier New'
+            Gutter.Font.Style = []
+            Gutter.ShowLineNumbers = True
+            Highlighter = dmShareData.synPas1
+            ReadOnly = True
+            RightEdge = 0
+            SearchEngine = dmShareData.synRegexSearch1
+            FontSmoothing = fsmNone
+          end
         end
       end
     end
@@ -839,34 +905,76 @@ object MainForm: TMainForm
               WideText = 'Message'
             end>
         end
-        object vstExceptionCallStack: TVirtualStringTree
+        object pExceptInfoAdv: TPanel
           Left = 511
           Top = 0
           Width = 303
           Height = 517
           Align = alClient
-          Header.AutoSizeIndex = 0
-          Header.Font.Charset = DEFAULT_CHARSET
-          Header.Font.Color = clWindowText
-          Header.Font.Height = -11
-          Header.Font.Name = 'Tahoma'
-          Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
-          Header.Style = hsFlatButtons
-          ScrollBarOptions.AlwaysVisible = True
+          BevelEdges = []
+          BevelOuter = bvNone
+          Caption = 'pExceptInfoAdv'
+          ShowCaption = False
           TabOrder = 1
-          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-          TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-          OnGetText = vstExceptionCallStackGetText
-          OnGetNodeDataSize = vstThreadsGetNodeDataSize
-          Columns = <
-            item
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
-              Position = 0
-              Width = 1000
-              WideText = 'Call Stack'
-            end>
+          object splExceptInfoAdv: TSplitter
+            Left = 0
+            Top = 217
+            Width = 303
+            Height = 3
+            Cursor = crVSplit
+            Align = alTop
+          end
+          object vstExceptionCallStack: TVirtualStringTree
+            Left = 0
+            Top = 0
+            Width = 303
+            Height = 217
+            Align = alTop
+            Header.AutoSizeIndex = 0
+            Header.Font.Charset = DEFAULT_CHARSET
+            Header.Font.Color = clWindowText
+            Header.Font.Height = -11
+            Header.Font.Name = 'Tahoma'
+            Header.Font.Style = []
+            Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+            Header.Style = hsFlatButtons
+            ScrollBarOptions.AlwaysVisible = True
+            TabOrder = 0
+            TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            OnGetText = vstExceptionCallStackGetText
+            OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            Columns = <
+              item
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+                Position = 0
+                Width = 1000
+                WideText = 'Call Stack'
+              end>
+          end
+          object synmExceptInfoSource: TSynMemo
+            Left = 0
+            Top = 220
+            Width = 303
+            Height = 297
+            Align = alClient
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -13
+            Font.Name = 'Courier New'
+            Font.Style = []
+            TabOrder = 1
+            Gutter.Font.Charset = DEFAULT_CHARSET
+            Gutter.Font.Color = clWindowText
+            Gutter.Font.Height = -11
+            Gutter.Font.Name = 'Courier New'
+            Gutter.Font.Style = []
+            Highlighter = dmShareData.synPas1
+            ReadOnly = True
+            RightEdge = 0
+            FontSmoothing = fsmNone
+          end
         end
       end
     end
