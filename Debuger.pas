@@ -710,6 +710,8 @@ begin
   FThreadList.Clear;
 
   FThreadAdvInfoList.Clear;
+
+  FDbgState := dsNone;
 end;
 
 constructor TDebuger.Create();

@@ -75,12 +75,10 @@ type
     vstMemInfoThreads: TVirtualStringTree;
     pnl1: TPanel;
     vstMemList: TVirtualStringTree;
-    vstMemStack: TVirtualStringTree;
     tsExceptions: TTabSheet;
     vstExceptionThreads: TVirtualStringTree;
     pnl2: TPanel;
     vstExceptionList: TVirtualStringTree;
-    vstExceptionCallStack: TVirtualStringTree;
     amMain: TActionManager;
     rbnMain: TRibbon;
     rbpMain: TRibbonPage;
@@ -148,6 +146,14 @@ type
     splDbgInfoFuncAdv: TSplitter;
     synmDbgInfoUnitSource: TSynMemo;
     synmDbgInfoFuncAdv: TSynMemo;
+    pMemoryInfoAdv: TPanel;
+    vstMemStack: TVirtualStringTree;
+    splMemInfoAdv: TSplitter;
+    synmMemInfoSource: TSynMemo;
+    pExceptInfoAdv: TPanel;
+    vstExceptionCallStack: TVirtualStringTree;
+    splExceptInfoAdv: TSplitter;
+    synmExceptInfoSource: TSynMemo;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -189,6 +195,7 @@ type
     procedure vstMemListFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
     procedure vstMemStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstMemStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
     procedure vstExceptionThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstExceptionThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
@@ -294,7 +301,7 @@ implementation
 {$R *.dfm}
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
-  uProjectOptions;
+  uProjectOptions, SynEditTypes;
 
 
 type
@@ -1380,8 +1387,16 @@ begin
         else
           LineNo := StartLine.LineNo - 2;
 
-        synmDbgInfoFuncAdv.CaretY := LineNo;
-        synmDbgInfoFuncAdv.TopLine := LineNo;
+        if Abs(StartLine.LineNo - LineNo) < 10 then
+          synmDbgInfoFuncAdv.TopLine := LineNo
+        else
+          synmDbgInfoFuncAdv.GotoLineAndCenter(StartLine.LineNo);
+
+        synmDbgInfoFuncAdv.SetCaretAndSelection(
+          BufferCoord(1, StartLine.LineNo),
+          BufferCoord(1, StartLine.LineNo),
+          BufferCoord(1, StartLine.LineNo + 1)
+        );
       end;
     finally
       synmDbgInfoFuncAdv.EndUpdate;
@@ -2378,23 +2393,78 @@ begin
   end;
 end;
 
+procedure TMainForm.vstMemStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+  StackEntry: TStackEntry;
+  LineNo: Integer;
+begin
+  synmMemInfoSource.Clear;
+
+  Data := vstMemStack.GetNodeData(Node);
+  if Data^.LinkType = ltMemStack then
+  begin
+    StackEntry := TStackEntry.Create(gvDebugInfo);
+    StackEntry.UpdateInfo(Data^.MemStackPtr);
+    try
+      if Assigned(StackEntry.UnitInfo) then
+      begin
+        synmMemInfoSource.BeginUpdate;
+        try
+          synmMemInfoSource.Lines.LoadFromFile(StackEntry.UnitInfo.FullUnitName);
+
+          if Assigned(StackEntry.LineInfo) then
+          begin
+            LineNo := StackEntry.LineInfo.LineNo;
+            synmMemInfoSource.GotoLineAndCenter(LineNo);
+            synmMemInfoSource.SetCaretAndSelection(
+              BufferCoord(1, LineNo),
+              BufferCoord(1, LineNo),
+              BufferCoord(1, LineNo + 1)
+            );
+          end
+          else
+          begin
+            // TODO:
+          end;
+        finally
+          synmMemInfoSource.EndUpdate;
+        end;
+      end;
+    finally
+      FreeAndNil(StackEntry);
+    end;
+  end;
+end;
+
 procedure TMainForm.vstMemStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
 begin
+  CellText := ' ';
+
   Data := vstMemStack.GetNodeData(Node);
-  case Column of
-    0: begin
-      StackEntry := TStackEntry.Create(gvDebugInfo);
-      try
-        if StackEntry.UpdateInfo(Data^.MemStackPtr) <> slNotFound then
-          CellText := StackEntry.GetInfo
-        else
-          CellText := Format('[$%p] unknown', [Data^.MemStackPtr]);
-      finally
-        FreeAndNil(StackEntry);
+  if Data^.LinkType = ltMemStack then
+  begin
+    StackEntry := TStackEntry.Create(gvDebugInfo);
+    StackEntry.UpdateInfo(Data^.MemStackPtr);
+    try
+      case Column of
+        0: CellText := Format('%p', [Data^.MemStackPtr]);
+        1: if Assigned(StackEntry.UnitInfo) then
+             CellText := StackEntry.UnitInfo.Name
+           else
+             CellText := 'unknown';
+        2: if Assigned(StackEntry.LineInfo) then
+             CellText := IntToStr(StackEntry.LineInfo.LineNo);
+        3: if Assigned(StackEntry.FuncInfo) then
+             CellText := StackEntry.FuncInfo.Name
+           else
+             CellText := 'unknown';
       end;
+    finally
+      FreeAndNil(StackEntry);
     end;
   end;
 end;
