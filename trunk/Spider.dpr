@@ -19,7 +19,9 @@ uses
   uActionController in 'uActionController.pas',
   uDebugerThread in 'uDebugerThread.pas',
   uProjectOptions in 'uProjectOptions.pas' {fmProjectOptions},
-  uSpiderOptions in 'uSpiderOptions.pas';
+  uSpiderOptions in 'uSpiderOptions.pas',
+  uShareData in 'uShareData.pas' {dmShareData: TDataModule},
+  uSelectSource in 'uSelectSource.pas' {fmSelectSource};
 
 {$R *.res}
 
@@ -29,6 +31,7 @@ begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   Application.Title := 'Spider';
+  Application.CreateForm(TdmShareData, dmShareData);
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.

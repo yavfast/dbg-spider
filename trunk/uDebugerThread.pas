@@ -7,7 +7,6 @@ uses SysUtils, Windows, Classes, DebugerTypes, uActionController;
 type
   TDebugerThread = class(TThread)
   private
-    FAppName: String;
     FProcessID: TProcessId;
     FDbgOptions: TDbgOptions;
 
@@ -32,11 +31,16 @@ type
     procedure InitDebuger;
     procedure InitDebugInfo;
     procedure LoadDebugInfo;
+    function GetAppName: String;
+    function GetSourceDirs: String;
   protected
     procedure Execute; override;
     procedure DoTerminate; override;
+
+    property AppName: String read GetAppName;
+    property SourceDirs: String read GetSourceDirs;
   public
-    constructor Create(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0);
+    constructor Create(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
     destructor Destroy; override;
   end;
 
@@ -49,12 +53,11 @@ uses Debuger, DebugInfo, DelphiDebugInfo;
 
 { TDebugerThread }
 
-constructor TDebugerThread.Create(const AppName: String; ADbgOptions: TDbgOptions; AProcessID: TProcessId = 0);
+constructor TDebugerThread.Create(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
 
-  FAppName := AppName;
   FDbgOptions := ADbgOptions;
   FProcessID := AProcessID;
 
@@ -96,8 +99,8 @@ begin
   begin
     if FProcessID = 0 then
     begin
-      _AC.Log('Run application "%s"', [FAppName]);
-      FRun := gvDebuger.DebugNewProcess(FAppName, False);
+      _AC.Log('Run application "%s"', [AppName]);
+      FRun := gvDebuger.DebugNewProcess(AppName, False);
     end
     else
     begin
@@ -120,6 +123,16 @@ begin
   end
   else
     _AC.DoAction(acRunEnabled, [True]);
+end;
+
+function TDebugerThread.GetAppName: String;
+begin
+  Result := gvProjectOptions.ApplicationName;
+end;
+
+function TDebugerThread.GetSourceDirs: String;
+begin
+  Result := gvProjectOptions.DelphiSource + ';' + gvProjectOptions.ProjectSource;
 end;
 
 procedure TDebugerThread.InitDebuger;
@@ -156,16 +169,16 @@ begin
 
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
-    _AC.Log('Load debug info for "%s"...', [FAppName]);
-    FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(FAppName, nil);
+    _AC.Log('Load debug info for "%s"...', [AppName]);
+    FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName, SourceDirs);
 
     if FDbgInfoLoaded then
     begin
-      _AC.Log('Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, FAppName]);
+      _AC.Log('Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, AppName]);
       _AC.ViewDebugInfo(gvDebugInfo);
     end
     else
-      _AC.Log('No debug info for "%s"', [FAppName]);
+      _AC.Log('No debug info for "%s"', [AppName]);
 
     _AC.DoAction(acUpdateInfo, []);
   finally

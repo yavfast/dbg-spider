@@ -1,10 +1,10 @@
-object frmProcessList: TfrmProcessList
+object fmSelectSource: TfmSelectSource
   Left = 0
   Top = 0
   BorderStyle = bsDialog
-  Caption = 'Process list'
-  ClientHeight = 384
-  ClientWidth = 569
+  Caption = 'Select source'
+  ClientHeight = 347
+  ClientWidth = 537
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,45 +14,28 @@ object frmProcessList: TfrmProcessList
   OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
-  OnShow = FormShow
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
-  object sgProcessList: TStringGrid
-    Left = 0
-    Top = 26
-    Width = 569
-    Height = 332
-    Align = alClient
-    BorderStyle = bsNone
-    ColCount = 1
-    DefaultRowHeight = 18
-    FixedCols = 0
-    TabOrder = 0
-    ColWidths = (
-      519)
-  end
   object cbTop: TCoolBar
     Left = 0
     Top = 0
-    Width = 569
-    Height = 26
+    Width = 537
+    Height = 30
     AutoSize = True
     Bands = <
       item
         Control = actbTop
         ImageIndex = -1
         MinHeight = 26
-        Width = 567
+        Width = 531
       end>
-    EdgeBorders = []
-    EdgeInner = esNone
-    EdgeOuter = esNone
     object actbTop: TActionToolBar
       Left = 11
       Top = 0
-      Width = 558
+      Width = 522
       Height = 26
-      ActionManager = actmgrProcessList
+      ActionManager = acmgrSelectSource
       Caption = 'actbTop'
       ColorMap.BtnSelectedColor = clBtnFace
       ColorMap.UnusedColor = 13684944
@@ -67,9 +50,9 @@ object frmProcessList: TfrmProcessList
   end
   object cbActions: TCoolBar
     Left = 0
-    Top = 358
-    Width = 569
-    Height = 26
+    Top = 317
+    Width = 537
+    Height = 30
     Align = alBottom
     AutoSize = True
     Bands = <
@@ -77,17 +60,14 @@ object frmProcessList: TfrmProcessList
         Control = actbActions
         ImageIndex = -1
         MinHeight = 26
-        Width = 567
+        Width = 531
       end>
-    EdgeInner = esNone
-    EdgeOuter = esNone
     object actbActions: TActionToolBar
       Left = 11
       Top = 0
-      Width = 558
+      Width = 522
       Height = 26
-      ActionManager = actmgrProcessList
-      AllowHiding = False
+      ActionManager = acmgrSelectSource
       BiDiMode = bdRightToLeft
       Caption = 'actbActions'
       ColorMap.BtnSelectedColor = clBtnFace
@@ -103,67 +83,104 @@ object frmProcessList: TfrmProcessList
       Spacing = 0
     end
   end
-  object AL: TActionList
+  object sgSource: TStringGrid
+    Left = 0
+    Top = 30
+    Width = 537
+    Height = 287
+    Align = alClient
+    BorderStyle = bsNone
+    ColCount = 1
+    DefaultRowHeight = 18
+    FixedCols = 0
+    FixedRows = 0
+    TabOrder = 2
+    ColWidths = (
+      500)
+  end
+  object alSelectSource: TActionList
     Images = dmShareData.ilActionsSmall
-    Left = 432
-    Top = 72
+    OnUpdate = alSelectSourceUpdate
+    Left = 392
+    Top = 80
     object acOk: TAction
-      Caption = 'Attach'
+      Caption = 'Save'
       ImageIndex = 1
-      ShortCut = 13
       OnExecute = acOkExecute
     end
     object acCancel: TAction
       Caption = 'Cancel'
       ImageIndex = 2
-      ShortCut = 27
       OnExecute = acCancelExecute
     end
-    object acRefresh: TAction
-      Caption = 'Refresh'
-      ImageIndex = 3
-      ShortCut = 116
-      OnExecute = acRefreshExecute
+    object acAdd: TAction
+      Caption = 'Add'
+      ImageIndex = 5
+      OnExecute = acAddExecute
+    end
+    object acRemove: TAction
+      Caption = 'Remove'
+      ImageIndex = 6
+      OnExecute = acRemoveExecute
+    end
+    object acEdit: TAction
+      Caption = 'Edit'
+      ImageIndex = 0
+      OnExecute = acEditExecute
     end
   end
-  object actmgrProcessList: TActionManager
+  object acmgrSelectSource: TActionManager
     ActionBars = <
-      item
-        Items = <
-          item
-            Action = acRefresh
-            Caption = '&Refresh'
-            ImageIndex = 3
-            ShortCut = 116
-          end>
-        ActionBar = actbTop
-      end
       item
         Items = <
           item
             Action = acCancel
             Caption = '&Cancel'
             ImageIndex = 2
-            ShortCut = 27
           end
           item
             Action = acOk
-            Caption = '&Attach'
-            Default = True
+            Caption = '&Save'
             ImageIndex = 1
-            ShortCut = 13
           end>
         ActionBar = actbActions
+      end
+      item
+        Items = <
+          item
+            Action = acAdd
+            Caption = '&Add'
+            ImageIndex = 5
+          end
+          item
+            Action = acEdit
+            Caption = '&Edit'
+            ImageIndex = 0
+          end
+          item
+            Action = acRemove
+            Caption = '&Remove'
+            ImageIndex = 6
+          end>
+        ActionBar = actbTop
       end>
     DisabledImages = dmShareData.ilActionsSmall
     LinkedActionLists = <
       item
-        ActionList = AL
-        Caption = 'AL'
+        ActionList = alSelectSource
+        Caption = 'alSelectSource'
       end>
     Images = dmShareData.ilActionsSmall
-    Left = 416
-    Top = 176
+    Left = 392
+    Top = 136
     StyleName = 'Ribbon - Silver'
+  end
+  object odSelectSource: TFileOpenDialog
+    FavoriteLinks = <>
+    FileTypes = <>
+    Options = [fdoPickFolders, fdoPathMustExist]
+    Title = 'Select source folder'
+    Left = 392
+    Top = 192
   end
 end

@@ -181,8 +181,8 @@ Begin
     Else
         Result.NameId := Module.NameIndex;
 
-    Result.FullUnitName := GetUnitFileName(String(Result.Name));
-    Units.AddObject(Result.FullUnitName, Result);
+    //Result.FullUnitName := GetUnitFileName(String(Result.Name));
+    Units.AddObject(Result.ShortName, Result);
 
     LoadSegments(Result, Module);
     LoadUsedUnits(Result, Module);
@@ -201,23 +201,17 @@ End;
 
 Function TDelphiDebugInfo.GetUnitFileName(Const UnitName : String) : String;
 Var
-    I : Integer;
     S : String;
+    Ext: String;
 Begin
-    Result := ExtractFileName(AnsiLowerCase(UnitName));
+    S := AnsiLowerCase(ExtractFileName(UnitName));
 
-    If ExtractFileExt(UnitName) = '' Then
-        Result := Result + '.pas';
+    Ext := ExtractFileExt(S);
+    If (Ext <> '.pas') and (Ext <> '.inc') Then
+        S := S + '.pas';
 
-    For I := 0 To Dirs.Count - 1 Do
-    Begin
-        S := IncludeTrailingPathDelimiter(Dirs[I]) + Result;
-        If FileExists(S) Then
-        Begin
-            Result := AnsiLowerCase(S);
-            Exit;
-        End;
-    End;
+    if not Dirs.TryGetValue(S, Result) then
+      Result := S;
 End;
 
 function TDelphiDebugInfo.GetNameById(const Idx: TNameId): AnsiString;
@@ -283,7 +277,7 @@ Begin
 
         L := TLineInfo.Create;
         L.LineNo := LineInfo.LineNo; // - 1; ???
-        L.Address := Pointer(LineInfo.Offset + FImage.ImageSectionHeaders[LineInfo.Segment{ - 1}].VirtualAddress + ImageBase);
+        L.Address := Pointer(LineInfo.Offset + FImage.ImageSectionHeaders[LineInfo.Segment - 1].VirtualAddress + ImageBase);
         UnitInfo.Lines.Add(L);
 
         F := FindFuncByAddr(UnitInfo, L.Address);
@@ -1027,7 +1021,7 @@ Begin
     Begin
         Result := TFuncInfo(UnitInfo.Funcs[I]);
 
-        if (Cardinal(Result.Address) >= Cardinal(Addr)) and
+        if (Cardinal(Result.Address) <= Cardinal(Addr)) and
           (Cardinal(Addr) < Cardinal(Result.Address) + Result.CodeSize)
         then
           Exit;
