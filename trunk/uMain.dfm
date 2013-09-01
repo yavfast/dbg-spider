@@ -23,7 +23,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsDebugInfo2
+    ActivePage = tsExceptions
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -764,7 +764,7 @@ object MainForm: TMainForm
               item
                 Position = 3
                 Width = 500
-                WideText = 'Function'
+                WideText = 'Call stack function'
               end>
           end
           object synmMemInfoSource: TSynMemo
@@ -943,14 +943,36 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            OnFocusChanged = vstExceptionCallStackFocusChanged
             OnGetText = vstExceptionCallStackGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
             Columns = <
               item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
                 Position = 0
-                Width = 1000
-                WideText = 'Call Stack'
+                Width = 70
+                WideText = 'Address'
+              end
+              item
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 1
+                Width = 120
+                WideText = 'Unit'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 2
+                WideText = 'Line'
+              end
+              item
+                Position = 3
+                Width = 500
+                WideText = 'Call stack function'
               end>
           end
           object synmExceptInfoSource: TSynMemo
@@ -965,11 +987,13 @@ object MainForm: TMainForm
             Font.Name = 'Courier New'
             Font.Style = []
             TabOrder = 1
+            Gutter.AutoSize = True
             Gutter.Font.Charset = DEFAULT_CHARSET
             Gutter.Font.Color = clWindowText
             Gutter.Font.Height = -11
             Gutter.Font.Name = 'Courier New'
             Gutter.Font.Style = []
+            Gutter.ShowLineNumbers = True
             Highlighter = dmShareData.synPas1
             ReadOnly = True
             RightEdge = 0

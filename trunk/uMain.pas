@@ -159,19 +159,6 @@ type
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 
-    procedure acAppOpenExecute(Sender: TObject);
-    procedure acAttachProcessExecute(Sender: TObject);
-    procedure acRunExecute(Sender: TObject);
-    procedure acStopExecute(Sender: TObject);
-    procedure acOptionsExecute(Sender: TObject);
-    procedure acExitExecute(Sender: TObject);
-    procedure acCPUTimeLineExecute(Sender: TObject);
-    procedure acRealTimeLineExecute(Sender: TObject);
-    procedure acMainTabExecute(Sender: TObject);
-
-    procedure tmrThreadsUpdateTimer(Sender: TObject);
-    procedure cbCPUTimeLineClick(Sender: TObject);
-
     procedure vstThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstThreadsDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
@@ -204,6 +191,7 @@ type
     procedure vstExceptionListFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
     procedure vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstExceptionCallStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
     procedure vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstDbgInfoUnitsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
@@ -223,6 +211,19 @@ type
 
     procedure vstLogResize(Sender: TObject);
     procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
+
+    procedure tmrThreadsUpdateTimer(Sender: TObject);
+    procedure cbCPUTimeLineClick(Sender: TObject);
+
+    procedure acAppOpenExecute(Sender: TObject);
+    procedure acAttachProcessExecute(Sender: TObject);
+    procedure acRunExecute(Sender: TObject);
+    procedure acStopExecute(Sender: TObject);
+    procedure acOptionsExecute(Sender: TObject);
+    procedure acExitExecute(Sender: TObject);
+    procedure acCPUTimeLineExecute(Sender: TObject);
+    procedure acRealTimeLineExecute(Sender: TObject);
+    procedure acMainTabExecute(Sender: TObject);
     procedure acOpenProjectExecute(Sender: TObject);
     procedure acCloseProjectExecute(Sender: TObject);
     procedure acNewProjectExecute(Sender: TObject);
@@ -1144,6 +1145,21 @@ end;
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   CanClose := FCloseApp;
+
+  if CanClose then
+  begin
+    if acStop.Enabled then
+    begin
+      acStop.Execute;
+      while Assigned(gvDebuger) and not(gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) do
+      begin
+        Sleep(10);
+        Application.ProcessMessages;
+      end;
+    end;
+
+    acCloseProject.Execute;
+  end;
 end;
 
 procedure TMainForm.OnException(Sender: TObject; E: Exception);
@@ -1330,6 +1346,7 @@ var
 begin
   vstDbgInfoFuncVars.Clear;
   vstDbgInfoFunctions.Clear;
+  synmDbgInfoFuncAdv.Clear;
 
   if UnitInfo.Funcs.Count = 0 then Exit;
 
@@ -2020,17 +2037,71 @@ begin
   end;
 end;
 
+procedure TMainForm.vstExceptionCallStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+  StackEntry: TStackEntry;
+  LineNo: Integer;
+begin
+  synmExceptInfoSource.Clear;
+
+  Data := vstExceptionCallStack.GetNodeData(Node);
+  if Data^.LinkType = ltExceptStack then
+  begin
+    StackEntry := Data^.ExceptStackEntry;
+    if Assigned(StackEntry) and Assigned(StackEntry.UnitInfo) then
+    begin
+      synmExceptInfoSource.BeginUpdate;
+      try
+        synmExceptInfoSource.Lines.LoadFromFile(StackEntry.UnitInfo.FullUnitName);
+
+        if Assigned(StackEntry.LineInfo) then
+        begin
+          LineNo := StackEntry.LineInfo.LineNo;
+          synmExceptInfoSource.GotoLineAndCenter(LineNo);
+          synmExceptInfoSource.SetCaretAndSelection(
+            BufferCoord(1, LineNo),
+            BufferCoord(1, LineNo),
+            BufferCoord(1, LineNo + 1)
+          );
+        end
+        else
+        begin
+          // TODO:
+        end;
+      finally
+        synmExceptInfoSource.EndUpdate;
+      end;
+    end;
+  end;
+end;
+
 procedure TMainForm.vstExceptionCallStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
 begin
+  CellText := ' ';
+
   Data := vstExceptionCallStack.GetNodeData(Node);
-  StackEntry := Data^.ExceptStackEntry;
-  if StackEntry <> nil then
+  if Data^.LinkType = ltExceptStack then
   begin
-    case Column of
-      0: CellText := StackEntry.GetInfo;
+    StackEntry := Data^.ExceptStackEntry;
+    if StackEntry <> nil then
+    begin
+      case Column of
+        0: CellText := Format('%p', [StackEntry.EIP]);
+        1: if Assigned(StackEntry.UnitInfo) then
+             CellText := StackEntry.UnitInfo.Name
+           else
+             CellText := 'unknown';
+        2: if Assigned(StackEntry.LineInfo) then
+             CellText := IntToStr(StackEntry.LineInfo.LineNo);
+        3: if Assigned(StackEntry.FuncInfo) then
+             CellText := StackEntry.FuncInfo.Name
+           else
+             CellText := 'unknown';
+      end;
     end;
   end;
 end;
@@ -2043,21 +2114,25 @@ var
   StackNode: PVirtualNode;
   StackData: PLinkData;
 begin
-  Data := vstExceptionList.GetNodeData(Node);
+  vstExceptionCallStack.Clear;
+  synmExceptInfoSource.Clear;
 
-  vstExceptionCallStack.BeginUpdate;
-  try
-    vstExceptionCallStack.Clear;
-    Stack := Data^.ExceptInfo.Stack;
-    for I := 0 to Stack.Count - 1 do
-    begin
-      StackNode := vstExceptionCallStack.AddChild(nil);
-      StackData := vstExceptionCallStack.GetNodeData(StackNode);
-      StackData^.LinkType := ltExceptStack;
-      StackData^.ExceptStackEntry := TStackEntry(Stack[I]);
+  Data := vstExceptionList.GetNodeData(Node);
+  if Data^.LinkType = ltExceptInfo then
+  begin
+    vstExceptionCallStack.BeginUpdate;
+    try
+      Stack := Data^.ExceptInfo.Stack;
+      for I := 0 to Stack.Count - 1 do
+      begin
+        StackNode := vstExceptionCallStack.AddChild(nil);
+        StackData := vstExceptionCallStack.GetNodeData(StackNode);
+        StackData^.LinkType := ltExceptStack;
+        StackData^.ExceptStackEntry := TStackEntry(Stack[I]);
+      end;
+    finally
+      vstExceptionCallStack.EndUpdate;
     end;
-  finally
-    vstExceptionCallStack.EndUpdate;
   end;
 end;
 
@@ -2083,7 +2158,9 @@ var
   I: Integer;
   L: TList;
 begin
+  vstExceptionList.Clear;
   vstExceptionCallStack.Clear;
+  synmExceptInfoSource.Clear;
 
   ExceptList := Nil;
   Data := Sender.GetNodeData(Node);
@@ -2100,12 +2177,10 @@ begin
     end;
   end;
 
-  vstMemList.BeginUpdate;
+  vstExceptionList.BeginUpdate;
   try
     if ExceptList <> Nil then
     begin
-      vstExceptionList.Clear;
-
       L := ExceptList.LockList;
       try
         for I := 0 to L.Count - 1 do
@@ -2121,7 +2196,7 @@ begin
       end;
     end;
   finally
-    vstMemList.EndUpdate;
+    vstExceptionList.EndUpdate;
   end;
 end;
 
@@ -2222,6 +2297,7 @@ begin
   end;
 
   vstMemStack.Clear;
+  synmMemInfoSource.Clear;
 
   vstMemList.BeginUpdate;
   try
@@ -2301,6 +2377,7 @@ var
   Ptr: Pointer;
 begin
   vstMemStack.Clear;
+  synmMemInfoSource.Clear;
 
   Data := vstMemList.GetNodeData(Node);
 
