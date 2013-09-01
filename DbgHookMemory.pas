@@ -103,7 +103,7 @@ asm
   MOV     EAX, FS:[0].NT_TIB32.StackBase
 end;
 
-function GetCallStack(var Stack: TDbgMemInfoStack): Boolean;
+function GetCallStack(var Stack: TDbgMemInfoStack): Boolean; stdcall;
 var
   TopOfStack: TJclAddr;
   BaseOfStack: TJclAddr;
@@ -156,7 +156,7 @@ begin
   end;
 end;
 
-procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; _Ptr: Pointer; const _Size: Cardinal);
+procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; _Ptr: Pointer; const _Size: Cardinal); stdcall;
 var
   DbgMemInfo: TDbgMemInfo;
   //ObjClassName: ShortString;

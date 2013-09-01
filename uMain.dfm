@@ -23,7 +23,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsExceptions
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -1207,6 +1207,15 @@ object MainForm: TMainForm
         GroupIndex = 3
         Rows = 2
       end
+      object rbngrpViewOptions: TRibbonGroup
+        Left = 549
+        Top = 3
+        Width = 118
+        Height = 86
+        ActionManager = amMain
+        Caption = 'View options'
+        GroupIndex = 4
+      end
     end
     object rbambMain: TRibbonApplicationMenuBar
       Margins.Left = 32
@@ -1319,22 +1328,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 825
+        Width = 831
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 389
+        Width = 383
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 838
+      Left = 844
       Top = 0
-      Width = 380
+      Width = 374
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1358,7 +1367,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 812
+      Width = 818
       Height = 25
       ActionManager = amMain
       Align = alNone
@@ -1487,7 +1496,7 @@ object MainForm: TMainForm
       OnExecute = acSaveCopyExecute
     end
     object acCPUTimeLine: TAction
-      Category = 'Debug'
+      Category = 'Options'
       AutoCheck = True
       Caption = 'CPU timeline'
       Checked = True
@@ -1495,7 +1504,7 @@ object MainForm: TMainForm
       OnExecute = acRealTimeLineExecute
     end
     object acRealTimeLine: TAction
-      Category = 'Debug'
+      Category = 'Options'
       AutoCheck = True
       Caption = 'Real timeline'
       GroupIndex = 1
@@ -1548,6 +1557,13 @@ object MainForm: TMainForm
       Caption = 'Settings'
       ImageIndex = 14
       OnExecute = acEditProjectExecute
+    end
+    object acUseShortNames: TAction
+      Category = 'Options'
+      AutoCheck = True
+      Caption = 'Use short names'
+      Checked = True
+      OnExecute = acUseShortNamesExecute
     end
   end
   object OD: TFileOpenDialog
@@ -1908,6 +1924,16 @@ object MainForm: TMainForm
             CommandProperties.ContainedControl = pStatusAction
           end>
         ActionBar = actbStatusInfo2
+      end
+      item
+        Items = <
+          item
+            Action = acUseShortNames
+            Caption = '&Use short names'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end>
+        ActionBar = rbngrpViewOptions
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain
