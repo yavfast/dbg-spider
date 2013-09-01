@@ -154,6 +154,8 @@ type
     vstExceptionCallStack: TVirtualStringTree;
     splExceptInfoAdv: TSplitter;
     synmExceptInfoSource: TSynMemo;
+    acUseShortNames: TAction;
+    rbngrpViewOptions: TRibbonGroup;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -230,6 +232,7 @@ type
     procedure acRecentExecute(Sender: TObject);
     procedure acEditProjectExecute(Sender: TObject);
     procedure acSaveCopyExecute(Sender: TObject);
+    procedure acUseShortNamesExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -398,6 +401,15 @@ begin
   acStop.Enabled := False;
 
   _AC.StopDebug;
+end;
+
+procedure TMainForm.acUseShortNamesExecute(Sender: TObject);
+begin
+  if Assigned(gvDebugInfo) then
+  begin
+    gvDebugInfo.UseShortNames := acUseShortNames.Checked;
+    UpdateTrees;
+  end;
 end;
 
 procedure TMainForm.HidePCTabs(PC: TPageControl);
@@ -1754,8 +1766,20 @@ begin
   vdtTimeLine.Invalidate;
   vdtTimeLine.Header.Invalidate(nil);
 
+  vstDbgInfoUnits.Invalidate;
+  vstDbgInfoConsts.Invalidate;
+  vstDbgInfoTypes.Invalidate;
+  vstDbgInfoVars.Invalidate;
+  vstDbgInfoFunctions.Invalidate;
+  vstDbgInfoFuncVars.Invalidate;
+
   vstMemInfoThreads.Invalidate;
+  vstMemList.Invalidate;
+  vstMemStack.Invalidate;
+
   vstExceptionThreads.Invalidate;
+  vstExceptionList.Invalidate;
+  vstExceptionCallStack.Invalidate;
 end;
 
 procedure TMainForm.vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader;
@@ -1834,7 +1858,7 @@ begin
       begin
         UnitInfo := Data^.DbgUnitInfo;
         case Column of
-          0: CellText := UnitInfo.Name;
+          0: CellText := UnitInfo.ShortName;
         else
           CellText := ' ';
         end;
@@ -1844,9 +1868,9 @@ begin
         ConstInfo := Data^.DbgConstInfo;
 
         case Column of
-          0: CellText := ConstInfo.Name;
+          0: CellText := ConstInfo.ShortName;
           1: CellText := ConstInfo.ValueAsString;
-          2: CellText := String(ConstInfo.TypeInfo.Name);
+          2: CellText := String(ConstInfo.TypeInfo.ShortName);
         end;
       end;
   end;
@@ -1879,7 +1903,7 @@ begin
       begin
         UnitInfo := Data^.DbgUnitInfo;
         case Column of
-          0: CellText := UnitInfo.Name;
+          0: CellText := UnitInfo.ShortName;
         else
           CellText := ' ';
         end;
@@ -1889,7 +1913,7 @@ begin
         FuncInfo := Data^.DbgFuncInfo;
 
         case Column of
-          0: CellText := FuncInfo.Name;
+          0: CellText := FuncInfo.ShortName;
           1: CellText := Format('%p', [FuncInfo.Address]);
           2: CellText := Format('%d', [FuncInfo.CodeSize]);
         end;
@@ -1909,7 +1933,7 @@ begin
       begin
         FuncInfo := Data^.DbgFuncInfo;
         case Column of
-          0: CellText := FuncInfo.Name;
+          0: CellText := FuncInfo.ShortName;
         else
           CellText := ' ';
         end;
@@ -1918,8 +1942,8 @@ begin
       begin
         VarInfo := Data^.DbgFuncParamInfo;
         case Column of
-          0: CellText := VarInfo.Name;
-          1: CellText := VarInfo.DataType.Name;
+          0: CellText := VarInfo.ShortName;
+          1: CellText := VarInfo.DataType.ShortName;
           2:
             begin
               case VarInfo.VarKind of
@@ -1951,7 +1975,7 @@ begin
       begin
         UnitInfo := Data^.DbgUnitInfo;
         case Column of
-          0: CellText := UnitInfo.Name;
+          0: CellText := UnitInfo.ShortName;
         else
           CellText := ' ';
         end;
@@ -1961,7 +1985,7 @@ begin
         TypeInfo := Data^.DbgTypeInfo;
 
         case Column of
-          0: CellText := TypeInfo.Name;
+          0: CellText := TypeInfo.ShortName;
           1: CellText := TypeInfo.TypeOf;
         end;
       end;
@@ -1970,8 +1994,8 @@ begin
         MemberInfo := Data^.DbgStructMemberInfo;
 
         case Column of
-          0: CellText := MemberInfo.Name;
-          1: CellText := MemberInfo.DataType.Name;
+          0: CellText := MemberInfo.ShortName;
+          1: CellText := MemberInfo.DataType.ShortName;
         end;
       end;
   end;
@@ -2001,7 +2025,7 @@ begin
   Data := vstDbgInfoUnits.GetNodeData(Node);
   UnitInfo := Data^.DbgUnitInfo;
   case Column of
-    0: CellText := UnitInfo.Name;
+    0: CellText := UnitInfo.ShortName;
     1: CellText := Format('%d', [UnitInfo.CodeSize]);
     2: CellText := Format('%d', [UnitInfo.DataSize]);
   end;
@@ -2019,7 +2043,7 @@ begin
       begin
         UnitInfo := Data^.DbgUnitInfo;
         case Column of
-          0: CellText := UnitInfo.Name;
+          0: CellText := UnitInfo.ShortName;
         else
           CellText := ' ';
         end;
@@ -2029,8 +2053,8 @@ begin
         VarInfo := Data^.DbgVarInfo;
 
         case Column of
-          0: CellText := VarInfo.Name;
-          1: CellText := VarInfo.DataType.Name;
+          0: CellText := VarInfo.ShortName;
+          1: CellText := VarInfo.DataType.ShortName;
           2: CellText := Format('%p', [Pointer(VarInfo.Offset)]);
         end;
       end;
@@ -2092,13 +2116,13 @@ begin
       case Column of
         0: CellText := Format('%p', [StackEntry.EIP]);
         1: if Assigned(StackEntry.UnitInfo) then
-             CellText := StackEntry.UnitInfo.Name
+             CellText := StackEntry.UnitInfo.ShortName
            else
              CellText := 'unknown';
         2: if Assigned(StackEntry.LineInfo) then
              CellText := IntToStr(StackEntry.LineInfo.LineNo);
         3: if Assigned(StackEntry.FuncInfo) then
-             CellText := StackEntry.FuncInfo.Name
+             CellText := StackEntry.FuncInfo.ShortName
            else
              CellText := 'unknown';
       end;
@@ -2481,7 +2505,7 @@ begin
   Data := vstMemStack.GetNodeData(Node);
   if Data^.LinkType = ltMemStack then
   begin
-    StackEntry := TStackEntry.Create(gvDebugInfo);
+    StackEntry := TStackEntry.Create;
     StackEntry.UpdateInfo(Data^.MemStackPtr);
     try
       if Assigned(StackEntry.UnitInfo) then
@@ -2524,19 +2548,19 @@ begin
   Data := vstMemStack.GetNodeData(Node);
   if Data^.LinkType = ltMemStack then
   begin
-    StackEntry := TStackEntry.Create(gvDebugInfo);
+    StackEntry := TStackEntry.Create;
     StackEntry.UpdateInfo(Data^.MemStackPtr);
     try
       case Column of
         0: CellText := Format('%p', [Data^.MemStackPtr]);
         1: if Assigned(StackEntry.UnitInfo) then
-             CellText := StackEntry.UnitInfo.Name
+             CellText := StackEntry.UnitInfo.ShortName
            else
              CellText := 'unknown';
         2: if Assigned(StackEntry.LineInfo) then
              CellText := IntToStr(StackEntry.LineInfo.LineNo);
         3: if Assigned(StackEntry.FuncInfo) then
-             CellText := StackEntry.FuncInfo.Name
+             CellText := StackEntry.FuncInfo.ShortName
            else
              CellText := 'unknown';
       end;

@@ -2,10 +2,13 @@ unit ClassUtils;
 
 interface
 
-uses Windows, Classes, SysUtils;
+uses Windows, Classes, SysUtils, StrUtils;
 
 const
   EIndexError: String = 'List index error: %d';
+
+type
+  TStringArray = Array of String;
 
 procedure ClearStringList(SL: TStringList);
 procedure FreeStringList(var SL: TStringList);
@@ -19,7 +22,30 @@ function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
 function FileTimeToInt64(const FileTime: TFileTime): UInt64;
 function Int64ToFileTime(const Value: UInt64): TFileTime;
 
+procedure SplitStr(const Str: String; const Delimiter: Char; var StrList: TStringArray);
+
 implementation
+
+procedure SplitStr(const Str: String; const Delimiter: Char; var StrList: TStringArray);
+var
+  SL: TStringList;
+  I: Integer;
+begin
+  SL := TStringList.Create;
+  try
+    SL.Delimiter := Delimiter;
+    SL.StrictDelimiter;
+    SL.Duplicates := dupAccept;
+
+    SL.DelimitedText := Str;
+
+    SetLength(StrList, SL.Count);
+    for I := 0 to SL.Count - 1 do
+      StrList[I] := SL.Strings[I];
+  finally
+    FreeAndNil(SL);
+  end;
+end;
 
 function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
 var

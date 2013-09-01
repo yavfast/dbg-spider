@@ -42,7 +42,7 @@ Type
         SymbolInfo : TObject; // ”казатель на TJclTD32SymbolInfo
 
         function Name: AnsiString; virtual; abstract;
-        function ShortName: String; virtual;
+        function ShortName: String; virtual; abstract;
     End;
 
     TNameIdList = TDictionary<TNameId,TNameInfo>;
@@ -88,6 +88,8 @@ Type
         Destructor Destroy; Override;
 
         function Name : AnsiString; override;
+        function ShortName: String; override;
+
         function KindAsString : String;
         function TypeOf: String;
         function ElementsToString: String;
@@ -100,18 +102,22 @@ Type
       OrderValue: Integer;
 
       function Name : AnsiString; override;
+      function ShortName: String; override;
     End;
 
 
 {..............................................................................}
     TConstInfo = Class(TNameInfo)
     public
-        Value : Variant;
-        UnitInfo : TUnitInfo;
-        FuncInfo : TFuncInfo;
         TypeInfo : TTypeInfo;
+        OwnerInfo: TSegmentCodeInfo;
+
+        Value : Variant;
 
         function Name: AnsiString; override;
+        function ShortName: String; override;
+
+        function UnitInfo: TUnitInfo;
         function ValueAsString: String;
     End;
 {..............................................................................}
@@ -143,7 +149,11 @@ Type
         Constructor Create;
         Destructor  Destroy; Override;
 
+        function UnitInfo: TUnitInfo;
+
         function Name: AnsiString; override;
+        function ShortName: String; override;
+
         function AsString: String;
     End;
 {..............................................................................}
@@ -166,7 +176,9 @@ Type
 
         function Alias : AnsiString; // read field for properties
         function MethodName : AnsiString; // read function name for properties
+
         function Name: AnsiString; override;
+        function ShortName: String; override;
     end;
 {..............................................................................}
 
@@ -209,10 +221,10 @@ Type
     End;
 
     TFuncInfo = Class(TSegmentCodeInfo)
-        ResultType : TTypeInfo;
-
         UnitInfo   : TUnitInfo;
         Params     : TNameList; // TODO: ќтделить параметры от Vars
+
+        ResultType : TTypeInfo;
 
         Parent     : TFuncInfo;
         ID         : TObject;
@@ -222,6 +234,8 @@ Type
         Destructor  Destroy; Override;
 
         function Name: AnsiString; Override;
+        function ShortName: String; override;
+
         function ParamsAsString: String;
     End;
 
@@ -241,6 +255,7 @@ Type
 
         function Name : AnsiString; Override;
         function ShortName: String; Override;
+
         function FullUnitName: String;
     end;
 
@@ -252,7 +267,6 @@ Type
 {...............................................................................}
     TStackEntry = Class
     Public
-        DebugInfo: TDebugInfo;
         UnitInfo        : TUnitInfo;
         FuncInfo        : TFuncInfo;
         LineInfo        : TLineInfo;
@@ -260,7 +274,7 @@ Type
         RET             : Pointer;
         EBP             : Pointer;
 
-        Constructor Create(ADebugInfo: TDebugInfo);
+        Constructor Create;
         Function    GetInfo : String;
         Function    UpdateInfo(Const Addr: Pointer = nil) : TFindResult;
     End;
@@ -286,8 +300,17 @@ Type
         FDebugInfoProgressCallback: TDebugInfoProgressCallback;
     Protected
         FDebugInfoType : String;
+        FUseShortNames: Boolean;
+
         procedure DoProgress(const Action: String; const Progress: Integer); virtual;
         Function DoReadDebugInfo(Const FileName : String; ALoadDebugInfo : Boolean) : Boolean; Virtual; abstract;
+
+        function ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String; virtual;
+        function ParseFuncName(FuncInfo: TFuncInfo): String; virtual;
+        function ParseTypeName(TypeInfo: TTypeInfo): String; virtual;
+        function ParseConstName(ConstInfo: TConstInfo): String; virtual;
+        function ParseVarName(VarInfo: TVarInfo): String; virtual;
+        function ParseStructMemberName(StructMember: TStructMember): String; virtual;
     Public
         Constructor Create(ADebuger: TDebuger);
         Destructor  Destroy; Override;
@@ -357,6 +380,7 @@ Type
         property DebugInfoLoaded: Boolean read FDebugInfoLoaded;
         property DebugInfoType: String read FDebugInfoType;
         property DebugInfoProgressCallback: TDebugInfoProgressCallback read FDebugInfoProgressCallback write FDebugInfoProgressCallback;
+        property UseShortNames: Boolean read FUseShortNames write FUseShortNames;
     End;
 {...............................................................................}
 
@@ -400,6 +424,7 @@ Begin
     FDebugInfoType := '';
 
     FDebugInfoProgressCallback := Nil;
+    FUseShortNames := True;
 End;
 {..............................................................................}
 
@@ -565,18 +590,19 @@ End;
 
 function TDebugInfo.FullUnitName(const UnitName: String): String;
 var
-  ShortUnitName: String;
+  Res: String;
 begin
-  ShortUnitName := AnsiLowerCase(ExtractFileName(UnitName));
+  Res := ExtractFileName(UnitName);
 
-  if not FDirs.TryGetValue(ShortUnitName, Result) then
+  if not FDirs.TryGetValue(AnsiLowerCase(Res), Result) then
   begin
-    if ExtractFileExt(ShortUnitName) <> '.pas' then
+    if not SameText(ExtractFileExt(Res), '.pas') then
     begin
-      ShortUnitName := ShortUnitName + '.pas';
-      if not FDirs.TryGetValue(ShortUnitName, Result) then
-        Result := ShortUnitName;
+      Res := Res + '.pas';
+      if FDirs.TryGetValue(AnsiLowerCase(Res), Result) then Exit;
     end;
+
+    Result := Res;
   end;
 end;
 
@@ -741,7 +767,7 @@ procedure TDebugInfo.GetCallStackItems(const ThreadID: TThreadId; Const ExceptAd
 
         If IsValidCodeAddr(Addr) Then
         Begin
-            Result := TStackEntry.Create(Self);
+            Result := TStackEntry.Create;
             Result.UpdateInfo(Addr);
             Result.EBP := EBP;
 
@@ -825,6 +851,39 @@ End;
 {..............................................................................}
 
 {..............................................................................}
+function TDebugInfo.ParseConstName(ConstInfo: TConstInfo): String;
+begin
+  Result := String(ConstInfo.Name);
+end;
+
+function TDebugInfo.ParseFuncName(FuncInfo: TFuncInfo): String;
+begin
+  Result := String(FuncInfo.Name);
+end;
+
+function TDebugInfo.ParseStructMemberName(StructMember: TStructMember): String;
+begin
+  Result := String(StructMember.Name);
+end;
+
+function TDebugInfo.ParseTypeName(TypeInfo: TTypeInfo): String;
+begin
+  Result := String(TypeInfo.Name);
+end;
+
+function TDebugInfo.ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String;
+begin
+  Result := ExtractFileName(UnitInfo.FullUnitName);
+
+  if not WithExt then
+    Result := ChangeFileExt(Result, '');
+end;
+
+function TDebugInfo.ParseVarName(VarInfo: TVarInfo): String;
+begin
+  Result := String(VarInfo.Name);
+end;
+
 Function TDebugInfo.ProcessDebugOutputMessage(Const Msg: WideString; DebugEvent : PDebugEvent): Boolean;
 Begin
     Result := False;
@@ -960,7 +1019,7 @@ End;
 
 function TFuncInfo.Name: AnsiString;
 begin
-    Result := UnitInfo.DebugInfo.GetNameById(NameId);
+    Result := gvDebugInfo.GetNameById(NameId);
 end;
 
 function TFuncInfo.ParamsAsString: String;
@@ -1002,6 +1061,11 @@ begin
   end;
 end;
 
+function TFuncInfo.ShortName: String;
+begin
+  Result := gvDebugInfo.ParseFuncName(Self);
+end;
+
 {...............................................................................}
 
 { TTypeInfo }
@@ -1036,7 +1100,7 @@ begin
       if Result <> '' then
         Result := Result + ', ';
 
-      Result := Result + Elements[I].Name;
+      Result := Result + Elements[I].ShortName;
     end;
   end;
 end;
@@ -1092,12 +1156,17 @@ begin
   Result := '';
 
   if NameId > 0 then
-    Result := UnitInfo.DebugInfo.GetNameById(NameId)
+    Result := gvDebugInfo.GetNameById(NameId)
   else
     if (Kind = tkObject) and (BaseType <> Nil) then
       Result := BaseType.Name
     else
       Result := KindAsString;
+end;
+
+function TTypeInfo.ShortName: String;
+begin
+  Result := gvDebugInfo.ParseTypeName(Self);
 end;
 
 function TTypeInfo.TypeOf: String;
@@ -1110,11 +1179,11 @@ begin
       tkArray,
       tkSet,
       tkDynamicArray:
-        Result := Format('%s Of %s', [KindAsString, BaseType.Name]);
+        Result := Format('%s Of %s', [KindAsString, BaseType.ShortName]);
       tkObject, tkClass:
-        Result := Format('%s(%s)', [KindAsString, BaseType.Name]);
+        Result := Format('%s(%s)', [KindAsString, BaseType.ShortName]);
     else
-      Result := Format('(%s)', [BaseType.Name])
+      Result := Format('(%s)', [BaseType.ShortName])
     end;
   end
   else
@@ -1132,7 +1201,7 @@ end;
 
 function TVarInfo.AsString: String;
 begin
-  Result := Format('%s: %s', [Name, DataType.Name]);
+  Result := Format('%s: %s', [ShortName, DataType.ShortName]);
 end;
 
 Constructor TVarInfo.Create;
@@ -1152,20 +1221,25 @@ Begin
     inherited;
 End;
 
-function TVarInfo.Name: AnsiString;
-var
-  UnitInfo: TUnitInfo;
+function TVarInfo.UnitInfo: TUnitInfo;
 begin
-  UnitInfo := Nil;
+  Result := Nil;
 
   if Owner is TFuncInfo then
-    UnitInfo := TFuncInfo(Owner).UnitInfo
+    Result := TFuncInfo(Owner).UnitInfo
   else
   if Owner is TUnitInfo then
-    UnitInfo := TUnitInfo(Owner);
+    Result := TUnitInfo(Owner);
+end;
 
-  if Assigned(UnitInfo) then
-    Result := UnitInfo.DebugInfo.GetNameById(NameId);
+function TVarInfo.Name: AnsiString;
+begin
+  Result := gvDebugInfo.GetNameById(NameId)
+end;
+
+function TVarInfo.ShortName: String;
+begin
+  Result := gvDebugInfo.ParseVarName(Self)
 end;
 
 { TUnitInfo }
@@ -1212,21 +1286,20 @@ end;
 
 function TUnitInfo.Name: AnsiString;
 begin
-    Result := DebugInfo.GetNameById(NameId);
+    Result := gvDebugInfo.GetNameById(NameId);
 end;
 
 function TUnitInfo.ShortName: String;
 begin
-  Result := AnsiLowerCase(ExtractFileName(Name));
+  Result := gvDebugInfo.ParseUnitName(Self);
 end;
 
 { TStackEntry }
 
-constructor TStackEntry.Create(ADebugInfo: TDebugInfo);
+constructor TStackEntry.Create;
 begin
     Inherited Create;
 
-    DebugInfo := ADebugInfo;
     UnitInfo        := Nil;
     FuncInfo        := Nil;
     LineInfo        := Nil;
@@ -1257,14 +1330,30 @@ end;
 function TStackEntry.UpdateInfo(const Addr: Pointer): TFindResult;
 begin
     EIP := Addr;
-    Result := DebugInfo.GetLineInfo(EIP, UnitInfo, FuncInfo, LineInfo, False);
+    Result := gvDebugInfo.GetLineInfo(EIP, UnitInfo, FuncInfo, LineInfo, False);
 end;
 
 { TConstInfo }
 
 function TConstInfo.Name: AnsiString;
 begin
-  Result := UnitInfo.DebugInfo.GetNameById(NameId);
+  Result := gvDebugInfo.GetNameById(NameId);
+end;
+
+function TConstInfo.ShortName: String;
+begin
+  Result := gvDebugInfo.ParseConstName(Self);
+end;
+
+function TConstInfo.UnitInfo: TUnitInfo;
+begin
+  if OwnerInfo is TUnitInfo then
+    Result := TUnitInfo(OwnerInfo)
+  else
+    if OwnerInfo is TFuncInfo then
+      Result := TFuncInfo(OwnerInfo).UnitInfo
+    else
+      Result := Nil;
 end;
 
 function TConstInfo.ValueAsString: String;
@@ -1439,13 +1528,6 @@ begin
   end;
 end;
 
-{ TNameInfo }
-
-function TNameInfo.ShortName: String;
-begin
-  Result := String(Name);
-end;
-
 { TStructMember }
 
 function TStructMember.Alias: AnsiString;
@@ -1460,14 +1542,24 @@ end;
 
 function TStructMember.Name: AnsiString;
 begin
-  Result := DataType.UnitInfo.DebugInfo.GetNameById(NameId);
+  Result := gvDebugInfo.GetNameById(NameId);
+end;
+
+function TStructMember.ShortName: String;
+begin
+  Result := gvDebugInfo.ParseStructMemberName(Self);
 end;
 
 { TEnumInfo }
 
 function TEnumInfo.Name: AnsiString;
 begin
-  Result := TypeInfo.UnitInfo.DebugInfo.GetNameById(NameId);
+  Result := gvDebugInfo.GetNameById(NameId);
+end;
+
+function TEnumInfo.ShortName: String;
+begin
+  Result := String(Name);
 end;
 
 End.
