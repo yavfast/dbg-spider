@@ -215,6 +215,8 @@ function TDelphiDebugInfo.ParseFuncName(FuncInfo: TFuncInfo): String;
 var
   SL: TStringArray;
   Idx: Integer;
+  S: String;
+  P: Integer;
 begin
   Result := inherited;
 
@@ -224,12 +226,22 @@ begin
 
     Result := '';
     for Idx := 0 to High(SL) do
-      if SL[Idx] <> '' then
+    begin
+      S := SL[Idx];
+      if S <> '' then
       begin
         if Result <> '' then Result := Result + '.';
 
-        Result := Result + SL[Idx];
+        P := Pos('$qq', S);
+        if P > 0 then
+          SetLength(S, P - 1);
+
+        Result := Result + S;
+
+        if P > 0 then
+          Break;
       end;
+    end;
   end;
 end;
 
@@ -242,6 +254,8 @@ function TDelphiDebugInfo.ParseTypeName(TypeInfo: TTypeInfo): String;
 var
   SL: TStringArray;
   Idx: Integer;
+  S: String;
+  P: Integer;
 begin
   Result := inherited;
 
@@ -251,12 +265,21 @@ begin
 
     Result := '';
     for Idx := 0 to High(SL) do
-      if SL[Idx] <> '' then
+    begin
+      S := SL[Idx];
+      if S <> '' then
       begin
         if Result <> '' then Result := Result + '.';
 
-        Result := Result + SL[Idx];
+        repeat
+          P := Pos('$', S);
+          if P > 0 then
+            Delete(S, P, 3);
+        until P <= 0;
+
+        Result := Result + S;
       end;
+    end;
   end;
 end;
 
