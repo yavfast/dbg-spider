@@ -1553,7 +1553,7 @@ var
     for I := 0 to Units.Count - 1 do
     begin
       UInfo := TUnitInfo(Units.Objects[I]);
-      if SameText(_SystemUnit, String(UInfo.Name)) then
+      if SameText(_SystemUnit, UInfo.ShortName) then
       begin
         USystem := UInfo;
         Result := True;

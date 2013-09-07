@@ -99,12 +99,12 @@ begin
   begin
     if FProcessID = 0 then
     begin
-      _AC.Log('Run application "%s"', [AppName]);
+      _AC.Log(dltInfo, 'Run application "%s"', [AppName]);
       FRun := gvDebuger.DebugNewProcess(AppName, False);
     end
     else
     begin
-      _AC.Log('Attach to process [%d]', [FProcessID]);
+      _AC.Log(dltInfo, 'Attach to process [%d]', [FProcessID]);
       FRun := gvDebuger.AttachToProcess(FProcessID, False);
     end;
 
@@ -112,12 +112,12 @@ begin
     begin
       gvDebuger.PerfomanceMode := (doProfiler in FDbgOptions);
 
-      _AC.Log('Start debug process');
+      _AC.Log(dltInfo, 'Start debug process');
       try
         gvDebuger.ProcessDebugEvents;
       except
         on E: Exception do
-          _AC.Log('Fail debug process: "%s"', [E.Message]);
+          _AC.Log(dltError, 'Fail debug process: "%s"', [E.Message]);
       end;
     end;
   end
@@ -169,16 +169,16 @@ begin
 
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
-    _AC.Log('Load debug info for "%s"...', [AppName]);
+    _AC.Log(dltInfo, 'Load debug info for "%s"...', [AppName]);
     FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName, SourceDirs);
 
     if FDbgInfoLoaded then
     begin
-      _AC.Log('Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, AppName]);
+      _AC.Log(dltInfo, 'Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, AppName]);
       _AC.ViewDebugInfo(gvDebugInfo);
     end
     else
-      _AC.Log('No debug info for "%s"', [AppName]);
+      _AC.Log(dltWarning, 'No debug info for "%s"', [AppName]);
 
     _AC.DoAction(acUpdateInfo, []);
   finally
@@ -190,12 +190,12 @@ procedure TDebugerThread.OnBreakPoint(Sender: TObject; ThreadId: TThreadId; Exce
       BreakPointIndex: Integer; var ReleaseBreakpoint: Boolean);
 begin
   if BreakPointIndex = -1 then
-    _AC.Log('Perfomance ThreadID: %d', [ThreadId]);
+    _AC.Log(dltThreadEvent, 'Perfomance ThreadID: %d', [ThreadId]);
 end;
 
 procedure TDebugerThread.OnCreateProcess(Sender: TObject; ProcessId: TProcessId; Data: PCreateProcessDebugInfo);
 begin
-  _AC.Log('Process Start ID: %d', [ProcessId]);
+  _AC.Log(dltProcessEvent, 'Process Start ID: %d', [ProcessId]);
 
   _AC.DoAction(acStopEnabled, [True]);
   _AC.DoAction(acCreateProcess, [ProcessId]);
@@ -203,40 +203,34 @@ end;
 
 procedure TDebugerThread.OnCreateThread(Sender: TObject; ThreadId: TThreadId; Data: PCreateThreadDebugInfo);
 begin
-  _AC.Log('Thread Create ID: %d', [ThreadID]);
+  _AC.Log(dltThreadEvent, 'Thread Create ID: %d', [ThreadID]);
   _AC.DoAction(acAddThread, [ThreadID]);
 end;
 
 procedure TDebugerThread.OnDebugString(Sender: TObject; ThreadId: TThreadId; Data: POutputDebugStringInfo);
 begin
   if Data^.fUnicode = 1 then
-    _AC.Log('Debug String: ' + PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
+    _AC.Log(dltDebugOutput, 'Debug String: ' + PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
   else
-    _AC.Log('Debug String: ' + PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
-
-  _AC.DoAction(acUpdateInfo, []);
+    _AC.Log(dltDebugOutput, 'Debug String: ' + PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
 end;
 
 procedure TDebugerThread.OnExitProcess(Sender: TObject; ProcessId: TProcessId; Data: PExitProcessDebugInfo);
 begin
-  _AC.Log('Process Exit ID: %d', [ProcessID]);
-
-  _AC.DoAction(acUpdateInfo, []);
+  _AC.Log(dltProcessEvent, 'Process Exit ID: %d', [ProcessID]);
 end;
 
 procedure TDebugerThread.OnExitThread(Sender: TObject; ThreadId: TThreadId; Data: PExitThreadDebugInfo);
 begin
   if Data <> Nil then
-    _AC.Log('Thread Exit ID: %d (%d)', [ThreadID, Data^.dwExitCode])
+    _AC.Log(dltThreadEvent, 'Thread Exit ID: %d (%d)', [ThreadID, Data^.dwExitCode])
   else
-    _AC.Log('Thread Exit ID: %d', [ThreadID]);
-
-  _AC.DoAction(acUpdateInfo, []);
+    _AC.Log(dltThreadEvent, 'Thread Exit ID: %d', [ThreadID]);
 end;
 
 procedure TDebugerThread.OnEndDebug(Sender: TObject);
 begin
-  _AC.Log('Finish debug');
+  _AC.Log(dltInfo, 'Finish debug');
 
   _AC.DoAction(acStopEnabled, [False]);
   _AC.DoAction(acRunEnabled, [True]);
@@ -244,8 +238,8 @@ end;
 
 procedure TDebugerThread.OnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PLoadDLLDebugInfo);
 const
-  FormatStrKnownDLL = 'Load Dll at instance %p handle %d "%s"';
-  FormatStrUnknownDLL = 'Load unknown Dll at instance %p handle %d';
+  FormatStrKnownDLL = 'Load Dll at instance $%p handle %d "%s"';
+  FormatStrUnknownDLL = 'Load unknown Dll at instance $%p handle %d';
 var
   DllName: AnsiString;
   IsUnicodeData: Boolean;
@@ -256,12 +250,12 @@ begin
   if DllName <> '' then
   begin
     if IsUnicodeData then
-      _AC.Log(FormatStrKnownDLL, [Data^.lpBaseOfDll, Data^.hFile, PWideChar(@DllName[1])])
+      _AC.Log(dltDLLEvent, FormatStrKnownDLL, [Data^.lpBaseOfDll, Data^.hFile, PWideChar(@DllName[1])])
     else
-      _AC.Log(Format(FormatStrKnownDLL, [Data^.lpBaseOfDll, Data^.hFile, PAnsiChar(@DllName[1])]));
+      _AC.Log(dltDLLEvent, Format(FormatStrKnownDLL, [Data^.lpBaseOfDll, Data^.hFile, PAnsiChar(@DllName[1])]));
   end
   else
-    _AC.Log(Format(FormatStrUnknownDLL, [Data^.lpBaseOfDll, Data^.hFile]));
+    _AC.Log(dltDLLEvent, Format(FormatStrUnknownDLL, [Data^.lpBaseOfDll, Data^.hFile]));
 end;
 
 procedure TDebugerThread.OnProgress(const Action: String; const Progress: Integer);
@@ -271,13 +265,12 @@ end;
 
 procedure TDebugerThread.OnRip(Sender: TObject; ThreadId: TThreadId; Data: PRIPInfo);
 begin
-  _AC.Log('Debug fail [error: %d; type: %d]', [Data^.dwError, Data^.dwType]);
-  _AC.DoAction(acUpdateInfo, []);
+  _AC.Log(dltError, 'Debug fail [error: %d; type: %d]', [Data^.dwError, Data^.dwType]);
 end;
 
 procedure TDebugerThread.OnUnknownBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
 begin
-  _AC.Log('OnUnknownBreakPoint ThreadID: %d', [ThreadId]);
+  _AC.Log(dltBreakPointEvent, 'OnUnknownBreakPoint ThreadID: %d', [ThreadId]);
 end;
 
 procedure TDebugerThread.OnUnknownException(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
@@ -287,9 +280,9 @@ end;
 
 procedure TDebugerThread.OnUnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PUnloadDLLDebugInfo);
 const
-  FormatStrDLL = 'UnLoad Dll at instance %p';
+  FormatStrDLL = 'UnLoad Dll at instance $%p';
 begin
-  _AC.Log(FormatStrDLL, [Data^.lpBaseOfDll]);
+  _AC.Log(dltDLLEvent, FormatStrDLL, [Data^.lpBaseOfDll]);
 end;
 
 end.

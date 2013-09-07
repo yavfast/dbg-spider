@@ -664,6 +664,8 @@ begin
   vstDbgInfoVars.Clear;
   vstDbgInfoFunctions.Clear;
   vstDbgInfoFuncVars.Clear;
+  synmDbgInfoUnitSource.Clear;
+  synmDbgInfoFuncAdv.Clear;
 end;
 
 procedure TMainForm.ClearDbgTrees;
@@ -674,14 +676,22 @@ begin
   vstMemInfoThreads.Clear;
   vstMemList.Clear;
   vstMemStack.Clear;
+  synmMemInfoSource.Clear;
 
   vstExceptionThreads.Clear;
   vstExceptionList.Clear;
   vstExceptionCallStack.Clear;
+  synmExceptInfoSource.Clear;
 end;
 
 procedure TMainForm.ClearProject;
 begin
+  if Assigned(gvDebugInfo) then
+    gvDebugInfo.ClearDebugInfo;
+
+  if Assigned(gvDebuger) then
+    gvDebuger.ClearDbgInfo;
+
   if gvProjectOptions.ProjectName <> '' then
     FSpiderOptions.AddRecentProject(gvProjectOptions.ProjectName);
 
@@ -692,6 +702,7 @@ begin
   gvProjectOptions.Clear;
 
   ClearTrees;
+
   UpdateStatusInfo;
   UpdateActions;
 end;
