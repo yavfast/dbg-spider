@@ -210,6 +210,8 @@ type
     procedure vstDbgInfoFuncVarsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
     procedure vstLogGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstLogDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+      const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
 
     procedure vstLogResize(Sender: TObject);
     procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
@@ -292,7 +294,6 @@ type
     procedure LoadGUIOptions;
     procedure LoadRecentProjects;
   public
-    procedure Log(const Msg: String);
     procedure DoAction(Action: TacAction; const Args: array of Variant);
     procedure ViewDebugInfo(DebugInfo: TDebugInfo);
   end;
@@ -1580,11 +1581,6 @@ begin
   end;
 end;
 
-procedure TMainForm.Log(const Msg: String);
-begin
-  //mLog.Lines.Add(FormatDateTime('hh:nn:ss.zzz', Now) + ': ' + Msg);
-end;
-
 procedure TMainForm.ProgressAction(const Action: String; const Progress: Integer);
 begin
   pbProgress.Visible := (Progress > 0);
@@ -2274,6 +2270,23 @@ end;
 procedure TMainForm.vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
 begin
   vstLogResize(Sender);
+end;
+
+procedure TMainForm.vstLogDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
+var
+  Data: PLinkData;
+  Item: TDbgLogItem;
+  C: TColor;
+begin
+  Data := vstLog.GetNodeData(Node);
+  case Data^.LinkType of
+    ltDbgLogItem:
+      begin
+        Item := Data^.DbgLogItem;
+        TargetCanvas.Font.Color := FSpiderOptions.LogColors[Item.LogType];
+      end;
+  end;
 end;
 
 procedure TMainForm.vstLogGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);

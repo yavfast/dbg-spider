@@ -34,7 +34,7 @@ implementation
 procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String);
 begin
   if Assigned(ParentNode) then
-    ParentNode.ChildValues[NodeName] := NodeValue;
+    ParentNode.ChildValues[AnsiLowerCase(NodeName)] := NodeValue;
 end;
 
 function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: Boolean = True): IXMLNode;
@@ -43,7 +43,7 @@ begin
 
   if Assigned(ParentNode) then
   begin
-    Result := ParentNode.ChildNodes.FindNode(NodeName);
+    Result := ParentNode.ChildNodes.FindNode(AnsiLowerCase(NodeName));
     if not Assigned(Result) and AutoCreate then
       Result := ParentNode.AddChild(NodeName);
   end;
@@ -56,7 +56,7 @@ begin
   Result := '';
   if Assigned(ParentNode) then
   begin
-    ResNode := ParentNode.ChildNodes.FindNode(NodeName);
+    ResNode := ParentNode.ChildNodes.FindNode(AnsiLowerCase(NodeName));
     if Assigned(ResNode) and ResNode.IsTextElement then
       Result := ResNode.Text;
   end;
