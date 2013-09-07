@@ -16,13 +16,21 @@ type
     property Colors[const Name: String]: TColor read GetColor write SetColor;
   end;
 
+  TLogColorOptions = class(TColorOptions)
+  private
+    function GetLogColor(const LogType: TDbgLogType): TColor;
+    procedure SetLogColor(const LogType: TDbgLogType; const Value: TColor);
+  public
+    property LogColors[const LogType: TDbgLogType]: TColor read GetLogColor write SetLogColor; default;
+  end;
+
   TSpiderOptions = class
   private
     FXMLFileName: String;
     FXML: IXMLDocument;
     FUpdateCount: Integer;
 
-    FLogColors: TColorOptions;
+    FLogColors: TLogColorOptions;
   protected
     procedure Open;
     procedure CreateNew;
@@ -37,7 +45,7 @@ type
     procedure AddRecentProject(const ProjectName: String);
     procedure GetRecentProjects(var Projects: TStringList);
 
-    property LogColors: TColorOptions read FLogColors;
+    property LogColors: TLogColorOptions read FLogColors;
   end;
 
 implementation
@@ -48,6 +56,30 @@ uses
 const
   _RECENT = 'recent';
   _RECENT_ITEM = 'item';
+
+  _DefLogColors: array[Low(TDbgLogType) .. High(TDbgLogType)] of TColor = (
+    clBlack, // dltInfo
+    clPurple, //dltWarning
+    clRed, // dltError
+    clNavy, // dltDebugOutput
+    clBlack, // dltProcessEvent
+    clBlack, // dltThreadEvent
+    clRed, // dltExceptionEvent
+    clMaroon, // dltBreakPointEvent
+    clBlack // dltDLLEvent
+  );
+
+  _LogColorNames: array[Low(TDbgLogType) .. High(TDbgLogType)] of String = (
+    'info', // dltInfo
+    'warning', //dltWarning
+    'error', // dltError
+    'debug_output', // dltDebugOutput
+    'process_event', // dltProcessEvent
+    'thread_event', // dltThreadEvent
+    'exception_event', // dltExceptionEvent
+    'breakpoint_event', // dltBreakPointEvent
+    'dll_event' // dltDLLEvent
+  );
 
 { TSpiderOptions }
 
@@ -186,7 +218,7 @@ begin
     ColorsNode := GetXMLChildNode(FXML.DocumentElement, 'colors');
 
     LogColorsNode := GetXMLChildNode(ColorsNode, 'log');
-    FLogColors := TColorOptions.Create(LogColorsNode);
+    FLogColors := TLogColorOptions.Create(LogColorsNode);
 
   finally
     EndUpdate;
@@ -222,6 +254,29 @@ end;
 procedure TColorOptions.SetColor(const Name: String; const Value: TColor);
 begin
   SetXMLValue(FXMLNode, Name, ColorToString(Value));
+end;
+
+{ TLogColorOptions }
+
+function TLogColorOptions.GetLogColor(const LogType: TDbgLogType): TColor;
+var
+  N: String;
+begin
+  N := _LogColorNames[LogType];
+
+  Result := Colors[N];
+
+  if Result = clDefault then
+    Result := _DefLogColors[LogType];
+end;
+
+procedure TLogColorOptions.SetLogColor(const LogType: TDbgLogType; const Value: TColor);
+var
+  N: String;
+begin
+  N := _LogColorNames[LogType];
+
+  Colors[N] := Value;
 end;
 
 end.

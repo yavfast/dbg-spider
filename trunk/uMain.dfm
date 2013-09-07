@@ -23,7 +23,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsDebugInfo2
+    ActivePage = tsLog
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -52,6 +52,7 @@ object MainForm: TMainForm
         TreeOptions.PaintOptions = [toShowDropmark, toShowHorzGridLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
         OnColumnResize = vstLogColumnResize
+        OnDrawText = vstLogDrawText
         OnGetText = vstLogGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
         OnResize = vstLogResize
