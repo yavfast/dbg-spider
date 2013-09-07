@@ -24,6 +24,14 @@ type
     property LogColors[const LogType: TDbgLogType]: TColor read GetLogColor write SetLogColor; default;
   end;
 
+  TTimelineOptions = class(TColorOptions)
+  private
+    function GetEventColor(const EventType: TDbgPointType): TColor;
+    procedure SetEventColor(const EventType: TDbgPointType; const Value: TColor);
+  public
+    property EventColors[const EventType: TDbgPointType]: TColor read GetEventColor write SetEventColor; default;
+  end;
+
   TSpiderOptions = class
   private
     FXMLFileName: String;
@@ -31,6 +39,7 @@ type
     FUpdateCount: Integer;
 
     FLogColors: TLogColorOptions;
+    FTimelineColors: TTimelineOptions;
   protected
     procedure Open;
     procedure CreateNew;
@@ -46,6 +55,7 @@ type
     procedure GetRecentProjects(var Projects: TStringList);
 
     property LogColors: TLogColorOptions read FLogColors;
+    property TimelineColors: TTimelineOptions read FTimelineColors;
   end;
 
 implementation
@@ -79,6 +89,28 @@ const
     'exception_event', // dltExceptionEvent
     'breakpoint_event', // dltBreakPointEvent
     'dll_event' // dltDLLEvent
+  );
+
+  _DefEventColors: array[Low(TDbgPointType) .. High(TDbgPointType)] of TColor = (
+    clWhite, // ptNone
+    clSkyBlue, // ptWait
+    clGreen, // ptStart
+    clGreen, // ptStop
+    clRed, // ptException
+    clGreen, // ptPerfomance
+    clGreen, // ptThreadInfo
+    clGreen // ptMemoryInfo
+  );
+
+  _EventColorNames: array[Low(TDbgPointType) .. High(TDbgPointType)] of String = (
+    'none', // ptNone
+    'wait', // ptWait
+    'start', // ptStart
+    'stop', // ptStop
+    'exception', // ptException
+    'active', // ptPerfomance
+    'thread', // ptThreadInfo
+    'memory' // ptMemoryInfo
   );
 
 { TSpiderOptions }
@@ -187,6 +219,7 @@ begin
   Save;
 
   FreeAndNil(FLogColors);
+  FreeAndNil(FTimelineColors);
 
   FXML := nil;
 
@@ -201,8 +234,7 @@ end;
 
 procedure TSpiderOptions.Open;
 var
-  ColorsNode: IXMLNode;
-  LogColorsNode: IXMLNode;
+  Node1, Node2: IXMLNode;
 begin
   BeginUpdate;
   try
@@ -215,11 +247,13 @@ begin
     else
       CreateNew;
 
-    ColorsNode := GetXMLChildNode(FXML.DocumentElement, 'colors');
+    Node1 := GetXMLChildNode(FXML.DocumentElement, 'colors');
 
-    LogColorsNode := GetXMLChildNode(ColorsNode, 'log');
-    FLogColors := TLogColorOptions.Create(LogColorsNode);
+    Node2 := GetXMLChildNode(Node1, 'log');
+    FLogColors := TLogColorOptions.Create(Node2);
 
+    Node2 := GetXMLChildNode(Node1, 'timeline');
+    FTimelineColors := TTimelineOptions.Create(Node2);
   finally
     EndUpdate;
   end;
@@ -263,7 +297,6 @@ var
   N: String;
 begin
   N := _LogColorNames[LogType];
-
   Result := Colors[N];
 
   if Result = clDefault then
@@ -275,7 +308,27 @@ var
   N: String;
 begin
   N := _LogColorNames[LogType];
+  Colors[N] := Value;
+end;
 
+{ TTimelineOptions }
+
+function TTimelineOptions.GetEventColor(const EventType: TDbgPointType): TColor;
+var
+  N: String;
+begin
+  N := _EventColorNames[EventType];
+  Result := Colors[N];
+
+  if Result = clDefault then
+    Result := _DefEventColors[EventType];
+end;
+
+procedure TTimelineOptions.SetEventColor(const EventType: TDbgPointType; const Value: TColor);
+var
+  N: String;
+begin
+  N := _EventColorNames[EventType];
   Colors[N] := Value;
 end;
 
