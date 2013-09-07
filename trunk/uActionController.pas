@@ -16,8 +16,8 @@ type
     class procedure StopDebug; static;
     class procedure PauseDebug; static;
 
-    class procedure Log(const Msg: String); overload; static;
-    class procedure Log(const Msg: String; const Args: array of const); overload; static;
+    class procedure Log(const LogType: TDbgLogType; const Msg: String); overload; static;
+    class procedure Log(const LogType: TDbgLogType; const Msg: String; const Args: array of const); overload; static;
 
     class procedure DoAction(const Action: TacAction; const Args: array of Variant); static;
     class procedure ViewDebugInfo(DebugInfo: TDebugInfo); static;
@@ -29,11 +29,8 @@ type
     FProjectXML: IXMLDocument;
     FUpdateCount: Integer;
 
-    function GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String; overload;
-    procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String); overload;
-
-    function GetXMLValue(const NodeName: String): String; overload;
-    procedure SetXMLValue(const NodeName, NodeValue: String); overload;
+    function GetXMLValue(const NodeName: String): String;
+    procedure SetXMLValue(const NodeName, NodeValue: String);
 
     procedure SetApplicationName(const Value: String);
     procedure SetProjectStorage(const Value: String);
@@ -73,30 +70,16 @@ var
 
 implementation
 
-uses SysUtils, uMain, Debuger, uDebugerThread;
+uses SysUtils, uMain, Debuger, uDebugerThread, ClassUtils;
 
 { TActionController }
 
-class procedure TActionController.Log(const Msg: String);
-//var
-//  _Msg: String;
+class procedure TActionController.Log(const LogType: TDbgLogType; const Msg: String);
 begin
   if Assigned(gvDebugInfo) then
-    gvDebugInfo.DbgLog.Add(Msg);
+    gvDebugInfo.DbgLog.Add(LogType, Msg);
 
   DoAction(acUpdateInfo, []);
-
-  (*
-  _Msg := Msg;
-  if Assigned(MainForm) then
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        if Assigned(MainForm) and MainForm.Visible then
-          MainForm.Log(_Msg);
-      end
-    );
-  *)
 end;
 
 class procedure TActionController.DoAction(const Action: TacAction; const Args: array of Variant);
@@ -122,9 +105,9 @@ begin
   end;
 end;
 
-class procedure TActionController.Log(const Msg: String; const Args: array of const);
+class procedure TActionController.Log(const LogType: TDbgLogType; const Msg: String; const Args: array of const);
 begin
-  Log(Format(Msg, Args));
+  Log(LogType, Format(Msg, Args));
 end;
 
 class procedure TActionController.PauseDebug;
@@ -270,30 +253,11 @@ begin
   SetXMLValue('project_storage', Value);
 end;
 
-function TProjectOptions.GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String;
-var
-  ResNode: IXMLNode;
-begin
-  Result := '';
-  if Assigned(ParentNode) then
-  begin
-    ResNode := ParentNode.ChildNodes.FindNode(NodeName);
-    if Assigned(ResNode) and ResNode.IsTextElement then
-      Result := ResNode.Text;
-  end;
-end;
-
 function TProjectOptions.GetXMLValue(const NodeName: String): String;
 begin
   Result := '';
   if Assigned(FProjectXML) then
-    Result := GetXMLValue(FProjectXML.DocumentElement, NodeName);
-end;
-
-procedure TProjectOptions.SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String);
-begin
-  if Assigned(ParentNode) then
-    ParentNode.ChildValues[NodeName] := NodeValue;
+    Result := ClassUtils.GetXMLValue(FProjectXML.DocumentElement, NodeName);
 end;
 
 procedure TProjectOptions.SetXMLValue(const NodeName, NodeValue: String);
@@ -301,7 +265,7 @@ begin
   if Assigned(FProjectXML) then
   begin
     BeginUpdate;
-    SetXMLValue(FProjectXML.DocumentElement, NodeName, NodeValue);
+    ClassUtils.SetXMLValue(FProjectXML.DocumentElement, NodeName, NodeValue);
     EndUpdate;
   end;
 end;

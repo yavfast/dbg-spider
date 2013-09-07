@@ -2,14 +2,27 @@ unit uSpiderOptions;
 
 interface
 
-uses Classes, XMLDoc, XMLIntf;
+uses Classes, XMLDoc, XMLIntf, DebugerTypes, Graphics;
 
 type
+  TColorOptions = class
+  private
+    FXMLNode: IXMLNode;
+    function GetColor(const Name: String): TColor;
+    procedure SetColor(const Name: String; const Value: TColor);
+  public
+    constructor Create(const OwnerNode: IXMLNode);
+
+    property Colors[const Name: String]: TColor read GetColor write SetColor;
+  end;
+
   TSpiderOptions = class
   private
     FXMLFileName: String;
     FXML: IXMLDocument;
     FUpdateCount: Integer;
+
+    FLogColors: TColorOptions;
   protected
     procedure Open;
     procedure CreateNew;
@@ -23,12 +36,14 @@ type
 
     procedure AddRecentProject(const ProjectName: String);
     procedure GetRecentProjects(var Projects: TStringList);
+
+    property LogColors: TColorOptions read FLogColors;
   end;
 
 implementation
 
 uses
-  Windows, SysUtils, SyncObjs;
+  Windows, SysUtils, SyncObjs, ClassUtils;
 
 const
   _RECENT = 'recent';
@@ -138,6 +153,9 @@ end;
 destructor TSpiderOptions.Destroy;
 begin
   Save;
+
+  FreeAndNil(FLogColors);
+
   FXML := nil;
 
   inherited;
@@ -150,21 +168,60 @@ begin
 end;
 
 procedure TSpiderOptions.Open;
+var
+  ColorsNode: IXMLNode;
+  LogColorsNode: IXMLNode;
 begin
-  if FileExists(FXMLFileName) then
-  begin
-    FXML := TXMLDocument.Create(FXMLFileName);
-    //FXML.NodeIndentStr := '  ';
-    FXML.Options := FXML.Options + [doNodeAutoIndent, doNodeAutoCreate];
-  end
-  else
-    CreateNew;
+  BeginUpdate;
+  try
+    if FileExists(FXMLFileName) then
+    begin
+      FXML := TXMLDocument.Create(FXMLFileName);
+      //FXML.NodeIndentStr := '  ';
+      FXML.Options := FXML.Options + [doNodeAutoIndent, doNodeAutoCreate];
+    end
+    else
+      CreateNew;
+
+    ColorsNode := GetXMLChildNode(FXML.DocumentElement, 'colors');
+
+    LogColorsNode := GetXMLChildNode(ColorsNode, 'log');
+    FLogColors := TColorOptions.Create(LogColorsNode);
+
+  finally
+    EndUpdate;
+  end;
 end;
 
 procedure TSpiderOptions.Save;
 begin
   if Assigned(FXML) then
     FXML.SaveToFile(FXMLFileName);
+end;
+
+{ TColorOptions }
+
+constructor TColorOptions.Create(const OwnerNode: IXMLNode);
+begin
+  inherited Create;
+
+  FXMLNode := OwnerNode;
+end;
+
+function TColorOptions.GetColor(const Name: String): TColor;
+var
+  Str: String;
+begin
+  Result := clDefault;
+
+  Str := GetXMLValue(FXMLNode, Name);
+  if Str <> '' then
+    Result := StringToColor(Str);
+end;
+
+procedure TColorOptions.SetColor(const Name: String; const Value: TColor);
+begin
+  SetXMLValue(FXMLNode, Name, ColorToString(Value));
 end;
 
 end.

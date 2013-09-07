@@ -374,7 +374,11 @@ type
 
   TDbgState = (dsNone, dsStarted, dsWait, dsPerfomance, dsTrace, dsEvent, dsStoping, dsStoped, dsDbgFail);
 
+  TDbgLogType = (dltInfo, dltWarning, dltError, dltDebugOutput, dltProcessEvent, dltThreadEvent, dltExceptionEvent,
+    dltBreakPointEvent, dltDLLEvent);
+
   TDbgLogItem = Class
+    LogType: TDbgLogType;
     DateTime: TDateTime;
     LogMessage: String;
   End;
@@ -390,8 +394,8 @@ type
 
     function Count: Integer;
 
-    procedure Add(const Msg: String); overload;
-    procedure Add(const FmtMsg: String; const Args: array of Const); overload;
+    procedure Add(const LogType: TDbgLogType; const Msg: String); overload;
+    procedure Add(const LogType: TDbgLogType; const FmtMsg: String; const Args: array of Const); overload;
 
     property Items[const Index: Integer]: TDbgLogItem read GetItem; default;
   end;
@@ -724,20 +728,21 @@ end;
 
 { TDbgLog }
 
-procedure TDbgLog.Add(const Msg: String);
+procedure TDbgLog.Add(const LogType: TDbgLogType; const Msg: String);
 var
   LogItem: TDbgLogItem;
 begin
   LogItem := TDbgLogItem.Create;
+  LogItem.LogType := LogType;
   LogItem.DateTime := Now;
   LogItem.LogMessage := Msg;
 
   inherited Add(LogItem);
 end;
 
-procedure TDbgLog.Add(const FmtMsg: String; const Args: array of Const);
+procedure TDbgLog.Add(const LogType: TDbgLogType; const FmtMsg: String; const Args: array of Const);
 begin
-  Add(Format(FmtMsg, Args));
+  Add(LogType, Format(FmtMsg, Args));
 end;
 
 procedure TDbgLog.ClearLog;

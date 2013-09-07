@@ -2,7 +2,7 @@ unit ClassUtils;
 
 interface
 
-uses Windows, Classes, SysUtils, StrUtils;
+uses Windows, Classes, SysUtils, StrUtils, XMLDoc, XMLIntf, Graphics;
 
 const
   EIndexError: String = 'List index error: %d';
@@ -24,7 +24,43 @@ function Int64ToFileTime(const Value: UInt64): TFileTime;
 
 procedure SplitStr(const Str: String; const Delimiter: Char; var StrList: TStringArray);
 
+function GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String;
+procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String);
+
+function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: Boolean = True): IXMLNode;
+
 implementation
+
+procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String);
+begin
+  if Assigned(ParentNode) then
+    ParentNode.ChildValues[NodeName] := NodeValue;
+end;
+
+function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: Boolean = True): IXMLNode;
+begin
+  Result := nil;
+
+  if Assigned(ParentNode) then
+  begin
+    Result := ParentNode.ChildNodes.FindNode(NodeName);
+    if not Assigned(Result) and AutoCreate then
+      Result := ParentNode.AddChild(NodeName);
+  end;
+end;
+
+function GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String;
+var
+  ResNode: IXMLNode;
+begin
+  Result := '';
+  if Assigned(ParentNode) then
+  begin
+    ResNode := ParentNode.ChildNodes.FindNode(NodeName);
+    if Assigned(ResNode) and ResNode.IsTextElement then
+      Result := ResNode.Text;
+  end;
+end;
 
 procedure SplitStr(const Str: String; const Delimiter: Char; var StrList: TStringArray);
 var
