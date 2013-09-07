@@ -225,7 +225,7 @@ type
     destructor Destroy; override;
   end;
 
-  TPointType = (ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
+  TDbgPointType = (ptNone, ptWait, ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
 
   PThreadPoint = ^TThreadPoint;
   TThreadPoint = packed record
@@ -233,7 +233,7 @@ type
     procedure Clear;
   public
     PerfIdx: Cardinal;
-    case PointType: TPointType of
+    case PointType: TDbgPointType of
       ptStart: ();
       ptStop: ();
       ptException: (
@@ -303,7 +303,7 @@ type
   TProcessPoint = packed record
     FromStart: Int64;        // кол-во тиков со старта
     CPUTime: UInt64;         // текущее время CPU
-    case PointType: TPointType of
+    case PointType: TDbgPointType of
       ptStart: ();
       ptStop: ();
       ptException: ();

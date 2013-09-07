@@ -29,7 +29,85 @@ procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: Str
 
 function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: Boolean = True): IXMLNode;
 
+procedure RGBToHSV(const Color: TColor; var h, s, v: Integer);
+function HSV2RGB(const h, s, v: Integer): TColor;
+
 implementation
+
+uses Math;
+
+// h=[0..360] s,v=[0..255]
+procedure RGBToHSV(const Color: TColor; var h, s, v: Integer);
+var
+  Delta: Integer;
+  MinRGB, MaxRGB: Integer;
+  r, g, b: Byte;
+begin
+  r := GetRValue(Color);
+  g := GetGValue(Color);
+  b := GetBValue(Color);
+
+  MinRGB := Min(r, Min(g, b));
+  MaxRGB := Max(r, Max(g, b));
+
+  v := MaxRGB;
+  Delta := MaxRGB - MinRGB;
+
+  if MaxRGB = 0 then
+    s := 0
+  else
+    s := (255 * Delta) div MaxRGB;
+
+  if s = 0 then
+    h := 0
+  else
+  begin
+    if r = MaxRGB then
+      h := (60 * (g - b)) div Delta
+    else
+    if g = MaxRGB then
+      h := 120 + (60 * (b - r)) div Delta
+    else
+      h := 240 + (60 * (r - g)) div Delta;
+
+    if h < 0 then
+      h := h + 360;
+  end;
+end;
+
+function HSV2RGB(const h, s, v: Integer): TColor;
+var
+  Hi: Integer;
+  f, p, q, t: Double;
+  r, g, b: Double;
+  sf, vf: Double;
+  hf: Integer;
+begin
+  sf := Max(0, Min(255, s));
+  vf := Max(0, Min(255, v));
+  hf := Max(0, Min(360, h));
+
+  sf := sf / 255;
+  vf := vf / 255;
+
+  f := hf / 60 - (hf div 60);
+  p := vf * (1 - sf);
+  q := vf * (1 - f * sf);
+  t := vf * (1 - (1 - f) * sf);
+
+  Hi := (hf div 60) mod 6;
+  case Hi of
+    0: begin r := vf; g := t; b := p; end;
+    1: begin r := q; g := vf; b := p; end;
+    2: begin r := p; g := vf; b := t; end;
+    3: begin r := p; g := q; b := vf; end;
+    4: begin r := t; g := p; b := vf; end;
+    5: begin r := vf; g := p; b := q; end;
+  end;
+
+  Result := RGB(Round(r * 255), Round(g * 255), Round(b * 255));
+end;
+
 
 procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String);
 begin

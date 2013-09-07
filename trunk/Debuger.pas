@@ -133,8 +133,8 @@ type
 
     function PerfomancePauseDebug: Boolean;
 
-    function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TPointType; DebugEvent: PDebugEvent = nil): Boolean;
-    function AddProcessPointInfo(const PointType: TPointType): Boolean;
+    function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): Boolean;
+    function AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
 
     function GetProcessCPUTime: UInt64;
     function GetThreadCPUTime(ThreadData: PThreadData): UInt64;
@@ -409,7 +409,7 @@ begin
   end;
 end;
 
-function TDebuger.AddThreadPointInfo(ThreadData: PThreadData; const PointType: TPointType; DebugEvent: PDebugEvent = nil): Boolean;
+function TDebuger.AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): Boolean;
 var
   Cur: Int64;
   Prev: UInt64;
@@ -498,7 +498,7 @@ begin
   end;
 end;
 
-function TDebuger.AddProcessPointInfo(const PointType: TPointType): Boolean;
+function TDebuger.AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
 var
   ProcPoint: PProcessPoint;
   Prev: UInt64;

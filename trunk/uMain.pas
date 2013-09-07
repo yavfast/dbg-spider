@@ -5,8 +5,8 @@ interface
 uses
   Windows, uShareData, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Buttons, Mask, ExtCtrls, ComCtrls, ActnList, DebugInfo,
-  Grids, VirtualTrees, 
-  Debuger, DebugerTypes, DelphiDebugInfo, 
+  Grids, VirtualTrees,
+  Debuger, DebugerTypes, DelphiDebugInfo,
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
   RibbonActnMenus, ImgList, ActnColorMaps, XPMan,
@@ -311,6 +311,68 @@ uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
 
 type
   THookBaseVirtualTree = class(TBaseVirtualTree);
+
+procedure DrawVGradientRect(Canvas: TCanvas; const Rect: TRect; const StartColor, EndColor: TColor);
+var
+  I: Integer;
+  R: TRect;
+  LStartRGB, LEndRGB: TColor;
+  LSteps: Integer;
+  DeltaR: Double;
+  DeltaG: Double;
+  DeltaB: Double;
+  DeltaColor: TColor;
+begin
+  LSteps := Rect.Bottom - Rect.Top;
+  if LSteps = 0 then Exit;
+
+  LStartRGB := ColorToRGB(StartColor);
+  LEndRGB := ColorToRGB(EndColor);
+
+  DeltaR := (GetRValue(LEndRGB) - GetRValue(LStartRGB)) / LSteps;
+  DeltaG := (GetGValue(LEndRGB) - GetGValue(LStartRGB)) / LSteps;
+  DeltaB := (GetBValue(LEndRGB) - GetBValue(LStartRGB)) / LSteps;
+
+  R.Left := Rect.Left;
+  R.Right := Rect.Right;
+
+  Canvas.Pen.Style := psSolid;
+
+  for I := 0 to LSteps - 1 do
+  begin
+    R.Top := Rect.Top + I;
+
+    DeltaColor := RGB(
+      Round(GetRValue(LStartRGB) + I * DeltaR),
+      Round(GetGValue(LStartRGB) + I * DeltaG),
+      Round(GetBValue(LStartRGB) + I * DeltaB)
+    );
+
+    if R.Left = R.Right then
+    begin
+      Canvas.Pixels[R.Left, R.Top] := DeltaColor;
+    end
+    else
+    begin
+      Canvas.Pen.Color := DeltaColor;
+      Canvas.MoveTo(R.Left, R.Top);
+      Canvas.LineTo(R.Right, R.Top);
+    end;
+  end;
+end;
+
+procedure DrawVGradientRect2(Canvas: TCanvas; const Rect: TRect; const Color: TColor; const Delta: Byte = 50);
+var
+  H, S, V: Integer;
+  C1, C2: TColor;
+begin
+  RGBToHSV(Color, H, S, V);
+
+  C1 := HSV2RGB(H, S, V + Delta);
+  C2 := HSV2RGB(H, S, V - Delta);
+
+  DrawVGradientRect(Canvas, Rect, C1, C2);
+end;
 
 procedure TMainForm.acAppOpenExecute(Sender: TObject);
 begin
@@ -836,10 +898,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clScrollBar;
-  C.FillRect(Rect(X1, Y1, X2, Y2));
-
-  C.Pen.Style := psSolid;
+  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ProcData^.DbgPointsCount > 0 then
   begin
@@ -856,17 +915,7 @@ begin
           if (X1 < R.Left) then Continue;
           if (X1 > R.Right) then Continue;
 
-          case ProcPoint^.PointType of
-            ptPerfomance:
-              C.Pen.Color := clGreen;
-            ptException:
-              C.Pen.Color := clRed;
-            ptThreadInfo:
-              C.Pen.Color := clGreen;
-          end;
-
-          C.MoveTo(X1, Y1);
-          C.LineTo(X1, Y2);
+          DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
         end;
       finally
         Inc(I);
@@ -919,11 +968,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clScrollBar;
-  C.FillRect(Rect(X1, Y1, X2, Y2));
-
-  C.Pen.Color := clGreen;
-  C.Pen.Style := psSolid;
+  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ProcData^.DbgPointsCount > 0 then
   begin
@@ -932,18 +977,16 @@ begin
     begin
       try
         ProcPoint := ProcData^.DbgPointByIdx(I);
-        if (ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0) then
+        if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
+          (ProcPoint^.PointType = ptException) then
         begin
           T1 := ProcPoint^.FromStart;
           OffsetT1 := T1 div F;
           X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
-          if (X1 < R.Left) then
-            Continue;
-          if (X1 > R.Right) then
-            Continue;
+          if (X1 < R.Left) then Continue;
+          if (X1 > R.Right) then Continue;
 
-          C.MoveTo(X1, Y1);
-          C.LineTo(X1, Y2);
+          DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
         end;
       finally
         Inc(I);
@@ -985,11 +1028,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clScrollBar;
-  C.Brush.Style := bsSolid;
-  C.FillRect(Rect(X1, Y1, X2, Y2));
-
-  C.Pen.Style := psSolid;
+  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ThData^.DbgPointsCount > 0 then
   begin
@@ -1002,22 +1041,12 @@ begin
         if ThPoint = nil then
           Continue;
 
-        case ThPoint^.PointType of
-          ptStart, ptStop:
-            C.Pen.Color := clGreen;
-          ptException:
-            C.Pen.Color := clRed;
-          ptPerfomance:
-            C.Pen.Color := clGreen;
-        end;
-
         T1 := ThPoint^.PerfIdx;
         X1 := R.Left + Integer(T1 - CurOffset) - 1;
         if (X1 < R.Left) then Continue;
         if (X1 > R.Right) then Continue;
 
-        C.MoveTo(X1, Y1);
-        C.LineTo(X1, Y2);
+        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
       finally
         Inc(I);
       end;
@@ -1071,11 +1100,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  C.Brush.Color := clScrollBar;
-  C.Brush.Style := bsSolid;
-  C.FillRect(Rect(X1, Y1, X2, Y2));
-
-  C.Pen.Style := psSolid;
+  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ThData^.DbgPointsCount > 0 then
   begin
@@ -1090,25 +1115,14 @@ begin
 
         ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
 
-        case ThPoint^.PointType of
-          ptStart, ptStop:
-            C.Pen.Color := clGreen;
-          ptException:
-            C.Pen.Color := clRed;
-          ptPerfomance:
-            C.Pen.Color := clGreen;
-        end;
-
         T1 := ProcPoint^.FromStart;
         OffsetT1 := T1 div F;
         X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
-        if (X1 < R.Left) then
-          Continue;
-        if (X1 > R.Right) then
-          Continue;
 
-        C.MoveTo(X1, Y1);
-        C.LineTo(X1, Y2);
+        if (X1 < R.Left) then Continue;
+        if (X1 > R.Right) then Continue;
+
+        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
       finally
         Inc(I);
       end;

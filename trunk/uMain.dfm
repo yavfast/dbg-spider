@@ -1172,16 +1172,16 @@ object MainForm: TMainForm
       object rbgProject: TRibbonGroup
         Left = 4
         Top = 3
-        Width = 197
+        Width = 177
         Height = 86
         ActionManager = amMain
         Caption = 'Project'
         GroupIndex = 0
       end
       object rbgApplication: TRibbonGroup
-        Left = 203
+        Left = 183
         Top = 3
-        Width = 122
+        Width = 102
         Height = 86
         ActionManager = amMain
         Caption = 'Application'
@@ -1189,9 +1189,9 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpDebug: TRibbonGroup
-        Left = 327
+        Left = 287
         Top = 3
-        Width = 121
+        Width = 101
         Height = 86
         ActionManager = amMain
         Caption = 'Debug'
@@ -1199,7 +1199,7 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpTimeLineSettings: TRibbonGroup
-        Left = 450
+        Left = 390
         Top = 3
         Width = 97
         Height = 86
@@ -1209,7 +1209,7 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpViewOptions: TRibbonGroup
-        Left = 549
+        Left = 489
         Top = 3
         Width = 118
         Height = 86
@@ -1329,22 +1329,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 831
+        Width = 838
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 383
+        Width = 376
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 844
+      Left = 851
       Top = 0
-      Width = 374
+      Width = 367
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1368,7 +1368,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 818
+      Width = 825
       Height = 25
       ActionManager = amMain
       Align = alNone
