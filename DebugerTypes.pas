@@ -404,7 +404,7 @@ procedure RaiseDebugCoreException(const Msg: String = '');
 
 implementation
 
-uses Debuger, DebugInfo;
+uses Debuger, DebugInfo, WinAPIUtils;
 
 procedure RaiseDebugCoreException(const Msg: String);
 begin
@@ -463,11 +463,11 @@ var
   Freq: Int64;
 begin
   if State = psActive then
-    QueryPerformanceCounter(Cur)
+    Cur := _QueryPerformanceCounter
   else
     Cur := Ellapsed;
 
-  QueryPerformanceFrequency(Freq);
+  Freq := _QueryPerformanceFrequency;
   Result := ((Cur - Started) * 1000) div Freq;
 end;
 
