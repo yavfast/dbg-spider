@@ -26,11 +26,9 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_UsePackage>vclx;vcl;vclimg;dbrtl;Rave77VCL;bdertl;rtl;vclactnband;vcldb;vcldbx;vcltouch;xmlrtl;dsnap;dsnapcon;TeeUI;Tee;TeeDB;vclib;ibxpress;adortl;IndyCore;IndySystem;IndyProtocols;inet;intrawebdb_100_140;Intraweb_100_140;VclSmp;vclie;websnap;webdsnap;inetdb;inetdbbde;inetdbxpress;soaprtl;vclribbon;dbexpress;DbxCommonDriver;DataSnapIndy10ServerTransport;DataSnapProviderClient;DataSnapServer;DbxClientDriver;DBXInterBaseDriver;DBXMySQLDriver;dbxcds;DBXFirebirdDriver;DBXSybaseASEDriver;DBXSybaseASADriver;DBXOracleDriver;DBXMSSQLDriver;DBXInformixDriver;DBXDb2Driver;GanttPackage;VirtualTreesR;JclDeveloperTools;Jcl;JclVcl;JclContainers;JvCore;JvSystem;JvStdCtrls;JvAppFrm;JvBands;JvDB;JvDlgs;JvBDE;JvControls;JvCmp;JvCrypt;JvCustom;JvDocking;JvDotNetCtrls;JvGlobus;JvHMI;JvJans;JvManagedThreads;JvMM;JvNet;JvPageComps;JvPascalInterpreter;JvPluginSystem;JvPrintPreview;JvRuntimeDesign;JvTimeFramework;JvWizards;JvXPCtrls;acnt2010_R</DCC_UsePackage>
-			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 			<DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Bindings;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Locale>1049</VerInfo_Locale>
-			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_UnitSearchPath>C:\Projects\JVCL\jcl\jcl\source\common;C:\Projects\JVCL\jcl\jcl\source\windows;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<BRCC_IncludePath>C:\Projects\Spider\JCL\source\common;C:\Projects\Spider\JCL\source\include;C:\Projects\Spider\JCL\source\include\jedi;C:\Projects\Spider\JCL\source\windows;C:\Projects\Spider\JCL\source;$(BRCC_IncludePath)</BRCC_IncludePath>
 			<DCC_DcuOutput>dcu</DCC_DcuOutput>
@@ -89,6 +87,7 @@
 			<DCCReference Include="uSelectSource.pas">
 				<Form>fmSelectSource</Form>
 			</DCCReference>
+			<DCCReference Include="WinAPIUtils.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
@@ -121,7 +120,7 @@
 						<VersionInfo Name="MajorVer">0</VersionInfo>
 						<VersionInfo Name="MinorVer">1</VersionInfo>
 						<VersionInfo Name="Release">1</VersionInfo>
-						<VersionInfo Name="Build">86</VersionInfo>
+						<VersionInfo Name="Build">104</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -133,7 +132,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName"/>
 						<VersionInfoKeys Name="FileDescription"/>
-						<VersionInfoKeys Name="FileVersion">0.1.1.86</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">0.1.1.104</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright"/>
 						<VersionInfoKeys Name="LegalTrademarks"/>

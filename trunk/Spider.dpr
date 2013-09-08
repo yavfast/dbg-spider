@@ -21,7 +21,8 @@ uses
   uProjectOptions in 'uProjectOptions.pas' {fmProjectOptions},
   uSpiderOptions in 'uSpiderOptions.pas',
   uShareData in 'uShareData.pas' {dmShareData: TDataModule},
-  uSelectSource in 'uSelectSource.pas' {fmSelectSource};
+  uSelectSource in 'uSelectSource.pas' {fmSelectSource},
+  WinAPIUtils in 'WinAPIUtils.pas';
 
 {$R *.res}
 

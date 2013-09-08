@@ -306,7 +306,7 @@ implementation
 {$R *.dfm}
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
-  uProjectOptions, SynEditTypes;
+  uProjectOptions, SynEditTypes, WinAPIUtils;
 
 
 type
@@ -940,13 +940,13 @@ begin
   if ProcData^.State <> psActive then
     T2 := ProcData^.Ellapsed
   else
-    QueryPerformanceCounter(T2);
+    T2 := _QueryPerformanceCounter;
 
   T2 := T2 - ProcData^.Started;
 
   Offset := CurOffset * _TicksPerSec;
 
-  QueryPerformanceFrequency(F); // in 1 sec
+  F := _QueryPerformanceFrequency; // in 1 sec
 
   F := F div _TicksPerSec;
 
@@ -1071,14 +1071,14 @@ begin
   if ThData^.State = tsFinished then
     T2 := T1 + ThData^.Ellapsed
   else
-    QueryPerformanceCounter(T2);
+    T2 := _QueryPerformanceCounter;
 
   T1 := T1 - gvDebugInfo.Debuger.ProcessData.Started;
   T2 := T2 - gvDebugInfo.Debuger.ProcessData.Started;
 
   Offset := CurOffset * _TicksPerSec;
 
-  QueryPerformanceFrequency(F); // in 1 sec
+  F := _QueryPerformanceFrequency; // in 1 sec
 
   F := F div _TicksPerSec;
 
@@ -2628,11 +2628,6 @@ begin
   end;
 
   Sender.Treeview.ClientWidth := W;
-
-//  if Sender.Treeview.Parent is TPanel then
-//  begin
-//    TPanel(Sender.Treeview.Parent).Width := Sender.Treeview.Width;
-//  end;
 end;
 
 procedure TMainForm.vstThreadsDrawText(Sender: TBaseVirtualTree;
@@ -2671,14 +2666,8 @@ begin
 end;
 
 function TMainForm.EllapsedToTime(const Ellapsed: UInt64): String;
-var
-  FT: TFileTime;
-  DT: TDateTime;
 begin
-  FT := Int64ToFileTime(Ellapsed);
-  DT := FileTimeToDateTime(FT);
-
-  Result := FormatDateTime('nn:ss.zzz', DT);
+  Result := FormatDateTime('nn:ss.zzz', Int64ToDateTime(Ellapsed));
 end;
 
 procedure TMainForm.vstThreadsGetText(Sender: TBaseVirtualTree;

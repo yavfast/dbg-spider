@@ -18,10 +18,6 @@ procedure FreeList(var L: TList);
 
 function IncPointer(Ptr: Pointer; Offset: Integer): Pointer; inline;
 
-function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
-function FileTimeToInt64(const FileTime: TFileTime): UInt64;
-function Int64ToFileTime(const Value: UInt64): TFileTime;
-
 procedure SplitStr(const Str: String; const Delimiter: Char; var StrList: TStringArray);
 
 function GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String;
@@ -159,31 +155,6 @@ begin
   finally
     FreeAndNil(SL);
   end;
-end;
-
-function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
-var
-  ModifiedTime: TFileTime;
-  SystemTime: TSystemTime;
-begin
-  Result := 0;
-  if (FileTime.dwLowDateTime = 0) and (FileTime.dwHighDateTime = 0) then
-    Exit;
-
-  if FileTimeToLocalFileTime(FileTime, ModifiedTime) then
-    if FileTimeToSystemTime(ModifiedTime, SystemTime) then
-      Result := SystemTimeToDateTime(SystemTime);
-end;
-
-function FileTimeToInt64(const FileTime: TFileTime): UInt64;
-begin
-  Result := UInt64(UInt64(FileTime.dwHighDateTime) shl 32) or FileTime.dwLowDateTime;
-end;
-
-function Int64ToFileTime(const Value: UInt64): TFileTime;
-begin
-  Result.dwLowDateTime := DWORD(Value);
-  Result.dwHighDateTime := DWORD(Value shr 32);
 end;
 
 function IncPointer(Ptr: Pointer; Offset: Integer): Pointer;

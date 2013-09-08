@@ -135,9 +135,6 @@ type
 
     function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): Boolean;
     function AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
-
-    function GetProcessCPUTime: UInt64;
-    function GetThreadCPUTime(ThreadData: PThreadData): UInt64;
   public
     constructor Create();
     destructor Destroy; override;
@@ -261,7 +258,7 @@ var
 implementation
 
 uses
-  RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes;
+  RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes, WinAPIUtils;
 
 type
   TCollectList<T> = class(TBaseCollectList)
@@ -348,11 +345,6 @@ begin
   Offset := Index mod FSegSize;
 end;
 
-
-function QueryThreadCycleTime(ThreadHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryThreadCycleTime';
-function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryProcessCycleTime';
-function DebugBreakProcess(Process: THandle): BOOL; stdcall; external kernel32 name 'DebugBreakProcess';
-
 function _DbgPerfomanceHook(pvParam: Pointer): DWORD; stdcall;
 begin
   Result := DWORD(@_DbgPerfomanceHook);
@@ -360,11 +352,6 @@ end;
 
 const
   BPOpcode: Byte = $CC;
-
-var
-  _FreqPerSec: Int64 = 0;
-  _FreqPerMSec: Int64 = 0;
-
 
 function Check(const Value: Boolean): Boolean; //inline;
 begin
@@ -434,20 +421,17 @@ begin
     ptPerfomance:
       begin
         // Относительное время выполнения
-        Cur := FProcessData.Ellapsed;
-        ThreadData^.Ellapsed := Cur - ThreadData^.Started;
+        ThreadData^.Ellapsed := FProcessData.Ellapsed - ThreadData^.Started;
 
         // Сохраняем время CPU
         PrevTime := ThreadData^.CPUTime;
-        ThreadData^.CPUTime := GetThreadCPUTime(ThreadData);
+        ThreadData^.CPUTime := GetThreadCPUTime(ThreadData^.ThreadHandle);
         Delta := ThreadData^.CPUTime - PrevTime;
 
         // Счетчик таймера CPU
-        if QueryThreadCycleTime(ThreadData^.ThreadHandle, @Cur) then
-        begin
-          Prev := ThreadData^.ThreadEllapsed;
-          ThreadData^.ThreadEllapsed := Cur;
-        end;
+        Cur := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
+        Prev := ThreadData^.ThreadEllapsed;
+        ThreadData^.ThreadEllapsed := Cur;
 
         // Добавляем инфу, когда поток активен
         Result := (Delta > 0);
@@ -474,10 +458,9 @@ begin
             ThreadData^.Ellapsed :=
               (FProcessData.Started + FProcessData.DbgPointByIdx(ThPoint^.PerfIdx)^.FromStart) - ThreadData^.Started;
 
-            ThreadData^.CPUTime := GetThreadCPUTime(ThreadData);
+            ThreadData^.CPUTime := GetThreadCPUTime(ThreadData^.ThreadHandle);
 
-            if QueryThreadCycleTime(ThreadData^.ThreadHandle, @Cur) then
-              ThreadData^.ThreadEllapsed := Cur;
+            ThreadData^.ThreadEllapsed := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
           end;
         ptException:
           begin
@@ -511,10 +494,9 @@ var
 begin
   Result := False;
 
-  if not QueryPerformanceCounter(PCur) then
-    RaiseDebugCoreException();
+  PCur := _QueryPerformanceCounter;
 
-  CurTime := GetProcessCPUTime;
+  CurTime := GetProcessCPUTime(FProcessData.AttachedProcessHandle);
 
   Delta := 0;
   PPrev := 0;
@@ -528,10 +510,7 @@ begin
     ptStop:
       begin
         FProcessData.Ellapsed := PCur;
-
-        If QueryProcessCycleTime(FProcessData.AttachedProcessHandle, @Cur) then
-          FProcessData.CPUEllapsed := Cur;
-
+        FProcessData.CPUEllapsed := _QueryProcessCycleTime(FProcessData.AttachedProcessHandle);
         FProcessData.CPUTime := CurTime;
 
         Result := True;
@@ -543,13 +522,9 @@ begin
         FProcessData.Ellapsed := PCur;
 
         // дельта счетчика таймера CPU
-        If QueryProcessCycleTime(FProcessData.AttachedProcessHandle, @Cur) then
-        begin
-          Prev := FProcessData.CPUEllapsed;
-          FProcessData.CPUEllapsed := Cur;
-        end
-        else
-          RaiseDebugCoreException();
+        Cur := _QueryProcessCycleTime(FProcessData.AttachedProcessHandle);
+        Prev := FProcessData.CPUEllapsed;
+        FProcessData.CPUEllapsed := Cur;
 
         // Время CPU процесса
         PrevTime := FProcessData.CPUTime;
@@ -835,7 +810,7 @@ begin
   FProcessData.BaseOfImage := DebugEvent^.CreateProcessInfo.lpBaseOfImage;
   FProcessData.MainThreadID := DebugEvent^.dwThreadId;
 
-  QueryPerformanceCounter(FProcessData.Started);
+  FProcessData.Started := _QueryPerformanceCounter;
   FProcessData.DbgPoints := TCollectList<TProcessPoint>.Create;
   FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1000);
 
@@ -1196,15 +1171,6 @@ begin
   end;
 end;
 
-function TDebuger.GetProcessCPUTime: UInt64;
-var
-  CT, ET, KT, UT: TFileTime;
-begin
-  Result := 0;
-  if GetProcessTimes(FProcessData.AttachedProcessHandle, CT, ET, KT, UT) then
-    Result := FileTimeToInt64(KT) + FileTimeToInt64(UT);
-end;
-
 function TDebuger.GetRegisters(const ThreadID: TThreadId): TContext;
 var
   ThData: PThreadData;
@@ -1280,15 +1246,6 @@ end;
 function TDebuger.GetThreadCount: Integer;
 begin
   Result := FThreadList.Count;
-end;
-
-function TDebuger.GetThreadCPUTime(ThreadData: PThreadData): UInt64;
-var
-  CT, ET, KT, UT: TFileTime;
-begin
-  Result := 0;
-  if GetThreadTimes(ThreadData^.ThreadHandle, CT, ET, KT, UT) then
-    Result := FileTimeToInt64(KT) + FileTimeToInt64(UT);
 end;
 
 function TDebuger.GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
@@ -2446,37 +2403,48 @@ const
 
 procedure TDebuger.UpdateHardwareBreakpoints(const ThreadID: TThreadId);
 var
-  Context: TContext;
+  Context: PContext;
   I: THWBPIndex;
   ThData: PThreadData;
+  Breakpoint: PHardwareBreakpoint;
 begin
   ThData := GetThreadData(ThreadID);
   if ThData = nil then
     Exit;
 
-  ZeroMemory(@Context, SizeOf(TContext));
-  Context.ContextFlags := CONTEXT_DEBUG_REGISTERS;
+  GetMem(Context, SizeOf(TContext));
+  try
+    ZeroMemory(@Context, SizeOf(TContext));
+    Context.ContextFlags := CONTEXT_DEBUG_REGISTERS;
 
-  for I := 0 to 3 do
-  begin
-    if not ThData^.Breakpoint.Active[I] then
-      Continue;
-    if ThData^.Breakpoint.Address[I] <> nil then
+    Breakpoint := ThData^.Breakpoint;
+
+    for I := 0 to 3 do
     begin
-      Context.Dr7 := Context.Dr7 or DR7_SET_LOC_ON;
-      case I of
-        0: Context.Dr0 := DWORD(ThData^.Breakpoint.Address[I]);
-        1: Context.Dr1 := DWORD(ThData^.Breakpoint.Address[I]);
-        2: Context.Dr2 := DWORD(ThData^.Breakpoint.Address[I]);
-        3: Context.Dr3 := DWORD(ThData^.Breakpoint.Address[I]);
-      end;
-      Context.Dr7 := Context.Dr7 or DR_On[I];
-      Context.Dr7 := Context.Dr7 or DR_Mode[I, ThData^.Breakpoint.Mode[I]];
-      Context.Dr7 := Context.Dr7 or DR_Size[I, ThData^.Breakpoint.Size[I]];
-    end;
-  end;
+      if not Breakpoint.Active[I] then
+        Continue;
 
-  Check(SetThreadContext(ThData^.ThreadHandle, Context));
+      if Breakpoint.Address[I] <> nil then
+      begin
+        Context.Dr7 := Context.Dr7 or DR7_SET_LOC_ON;
+
+        case I of
+          0: Context.Dr0 := DWORD(Breakpoint.Address[I]);
+          1: Context.Dr1 := DWORD(Breakpoint.Address[I]);
+          2: Context.Dr2 := DWORD(Breakpoint.Address[I]);
+          3: Context.Dr3 := DWORD(Breakpoint.Address[I]);
+        end;
+
+        Context.Dr7 := Context.Dr7 or DR_On[I];
+        Context.Dr7 := Context.Dr7 or DR_Mode[I, Breakpoint.Mode[I]];
+        Context.Dr7 := Context.Dr7 or DR_Size[I, Breakpoint.Size[I]];
+      end;
+    end;
+
+    Check(SetThreadContext(ThData^.ThreadHandle, Context^));
+  finally
+    FreeMem(Context);
+  end;
 end;
 
 procedure TDebuger.UpdateMemoryInfoObjectTypes;
@@ -2545,9 +2513,6 @@ end;
 
 
 initialization
-  QueryPerformanceFrequency(_FreqPerSec);
-  _FreqPerMSec := _FreqPerSec div 1000;
-
   _DbgMemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
 
 finalization
