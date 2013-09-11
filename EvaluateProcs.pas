@@ -636,7 +636,7 @@ Begin
                         If Member.DataType <> Nil Then
                         Begin
                             MemberAddr := Pointer(Cardinal(Address) + (TUInteger(Member.BitOffset) Div 8));
-                            Value := GetValue(ToStringData.DebugInfo.Debuger, Member.DataType, MemberAddr, True, BriefMode);
+                            Value := GetValue(gvDebuger, Member.DataType, MemberAddr, True, BriefMode);
                             MemberValue := VariantToString(Value, ToStringData);
                         End
                         Else MemberValue := cPrefixWarning + '''???'''
@@ -1182,7 +1182,7 @@ Begin
                 If Supports(IUnknown(TVarData(Value).VUnknown), IReferenceAccess, ReferenceAccess) Then
                 Begin
                     CalculateData.BriefMode := BriefMode;
-                    CalculateData.DebugInfo := FuncInfo.UnitInfo.DebugInfo;
+                    CalculateData.DebugInfo := gvDebugInfo;
                     Result := ReferenceAccess.TryReference(CalculateData, FieldName, Value);
                 End;
         Else
@@ -1213,7 +1213,7 @@ Begin
         If Result Then
         Begin
             CalculateData.BriefMode := False;
-            CalculateData.DebugInfo := FuncInfo.UnitInfo.DebugInfo;
+            CalculateData.DebugInfo := gvDebugInfo;
             RequireValue(CalculateData, SelfValue);
             Result := TryGetValueAddress(SelfValue, Address);
             If Result Then

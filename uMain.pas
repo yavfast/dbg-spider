@@ -1011,7 +1011,7 @@ begin
   if ThData^.State = tsFinished then
     T2 := ThData^.DbgPointByIdx(ThData^.DbgPointsCount - 1)^.PerfIdx
   else
-    T2 := gvDebugInfo.Debuger.ProcessData.CurDbgPointIdx;
+    T2 := gvDebuger.ProcessData.CurDbgPointIdx;
 
   X1 := R.Left + Integer(T1 - CurOffset);
   X2 := R.Left + Integer(T2 - CurOffset);
@@ -1073,8 +1073,8 @@ begin
   else
     T2 := _QueryPerformanceCounter;
 
-  T1 := T1 - gvDebugInfo.Debuger.ProcessData.Started;
-  T2 := T2 - gvDebugInfo.Debuger.ProcessData.Started;
+  T1 := T1 - gvDebuger.ProcessData.Started;
+  T2 := T2 - gvDebuger.ProcessData.Started;
 
   Offset := CurOffset * _TicksPerSec;
 
@@ -1283,16 +1283,16 @@ var
   PW: Integer;
 begin
   Result := 0;
-  if Assigned(gvDebugInfo) and Assigned(gvDebugInfo.Debuger) and
-    (gvDebugInfo.Debuger.ProcessData.DbgPointsCount > 0)
+  if Assigned(gvDebugInfo) and Assigned(gvDebuger) and
+    (gvDebuger.ProcessData.DbgPointsCount > 0)
   then
   begin
     PW := vdtTimeLine.Header.Columns[0].Width - vdtTimeLine.ClientWidth;
     F := (-vdtTimeLine.OffsetX) / PW;
     if acCPUTimeLine.Checked then
-      Result := (Trunc(gvDebugInfo.Debuger.ProcessData.CurDbgPointIdx * F) div 100) * 100
+      Result := (Trunc(gvDebuger.ProcessData.CurDbgPointIdx * F) div 100) * 100
     else
-      Result := Trunc((gvDebugInfo.Debuger.ProcessData.Ellapsed_MSec div 1000) * F);
+      Result := Trunc((gvDebuger.ProcessData.Ellapsed_MSec div 1000) * F);
   end;
 end;
 
@@ -1669,8 +1669,9 @@ begin
 
   UpdateStatusInfo;
 
-  if not Assigned(gvDebugInfo) or not Assigned(gvDebugInfo.Debuger) or
-    (gvDebugInfo.Debuger.DbgState in [dsNone, dsStoped]) then Exit;
+  if not Assigned(gvDebugInfo) or not Assigned(gvDebuger) or
+    (gvDebuger.DbgState in [dsNone, dsStoped])
+  then Exit;
 
   UpdateTrees;
 

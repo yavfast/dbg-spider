@@ -51,7 +51,7 @@ Type
     private
         FNameIdList: TNameIdList;
         FFreeItems: Boolean;
-    function GetNameInfoItem(const Index: Integer): TNameInfo;
+        function GetNameInfoItem(const Index: Integer): TNameInfo;
     protected
         procedure Notify(Ptr: Pointer; Action: TListNotification); override;
         procedure CheckNameIdList;
@@ -239,16 +239,18 @@ Type
         function ParamsAsString: String;
     End;
 
+    TUnitType = (utUnknown, utSystem, utProject, utExternal);
+
     TUnitInfo = Class(TSegmentCodeInfo)
     public
-        DebugInfo   : TDebugInfo;
         Segments    : TList;
         UsedUnits   : TStringList;
+        UnitType    : TUnitType;
 
         CodeSize    : Cardinal;
         DataSize    : Cardinal;
 
-        Constructor Create(ADebugInfo: TDebugInfo);
+        Constructor Create;
         Destructor  Destroy; Override;
 
         Procedure   Clear; Override;
@@ -282,15 +284,16 @@ Type
 
     TDebugInfoProgressCallback = procedure(const Action: String; const Progress: Integer) of object;
 
+    TDbgSourceType = (stUnknown, stSystem, stProject, stExternal);
     TDbgSourceDirs = TDictionary<String,String>;
+    TDbgSourceList = Array[Low(TDbgSourceType)..High(TDbgSourceType)] of TDbgSourceDirs;
 
     TDebugInfoClass = Class Of TDebugInfo;
 
     TDebugInfo = Class
     Private
-        FDebuger   : TDebuger;
-        FSourceDirs: String;
-        FDirs      : TDbgSourceDirs;
+        //FSourceDirs: String;
+        FDirs      : TDbgSourceList;
         FUnits     : TStringList;
         FDbgLog    : TDbgLog;
 
@@ -298,6 +301,8 @@ Type
         FDebugInfoLoaded : Boolean;
 
         FDebugInfoProgressCallback: TDebugInfoProgressCallback;
+        function GetDirs(const SourceType: TDbgSourceType): TDbgSourceDirs;
+        procedure ClearDirs;
     Protected
         FDebugInfoType : String;
         FUseShortNames: Boolean;
@@ -312,12 +317,12 @@ Type
         function ParseVarName(VarInfo: TVarInfo): String; virtual;
         function ParseStructMemberName(StructMember: TStructMember): String; virtual;
     Public
-        Constructor Create(ADebuger: TDebuger);
+        Constructor Create;
         Destructor  Destroy; Override;
 
         Procedure ClearDebugInfo; Virtual;
         Function  HasDebugInfo(Const FileName : String) : Boolean; Virtual; abstract;
-        Function  ReadDebugInfo(Const FileName : String; const SourceDirs : String = '') : Boolean; Virtual;
+        Function  ReadDebugInfo(Const FileName : String) : Boolean; Virtual;
         Function  GetFileCount : Integer; Virtual;
         Function  GetFile(Index : Integer) : String; Virtual;
         Function  GetTypeInfo(Const TypeName : String) : TTypeInfo; Virtual;
@@ -329,8 +334,8 @@ Type
         Function  GetLineInformation(Addr : Pointer; Var UnitName : String;
           Var FuncName : String; Var Line : LongInt; GetPrevLine : Boolean) : TFindResult; Virtual; abstract;
 
-        procedure UpdateSourceDirs; virtual;
-        procedure AddSourceDir(const Dir: String; const Recursive: Boolean = True); virtual;
+        procedure UpdateSourceDirs(const SourceType: TDbgSourceType; const SourceDirs: String); virtual;
+        procedure AddSourceDir(const SourceType: TDbgSourceType; const Dir: String; const Recursive: Boolean = True); virtual;
         function FullUnitName(const UnitName: String): String;
 
         Function  MakeFuncDbgFullName(Const ClassName, MethodName : AnsiString) : AnsiString; Virtual; abstract;
@@ -370,9 +375,8 @@ Type
         Function  IsValidStackAddr(Const Addr: Pointer; const ThreadID: TThreadId) : Boolean;
         Function  IsValidDataAddr (Const Addr: Pointer; const ThreadID: TThreadId) : Boolean;
 
-        property Debuger: TDebuger read FDebuger;
-        Property SourceDirs: String read FSourceDirs;
-        Property Dirs: TDbgSourceDirs Read FDirs;
+        //Property SourceDirs: String read FSourceDirs;
+        Property Dirs[const SourceType: TDbgSourceType]: TDbgSourceDirs Read GetDirs;
         Property Units: TStringList Read FUnits;
 
         Property DbgLog: TDbgLog read FDbgLog;
@@ -407,13 +411,14 @@ end;
 { TDebugInfo }
 
 {..............................................................................}
-Constructor TDebugInfo.Create(ADebuger: TDebuger);
+Constructor TDebugInfo.Create;
+var
+  ST: TDbgSourceType;
 Begin
     Inherited Create;
 
-    FDebuger := ADebuger;
-
-    FDirs := TDbgSourceDirs.Create(4096);
+    for ST := Low(TDbgSourceType) to High(TDbgSourceType) do
+      FDirs[ST] := TDbgSourceDirs.Create(4096);
 
     FUnits := TStringList.Create;
 
@@ -430,11 +435,15 @@ End;
 
 {..............................................................................}
 Destructor TDebugInfo.Destroy;
+var
+  ST: TDbgSourceType;
 Begin
     ClearDebugInfo;
 
     FreeAndNil(FUnits);
-    FreeAndNil(FDirs);
+
+    for ST := Low(TDbgSourceType) to High(TDbgSourceType) do
+      FreeAndNil(FDirs[ST]);
 
     FreeAndNil(FDbgLog);
 
@@ -449,7 +458,7 @@ end;
 {..............................................................................}
 
 {..............................................................................}
-procedure TDebugInfo.AddSourceDir(const Dir: String; const Recursive: Boolean);
+procedure TDebugInfo.AddSourceDir(const SourceType: TDbgSourceType; const Dir: String; const Recursive: Boolean);
 const
   _PAS_EXTS: array[0..2] of String = ('*.pas', '*.inc', '*.dpr');
 var
@@ -469,14 +478,14 @@ begin
         FileName := Files[I];
         ShortFileName := AnsiLowerCase(ExtractFileName(FileName));
 
-        FDirs.AddOrSetValue(ShortFileName, FileName);
+        FDirs[SourceType].AddOrSetValue(ShortFileName, FileName);
       end;
   end;
 
   ChildDirs := TDirectory.GetDirectories(Dir);
   if Length(ChildDirs) > 0 then
     for I := 0 to High(ChildDirs) do
-      AddSourceDir(ChildDirs[I], True);
+      AddSourceDir(SourceType, ChildDirs[I], True);
 end;
 
 Function TDebugInfo.CheckAddr(Const Addr : Pointer): Boolean;
@@ -510,7 +519,7 @@ Begin
     Begin
         FDebugInfoLoaded := False;
 
-        FDirs.Clear;
+        ClearDirs;
         ClearStringList(FUnits);
 
         FDbgLog.ClearLog;
@@ -518,17 +527,25 @@ Begin
         FExeFileName := '';
     End;
 End;
+
+procedure TDebugInfo.ClearDirs;
+var
+  ST: TDbgSourceType;
+begin
+  for ST := Low(TDbgSourceType) to High(TDbgSourceType) do
+    FDirs[ST].Clear;
+end;
 {..............................................................................}
 
 {..............................................................................}
-Function TDebugInfo.ReadDebugInfo(Const FileName : String; const SourceDirs : String = '') : Boolean;
+Function TDebugInfo.ReadDebugInfo(Const FileName : String) : Boolean;
 Begin
     Result := True;
 
     If Not(FDebugInfoLoaded And SameText(FExeFileName, FileName)) Then
     Begin
-        FDirs.Clear;
-        FSourceDirs := SourceDirs;
+        ClearDirs;
+        //FSourceDirs := '';
 
         Result := DoReadDebugInfo(FileName, True);
 
@@ -537,18 +554,18 @@ Begin
             FExeFileName := FileName;
             FDebugInfoLoaded := True;
 
-            UpdateSourceDirs;
+            //UpdateSourceDirs;
         End;
     End;
 End;
 
-procedure TDebugInfo.UpdateSourceDirs;
+procedure TDebugInfo.UpdateSourceDirs(const SourceType: TDbgSourceType; const SourceDirs: String);
 var
   SL: TStringList;
   I: Integer;
   S: String;
 begin
-  FDirs.Clear;
+  FDirs[SourceType].Clear;
 
   SL := TStringList.Create;
   try
@@ -556,7 +573,7 @@ begin
     SL.StrictDelimiter := True;
     SL.Duplicates := dupIgnore;
 
-    SL.DelimitedText := FSourceDirs;
+    SL.DelimitedText := SourceDirs;
 
     for I := 0 to SL.Count - 1 do
     begin
@@ -565,7 +582,7 @@ begin
       begin
         S := ExcludeTrailingPathDelimiter(S);
         if DirectoryExists(S) then
-          AddSourceDir(S, True);
+          AddSourceDir(SourceType, S, True);
       end;
     end;
   finally
@@ -591,18 +608,25 @@ End;
 function TDebugInfo.FullUnitName(const UnitName: String): String;
 var
   Res: String;
+  ST: TDbgSourceType;
 begin
-  Res := ExtractFileName(UnitName);
+  Res := '';
 
-  if not FDirs.TryGetValue(AnsiLowerCase(Res), Result) then
+  for ST := Low(TDbgSourceType) to High(TDbgSourceType) do
   begin
-    if not SameText(ExtractFileExt(Res), '.pas') then
-    begin
-      Res := Res + '.pas';
-      if FDirs.TryGetValue(AnsiLowerCase(Res), Result) then Exit;
-    end;
+    Res := ExtractFileName(UnitName);
 
-    Result := Res;
+    if not FDirs[ST].TryGetValue(AnsiLowerCase(Res), Result) then
+    begin
+      if not SameText(ExtractFileExt(Res), '.pas') then
+      begin
+        Res := Res + '.pas';
+        if FDirs[ST].TryGetValue(AnsiLowerCase(Res), Result) then Exit;
+      end;
+
+      Result := Res;
+    end
+    else Exit;
   end;
 end;
 
@@ -792,7 +816,7 @@ Begin
     End
     Else
     Begin
-        ThData := FDebuger.UpdateThreadContext(ThreadID);
+        ThData := gvDebuger.UpdateThreadContext(ThreadID);
 
         if ThData = Nil then Exit;
 
@@ -810,17 +834,17 @@ Begin
             If (EIP = StackEntry.FuncInfo.Address) Then
             Begin
                 StackEntry.EBP := nil;
-                FDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
+                gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
                 AddStackEntry(ESPV, EBP);
             End
             Else
             Begin
                 StackEntry.EBP := nil;
-                FDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
+                gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
                 // push ebp; move ebp, esp;
                 If (ESPV = EBP) Then
                 Begin
-                    FDebuger.ReadData(Pointer(Cardinal(ESP) + 4), @ESPV, SizeOf(ESPV));
+                    gvDebuger.ReadData(Pointer(Cardinal(ESP) + 4), @ESPV, SizeOf(ESPV));
                     AddStackEntry(ESPV, EBP);
                 End;
             End;
@@ -830,10 +854,10 @@ Begin
         Begin
             StackEntry.EBP := nil;
             // ret;
-            FDebuger.ReadData(EIP, @OpCode, SizeOf(Byte));
+            gvDebuger.ReadData(EIP, @OpCode, SizeOf(Byte));
             If OpCode In [$C3, $CB] Then
             Begin
-                FDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
+                gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
                 AddStackEntry(ESPV, EBP);
             End;
         End;
@@ -841,16 +865,19 @@ Begin
 
     While IsValidAddr(EBP) Do
     Begin
-        FDebuger.ReadData(IncPointer(EBP, 4), @EIP, SizeOf(Pointer));
-        FDebuger.ReadData(EBP, @EBP, SizeOf(Pointer));
+        gvDebuger.ReadData(IncPointer(EBP, 4), @EIP, SizeOf(Pointer));
+        gvDebuger.ReadData(EBP, @EBP, SizeOf(Pointer));
 
         If AddStackEntry(EIP, EBP) = Nil Then
             Break;
     End;
 End;
-{..............................................................................}
 
-{..............................................................................}
+function TDebugInfo.GetDirs(const SourceType: TDbgSourceType): TDbgSourceDirs;
+begin
+  Result := FDirs[SourceType];
+end;
+
 function TDebugInfo.ParseConstName(ConstInfo: TConstInfo): String;
 begin
   Result := String(ConstInfo.Name);
@@ -914,13 +941,13 @@ Begin
     if isUnicode then
     begin
       SetLength(OutputStringW, StrSize div SizeOf(WideChar));
-      if not FDebuger.ReadData(StrAddr, @OutputStringW, StrSize) then
+      if not gvDebuger.ReadData(StrAddr, @OutputStringW, StrSize) then
         OutputStringW := '';
     end
     else
     begin
       SetLength(OutputStringA, StrSize);
-      if not FDebuger.ReadData(StrAddr, @OutputStringA, StrSize) then
+      if not gvDebuger.ReadData(StrAddr, @OutputStringA, StrSize) then
         OutputStringA := '';
 
       OutputStringW := WideString(OutputStringA);
@@ -956,12 +983,12 @@ End;
 
 function TDebugInfo.IsValidAddr(const Addr: Pointer): Boolean;
 Begin
-    Result := Debuger.IsValidAddr(Addr);
+    Result := gvDebuger.IsValidAddr(Addr);
 end;
 
 function TDebugInfo.IsValidCodeAddr(const Addr: Pointer): Boolean;
 Begin
-    Result := Debuger.IsValidCodeAddr(Addr);
+    Result := gvDebuger.IsValidCodeAddr(Addr);
 end;
 
 function TDebugInfo.IsValidDataAddr(const Addr: Pointer; const ThreadID: TThreadId): Boolean;
@@ -979,16 +1006,16 @@ Var
 Begin
     Result := False;
 
-    ThreadData := FDebuger.GetThreadData(ThreadID);
+    ThreadData := gvDebuger.GetThreadData(ThreadID);
 
     if ThreadData <> nil then
     begin
-        ThreadContext := FDebuger.GetRegisters(ThreadID);
+        ThreadContext := gvDebuger.GetRegisters(ThreadID);
         If GetThreadSelectorEntry(ThreadData^.ThreadHandle, ThreadContext.SegFs, ldtSel) Then
         Begin
             TIB := Pointer((ldtSel.BaseHi shl 24) Or (ldtSel.BaseMid shl 16) Or (ldtSel.BaseLow));
             TopStack := nil;
-            if FDebuger.ReadData(Pointer(Cardinal(TIB) + 4), @TopStack, SizeOf(Pointer)) { fs:[4] } then
+            if gvDebuger.ReadData(Pointer(Cardinal(TIB) + 4), @TopStack, SizeOf(Pointer)) { fs:[4] } then
               Result := (TopStack <> nil) And (Cardinal(Addr) <= Cardinal(TopStack)) And
                 (Cardinal(Addr) >= (ThreadContext.Esp));
         End;
@@ -1256,13 +1283,12 @@ begin
     inherited Clear;
 end;
 
-constructor TUnitInfo.Create(ADebugInfo: TDebugInfo);
+constructor TUnitInfo.Create;
 begin
     Inherited Create;
 
-    DebugInfo := ADebugInfo;
-
     UsedUnits := TStringList.Create;
+    UnitType  := utUnknown;
     Segments  := TList.Create;
 
     CodeSize := 0;
@@ -1281,7 +1307,7 @@ end;
 
 function TUnitInfo.FullUnitName: String;
 begin
-  Result := DebugInfo.FullUnitName(Name);
+  Result := gvDebugInfo.FullUnitName(Name);
 end;
 
 function TUnitInfo.Name: AnsiString;
@@ -1358,7 +1384,7 @@ end;
 
 function TConstInfo.ValueAsString: String;
 begin
-  Result := UnitInfo.DebugInfo.VarValueAsString(Value);
+  Result := gvDebugInfo.VarValueAsString(Value);
 end;
 
 { TSegmentCodeInfo }
@@ -1532,12 +1558,12 @@ end;
 
 function TStructMember.Alias: AnsiString;
 begin
-  Result := DataType.UnitInfo.DebugInfo.GetNameById(AliasNameId);
+  Result := gvDebugInfo.GetNameById(AliasNameId);
 end;
 
 function TStructMember.MethodName: AnsiString;
 begin
-  Result := DataType.UnitInfo.DebugInfo.GetNameById(MethodNameId);
+  Result := gvDebugInfo.GetNameById(MethodNameId);
 end;
 
 function TStructMember.Name: AnsiString;

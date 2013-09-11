@@ -36,6 +36,10 @@ type
 
     FDbgShareMem: THandle;
 
+    DbgTrackBreakpoints: TTrackBreakpointList;
+    DbgCurTrackAddress: Pointer;
+    //DbgCurTrackBp: PTrackBreakpoint;
+
     // внешние события
     FMainLoopFailed: TNotifyEvent;
     FCreateThread: TCreateThreadEvent;
@@ -62,6 +66,10 @@ type
     function FindMemoryPointer(const Ptr: Pointer): PThreadData;
     procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
     procedure UpdateMemoryInfoObjectTypes;
+
+    procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
+    procedure DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
+    procedure DoRestoreBreakpoint(const Address: Pointer);
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -129,7 +137,7 @@ type
     procedure UpdateHardwareBreakpoints(const ThreadID: TThreadId);
 
     // перевод нити отлаживаемого приложения в режим трассировки
-    procedure SetSingleStepMode(const ThreadID: TThreadId; RestoreEIPAfterBP: Boolean);
+    procedure SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean);
 
     function PerfomancePauseDebug: Boolean;
 
@@ -196,8 +204,12 @@ type
     function GetDllName(lpImageName, lpBaseOfDll: Pointer; var Unicode: Boolean): AnsiString;
 
     // работа с точками остановки
-    function SetBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
+    function SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
     function SetMemoryBreakpoint(Address: Pointer; Size: Cardinal; BreakOnWrite: Boolean; const Description: string): Boolean;
+    procedure SetTrackBreakpoint(const Address: Pointer; FuncInfo: TObject);
+
+    procedure InitDbgTracking(const Capacity: Integer);
+    procedure ClearDbgTracking;
 
     procedure RemoveBreakpoint(Index: Integer);
 
@@ -349,9 +361,6 @@ function _DbgPerfomanceHook(pvParam: Pointer): DWORD; stdcall;
 begin
   Result := DWORD(@_DbgPerfomanceHook);
 end;
-
-const
-  BPOpcode: Byte = $CC;
 
 function Check(const Value: Boolean): Boolean; //inline;
 begin
@@ -683,10 +692,20 @@ begin
   end;
 
   FThreadList.Clear;
-
   FThreadAdvInfoList.Clear;
 
+  ClearDbgTracking;
+
   FDbgState := dsNone;
+end;
+
+procedure TDebuger.ClearDbgTracking;
+begin
+  if Assigned(DbgTrackBreakpoints) then
+  begin
+    DbgTrackBreakpoints.Clear;
+    FreeAndNil(DbgTrackBreakpoints);
+  end;
 end;
 
 constructor TDebuger.Create();
@@ -819,6 +838,8 @@ begin
 
   FProcessData.DbgExceptions := TThreadList.Create;
 
+  DbgTrackBreakpoints := nil;
+
   // Метка старта процесса
   AddProcessPointInfo(ptStart);
 
@@ -829,7 +850,7 @@ begin
 
   // Устанавливаем BreakPoint на точку входа процесса
   if FSetEntryPointBreakPoint then
-    SetBreakpoint(FProcessData.StartAddress, 0, 'Process Entry Point Breakpoint');
+    SetUserBreakpoint(FProcessData.StartAddress, 0, 'Process Entry Point Breakpoint');
 
   if Assigned(FCreateProcess) then
     FCreateProcess(Self, DebugEvent^.dwProcessId, @DebugEvent^.CreateProcessInfo);
@@ -945,6 +966,19 @@ begin
     FMainLoopFailed(Self);
 end;
 
+procedure TDebuger.DoRestoreBreakpoint(const Address: Pointer);
+var
+  OldProtect: DWORD;
+  Dummy: TSysUInt;
+begin
+  Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_READWRITE, OldProtect));
+  try
+    Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
+  finally
+    Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
+  end;
+end;
+
 procedure TDebuger.DoResumeAction(const ThreadID: TThreadId);
 begin
   // здесь будем управлять поведением отладчика
@@ -1043,7 +1077,7 @@ begin
   for Result := 0 to BreakpointCount - 1 do
   begin
     BP := @FBreakpointList[Result];
-    if BP^.bpType <> btBreakpoint then
+    if BP^.bpType <> btUser then
       Continue;
 
     if (BP^.Int3.Address = BreakPointAddr) and ((ThreadID = 0) or (BP^.ThreadId = ThreadId)) then
@@ -1160,7 +1194,7 @@ begin
   Result := -1;
   for I := FromIndex to BreakpointCount - 1 do
   begin
-    if FBreakpointList[I].bpType <> btMemoryBreakpoint then
+    if FBreakpointList[I].bpType <> btMemory then
       Continue;
     if CheckStartAddr(FBreakpointList[I].Memory.RegionStart) and CheckEndAddr(FBreakpointList[I].Memory.RegionStart,
       FBreakpointList[I].Memory.RegionSize) then
@@ -1278,13 +1312,13 @@ begin
   Result := False;
   for I := 0 to BreakpointCount - 1 do
     case FBreakpointList[I].bpType of
-      btBreakpoint:
+      btUser:
         if FBreakpointList[I].Int3.Address = Value.Int3.Address then
         begin
           Result := True;
           Break;
         end;
-      btMemoryBreakpoint:
+      btMemory:
         if CheckIsAddrInRealMemoryBPRegion(I, Value.Memory.Address) or
           CheckIsAddrInRealMemoryBPRegion(I, Pointer(Cardinal(Value.Memory.Address) + Value.Memory.Size - 1)) then
         begin
@@ -1335,6 +1369,11 @@ end;
 function TDebuger.PauseDebug: Boolean;
 begin
   Result := DebugBreakProcess(FProcessData.AttachedProcessHandle);
+end;
+
+procedure TDebuger.InitDbgTracking(const Capacity: Integer);
+begin
+  DbgTrackBreakpoints := TTrackBreakpointList.Create(Capacity);
 end;
 
 function TDebuger.InjectFunc(Func: Pointer; const CodeSize: Cardinal): Pointer;
@@ -1428,13 +1467,29 @@ end;
 
 procedure TDebuger.ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
 var
+  Address: Pointer;
+  TrackBp: PTrackBreakpoint;
+
   ReleaseBP: Boolean;
   BreakPointIndex: Integer;
 begin
   ReleaseBP := False;
   FRemoveCurrentBreakpoint := False;
 
-  BreakPointIndex := GetBPIndex(DebugEvent^.Exception.ExceptionRecord.ExceptionAddress, DebugEvent^.dwThreadId);
+  Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
+  if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
+  begin
+    DbgCurTrackAddress := Address;
+    DoRemoveBreakpoint(Address, TrackBp^.SaveByte);
+    SetSingleStepMode(DebugEvent^.dwThreadId, True);
+    Exit;
+  end
+  else
+  begin
+    DbgCurTrackAddress := nil;
+  end;
+
+  BreakPointIndex := GetBPIndex(Address, DebugEvent^.dwThreadId);
   if BreakPointIndex >= 0 then
   begin
     if Assigned(FBreakPoint) then
@@ -1509,6 +1564,16 @@ procedure TDebuger.ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
 var
   Handled: Boolean;
 begin
+  if DbgCurTrackAddress <> nil then
+  begin
+    DoRestoreBreakpoint(DbgCurTrackAddress);
+    DbgCurTrackAddress := nil;
+    Exit;
+  end;
+
+
+
+
   // ОБрабатываем HWBP
   Handled := ProcessHardwareBreakpoint(DebugEvent);
 
@@ -1524,7 +1589,7 @@ begin
   if FRestoreBPIndex >= 0 then
   begin
     CheckBreakpointIndex(FRestoreBPIndex);
-    if FBreakpointList[FRestoreBPIndex].bpType = btBreakpoint then
+    if FBreakpointList[FRestoreBPIndex].bpType = btUser then
       ToggleInt3Breakpoint(FRestoreBPIndex, True);
     FRestoreBPIndex := -1;
   end;
@@ -1533,7 +1598,7 @@ begin
   if FRestoreMBPIndex >= 0 then
   begin
     CheckBreakpointIndex(FRestoreMBPIndex);
-    if FBreakpointList[FRestoreMBPIndex].bpType = btMemoryBreakpoint then
+    if FBreakpointList[FRestoreMBPIndex].bpType = btMemory then
       ToggleMemoryBreakpoint(FRestoreMBPIndex, True);
     FRestoreMBPIndex := -1;
   end;
@@ -2039,7 +2104,21 @@ begin
   DoEndDebug;
 end;
 
-function TDebuger.SetBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
+procedure TDebuger.DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
+var
+  OldProtect: DWORD;
+  Dummy: TSysUInt;
+begin
+  Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_READWRITE, OldProtect));
+  try
+    Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
+    Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
+  finally
+    Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
+  end;
+end;
+
+function TDebuger.SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
 var
   Breakpoint: TBreakpoint;
   OldProtect: DWORD;
@@ -2047,12 +2126,15 @@ var
 begin
   ZeroMemory(@Breakpoint, SizeOf(TBreakpoint));
 
-  Breakpoint.bpType := btBreakpoint;
+  Breakpoint.bpType := btUser;
   Breakpoint.ThreadId := ThreadId;
   Breakpoint.Active := True;
   Breakpoint.Int3.Address := Address;
   Breakpoint.Description := ShortString(Description);
 
+  DoSetBreakpoint(Address, Breakpoint.Int3.SaveByte);
+
+  (*
   Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_READWRITE, OldProtect));
   try
     Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @Breakpoint.Int3.ByteCode, 1, Dummy));
@@ -2060,11 +2142,10 @@ begin
   finally
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
   end;
+  *)
 
   Result := AddNewBreakPoint(Breakpoint);
 end;
-
-function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall; external kernel32;
 
 procedure TDebuger.SetCloseDebugProcess(const Value: Boolean);
 begin
@@ -2121,7 +2202,7 @@ var
   Index: Integer;
 begin
   Index := GetMBPIndex(Address);
-  if (Index >= 0) and (FBreakpointList[Index].bpType = btMemoryBreakpoint) then
+  if (Index >= 0) and (FBreakpointList[Index].bpType = btMemory) then
   begin
     MBI.BaseAddress := FBreakpointList[Index].Memory.RegionStart;
     MBI.RegionSize := FBreakpointList[Index].Memory.RegionSize;
@@ -2130,7 +2211,7 @@ begin
   else
     Check(VirtualQueryEx(ProcessData.AttachedProcessHandle, Address, MBI, SizeOf(TMemoryBasicInformation)) > 0);
   ZeroMemory(@Breakpoint, SizeOf(TBreakpoint));
-  Breakpoint.bpType := btMemoryBreakpoint;
+  Breakpoint.bpType := btMemory;
   Breakpoint.Description := ShortString(Description);
   Breakpoint.Memory.Address := Address;
   Breakpoint.Memory.Size := Size;
@@ -2176,23 +2257,23 @@ begin
   end;
 end;
 
-function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall; external kernel32;
-
-procedure TDebuger.SetSingleStepMode(const ThreadID: TThreadId; RestoreEIPAfterBP: Boolean);
+procedure TDebuger.SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean);
 var
-  Context: TContext;
   ThData: PThreadData;
 begin
   ThData := GetThreadData(ThreadID);
 
-  ZeroMemory(@Context, SizeOf(TContext));
+  ZeroMemory(ThData^.Context, SizeOf(TContext));
 
-  Context.ContextFlags := CONTEXT_FULL;
-  Check(GetThreadContext(ThData^.ThreadHandle, Context));
+  ThData^.Context^.ContextFlags := CONTEXT_FULL;
+  Check(GetThreadContext(ThData^.ThreadHandle, ThData^.Context^));
+
   if RestoreEIPAfterBP then
-    Dec(Context.Eip);
-  Context.EFlags := Context.EFlags or EFLAGS_TF;
-  Check(SetThreadContext(ThData^.ThreadHandle, Context));
+    Dec(ThData^.Context^.Eip);
+
+  ThData^.Context^.EFlags := ThData^.Context^.EFlags or EFLAGS_TF;
+
+  Check(SetThreadContext(ThData^.ThreadHandle, ThData^.Context^));
 end;
 
 function TDebuger.SetThreadInfo(const ThreadId: TThreadId): PThreadAdvInfo;
@@ -2211,6 +2292,20 @@ begin
   Str := ReadStringA(StrAddr, -1);
   if Str <> '' then
     SetThreadInfo(DebugEvent^.dwThreadId)^.ThreadName := String(Str);
+end;
+
+procedure TDebuger.SetTrackBreakpoint(const Address: Pointer; FuncInfo: TObject);
+var
+  TrackBk: PTrackBreakpoint;
+begin
+  GetMem(TrackBk, SizeOf(TTrackBreakpoint));
+
+  TrackBk^.FuncInfo := FuncInfo;
+  TrackBk^.SaveByte := 0;
+
+  DoSetBreakpoint(Address, TrackBk^.SaveByte);
+
+  DbgTrackBreakpoints.Add(Address, TrackBk);
 end;
 
 function TDebuger.StopDebug: Boolean;
@@ -2253,9 +2348,9 @@ procedure TDebuger.ToggleBreakpoint(Index: Integer; Active: Boolean);
 begin
   CheckBreakpointIndex(Index);
   case FBreakpointList[Index].bpType of
-    btBreakpoint:
+    btUser:
       ToggleInt3Breakpoint(Index, Active);
-    btMemoryBreakpoint:
+    btMemory:
       ToggleMemoryBreakpoint(Index, Active);
   end;
 end;
@@ -2274,6 +2369,19 @@ begin
   end;
 end;
 
+procedure TDebuger.DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
+var
+  OldProtect: DWORD;
+  Dummy: TSysUInt;
+begin
+  Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_READWRITE, OldProtect));
+  try
+    Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
+  finally
+    Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
+  end;
+end;
+
 procedure TDebuger.ToggleInt3Breakpoint(Index: Integer; Active: Boolean);
 var
   OldProtect: DWORD;
@@ -2281,7 +2389,7 @@ var
 begin
   CheckBreakpointIndex(Index);
 
-  if FBreakpointList[Index].bpType <> btBreakpoint then
+  if FBreakpointList[Index].bpType <> btUser then
     Exit;
 
   if FBreakpointList[Index].Active = Active then
@@ -2292,7 +2400,7 @@ begin
     if Active then
       Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, @BPOpcode, 1, Dummy))
     else
-      Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, @FBreakpointList[Index].Int3.ByteCode, 1, Dummy));
+      Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, @FBreakpointList[Index].Int3.SaveByte, 1, Dummy));
   finally
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Int3.Address, 1, OldProtect, OldProtect));
   end;
@@ -2305,7 +2413,7 @@ var
   Dummy, TmpSize: DWORD;
 begin
   CheckBreakpointIndex(Index);
-  if FBreakpointList[Index].bpType <> btMemoryBreakpoint then
+  if FBreakpointList[Index].bpType <> btMemory then
     Exit;
   if FBreakpointList[Index].Active = Active then
     Exit;
