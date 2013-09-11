@@ -651,7 +651,7 @@ Begin
     If TypeInfo.Kind = tkDynamicArray Then
     Begin
         MinValue := 0;
-        MaxValue := Integer(ReadAddressValue(DebugInfo.Debuger, IncPointer(Address, -4)));
+        MaxValue := Integer(ReadAddressValue(gvDebuger, IncPointer(Address, -4)));
         Info := TypeInfo.BaseType;
         Inc(MaxValue, Info.MaxValue);
     End
@@ -665,7 +665,7 @@ Begin
     If (IntIndexValue < MinValue) Or (IntIndexValue > MaxValue) Then
         ExpressionError(cConstantExpressionViolatesSubrangeBounds);
 
-    Result := GetValue(DebugInfo.Debuger, Info.BaseType,
+    Result := GetValue(gvDebuger, Info.BaseType,
       IncPointer(Address, (IntIndexValue - MinValue) * Info.BaseType.DataSize), True, BriefMode);
 End;
 {..............................................................................}
@@ -787,49 +787,49 @@ Begin
     If FTypeInfo.Kind = tkArray Then
         Result := FAddress
     Else
-        Result := ReadAddressValue(CalculateData.DebugInfo.Debuger, FAddress);
+        Result := ReadAddressValue(gvDebuger, FAddress);
 End;
 {..............................................................................}
 
 {..............................................................................}
 Function TIntegerRefVariantValue.Calculate(const CalculateData: TCalculateData) : Variant;
 Begin
-    Result := ReadIntegerValue(CalculateData.DebugInfo.Debuger, FTypeInfo, FAddress);
+    Result := ReadIntegerValue(gvDebuger, FTypeInfo, FAddress);
 End;
 {..............................................................................}
 
 {..............................................................................}
 Procedure TIntegerRefVariantValue.SetData(Const CalculateData : TCalculateData; Const Data : Variant);
 Begin
-    WriteIntegerValue(CalculateData.DebugInfo.Debuger, FTypeInfo, FAddress, Data);
+    WriteIntegerValue(gvDebuger, FTypeInfo, FAddress, Data);
 End;
 {..............................................................................}
 
 {..............................................................................}
 Function TInt64RefVariantValue.Calculate(const CalculateData: TCalculateData) : Variant;
 Begin
-    Result := ReadInt64Value(CalculateData.DebugInfo.Debuger, FTypeInfo,  FAddress);
+    Result := ReadInt64Value(gvDebuger, FTypeInfo,  FAddress);
 End;
 {..............................................................................}
 
 {..............................................................................}
 Procedure TInt64RefVariantValue.SetData(Const CalculateData : TCalculateData; Const Data : Variant);
 Begin
-    WriteInt64Value(CalculateData.DebugInfo.Debuger, FTypeInfo, FAddress, Data);
+    WriteInt64Value(gvDebuger, FTypeInfo, FAddress, Data);
 End;
 {..............................................................................}
 
 {..............................................................................}
 Function TFloatRefVariantValue.Calculate(const CalculateData: TCalculateData) : Variant;
 Begin
-    Result := ReadFloatValue(CalculateData.DebugInfo.Debuger, FTypeInfo, FAddress);
+    Result := ReadFloatValue(gvDebuger, FTypeInfo, FAddress);
 End;
 {..............................................................................}
 
 {..............................................................................}
 Procedure TFloatRefVariantValue.SetData(Const CalculateData: TCalculateData; Const Data: Variant);
 Begin
-    WriteFloatValue(CalculateData.DebugInfo.Debuger, FTypeInfo, FAddress, Data);
+    WriteFloatValue(gvDebuger, FTypeInfo, FAddress, Data);
 End;
 {..............................................................................}
 
@@ -846,7 +846,7 @@ End;
 {..............................................................................}
 Function TShortStringRefVariantValue.Calculate(Const CalculateData : TCalculateData) : Variant;
 Begin
-    Result := ReadShortStringValue(CalculateData.DebugInfo.Debuger, FAddress);
+    Result := ReadShortStringValue(gvDebuger, FAddress);
 End;
 {..............................................................................}
 
@@ -860,7 +860,7 @@ End;
 {..............................................................................}
 Function TAnsiStringRefVariantValue.Calculate(Const CalculateData : TCalculateData) : Variant;
 Begin
-    Result := ReadAnsiStringValue(CalculateData.DebugInfo.Debuger, GetAddressToUse(CalculateData), CalculateData.BriefMode);
+    Result := ReadAnsiStringValue(gvDebuger, GetAddressToUse(CalculateData), CalculateData.BriefMode);
 End;
 {..............................................................................}
 
@@ -886,7 +886,7 @@ Begin
         SetLength(Params, 2);
         Params[0] := Self As IUnknown;
         Params[1] := StrData;
-        EvaluateFunction(CalculateData.DebugInfo.Debuger, Nil, F, Params);
+        EvaluateFunction(gvDebuger, Nil, F, Params);
     End;
 End;
 {..............................................................................}
@@ -894,7 +894,7 @@ End;
 {..............................................................................}
 Function TWideStringRefVariantValue.Calculate(Const CalculateData : TCalculateData) : Variant;
 Begin
-    Result := ReadWideStringValue(CalculateData.DebugInfo.Debuger, GetAddressToUse(CalculateData), CalculateData.BriefMode);
+    Result := ReadWideStringValue(gvDebuger, GetAddressToUse(CalculateData), CalculateData.BriefMode);
 End;
 {..............................................................................}
 
@@ -920,7 +920,7 @@ Begin
         SetLength(Params, 2);
         Params[0] := Self As IUnknown;
         Params[1] := StrData;
-        EvaluateFunction(CalculateData.DebugInfo.Debuger, Nil, F, Params);
+        EvaluateFunction(gvDebuger, Nil, F, Params);
     End;
 End;
 {..............................................................................}
@@ -930,7 +930,7 @@ Function TEnumRefVariantValue.Calculate(Const CalculateData : TCalculateData) : 
 Var
     Value : TOrdinalValue;
 Begin
-    Value := ReadIntegerValue(CalculateData.DebugInfo.Debuger, FTypeInfo, FAddress);
+    Value := ReadIntegerValue(gvDebuger, FTypeInfo, FAddress);
     Result := TEnumVariantValue.Create(FTypeInfo, Value) As IUnknown;
 End;
 {..............................................................................}
@@ -964,7 +964,7 @@ Var
     Value : TSetValue;
 Begin
     SetLength(Value, FTypeInfo.DataSize);
-    CalculateData.DebugInfo.Debuger.ReadData(FAddress, @Value[0], FTypeInfo.DataSize);
+    gvDebuger.ReadData(FAddress, @Value[0], FTypeInfo.DataSize);
     Result := TSetVariantValue.Create(FTypeInfo, Value) As IUnknown;
 End;
 {..............................................................................}
@@ -1101,7 +1101,7 @@ Begin
 
         If TypeInfo.Kind = tkDynamicArray Then
         Begin
-            Addr := ReadAddressValue(ToStringData.DebugInfo.Debuger, FAddress);
+            Addr := ReadAddressValue(gvDebuger, FAddress);
             If Addr = Nil Then
             Begin
                 Result := 'Unassigned';
@@ -1110,9 +1110,9 @@ Begin
 
             MinValue := 0;
 
-            If ToStringData.DebugInfo.IsValidDataAddr(Addr, ToStringData.DebugInfo.Debuger.CurThreadId) Then
+            If ToStringData.DebugInfo.IsValidDataAddr(Addr, gvDebuger.CurThreadId) Then
             Begin
-                MaxValue := Integer(ReadAddressValue(ToStringData.DebugInfo.Debuger, IncPointer(Addr, -4)));
+                MaxValue := Integer(ReadAddressValue(gvDebuger, IncPointer(Addr, -4)));
                 Inc(MaxValue, TypeInfo.MaxValue);
             End
             Else
@@ -1142,7 +1142,7 @@ Begin
 
             Result := Result + VariantToString(
               GetValueRef(
-                ToStringData.DebugInfo.Debuger,
+                gvDebuger,
                 TypeInfo.BaseType,
                 IncPointer(Addr, (I - MinValue) * TypeInfo.BaseType.DataSize)
               ),
@@ -1166,7 +1166,7 @@ Begin
     Result := (TypeInfo.BaseType <> Nil) And (TypeInfo.BaseType.Kind = tkStructure);
     If Result Then
     Begin
-        Value := GetValueRef(CalculateData.DebugInfo.Debuger, TypeInfo.BaseType, Address);
+        Value := GetValueRef(gvDebuger, TypeInfo.BaseType, Address);
         Result := Supports(IUnknown(TVarData(Value).VUnknown), IReferenceAccess, ReferenceAccess);
         If Result Then
             Result := ReferenceAccess.TryReference(CalculateData, ItemName, Value);
@@ -1187,7 +1187,7 @@ Begin
     If FTypeInfo = Nil Then
         Result := GetVoidValue
     Else
-        Result := GetValueRef(CalculateData.DebugInfo.Debuger, FTypeInfo.BaseType, GetAddressToUse(CalculateData));
+        Result := GetValueRef(gvDebuger, FTypeInfo.BaseType, GetAddressToUse(CalculateData));
 End;
 {..............................................................................}
 
@@ -1213,7 +1213,7 @@ Begin
     If FTypeInfo = Nil Then
         Result := GetVoidValue
     Else
-        Result := GetValueRef(CalculateData.DebugInfo.Debuger, FTypeInfo.BaseType, FAddress);
+        Result := GetValueRef(gvDebuger, FTypeInfo.BaseType, FAddress);
 End;
 {..............................................................................}
 
@@ -1233,7 +1233,7 @@ Begin
 
     If (FTypeInfo <> Nil) And (FTypeInfo.BaseType <> Nil) Then
     Begin
-        Value := GetValue(ToStringData.DebugInfo.Debuger, FTypeInfo.BaseType, Address, True, (ToStringData.Mode = tsmBrief));
+        Value := GetValue(gvDebuger, FTypeInfo.BaseType, Address, True, (ToStringData.Mode = tsmBrief));
         Result := VariantToString(Value, ToStringData);
     End
     Else
@@ -1253,7 +1253,7 @@ Function TObjectRefVariantValue.Calculate(Const CalculateData : TCalculateData) 
 Var
     Address : TPointer;
 Begin
-    Address := ReadAddressValue(CalculateData.DebugInfo.Debuger, FAddress);
+    Address := ReadAddressValue(gvDebuger, FAddress);
     Result := TObjectVariantValue.Create(FTypeInfo, Address) As IUnknown;
 End;
 {..............................................................................}
@@ -1400,7 +1400,7 @@ End;
 {..............................................................................}
 Function TFunctionVariantValue.CalculateFunction(Const CalculateData : TCalculateData; Const Params : TCalculateParams) : Variant;
 Begin
-    Result := EvaluateFunction(CalculateData.DebugInfo.Debuger, FSelfAddress, FFuncInfo, Params);
+    Result := EvaluateFunction(gvDebuger, FSelfAddress, FFuncInfo, Params);
 End;
 {..............................................................................}
 

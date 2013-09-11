@@ -56,10 +56,11 @@ Type
 
         function  CustomVariantAsString(const Value: Variant): String;
         procedure SetDelphiVersion(const Value: TDelphiVersion);
+        procedure InitCodeTracking;
     Protected
         Function  DoReadDebugInfo(Const FileName : String; ALoadDebugInfo : Boolean) : Boolean; Override;
     Public
-        Constructor Create(ADebuger: TDebuger);
+        Constructor Create;
         Destructor  Destroy; Override;
 
         Function GetNameById(const Idx: TNameId): AnsiString; override;
@@ -121,7 +122,8 @@ Uses
     //ExpressionEvaluator,
     Math, Variants,
     //Morfik.dcSystem,
-    EvaluateTypes, EvaluateProcs, ClassUtils, DebugHook, StrUtils;
+    EvaluateTypes, EvaluateProcs,
+    ClassUtils, DebugHook, StrUtils;
 {..............................................................................}
 
 {..............................................................................}
@@ -160,9 +162,9 @@ End;
 { TDelphiDebugInfo }
 
 {...............................................................................}
-Constructor TDelphiDebugInfo.Create(ADebuger: TDebuger);
+Constructor TDelphiDebugInfo.Create;
 Begin
-    Inherited Create(ADebuger);
+    Inherited Create;
 
     FImage := Nil;
     FDelphiVersion := dvAuto;
@@ -290,7 +292,7 @@ Var
     //ModuleName: AnsiString;
     SourceModuleInfo: TJclTD32SourceModuleInfo;
 Begin
-    Result := TUnitInfo.Create(Self);
+    Result := TUnitInfo.Create;
     Result.SymbolInfo := Module;
 
     If Module.SourceModuleCount > 0 Then
@@ -347,6 +349,7 @@ Function TDelphiDebugInfo.GetUnitFileName(Const UnitName : String) : String;
 Var
     S : String;
     Ext: String;
+    ST: TDbgSourceType;
 Begin
     S := AnsiLowerCase(ExtractFileName(UnitName));
 
@@ -354,8 +357,11 @@ Begin
     If (Ext <> '.pas') and (Ext <> '.inc') Then
         S := S + '.pas';
 
-    if not Dirs.TryGetValue(S, Result) then
-      Result := S;
+    for ST := Low(TDbgSourceType) to High(TDbgSourceType) do
+      if Dirs[ST].TryGetValue(S, Result) then
+        Exit;
+
+    Result := S;
 End;
 
 function TDelphiDebugInfo.GetNameById(const Idx: TNameId): AnsiString;
@@ -1332,10 +1338,10 @@ Var
   I: Integer;
 begin
   Result := '';
-  if Debuger.ReadData(ObjectPtr, @ObjTypePtr, SizeOf(Pointer)) then
-    if Debuger.ReadData(IncPointer(ObjTypePtr, vmtClassName), @ClassNamePtr, SizeOf(Pointer)) then
+  if gvDebuger.ReadData(ObjectPtr, @ObjTypePtr, SizeOf(Pointer)) then
+    if gvDebuger.ReadData(IncPointer(ObjTypePtr, vmtClassName), @ClassNamePtr, SizeOf(Pointer)) then
     begin
-      ClassName := Debuger.ReadStringP(IncPointer(ClassNamePtr, SizeOf(Byte)));
+      ClassName := gvDebuger.ReadStringP(IncPointer(ClassNamePtr, SizeOf(Byte)));
       for I := 1 to Length(ClassName) do
         if not (ClassName[I] in _ValidChars) then
           Exit;
@@ -1380,8 +1386,8 @@ Begin
         //ExceptMsgPtr   := ReadAddressValue(Debuger, TPointer(@Exception(ExceptTypeAddr).Message));
         //ExceptMsg      := String(ReadAnsiStringValue(Debuger, ExceptMsgPtr, False));
 
-        if Debuger.ReadData(@Exception(ExceptTypeAddr).Message, @ExceptMsgPtr, SizeOf(Pointer)) then
-            Result := Debuger.ReadStringW(ExceptMsgPtr);
+        if gvDebuger.ReadData(@Exception(ExceptTypeAddr).Message, @ExceptMsgPtr, SizeOf(Pointer)) then
+            Result := gvDebuger.ReadStringW(ExceptMsgPtr);
 
         //Result := Format('Exception [%s] at $%p: %s', [GetExceptionName(ExceptionRecord), GetExceptionAddress(ExceptionRecord), ExceptMsg]);
     End
@@ -1537,6 +1543,31 @@ begin
         Result := '';
 end;
 
+procedure TDelphiDebugInfo.InitCodeTracking;
+var
+  FuncCount: Integer;
+  I, J: Integer;
+  UnitInfo: TUnitInfo;
+  FuncInfo: TFuncInfo;
+begin
+  FuncCount := 0;
+  for I := 0 to Units.Count - 1 do
+    Inc(FuncCount, TUnitInfo(Units.Objects[I]).Funcs.Count);
+
+  gvDebuger.ClearDbgTracking;
+  gvDebuger.InitDbgTracking(FuncCount);
+
+  for I := 0 to Units.Count - 1 do
+  begin
+    UnitInfo := TUnitInfo(Units.Objects[I]);
+    for J := 0 to UnitInfo.Funcs.Count - 1 do
+    begin
+      FuncInfo := TFuncInfo(UnitInfo.Funcs[J]);
+      gvDebuger.SetTrackBreakpoint(FuncInfo.Address, FuncInfo);
+    end;
+  end;
+end;
+
 Procedure TDelphiDebugInfo.InitDebugHook;
 var
   USystem   : TUnitInfo;
@@ -1573,7 +1604,7 @@ var
   begin
     DebugHook := USystem.FindVarByName(_DebugHook);
     If Assigned(DebugHook) Then
-      Debuger.WriteData(Pointer(DebugHook.Offset), @Enable, 1);
+      gvDebuger.WriteData(Pointer(DebugHook.Offset), @Enable, 1);
   end;
 
   function GetMemoryManagerVar: Pointer;
@@ -1596,7 +1627,9 @@ var
   end;
 
 Begin
-  Debuger.ProcessData.SetPEImage(FImage);
+  gvDebuger.ProcessData.SetPEImage(FImage);
+
+  InitCodeTracking;
 
   if FindSystemPas then
   Begin
@@ -1605,7 +1638,7 @@ Begin
   End;
 
   LoadDbgHookDll(
-    Debuger.ProcessData.AttachedProcessHandle,
+    gvDebuger.ProcessData.AttachedProcessHandle,
     'DbgHook32.dll',
     Pointer(FImage.OptionalHeader32.ImageBase),
     GetMemoryManagerVar);

@@ -80,6 +80,9 @@ const
   EFLAGS_DF = $400;
   EFLAGS_OF = $800;
 
+const
+  BPOpcode: Byte = $CC;
+
 type
   TThreadId = type Cardinal;
   TProcessId = type Cardinal;
@@ -118,15 +121,17 @@ type
   // Список поддерживаемых типов точек остановки (далее ВР)
 
   TBreakpointType = (
-    btBreakpoint, // WriteProcessMemoryEx + 0xCC
-    btMemoryBreakpoint // VirtualProtectEx + PAGE_GUARD
+    btUser,
+    btTemp,
+    btCodeTrack,
+    btMemory
   );
 
   // структуры для хранения данных об известных отладчику ВР
 
   TInt3Breakpoint = record
     Address: Pointer;
-    ByteCode: Byte;
+    SaveByte: Byte;
   end;
 
   TMemotyBreakPoint = record
@@ -151,12 +156,13 @@ type
 
   TBreakpointList = array of TBreakpoint;
 
-  // Структура хранящая хэндлы открытых отлаживаемым процессом нитей,
-  // а также данные о установленных аппаратных точках остановки.
-  // Используется отладчиком, доступна пользователю через функцию GetThreadData
-  // Внимание !!!
-  // Данная информация может использоваться пользователем только на чтение,
-  // не закрывайте хэндлы описанные в данной структуре через CloseHandle()
+  PTrackBreakpoint = ^TTrackBreakpoint;
+  TTrackBreakpoint = packed record
+    FuncInfo: TObject;
+    SaveByte: Byte;
+  end;
+
+  TTrackBreakpointList = TDictionary<Pointer,PTrackBreakpoint>;
 
   THWBPIndex = 0..3;
   THWBPSize = (hsByte, hdWord, hsDWord);

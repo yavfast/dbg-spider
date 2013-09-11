@@ -32,13 +32,15 @@ type
     procedure InitDebugInfo;
     procedure LoadDebugInfo;
     function GetAppName: String;
-    function GetSourceDirs: String;
+    function GetProjectSourceDirs: String;
+    function GetDelphiSourceDirs: String;
   protected
     procedure Execute; override;
     procedure DoTerminate; override;
 
     property AppName: String read GetAppName;
-    property SourceDirs: String read GetSourceDirs;
+    property ProjectSourceDirs: String read GetProjectSourceDirs;
+    property DelphiSourceDirs: String read GetDelphiSourceDirs;
   public
     constructor Create(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
     destructor Destroy; override;
@@ -130,9 +132,14 @@ begin
   Result := gvProjectOptions.ApplicationName;
 end;
 
-function TDebugerThread.GetSourceDirs: String;
+function TDebugerThread.GetDelphiSourceDirs: String;
 begin
-  Result := gvProjectOptions.DelphiSource + ';' + gvProjectOptions.ProjectSource;
+  Result := gvProjectOptions.DelphiSource;
+end;
+
+function TDebugerThread.GetProjectSourceDirs: String;
+begin
+  Result := gvProjectOptions.ProjectSource;
 end;
 
 procedure TDebugerThread.InitDebuger;
@@ -157,7 +164,7 @@ end;
 procedure TDebugerThread.InitDebugInfo;
 begin
   if gvDebugInfo = nil then
-    gvDebugInfo := TDelphiDebugInfo.Create(gvDebuger);
+    gvDebugInfo := TDelphiDebugInfo.Create;
 
   gvDebugInfo.DebugInfoProgressCallback := OnProgress;
 end;
@@ -170,7 +177,9 @@ begin
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
     _AC.Log(dltInfo, 'Load debug info for "%s"...', [AppName]);
-    FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName, SourceDirs);
+    FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName);
+
+    // TODO: Load Source dirs
 
     if FDbgInfoLoaded then
     begin

@@ -19,12 +19,16 @@ function Int64ToFileTime(const Value: UInt64): TFileTime;
 function Int64ToDateTime(const Value: UInt64): TDateTime;
 
 function DebugBreakProcess(Process: THandle): BOOL; stdcall;
+function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall;
+function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall;
 
 implementation
 
 function QueryThreadCycleTime(ThreadHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryThreadCycleTime';
 function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryProcessCycleTime';
 function DebugBreakProcess(Process: THandle): BOOL; stdcall; external kernel32 name 'DebugBreakProcess';
+function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall; external kernel32;
+function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall; external kernel32;
 
 function _QueryThreadCycleTime(const ThreadHandle: THandle): UInt64;
 var

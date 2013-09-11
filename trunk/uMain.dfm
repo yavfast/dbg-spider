@@ -1329,22 +1329,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 838
+        Width = 842
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 376
+        Width = 372
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 851
+      Left = 855
       Top = 0
-      Width = 367
+      Width = 363
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1368,7 +1368,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 825
+      Width = 829
       Height = 25
       ActionManager = amMain
       Align = alNone

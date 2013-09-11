@@ -555,7 +555,7 @@ Begin
     FMemory.Write(Instructions.cPushData);
     FMemory.Write(FExceptionMessage);
 
-    CallProtectedFuncInfo := FFuncInfo.UnitInfo.DebugInfo.FuncByName(c__Eval__CallProtected);
+    CallProtectedFuncInfo := gvDebugInfo.FuncByName(c__Eval__CallProtected);
     if CallProtectedFuncInfo = Nil then
         RaiseInternalError(cCannotFindEvalSupportFunctions);
 
@@ -653,7 +653,7 @@ Begin
         Result := GetValue(FDebuger, FFuncInfo.ResultType, FResultAddr, True, False);
         // Function always return value so we can't assign to it
         CalculateData.BriefMode := False;
-        CalculateData.DebugInfo := FFuncInfo.UnitInfo.DebugInfo;
+        CalculateData.DebugInfo := gvDebugInfo;
         RequireValue(CalculateData, Result);
     End
     Else
