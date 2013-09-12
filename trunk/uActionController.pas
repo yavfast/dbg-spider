@@ -7,7 +7,7 @@ type
   TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo, acProgress,
     acSetProjectName);
 
-  TDbgOption = (doDebugInfo, doRun, doProfiler, doMemLeaks);
+  TDbgOption = (doDebugInfo, doRun, doProfiler, doMemProfiler, doCodeTracking, doTrackSystemUnits);
   TDbgOptions = set of TDbgOption;
 
   TActionController = class

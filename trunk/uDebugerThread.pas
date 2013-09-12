@@ -113,6 +113,9 @@ begin
     if FRun then
     begin
       gvDebuger.PerfomanceMode := (doProfiler in FDbgOptions);
+      gvDebuger.CodeTracking := (doCodeTracking in FDbgOptions);
+      if gvDebuger.CodeTracking then
+        gvDebuger.TrackSystemUnits := (doTrackSystemUnits in FDbgOptions);
 
       _AC.Log(dltInfo, 'Start debug process');
       try
@@ -176,10 +179,12 @@ begin
 
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
-    _AC.Log(dltInfo, 'Load debug info for "%s"...', [AppName]);
-    FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName);
+    _AC.Log(dltInfo, 'Scan source dirs');
+    gvDebugInfo.UpdateSourceDirs(utSystem, DelphiSourceDirs);
+    gvDebugInfo.UpdateSourceDirs(utProject, ProjectSourceDirs);
 
-    // TODO: Load Source dirs
+    _AC.Log(dltInfo, 'Load debug info for "%s"', [AppName]);
+    FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName);
 
     if FDbgInfoLoaded then
     begin

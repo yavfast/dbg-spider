@@ -267,11 +267,22 @@ type
     function AsString: String;
   end;
 
+  PTrackPoint = ^TTrackPoint;
+  TTrackPoint = record
+    FuncInfo: TObject;
+    RET: Pointer; // Адрес выхода в вызывающей функции
+    // Stack ???
+    TimeEnter: UInt64;
+    TimeLeave: UInt64;
+  end;
+
   TThreadAdvInfoList = TBaseCollectList; //TCollectList<TThreadAdvInfo>;
 
   TThreadPointList = TBaseCollectList; //TCollectList<TThreadPoint>;
 
   TThreadMemInfoList = TBaseCollectList; //TCollectList<TMemInfo>;
+
+  TTrackPointList = TBaseCollectList; //TCollectList<TTrackPoint>;
 
   TThreadState = (tsNone, tsActive, tsFinished, tsSuspended, tsLocked);
 
@@ -293,6 +304,9 @@ type
     DbgGetMemInfoSize: Cardinal;
 
     DbgExceptions: TThreadList;
+
+    DbgTrackList: TTrackPointList;
+    DbgCurTrackAddress: Pointer;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -505,6 +519,7 @@ begin
   //FreeAndNil(DbgMemInfo);
   FreeAndNil(DbgGetMemInfo);
   FreeAndNil(DbgExceptions);
+  FreeAndNil(DbgTrackList);
 
   FreeMemory(Context);
 

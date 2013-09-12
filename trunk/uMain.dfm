@@ -23,7 +23,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsLog
+    ActivePage = tsCodeTracking
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -1003,6 +1003,218 @@ object MainForm: TMainForm
         end
       end
     end
+    object tsCodeTracking: TTabSheet
+      Caption = 'Code tracking'
+      ImageIndex = 5
+      object vstTrackThreads: TVirtualStringTree
+        Left = 0
+        Top = 0
+        Width = 396
+        Height = 517
+        Align = alLeft
+        Header.AutoSizeIndex = 0
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'Tahoma'
+        Header.Font.Style = []
+        Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+        Header.Style = hsFlatButtons
+        ScrollBarOptions.AlwaysVisible = True
+        TabOrder = 0
+        TreeOptions.AutoOptions = [toAutoDropExpand, toAutoTristateTracking, toAutoDeleteMovedNodes]
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        OnColumnResize = vstThreadsColumnResize
+        OnDrawText = vstThreadsDrawText
+        OnFocusChanged = vstExceptionThreadsFocusChanged
+        OnGetText = vstExceptionThreadsGetText
+        OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        Columns = <
+          item
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+            Position = 0
+            Width = 250
+            WideText = 'Thread name'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 1
+            Width = 75
+            WideText = 'ID'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+            Position = 2
+            WideText = 'Count'
+          end>
+      end
+      object pTrackAdv: TPanel
+        Left = 396
+        Top = 0
+        Width = 814
+        Height = 517
+        Align = alClient
+        BevelOuter = bvNone
+        Caption = 'pTrackAdv'
+        ShowCaption = False
+        TabOrder = 1
+        object vstTrackFuncs: TVirtualStringTree
+          Left = 0
+          Top = 0
+          Width = 396
+          Height = 517
+          Align = alLeft
+          BevelEdges = []
+          BevelInner = bvNone
+          BevelOuter = bvNone
+          BorderStyle = bsNone
+          Header.AutoSizeIndex = 0
+          Header.Font.Charset = DEFAULT_CHARSET
+          Header.Font.Color = clWindowText
+          Header.Font.Height = -11
+          Header.Font.Name = 'Tahoma'
+          Header.Font.Style = []
+          Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+          ScrollBarOptions.AlwaysVisible = True
+          TabOrder = 0
+          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+          TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+          OnColumnResize = vstThreadsColumnResize
+          OnFocusChanged = vstDbgInfoFunctionsFocusChanged
+          OnGetText = vstDbgInfoFunctionsGetText
+          OnGetNodeDataSize = vstThreadsGetNodeDataSize
+          Columns = <
+            item
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+              Position = 0
+              Width = 200
+              WideText = 'Function name'
+            end
+            item
+              Alignment = taRightJustify
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 1
+              Width = 70
+              WideText = 'Address'
+            end>
+        end
+        object pTrackFuncAdv: TPanel
+          Left = 396
+          Top = 0
+          Width = 418
+          Height = 517
+          Align = alClient
+          BevelOuter = bvNone
+          Caption = 'pTrackFuncAdv'
+          ShowCaption = False
+          TabOrder = 1
+          object splTrackFuncAdv: TSplitter
+            Left = 0
+            Top = 273
+            Width = 418
+            Height = 3
+            Cursor = crVSplit
+            Align = alTop
+          end
+          object vstTrackFuncParent: TVirtualStringTree
+            Left = 0
+            Top = 0
+            Width = 418
+            Height = 273
+            Align = alTop
+            BevelEdges = []
+            BevelInner = bvNone
+            BevelOuter = bvNone
+            BorderStyle = bsNone
+            Header.AutoSizeIndex = 0
+            Header.Font.Charset = DEFAULT_CHARSET
+            Header.Font.Color = clWindowText
+            Header.Font.Height = -11
+            Header.Font.Name = 'Tahoma'
+            Header.Font.Style = []
+            Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+            ScrollBarOptions.AlwaysVisible = True
+            TabOrder = 0
+            TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            OnColumnResize = vstThreadsColumnResize
+            OnFocusChanged = vstDbgInfoFunctionsFocusChanged
+            OnGetText = vstDbgInfoFunctionsGetText
+            OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            Columns = <
+              item
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                Position = 0
+                Width = 200
+                WideText = 'Function name'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 1
+                Width = 70
+                WideText = 'Address'
+              end>
+          end
+          object vstTrackFuncChilds: TVirtualStringTree
+            Left = 0
+            Top = 276
+            Width = 418
+            Height = 241
+            Align = alClient
+            BevelEdges = []
+            BevelInner = bvNone
+            BevelOuter = bvNone
+            BorderStyle = bsNone
+            Header.AutoSizeIndex = 0
+            Header.Font.Charset = DEFAULT_CHARSET
+            Header.Font.Color = clWindowText
+            Header.Font.Height = -11
+            Header.Font.Name = 'Tahoma'
+            Header.Font.Style = []
+            Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+            ScrollBarOptions.AlwaysVisible = True
+            TabOrder = 1
+            TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            OnColumnResize = vstThreadsColumnResize
+            OnFocusChanged = vstDbgInfoFunctionsFocusChanged
+            OnGetText = vstDbgInfoFunctionsGetText
+            OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            Columns = <
+              item
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                Position = 0
+                Width = 200
+                WideText = 'Function name'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 1
+                Width = 70
+                WideText = 'Address'
+              end>
+          end
+        end
+      end
+    end
   end
   object rbnMain: TRibbon
     Left = 0
@@ -1172,16 +1384,16 @@ object MainForm: TMainForm
       object rbgProject: TRibbonGroup
         Left = 4
         Top = 3
-        Width = 177
+        Width = 197
         Height = 86
         ActionManager = amMain
         Caption = 'Project'
         GroupIndex = 0
       end
       object rbgApplication: TRibbonGroup
-        Left = 183
+        Left = 203
         Top = 3
-        Width = 102
+        Width = 122
         Height = 86
         ActionManager = amMain
         Caption = 'Application'
@@ -1189,9 +1401,9 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpDebug: TRibbonGroup
-        Left = 287
+        Left = 327
         Top = 3
-        Width = 101
+        Width = 121
         Height = 86
         ActionManager = amMain
         Caption = 'Debug'
@@ -1199,7 +1411,7 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpTimeLineSettings: TRibbonGroup
-        Left = 390
+        Left = 450
         Top = 3
         Width = 97
         Height = 86
@@ -1209,13 +1421,22 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpViewOptions: TRibbonGroup
-        Left = 489
+        Left = 549
         Top = 3
         Width = 118
         Height = 86
         ActionManager = amMain
         Caption = 'View options'
         GroupIndex = 4
+      end
+      object rbngrpCodeTracking: TRibbonGroup
+        Left = 669
+        Top = 3
+        Width = 127
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Code tracking'
+        GroupIndex = 5
       end
     end
     object rbambMain: TRibbonApplicationMenuBar
@@ -1329,22 +1550,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 842
+        Width = 852
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 372
+        Width = 362
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 855
+      Left = 865
       Top = 0
-      Width = 363
+      Width = 353
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1368,7 +1589,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 829
+      Width = 839
       Height = 25
       ActionManager = amMain
       Align = alNone
@@ -1565,6 +1786,23 @@ object MainForm: TMainForm
       Caption = 'Use short names'
       Checked = True
       OnExecute = acUseShortNamesExecute
+    end
+    object acTabCodeTracking: TAction
+      Tag = 5
+      Category = 'MainTabs'
+      Caption = 'Code tracking'
+      OnExecute = acMainTabExecute
+    end
+    object acCodeTracking: TAction
+      Category = 'Options'
+      Caption = 'Code tracking'
+      Checked = True
+      OnExecute = acCodeTrackingExecute
+    end
+    object acTrackSystemUnits: TAction
+      Category = 'Options'
+      Caption = 'Track system units'
+      OnExecute = acTrackSystemUnitsExecute
     end
   end
   object OD: TFileOpenDialog
@@ -1813,6 +2051,13 @@ object MainForm: TMainForm
           item
             Action = acTabExceptions
             Caption = '&Exceptions'
+          end
+          item
+            Caption = '-'
+          end
+          item
+            Action = acTabCodeTracking
+            Caption = '&Code tracking'
           end>
         ActionBar = actbMainTabs
       end
@@ -1935,6 +2180,22 @@ object MainForm: TMainForm
             CommandProperties.Width = -1
           end>
         ActionBar = rbngrpViewOptions
+      end
+      item
+        Items = <
+          item
+            Action = acCodeTracking
+            Caption = '&Code tracking'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
+            Action = acTrackSystemUnits
+            Caption = '&Track system units'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end>
+        ActionBar = rbngrpCodeTracking
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain

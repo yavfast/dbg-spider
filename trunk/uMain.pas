@@ -156,6 +156,18 @@ type
     synmExceptInfoSource: TSynMemo;
     acUseShortNames: TAction;
     rbngrpViewOptions: TRibbonGroup;
+    tsCodeTracking: TTabSheet;
+    acTabCodeTracking: TAction;
+    rbngrpCodeTracking: TRibbonGroup;
+    acCodeTracking: TAction;
+    acTrackSystemUnits: TAction;
+    vstTrackThreads: TVirtualStringTree;
+    pTrackAdv: TPanel;
+    vstTrackFuncs: TVirtualStringTree;
+    pTrackFuncAdv: TPanel;
+    vstTrackFuncParent: TVirtualStringTree;
+    splTrackFuncAdv: TSplitter;
+    vstTrackFuncChilds: TVirtualStringTree;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -235,6 +247,8 @@ type
     procedure acEditProjectExecute(Sender: TObject);
     procedure acSaveCopyExecute(Sender: TObject);
     procedure acUseShortNamesExecute(Sender: TObject);
+    procedure acCodeTrackingExecute(Sender: TObject);
+    procedure acTrackSystemUnitsExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -401,6 +415,15 @@ begin
   ClearProject;
 end;
 
+procedure TMainForm.acCodeTrackingExecute(Sender: TObject);
+begin
+  if Assigned(gvDebuger) then
+  begin
+    gvDebuger.CodeTracking := acCodeTracking.Checked;
+    acTrackSystemUnits.Enabled := gvDebuger.CodeTracking;
+  end;
+end;
+
 procedure TMainForm.acCPUTimeLineExecute(Sender: TObject);
 begin
   UpdateTrees;
@@ -451,7 +474,7 @@ begin
 
   ClearDbgTrees;
 
-  _AC.RunDebug([doRun, doProfiler], FPID);
+  _AC.RunDebug([doRun, doProfiler, doMemProfiler, doCodeTracking], FPID);
 end;
 
 procedure TMainForm.acSaveCopyExecute(Sender: TObject);
@@ -464,6 +487,14 @@ begin
   acStop.Enabled := False;
 
   _AC.StopDebug;
+end;
+
+procedure TMainForm.acTrackSystemUnitsExecute(Sender: TObject);
+begin
+  if Assigned(gvDebuger) then
+  begin
+    gvDebuger.CodeTracking := acTrackSystemUnits.Checked;
+  end;
 end;
 
 procedure TMainForm.acUseShortNamesExecute(Sender: TObject);
@@ -507,6 +538,7 @@ begin
   acTabTimeline.Checked := (CurTag = acTabTimeline.Tag);
   acTabMemoryInfo.Checked := (CurTag = acTabMemoryInfo.Tag);
   acTabExceptions.Checked := (CurTag = acTabExceptions.Tag);
+  acTabCodeTracking.Checked := (CurTag = acTabCodeTracking.Tag);
 
   pcMain.ActivePageIndex := CurTag;
 end;
