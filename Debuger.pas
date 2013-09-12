@@ -30,6 +30,7 @@ type
     //FDbgPerfomanceThread: TDbgPerfomanceThread;
     FPerfomanceMode: Boolean;
     FPerfCallStacks: Boolean;
+    FCodeTracking: Boolean;
 
     FPerfomanceCheckPtr: Pointer;
     //FPerfomanceThreadId: TThreadId;
@@ -37,7 +38,6 @@ type
     FDbgShareMem: THandle;
 
     DbgTrackBreakpoints: TTrackBreakpointList;
-    DbgCurTrackAddress: Pointer;
     //DbgCurTrackBp: PTrackBreakpoint;
 
     // внешние события
@@ -55,6 +55,7 @@ type
     FExceptioEvents: array [TExceptionCode] of TDefaultExceptionEvent;
     FBreakPoint: TBreakPointEvent;
     FHardwareBreakpoint: THardwareBreakpointEvent;
+    FTrackSystemUnits: Boolean;
 
     function GetExceptionEvent(const Index: TExceptionCode): TDefaultExceptionEvent;
     procedure SetExceptionEvent(const Index: TExceptionCode; const Value: TDefaultExceptionEvent);
@@ -62,6 +63,7 @@ type
 
     procedure SetPerfomanceMode(const Value: Boolean);
     procedure SetPerfCallStacks(const Value: Boolean);
+    procedure SetCodeTracking(const Value: Boolean);
 
     function FindMemoryPointer(const Ptr: Pointer): PThreadData;
     procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
@@ -70,6 +72,7 @@ type
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
     procedure DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
     procedure DoRestoreBreakpoint(const Address: Pointer);
+    procedure SetTrackSystemUnits(const Value: Boolean);
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -103,6 +106,10 @@ type
     procedure CallUnhandledBreakPointEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 
     procedure ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
+    function ProcessTrackBreakPoint(DebugEvent: PDebugEvent): Boolean;
+    function ProcessUserBreakPoint(DebugEvent: PDebugEvent): Boolean;
+
+
     procedure ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
     procedure ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
 
@@ -115,25 +122,16 @@ type
 
     function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 
-    // работа с точками остановки:
+    // работа с точками остановки
 
-    // регистрация нового обработчика в списке
     function AddNewBreakPoint(var Value: TBreakpoint): Boolean;
-    // проверка допутимости индекса обработчика
     procedure CheckBreakpointIndex(Value: Integer);
-    // проверка попадания адреса в область памяти контролируемую Memory BP
     function CheckIsAddrInRealMemoryBPRegion(BreakPointIndex: Integer; AAddr: Pointer): Boolean;
-    // получение обработчика BP обрабатывающего указанный адрес
     function GetBPIndex(BreakPointAddr: Pointer; const ThreadID: TThreadId = 0): Integer;
-    // получение обработчика MBP обрабатывающего указанный адрес
     function GetMBPIndex(BreakPointAddr: Pointer; FromIndex: Integer = 0): Integer;
-    // проверка установлен ли уже аналогичный BP
     function IsBreakpointPresent(const Value: TBreakpoint): Boolean;
-    // переключение активности Int3 брякпойнта
     procedure ToggleInt3Breakpoint(Index: Integer; Active: Boolean);
-    // переключение активности брякпойна та область памяти
     procedure ToggleMemoryBreakpoint(Index: Integer; Active: Boolean);
-    // обновление аппаратных точек останова нити
     procedure UpdateHardwareBreakpoints(const ThreadID: TThreadId);
 
     // перевод нити отлаживаемого приложения в режим трассировки
@@ -260,6 +258,8 @@ type
 
     property PerfomanceMode: Boolean read FPerfomanceMode write SetPerfomanceMode;
     property PerfCallStacks: Boolean read FPerfCallStacks write SetPerfCallStacks;
+    property CodeTracking: Boolean read FCodeTracking write SetCodeTracking;
+    property TrackSystemUnits: Boolean read FTrackSystemUnits write SetTrackSystemUnits;
 
     property DbgShareMem: THandle read FDbgShareMem;
   end;
@@ -589,6 +589,7 @@ begin
     //Result^.DbgMemInfo := TCollectList<TMemInfo>.Create;
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
     Result^.DbgExceptions := TThreadList.Create;
+    Result^.DbgTrackList := TCollectList<TTrackPoint>.Create;
 
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(Result, ptStart);
@@ -1466,46 +1467,14 @@ begin
 end;
 
 procedure TDebuger.ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
-var
-  Address: Pointer;
-  TrackBp: PTrackBreakpoint;
-
-  ReleaseBP: Boolean;
-  BreakPointIndex: Integer;
 begin
-  ReleaseBP := False;
-  FRemoveCurrentBreakpoint := False;
-
-  Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
-  if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
-  begin
-    DbgCurTrackAddress := Address;
-    DoRemoveBreakpoint(Address, TrackBp^.SaveByte);
-    SetSingleStepMode(DebugEvent^.dwThreadId, True);
+  if FCodeTracking and ProcessTrackBreakPoint(DebugEvent) then
     Exit;
-  end
-  else
-  begin
-    DbgCurTrackAddress := nil;
-  end;
 
-  BreakPointIndex := GetBPIndex(Address, DebugEvent^.dwThreadId);
-  if BreakPointIndex >= 0 then
-  begin
-    if Assigned(FBreakPoint) then
-      FBreakPoint(Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord, BreakPointIndex, ReleaseBP)
-    else
-      CallUnhandledBreakPointEvents(ecBreakpoint, DebugEvent);
+  if ProcessUserBreakPoint(DebugEvent) then
+    Exit;
 
-    ToggleInt3Breakpoint(BreakPointIndex, False);
-    SetSingleStepMode(DebugEvent^.dwThreadId, True);
-    if ReleaseBP or FRemoveCurrentBreakpoint then
-      RemoveBreakpoint(BreakPointIndex)
-    else
-      FRestoreBPIndex := BreakPointIndex;
-  end
-  else
-    CallUnhandledBreakPointEvents(ecBreakpoint, DebugEvent);
+  CallUnhandledBreakPointEvents(ecBreakpoint, DebugEvent);
 end;
 
 procedure TDebuger.ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
@@ -1563,12 +1532,18 @@ end;
 procedure TDebuger.ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
 var
   Handled: Boolean;
+  ThData: PThreadData;
 begin
-  if DbgCurTrackAddress <> nil then
+  ThData := GetThreadData(DebugEvent^.dwThreadId);
+
+  if Assigned(ThData) then
   begin
-    DoRestoreBreakpoint(DbgCurTrackAddress);
-    DbgCurTrackAddress := nil;
-    Exit;
+    if Assigned(ThData^.DbgCurTrackAddress) then
+    begin
+      DoRestoreBreakpoint(ThData^.DbgCurTrackAddress);
+      ThData^.DbgCurTrackAddress := nil;
+      Exit;
+    end;
   end;
 
 
@@ -1676,6 +1651,64 @@ begin
 
     FRestoredHWBPIndex := Index;
     FRestoredThread := DebugEvent^.dwThreadId;
+  end;
+end;
+
+function TDebuger.ProcessTrackBreakPoint(DebugEvent: PDebugEvent): Boolean;
+var
+  ThData: PThreadData;
+  Address: Pointer;
+  TrackBp: PTrackBreakpoint;
+  TrackPoint: PTrackPoint;
+begin
+  Result := False;
+  ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
+  if Assigned(ThData) then
+  begin
+    Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
+    if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
+    begin
+      TrackPoint := ThData^.DbgTrackList.Add;
+      TrackPoint^.FuncInfo := TrackBp^.FuncInfo;
+      TrackPoint^.RET := Pointer(ThData^.Context^.Esp);
+      //TrackPoint^.TimeEnter := _QueryThreadCycleTime(ThData^.ThreadHandle);
+
+      ThData^.DbgCurTrackAddress := Address;
+      DoRemoveBreakpoint(Address, TrackBp^.SaveByte);
+      SetSingleStepMode(DebugEvent^.dwThreadId, True);
+      Result := True;
+    end;
+  end;
+end;
+
+function TDebuger.ProcessUserBreakPoint(DebugEvent: PDebugEvent): Boolean;
+var
+  Address: Pointer;
+  ReleaseBP: Boolean;
+  BreakPointIndex: Integer;
+begin
+  Result := False;
+
+  ReleaseBP := False;
+  FRemoveCurrentBreakpoint := False;
+
+  Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
+  BreakPointIndex := GetBPIndex(Address, DebugEvent^.dwThreadId);
+  if BreakPointIndex >= 0 then
+  begin
+    if Assigned(FBreakPoint) then
+      FBreakPoint(Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord, BreakPointIndex, ReleaseBP)
+    else
+      CallUnhandledBreakPointEvents(ecBreakpoint, DebugEvent);
+
+    ToggleInt3Breakpoint(BreakPointIndex, False);
+    SetSingleStepMode(DebugEvent^.dwThreadId, True);
+    if ReleaseBP or FRemoveCurrentBreakpoint then
+      RemoveBreakpoint(BreakPointIndex)
+    else
+      FRestoreBPIndex := BreakPointIndex;
+
+    Result := True;
   end;
 end;
 
@@ -2153,6 +2186,11 @@ begin
   DebugSetProcessKillOnExit(CloseDebugProcessOnFree);
 end;
 
+procedure TDebuger.SetCodeTracking(const Value: Boolean);
+begin
+  FCodeTracking := Value;
+end;
+
 procedure TDebuger.SetExceptionEvent(const Index: TExceptionCode; const Value: TDefaultExceptionEvent);
 begin
   FExceptioEvents[Index] := Value;
@@ -2306,6 +2344,11 @@ begin
   DoSetBreakpoint(Address, TrackBk^.SaveByte);
 
   DbgTrackBreakpoints.Add(Address, TrackBk);
+end;
+
+procedure TDebuger.SetTrackSystemUnits(const Value: Boolean);
+begin
+  FTrackSystemUnits := Value;
 end;
 
 function TDebuger.StopDebug: Boolean;
