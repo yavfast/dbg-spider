@@ -15,6 +15,7 @@ Type
   Private
     FImage: TJclPeBorTD32Image;
     FDelphiVersion: TDelphiVersion;
+    FSystemUnits: TStringList;
 
     Function ImageBase: Cardinal;
     Function ImageNames(const Index: TNameId): AnsiString;
@@ -40,6 +41,7 @@ Type
     function CustomVariantAsString(const Value: Variant): String;
     procedure SetDelphiVersion(const Value: TDelphiVersion);
     procedure InitCodeTracking;
+    procedure FillSystemUnits;
   Protected
     Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Override;
   Public
@@ -151,6 +153,8 @@ Begin
 
   FImage := Nil;
   FDelphiVersion := dvAuto;
+  FSystemUnits := TStringList.Create;
+  FillSystemUnits;
 End;
 
 function TDelphiDebugInfo.CustomVariantAsString(const Value: Variant): String;
@@ -176,6 +180,7 @@ end;
 Destructor TDelphiDebugInfo.Destroy;
 Begin
   FreeAndNil(FImage);
+  FreeAndNil(FSystemUnits);
 
   Inherited;
 End;
@@ -1114,7 +1119,6 @@ Begin
   Begin
     UInfo := TUnitInfo(Units.Objects[I]);
 
-
     // DoProgress(Format('Check unit "%s"', [UInfo.Name]), 90 + Round((I + 1) * Delta));
 
     For J := 0 To UInfo.UsedUnits.Count - 1 Do
@@ -1188,6 +1192,52 @@ End;
 { ............................................................................... }
 
 { ............................................................................... }
+procedure TDelphiDebugInfo.FillSystemUnits;
+begin
+  FSystemUnits.Clear;
+  FSystemUnits.Sorted := False;
+  FSystemUnits.CaseSensitive := False;
+
+  FSystemUnits.Add('System');
+  FSystemUnits.Add('Classes');
+  FSystemUnits.Add('Windows');
+  FSystemUnits.Add('SysUtils');
+  FSystemUnits.Add('Variants');
+  FSystemUnits.Add('StrUtils');
+  FSystemUnits.Add('WideStrUtils');
+  FSystemUnits.Add('XMLDoc');
+  FSystemUnits.Add('XMLIntf');
+  FSystemUnits.Add('Graphics');
+  FSystemUnits.Add('Forms');
+  FSystemUnits.Add('Controls');
+  FSystemUnits.Add('StdCtrls');
+  FSystemUnits.Add('ExtCtrls');
+  FSystemUnits.Add('ComCtrls');
+  FSystemUnits.Add('Buttons');
+  FSystemUnits.Add('ActnList');
+  FSystemUnits.Add('Mask');
+  FSystemUnits.Add('Dialogs');
+
+  FSystemUnits.Add('WinApi');
+  FSystemUnits.Add('Vcl');
+  FSystemUnits.Add('Soap');
+  FSystemUnits.Add('Xml');
+  FSystemUnits.Add('Web');
+  FSystemUnits.Add('Data');
+
+  FSystemUnits.Add('acPNG');
+  FSystemUnits.Add('sCommonData');
+  FSystemUnits.Add('acZLibEx');
+  FSystemUnits.Add('sVclUtils');
+  FSystemUnits.Add('sLabel');
+  FSystemUnits.Add('sSkinProvider');
+  FSystemUnits.Add('sSkinManager');
+  FSystemUnits.Add('sGraphUtils');
+  FSystemUnits.Add('acntUtils');
+
+  FSystemUnits.Sorted := True;
+end;
+
 Function TDelphiDebugInfo.FindFuncByAddr(UnitInfo: TUnitInfo; const Addr: TPointer): TFuncInfo;
 Var
   I: Integer;
@@ -1298,9 +1348,13 @@ End;
 Function TDelphiDebugInfo.CheckSystemFile(Const FileName: String): Boolean;
 Var
   FN: String;
+  SL: TStringArray;
 Begin
+  Result := False;
   FN := ExtractFileName(FileName);
-  Result := SameText(FN, 'system.pas');
+  SplitStr(FN, '.', SL);
+  if Length(SL) > 0 then
+    Result := (FSystemUnits.IndexOf(SL[0]) >= 0);
 End;
 { ............................................................................... }
 
@@ -1580,7 +1634,7 @@ begin
   begin
     UnitInfo := TUnitInfo(Units.Objects[I]);
 
-    if not gvDebuger.TrackSystemUnits and (UnitInfo.UnitType = utSystem) then
+    if not gvDebuger.TrackSystemUnits and (UnitInfo.GetUnitType = utSystem) then
       Continue;
 
     for J := 0 to UnitInfo.Funcs.Count - 1 do

@@ -70,8 +70,12 @@ type
     procedure UpdateMemoryInfoObjectTypes;
 
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
+    procedure DoSetBreakpointF(const Address: Pointer; var SaveByte: Byte);
     procedure DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
+    procedure DoRemoveBreakpointF(const Address: Pointer; const SaveByte: Byte);
     procedure DoRestoreBreakpoint(const Address: Pointer);
+    procedure DoRestoreBreakpointF(const Address: Pointer);
+
     procedure SetTrackSystemUnits(const Value: Boolean);
   protected
     // работа с данными о нитях отлаживаемого приложения
@@ -134,8 +138,8 @@ type
     procedure ToggleMemoryBreakpoint(Index: Integer; Active: Boolean);
     procedure UpdateHardwareBreakpoints(const ThreadID: TThreadId);
 
-    // перевод нити отлаживаемого приложения в режим трассировки
-    procedure SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean);
+    procedure SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean); overload;
+    procedure SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: Boolean); overload;
 
     function PerfomancePauseDebug: Boolean;
 
@@ -167,7 +171,7 @@ type
     procedure InjectPerfThread;
     procedure InjectPerfFunc;
 
-    function ReadData(AddrPrt, ResultPtr: Pointer; DataSize: Integer): Boolean;
+    function ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): Boolean;
 
     function ReadStringA(AddrPrt: Pointer; Len: Integer = 0): AnsiString;
     function ReadStringW(AddrPrt: Pointer; Len: Integer = 0): WideString;
@@ -178,8 +182,8 @@ type
     procedure SetFlag(const ThreadID: TThreadId; Flag: DWORD; Value: Boolean);
     function GetFlag(const ThreadID: TThreadId; Flag: DWORD): Boolean;
 
-    function UpdateThreadContext(const ThreadID: TThreadId): PThreadData; overload;
-    function UpdateThreadContext(ThreadData: PThreadData): Boolean; overload;
+    function UpdateThreadContext(const ThreadID: TThreadId; const ContextFlags: Cardinal = CONTEXT_FULL): PThreadData; overload;
+    function UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): Boolean; overload;
 
     function GetRegisters(const ThreadID: TThreadId): TContext;
     procedure SetRegisters(const ThreadID: TThreadId; var Context: TContext);
@@ -362,11 +366,10 @@ begin
   Result := DWORD(@_DbgPerfomanceHook);
 end;
 
-function Check(const Value: Boolean): Boolean; //inline;
+procedure Check(const Value: Boolean); inline;
 begin
   if not Value then
     RaiseLastOSError;
-  Result := Value;
 end;
 
 function CodeDataToExceptionCode(const Value: DWORD): TExceptionCode;
@@ -590,6 +593,7 @@ begin
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
     Result^.DbgExceptions := TThreadList.Create;
     Result^.DbgTrackList := TCollectList<TTrackPoint>.Create;
+    Result^.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
 
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(Result, ptStart);
@@ -978,6 +982,13 @@ begin
   finally
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
   end;
+end;
+
+procedure TDebuger.DoRestoreBreakpointF(const Address: Pointer);
+var
+  Dummy: TSysUInt;
+begin
+  Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
 end;
 
 procedure TDebuger.DoResumeAction(const ThreadID: TThreadId);
@@ -1540,7 +1551,7 @@ begin
   begin
     if Assigned(ThData^.DbgCurTrackAddress) then
     begin
-      DoRestoreBreakpoint(ThData^.DbgCurTrackAddress);
+      DoRestoreBreakpointF(ThData^.DbgCurTrackAddress);
       ThData^.DbgCurTrackAddress := nil;
       Exit;
     end;
@@ -1659,7 +1670,11 @@ var
   ThData: PThreadData;
   Address: Pointer;
   TrackBp: PTrackBreakpoint;
-  TrackPoint: PTrackPoint;
+  ParentFuncAddr: Pointer;
+  TrackFuncInfo: TTrackFuncInfo;
+  ParentCallFuncInfo: PCallFuncInfo;
+  ParentFuncInfo: TFuncInfo;
+  ParentTrackFuncInfo: TTrackFuncInfo;
 begin
   Result := False;
   ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
@@ -1668,14 +1683,23 @@ begin
     Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
     if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
     begin
-      TrackPoint := ThData^.DbgTrackList.Add;
-      TrackPoint^.FuncInfo := TrackBp^.FuncInfo;
-      TrackPoint^.RET := Pointer(ThData^.Context^.Esp);
-      //TrackPoint^.TimeEnter := _QueryThreadCycleTime(ThData^.ThreadHandle);
+      ParentFuncAddr := nil;
+      ReadData(Pointer(ThData^.Context^.Esp), @ParentFuncAddr, SizeOf(Pointer));
 
+      // Add parent function
+      TrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo);
+      ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
+
+      // Add child in parent function
+      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+      ParentTrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo);
+      ParentTrackFuncInfo.AddChildCall(Address);
+
+      // Restore breakpoint byte-code
       ThData^.DbgCurTrackAddress := Address;
-      DoRemoveBreakpoint(Address, TrackBp^.SaveByte);
-      SetSingleStepMode(DebugEvent^.dwThreadId, True);
+      DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
+      SetSingleStepMode(ThData, True);
+
       Result := True;
     end;
   end;
@@ -1737,7 +1761,7 @@ begin
   end;
 end;
 
-function TDebuger.ReadData(AddrPrt, ResultPtr: Pointer; DataSize: Integer): Boolean;
+function TDebuger.ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): Boolean;
 var
   Dummy: TSysUInt;
 begin
@@ -2051,7 +2075,7 @@ end;
 
 procedure TDebuger.ProcessDebugEvents;
 var
-  DebugEvent: PDebugEvent; // !!! Необходимо выравнивание по памяти
+  DebugEvent: PDebugEvent;
   ExceptionCode: DWORD;
   CallNextLoopIteration: Boolean;
 begin
@@ -2083,14 +2107,14 @@ begin
             ExceptionCode := DebugEvent^.Exception.ExceptionRecord.ExceptionCode;
 
             case ExceptionCode of
-              DBG_EXCEPTION:
-                ProcessDbgException(DebugEvent);
+              EXCEPTION_BREAKPOINT:
+                ProcessExceptionBreakPoint(DebugEvent);
 
               EXCEPTION_SINGLE_STEP:
                 ProcessExceptionSingleStep(DebugEvent);
 
-              EXCEPTION_BREAKPOINT:
-                ProcessExceptionBreakPoint(DebugEvent);
+              DBG_EXCEPTION:
+                ProcessDbgException(DebugEvent);
 
               EXCEPTION_SET_THREAD_NAME:
                 SetThreadName(DebugEvent);
@@ -2139,16 +2163,24 @@ end;
 
 procedure TDebuger.DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
 var
-  OldProtect: DWORD;
   Dummy: TSysUInt;
+  OldProtect: DWORD;
 begin
-  Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_READWRITE, OldProtect));
-  try
+  Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_EXECUTE_READWRITE, OldProtect));
+  //try
     Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
     Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
-  finally
-    Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
-  end;
+//  finally
+//    Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
+//  end;
+end;
+
+procedure TDebuger.DoSetBreakpointF(const Address: Pointer; var SaveByte: Byte);
+var
+  Dummy: TSysUInt;
+begin
+  Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
+  Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
 end;
 
 function TDebuger.SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
@@ -2295,6 +2327,17 @@ begin
   end;
 end;
 
+procedure TDebuger.SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: Boolean);
+begin
+  // !!! ThData^.Context уже должен быть актуальным
+  if RestoreEIPAfterBP then
+    Dec(ThData^.Context^.Eip);
+
+  ThData^.Context^.EFlags := ThData^.Context^.EFlags or EFLAGS_TF;
+
+  Check(SetThreadContext(ThData^.ThreadHandle, ThData^.Context^));
+end;
+
 procedure TDebuger.SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean);
 var
   ThData: PThreadData;
@@ -2336,14 +2379,17 @@ procedure TDebuger.SetTrackBreakpoint(const Address: Pointer; FuncInfo: TObject)
 var
   TrackBk: PTrackBreakpoint;
 begin
-  GetMem(TrackBk, SizeOf(TTrackBreakpoint));
+  if not DbgTrackBreakpoints.ContainsKey(Address) then
+  begin
+    GetMem(TrackBk, SizeOf(TTrackBreakpoint));
 
-  TrackBk^.FuncInfo := FuncInfo;
-  TrackBk^.SaveByte := 0;
+    TrackBk^.FuncInfo := FuncInfo;
+    TrackBk^.SaveByte := 0;
 
-  DoSetBreakpoint(Address, TrackBk^.SaveByte);
+    DoSetBreakpoint(Address, TrackBk^.SaveByte);
 
-  DbgTrackBreakpoints.Add(Address, TrackBk);
+    DbgTrackBreakpoints.Add(Address, TrackBk);
+  end;
 end;
 
 procedure TDebuger.SetTrackSystemUnits(const Value: Boolean);
@@ -2414,8 +2460,8 @@ end;
 
 procedure TDebuger.DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
 var
-  OldProtect: DWORD;
   Dummy: TSysUInt;
+  OldProtect: DWORD;
 begin
   Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_READWRITE, OldProtect));
   try
@@ -2423,6 +2469,13 @@ begin
   finally
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
   end;
+end;
+
+procedure TDebuger.DoRemoveBreakpointF(const Address: Pointer; const SaveByte: Byte);
+var
+  Dummy: TSysUInt;
+begin
+  Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
 end;
 
 procedure TDebuger.ToggleInt3Breakpoint(Index: Integer; Active: Boolean);
@@ -2631,23 +2684,23 @@ begin
   end;
 end;
 
-function TDebuger.UpdateThreadContext(ThreadData: PThreadData): Boolean;
+function TDebuger.UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;
 begin
   Result := False;
   if ThreadData <> Nil then
   begin
-    ZeroMemory(ThreadData^.Context, SizeOf(TContext));
+    //ZeroMemory(ThreadData^.Context, SizeOf(TContext));
 
-    ThreadData^.Context^.ContextFlags := CONTEXT_FULL or CONTEXT_DEBUG_REGISTERS;
+    ThreadData^.Context^.ContextFlags := ContextFlags;
     Result := GetThreadContext(ThreadData^.ThreadHandle, ThreadData^.Context^);
   end;
 end;
 
-function TDebuger.UpdateThreadContext(const ThreadID: TThreadId): PThreadData;
+function TDebuger.UpdateThreadContext(const ThreadID: TThreadId; const ContextFlags: Cardinal = CONTEXT_FULL): PThreadData;
 begin
   Result := GetThreadData(ThreadId);
   if Result <> nil then
-    if not UpdateThreadContext(Result) then
+    if not UpdateThreadContext(Result, ContextFlags) then
       RaiseDebugCoreException();
 end;
 

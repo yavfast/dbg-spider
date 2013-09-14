@@ -1006,69 +1006,20 @@ object MainForm: TMainForm
     object tsCodeTracking: TTabSheet
       Caption = 'Code tracking'
       ImageIndex = 5
-      object vstTrackThreads: TVirtualStringTree
-        Left = 0
-        Top = 0
-        Width = 396
-        Height = 517
-        Align = alLeft
-        Header.AutoSizeIndex = 0
-        Header.Font.Charset = DEFAULT_CHARSET
-        Header.Font.Color = clWindowText
-        Header.Font.Height = -11
-        Header.Font.Name = 'Tahoma'
-        Header.Font.Style = []
-        Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
-        Header.Style = hsFlatButtons
-        ScrollBarOptions.AlwaysVisible = True
-        TabOrder = 0
-        TreeOptions.AutoOptions = [toAutoDropExpand, toAutoTristateTracking, toAutoDeleteMovedNodes]
-        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning]
-        TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-        OnColumnResize = vstThreadsColumnResize
-        OnDrawText = vstThreadsDrawText
-        OnFocusChanged = vstExceptionThreadsFocusChanged
-        OnGetText = vstExceptionThreadsGetText
-        OnGetNodeDataSize = vstThreadsGetNodeDataSize
-        Columns = <
-          item
-            CaptionAlignment = taCenter
-            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
-            Position = 0
-            Width = 250
-            WideText = 'Thread name'
-          end
-          item
-            Alignment = taRightJustify
-            CaptionAlignment = taCenter
-            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-            Position = 1
-            Width = 75
-            WideText = 'ID'
-          end
-          item
-            Alignment = taRightJustify
-            CaptionAlignment = taCenter
-            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-            Position = 2
-            WideText = 'Count'
-          end>
-      end
       object pTrackAdv: TPanel
-        Left = 396
+        Left = 462
         Top = 0
-        Width = 814
+        Width = 748
         Height = 517
         Align = alClient
         BevelOuter = bvNone
         Caption = 'pTrackAdv'
         ShowCaption = False
-        TabOrder = 1
+        TabOrder = 0
         object vstTrackFuncs: TVirtualStringTree
           Left = 0
           Top = 0
-          Width = 396
+          Width = 357
           Height = 517
           Align = alLeft
           BevelEdges = []
@@ -1088,8 +1039,8 @@ object MainForm: TMainForm
           TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
           TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
           OnColumnResize = vstThreadsColumnResize
-          OnFocusChanged = vstDbgInfoFunctionsFocusChanged
-          OnGetText = vstDbgInfoFunctionsGetText
+          OnFocusChanged = vstTrackFuncsFocusChanged
+          OnGetText = vstTrackFuncsGetText
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
@@ -1105,13 +1056,21 @@ object MainForm: TMainForm
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
               Position = 1
               Width = 70
-              WideText = 'Address'
+              WideText = 'Call count'
+            end
+            item
+              Alignment = taRightJustify
+              CaptionAlignment = taCenter
+              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+              Position = 2
+              Width = 70
+              WideText = 'Ellapsed'
             end>
         end
         object pTrackFuncAdv: TPanel
-          Left = 396
+          Left = 357
           Top = 0
-          Width = 418
+          Width = 391
           Height = 517
           Align = alClient
           BevelOuter = bvNone
@@ -1121,7 +1080,7 @@ object MainForm: TMainForm
           object splTrackFuncAdv: TSplitter
             Left = 0
             Top = 273
-            Width = 418
+            Width = 391
             Height = 3
             Cursor = crVSplit
             Align = alTop
@@ -1129,7 +1088,7 @@ object MainForm: TMainForm
           object vstTrackFuncParent: TVirtualStringTree
             Left = 0
             Top = 0
-            Width = 418
+            Width = 391
             Height = 273
             Align = alTop
             BevelEdges = []
@@ -1148,31 +1107,36 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-            OnColumnResize = vstThreadsColumnResize
-            OnFocusChanged = vstDbgInfoFunctionsFocusChanged
-            OnGetText = vstDbgInfoFunctionsGetText
+            OnGetText = vstTrackFuncParentGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
             Columns = <
               item
                 CaptionAlignment = taCenter
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                 Position = 0
-                Width = 200
-                WideText = 'Function name'
+                Width = 300
+                WideText = 'Parent function name'
               end
               item
                 Alignment = taRightJustify
                 CaptionAlignment = taCenter
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                 Position = 1
+                WideText = 'LineNo'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 2
                 Width = 70
-                WideText = 'Address'
+                WideText = 'Call count'
               end>
           end
           object vstTrackFuncChilds: TVirtualStringTree
             Left = 0
             Top = 276
-            Width = 418
+            Width = 391
             Height = 241
             Align = alClient
             BevelEdges = []
@@ -1191,28 +1155,90 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-            OnColumnResize = vstThreadsColumnResize
-            OnFocusChanged = vstDbgInfoFunctionsFocusChanged
-            OnGetText = vstDbgInfoFunctionsGetText
+            OnGetText = vstTrackFuncChildsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
             Columns = <
               item
                 CaptionAlignment = taCenter
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                 Position = 0
-                Width = 200
-                WideText = 'Function name'
+                Width = 300
+                WideText = 'Child function name'
               end
               item
                 Alignment = taRightJustify
                 CaptionAlignment = taCenter
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                 Position = 1
+                WideText = 'LineNo'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 2
                 Width = 70
-                WideText = 'Address'
+                WideText = 'Call count'
               end>
           end
         end
+      end
+      object vstTrackThreads: TVirtualStringTree
+        Left = 0
+        Top = 0
+        Width = 462
+        Height = 517
+        Align = alLeft
+        BorderStyle = bsNone
+        Colors.FocusedSelectionColor = clBtnFace
+        Colors.FocusedSelectionBorderColor = clBtnFace
+        Colors.SelectionRectangleBlendColor = clBtnFace
+        Colors.SelectionRectangleBorderColor = clBtnFace
+        Colors.SelectionTextColor = clWindowText
+        DrawSelectionMode = smBlendedRectangle
+        Header.AutoSizeIndex = -1
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'Tahoma'
+        Header.Font.Style = []
+        Header.Options = [hoColumnResize, hoVisible]
+        Header.Style = hsPlates
+        ScrollBarOptions.AlwaysVisible = True
+        TabOrder = 1
+        TreeOptions.AutoOptions = [toAutoTristateTracking, toAutoDeleteMovedNodes]
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+        TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
+        OnColumnResize = vstThreadsColumnResize
+        OnDrawText = vstThreadsDrawText
+        OnFocusChanged = vstTrackThreadsFocusChanged
+        OnGetText = vstThreadsGetText
+        OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        Columns = <
+          item
+            CaptionAlignment = taCenter
+            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coUseCaptionAlignment]
+            Position = 0
+            Width = 300
+            WideText = 'Thread name'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
+            Position = 1
+            Width = 75
+            WideText = 'ID'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
+            Position = 2
+            Width = 70
+            WideText = 'CPU time'
+          end>
       end
     end
   end
@@ -1550,22 +1576,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 852
+        Width = 858
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 362
+        Width = 356
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 865
+      Left = 871
       Top = 0
-      Width = 353
+      Width = 347
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1589,7 +1615,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 839
+      Width = 845
       Height = 25
       ActionManager = amMain
       Align = alNone
@@ -1795,12 +1821,14 @@ object MainForm: TMainForm
     end
     object acCodeTracking: TAction
       Category = 'Options'
+      AutoCheck = True
       Caption = 'Code tracking'
       Checked = True
       OnExecute = acCodeTrackingExecute
     end
     object acTrackSystemUnits: TAction
       Category = 'Options'
+      AutoCheck = True
       Caption = 'Track system units'
       OnExecute = acTrackSystemUnitsExecute
     end

@@ -276,6 +276,50 @@ type
     TimeLeave: UInt64;
   end;
 
+  PCallFuncInfo = ^TCallFuncInfo;
+  TCallFuncInfo = record
+    FuncInfo: TObject;
+    LineNo: Cardinal;
+    CallCount: UInt64;
+  end;
+
+  TCallFuncCounter = class(TDictionary<Pointer,PCallFuncInfo>)
+  private
+    function AddNewCallFunc(const Addr: Pointer): PCallFuncInfo;
+  protected
+    procedure ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification); override;
+  public
+    function AddCallFunc(const Addr: Pointer): PCallFuncInfo;
+  end;
+  TCallFuncCounterPair = TPair<Pointer,PCallFuncInfo>;
+
+  TTrackFuncInfo = class
+  private
+    FFuncInfo: TObject;
+    FCallCount: UInt64;
+    FParentFuncs: TCallFuncCounter;
+    FChildFuncs: TCallFuncCounter;
+  public
+    constructor Create(AFuncInfo: TObject);
+    destructor Destroy; override;
+
+    function AddParentCall(const Addr: Pointer): PCallFuncInfo;
+    function AddChildCall(const Addr: Pointer): PCallFuncInfo;
+
+    property FuncInfo: TObject read FFuncInfo;
+    property CallCount: UInt64 read FCallCount;
+    property ParentFuncs: TCallFuncCounter read FParentFuncs;
+    property ChildFuncs: TCallFuncCounter read FChildFuncs;
+  end;
+
+  TTrackFuncInfoList = class(TDictionary<TObject,TTrackFuncInfo>)
+  protected
+    procedure ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification); override;
+  public
+    function GetTrackFuncInfo(const FuncInfo: TObject): TTrackFuncInfo;
+  end;
+  TTrackFuncInfoPair = TPair<TObject,TTrackFuncInfo>;
+
   TThreadAdvInfoList = TBaseCollectList; //TCollectList<TThreadAdvInfo>;
 
   TThreadPointList = TBaseCollectList; //TCollectList<TThreadPoint>;
@@ -307,6 +351,8 @@ type
 
     DbgTrackList: TTrackPointList;
     DbgCurTrackAddress: Pointer;
+
+    DbgTrackFuncList: TTrackFuncInfoList;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -520,6 +566,7 @@ begin
   FreeAndNil(DbgGetMemInfo);
   FreeAndNil(DbgExceptions);
   FreeAndNil(DbgTrackList);
+  FreeAndNil(DbgTrackFuncList);
 
   FreeMemory(Context);
 
@@ -815,6 +862,105 @@ begin
   finally
     UnlockList;
   end;
+end;
+
+{ TTrackFuncInfo }
+
+function TTrackFuncInfo.AddChildCall(const Addr: Pointer): PCallFuncInfo;
+begin
+  if Assigned(Addr) then
+    Result := FChildFuncs.AddCallFunc(Addr)
+  else
+    Result := nil;
+end;
+
+function TTrackFuncInfo.AddParentCall(const Addr: Pointer): PCallFuncInfo;
+begin
+  Inc(FCallCount);
+
+  if Assigned(Addr) then
+    Result := FParentFuncs.AddCallFunc(Addr)
+  else
+    Result := nil;
+end;
+
+constructor TTrackFuncInfo.Create(AFuncInfo: TObject);
+begin
+  inherited Create;
+
+  FFuncInfo := AFuncInfo;
+  FCallCount := 0;
+  FParentFuncs := TCallFuncCounter.Create(256);
+  FChildFuncs := TCallFuncCounter.Create(256);
+end;
+
+destructor TTrackFuncInfo.Destroy;
+begin
+  FreeAndNil(FParentFuncs);
+  FreeAndNil(FChildFuncs);
+
+  inherited;
+end;
+
+{ TTrackFuncInfoList }
+
+function TTrackFuncInfoList.GetTrackFuncInfo(const FuncInfo: TObject): TTrackFuncInfo;
+begin
+  if not TryGetValue(FuncInfo, Result) then
+  begin
+    Result := TTrackFuncInfo.Create(FuncInfo);
+    Add(FuncInfo, Result);
+  end;
+end;
+
+procedure TTrackFuncInfoList.ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification);
+begin
+  inherited;
+
+  if Action = cnRemoved then
+    Value.Free;
+end;
+
+{ TCallCounter }
+
+function TCallFuncCounter.AddCallFunc(const Addr: Pointer): PCallFuncInfo;
+begin
+  if TryGetValue(Addr, Result) then
+    Inc(Result^.CallCount)
+  else
+  begin
+    Result := AddNewCallFunc(Addr);
+    Result^.CallCount := 1;
+
+    Add(Addr, Result);
+  end;
+end;
+
+function TCallFuncCounter.AddNewCallFunc(const Addr: Pointer): PCallFuncInfo;
+var
+  UnitInfo: TUnitInfo;
+  FuncInfo: TFuncInfo;
+  LineInfo: TLineInfo;
+begin
+  Result := GetMemory(SizeOf(TCallFuncInfo));
+  ZeroMemory(Result, SizeOf(TCallFuncInfo));
+
+  FuncInfo := nil;
+  LineInfo := nil;
+  if gvDebugInfo.GetLineInfo(Addr, UnitInfo, FuncInfo, LineInfo, False) <> slNotFound then
+  begin
+    Result^.FuncInfo := FuncInfo;
+    if Assigned(LineInfo) then
+      Result^.LineNo := LineInfo.LineNo;
+  end;
+end;
+
+procedure TCallFuncCounter.ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification);
+begin
+  inherited;
+
+  if Action = cnRemoved then
+    FreeMemory(Value);
 end;
 
 end.

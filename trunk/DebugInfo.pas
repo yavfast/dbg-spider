@@ -254,7 +254,7 @@ Type
     function ShortName: String; Override;
 
     function FullUnitName: String;
-    function UnitType: TUnitType;
+    function GetUnitType: TUnitType;
   end;
 
   TDLLInfo = Class(TSegmentCodeInfo)
@@ -718,6 +718,12 @@ begin
   begin
     if FDirs[Result].ContainsKey(AnsiLowerCase(UnitName)) then
       Exit;
+  end;
+
+  if CheckSystemFile(UnitName) then
+  begin
+    Result := utSystem;
+    Exit;
   end;
 
   Result := utUnknown;
@@ -1356,7 +1362,7 @@ begin
   Result := gvDebugInfo.ParseUnitName(Self);
 end;
 
-function TUnitInfo.UnitType: TUnitType;
+function TUnitInfo.GetUnitType: TUnitType;
 begin
   Result := gvDebugInfo.GetUnitType(ShortName);
 end;
