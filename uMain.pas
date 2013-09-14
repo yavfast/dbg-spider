@@ -17,7 +17,7 @@ type
 
   TLinkType = (ltProject, ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
     ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
-    ltDbgFuncParamInfo, ltDbgLogItem);
+    ltDbgFuncParamInfo, ltDbgLogItem, ltTrackFuncInfo, ltTrackCallFuncInfo);
 
   PLinkData = ^TLinkData;
   TLinkData = record
@@ -53,6 +53,10 @@ type
         (DbgFuncParamInfo: TVarInfo);
       ltDbgLogItem:
         (DbgLogItem: TDbgLogItem);
+      ltTrackFuncInfo:
+        (TrackFuncInfo: TTrackFuncInfo);
+      ltTrackCallFuncInfo:
+        (TrackCallFuncInfo: PCallFuncInfo);
   end;
 
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -161,13 +165,13 @@ type
     rbngrpCodeTracking: TRibbonGroup;
     acCodeTracking: TAction;
     acTrackSystemUnits: TAction;
-    vstTrackThreads: TVirtualStringTree;
     pTrackAdv: TPanel;
     vstTrackFuncs: TVirtualStringTree;
     pTrackFuncAdv: TPanel;
     vstTrackFuncParent: TVirtualStringTree;
     splTrackFuncAdv: TSplitter;
     vstTrackFuncChilds: TVirtualStringTree;
+    vstTrackThreads: TVirtualStringTree;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -228,6 +232,14 @@ type
     procedure vstLogResize(Sender: TObject);
     procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
 
+    procedure vstTrackThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+
+    procedure vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+
+    procedure vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+
     procedure tmrThreadsUpdateTimer(Sender: TObject);
     procedure cbCPUTimeLineClick(Sender: TObject);
 
@@ -270,6 +282,7 @@ type
     procedure ClearTrees;
     procedure ClearDbgTrees;
     procedure ClearDbgInfoTrees;
+    procedure ClearTrackTress;
 
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
@@ -287,6 +300,11 @@ type
     procedure LoadFunctionSource(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
     procedure LoadUnitSource(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 
+    procedure LoadTrackProcessFunctions(ProcData: PProcessData; ThreadNode: PVirtualNode);
+    procedure LoadTrackThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
+    procedure LoadTrackParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
+    procedure LoadTrackChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
+
     procedure DrawTimeLineHeader(C: TCanvas; const R: TRect; const Offset: Integer);
     procedure DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
     procedure DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
@@ -302,7 +320,10 @@ type
 
     function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
     function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
+    function FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TUnitInfo): PVirtualNode;
+
     function FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
+
     procedure OnException(Sender: TObject; E: Exception);
 
     procedure LoadGUIOptions;
@@ -581,27 +602,34 @@ begin
   LinkData^.SyncNode := nil;
   LinkData^.LinkType := ltProcess;
   LinkData^.ProcessData := @gvDebuger.ProcessData;
+
+  // Code Tracking
+  NameNode := vstTrackThreads.AddChild(Nil);
+  LinkData := vstTrackThreads.GetNodeData(NameNode);
+  LinkData^.SyncNode := nil;
+  LinkData^.LinkType := ltProcess;
+  LinkData^.ProcessData := @gvDebuger.ProcessData;
 end;
 
 function TMainForm.FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
-  var
-    CurNode: PVirtualNode;
-    LinkData: PLinkData;
-  begin
-    Result := Nil;
-    CurNode := Node^.FirstChild;
-    if CurNode <> Nil then
-    repeat
-      LinkData := vTree.GetNodeData(CurNode);
-      if CheckFunc(LinkData, CmpData) then
-      begin
-        Result := CurNode;
-        Break;
-      end;
+var
+  CurNode: PVirtualNode;
+  LinkData: PLinkData;
+begin
+  Result := Nil;
+  CurNode := Node^.FirstChild;
+  if CurNode <> Nil then
+  repeat
+    LinkData := vTree.GetNodeData(CurNode);
+    if CheckFunc(LinkData, CmpData) then
+    begin
+      Result := CurNode;
+      Break;
+    end;
 
-      Result := FindNode(vTree, CurNode, CheckFunc, CmpData);
-      CurNode := CurNode^.NextSibling;
-    until (CurNode = nil) or (Result <> Nil);
+    Result := FindNode(vTree, CurNode, CheckFunc, CmpData);
+    CurNode := CurNode^.NextSibling;
+  until (CurNode = nil) or (Result <> Nil);
 end;
 
 function TMainForm.FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
@@ -624,6 +652,17 @@ function TMainForm.FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: T
 
 begin
   Result := FindNode(vTree, vTree.RootNode, @_Cmp, Pointer(ThreadId));
+end;
+
+function TMainForm.FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TUnitInfo): PVirtualNode;
+
+  function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
+  begin
+    Result := (LinkData^.LinkType = ltDbgUnitInfo) and (LinkData^.DbgUnitInfo = CmpData);
+  end;
+
+begin
+  Result := FindNode(vTree, vTree.RootNode, @_Cmp, UnitInfo);
 end;
 
 procedure TMainForm.AddThread(const ThreadID: Cardinal);
@@ -744,6 +783,35 @@ begin
     vstExceptionThreads.FocusedNode := CurNode;
     vstExceptionThreads.EndUpdate;
   end;
+
+  // Code Tracking
+  vstTrackThreads.BeginUpdate;
+  CurNode := vstTrackThreads.FocusedNode;
+  try
+    ParentNode := Nil;
+    if ParentId <> 0 then
+    begin
+      if ParentThData = nil then
+        // Если родительский поток завершился раньше старта дочернего
+        ParentNode := FindThreadNodeById(vstTrackThreads, ParentId)
+      else
+        ParentNode := FindThreadNode(vstTrackThreads, ParentThData);
+    end;
+
+    if ParentNode = Nil then
+      ParentNode := vstTrackThreads.RootNode^.FirstChild;
+
+    NameNode := vstTrackThreads.AddChild(ParentNode);
+    vstTrackThreads.Expanded[ParentNode] := True;
+
+    LinkData := vstTrackThreads.GetNodeData(NameNode);
+    LinkData^.SyncNode := nil;
+    LinkData^.LinkType := ltThread;
+    LinkData^.ThreadData := ThData;
+  finally
+    vstTrackThreads.FocusedNode := CurNode;
+    vstTrackThreads.EndUpdate;
+  end;
 end;
 
 procedure TMainForm.cbCPUTimeLineClick(Sender: TObject);
@@ -781,6 +849,16 @@ end;
 
 procedure TMainForm.ClearProject;
 begin
+  if Assigned(gvDebuger) and not(gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) then
+  begin
+    acStop.Execute;
+
+    while not(gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) do
+    begin
+      Application.ProcessMessages;
+    end;
+  end;
+
   if Assigned(gvDebugInfo) then
     gvDebugInfo.ClearDebugInfo;
 
@@ -802,12 +880,21 @@ begin
   UpdateActions;
 end;
 
+procedure TMainForm.ClearTrackTress;
+begin
+  vstTrackThreads.Clear;
+  vstTrackFuncs.Clear;
+  vstTrackFuncParent.Clear;
+  vstTrackFuncChilds.Clear;
+end;
+
 procedure TMainForm.ClearTrees;
 begin
   vstLog.Clear;
 
   ClearDbgTrees;
   ClearDbgInfoTrees;
+  ClearTrackTress;
 end;
 
 procedure TMainForm.DoAction(Action: TacAction; const Args: array of Variant);
@@ -1491,6 +1578,168 @@ begin
   end;
 end;
 
+procedure TMainForm.LoadTrackChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
+var
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  BaseNode: PVirtualNode;
+  UnitNode: PVirtualNode;
+  Node: PVirtualNode;
+  CallFuncCounterPair: TCallFuncCounterPair;
+begin
+  vstTrackFuncChilds.Clear;
+
+  vstTrackFuncChilds.BeginUpdate;
+  try
+    BaseNode := vstTrackFuncChilds.AddChild(nil);
+    Data := vstTrackFuncChilds.GetNodeData(BaseNode);
+    Data^.LinkType := ltTrackFuncInfo;
+    Data^.TrackFuncInfo := TrackFuncInfo;
+    Data^.SyncNode := TrackFuncNode;
+
+    for CallFuncCounterPair in TrackFuncInfo.ChildFuncs do
+    begin
+      FuncInfo := TFuncInfo(CallFuncCounterPair.Value^.FuncInfo);
+      if FuncInfo = nil then Continue;
+
+      UnitNode := FindTrackUnitNode(vstTrackFuncChilds, FuncInfo.UnitInfo);
+
+      if UnitNode = nil then
+      begin
+        UnitNode := vstTrackFuncChilds.AddChild(BaseNode);
+        Data := vstTrackFuncChilds.GetNodeData(UnitNode);
+
+        Data^.LinkType := ltDbgUnitInfo;
+        Data^.DbgUnitInfo := FuncInfo.UnitInfo;
+      end;
+
+      Node := vstTrackFuncChilds.AddChild(UnitNode);
+      Data := vstTrackFuncChilds.GetNodeData(Node);
+
+      Data^.LinkType := ltTrackCallFuncInfo;
+      Data^.TrackCallFuncInfo := CallFuncCounterPair.Value;
+      Data^.SyncNode := TrackFuncNode;
+
+      vstTrackFuncChilds.Expanded[UnitNode] := True;
+    end;
+
+    vstTrackFuncChilds.Expanded[BaseNode] := True;
+  finally
+    vstTrackFuncChilds.EndUpdate;
+  end;
+end;
+
+procedure TMainForm.LoadTrackParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
+var
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  BaseNode: PVirtualNode;
+  UnitNode: PVirtualNode;
+  Node: PVirtualNode;
+  CallFuncCounterPair: TCallFuncCounterPair;
+begin
+  vstTrackFuncParent.Clear;
+
+  vstTrackFuncParent.BeginUpdate;
+  try
+    BaseNode := vstTrackFuncParent.AddChild(nil);
+    Data := vstTrackFuncParent.GetNodeData(BaseNode);
+    Data^.LinkType := ltTrackFuncInfo;
+    Data^.TrackFuncInfo := TrackFuncInfo;
+    Data^.SyncNode := TrackFuncNode;
+
+    for CallFuncCounterPair in TrackFuncInfo.ParentFuncs do
+    begin
+      FuncInfo := TFuncInfo(CallFuncCounterPair.Value^.FuncInfo);
+      if FuncInfo = nil then Continue;
+
+      UnitNode := FindTrackUnitNode(vstTrackFuncParent, FuncInfo.UnitInfo);
+
+      if UnitNode = nil then
+      begin
+        UnitNode := vstTrackFuncParent.AddChild(BaseNode);
+        Data := vstTrackFuncParent.GetNodeData(UnitNode);
+
+        Data^.LinkType := ltDbgUnitInfo;
+        Data^.DbgUnitInfo := FuncInfo.UnitInfo;
+      end;
+
+      Node := vstTrackFuncParent.AddChild(UnitNode);
+      Data := vstTrackFuncParent.GetNodeData(Node);
+
+      Data^.LinkType := ltTrackCallFuncInfo;
+      Data^.TrackCallFuncInfo := CallFuncCounterPair.Value;
+      Data^.SyncNode := TrackFuncNode;
+
+      vstTrackFuncParent.Expanded[UnitNode] := True;
+    end;
+
+    vstTrackFuncParent.Expanded[BaseNode] := True;
+  finally
+    vstTrackFuncParent.EndUpdate;
+  end;
+end;
+
+procedure TMainForm.LoadTrackProcessFunctions(ProcData: PProcessData; ThreadNode: PVirtualNode);
+begin
+  vstTrackFuncs.Clear;
+  vstTrackFuncParent.Clear;
+  vstTrackFuncChilds.Clear;
+end;
+
+procedure TMainForm.LoadTrackThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
+var
+  TrackFuncInfoPair: TTrackFuncInfoPair;
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  BaseNode: PVirtualNode;
+  UnitNode: PVirtualNode;
+  Node: PVirtualNode;
+begin
+  vstTrackFuncs.Clear;
+  vstTrackFuncParent.Clear;
+  vstTrackFuncChilds.Clear;
+
+  vstTrackFuncs.BeginUpdate;
+  try
+    BaseNode := vstTrackFuncs.AddChild(nil);
+    Data := vstTrackFuncs.GetNodeData(BaseNode);
+    Data^.LinkType := ltThread;
+    Data^.ThreadData := ThData;
+    Data^.SyncNode := ThreadNode;
+
+    for TrackFuncInfoPair in ThData^.DbgTrackFuncList do
+    begin
+      FuncInfo := TFuncInfo(TrackFuncInfoPair.Value.FuncInfo);
+      if FuncInfo = nil then Continue;
+      
+      UnitNode := FindTrackUnitNode(vstTrackFuncs, FuncInfo.UnitInfo);
+
+      if UnitNode = nil then
+      begin
+        UnitNode := vstTrackFuncs.AddChild(BaseNode);
+        Data := vstTrackFuncs.GetNodeData(UnitNode);
+
+        Data^.LinkType := ltDbgUnitInfo;
+        Data^.DbgUnitInfo := FuncInfo.UnitInfo;
+      end;
+
+      Node := vstTrackFuncs.AddChild(UnitNode);
+      Data := vstTrackFuncs.GetNodeData(Node);
+
+      Data^.LinkType := ltTrackFuncInfo;
+      Data^.TrackFuncInfo := TrackFuncInfoPair.Value;
+      Data^.SyncNode := ThreadNode;
+
+      vstTrackFuncs.Expanded[UnitNode] := True;
+    end;
+
+    vstTrackFuncs.Expanded[BaseNode] := True;
+  finally
+    vstTrackFuncs.EndUpdate;
+  end;
+end;
+
 procedure TMainForm.LoadTypes(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 var
   I, J: Integer;
@@ -1834,6 +2083,11 @@ begin
   vstExceptionThreads.Invalidate;
   vstExceptionList.Invalidate;
   vstExceptionCallStack.Invalidate;
+
+  vstTrackThreads.Invalidate;
+  vstTrackFuncs.Invalidate;
+  vstTrackFuncParent.Invalidate;
+  vstTrackFuncChilds.Invalidate;
 end;
 
 procedure TMainForm.vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader;
@@ -2740,6 +2994,148 @@ procedure TMainForm.vstThreadsScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: I
 begin
   if DeltaY <> 0 then
     vdtTimeLine.OffsetY := vstThreads.OffsetY;
+end;
+
+procedure TMainForm.vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
+var
+  Data: PLinkData;
+  TrackCallFuncInfo: PCallFuncInfo;
+  TrackFuncInfo: TTrackFuncInfo;
+begin
+  CellText := ' ';
+
+  Data := vstTrackFuncChilds.GetNodeData(Node);
+  case Data^.LinkType of
+    ltDbgUnitInfo:
+      begin
+        case Column of
+          0: CellText := Data^.DbgUnitInfo.ShortName;
+        end;
+      end;
+    ltTrackFuncInfo:
+      begin
+        TrackFuncInfo := Data^.TrackFuncInfo;
+        case Column of
+          0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
+          2: CellText := IntToStr(TrackFuncInfo.CallCount);
+        end;
+      end;
+    ltTrackCallFuncInfo:
+      begin
+        TrackCallFuncInfo := Data^.TrackCallFuncInfo;
+        case Column of
+          0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
+          1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
+          2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+        end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
+var
+  Data: PLinkData;
+  TrackCallFuncInfo: PCallFuncInfo;
+  TrackFuncInfo: TTrackFuncInfo;
+begin
+  CellText := ' ';
+
+  Data := vstTrackFuncParent.GetNodeData(Node);
+  case Data^.LinkType of
+    ltDbgUnitInfo:
+      begin
+        case Column of
+          0: CellText := Data^.DbgUnitInfo.ShortName;
+        end;
+      end;
+    ltTrackFuncInfo:
+      begin
+        TrackFuncInfo := Data^.TrackFuncInfo;
+        case Column of
+          0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
+          2: CellText := IntToStr(TrackFuncInfo.CallCount);
+        end;
+      end;
+    ltTrackCallFuncInfo:
+      begin
+        TrackCallFuncInfo := Data^.TrackCallFuncInfo;
+        case Column of
+          0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
+          1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
+          2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+        end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+begin
+  Data := vstTrackFuncs.GetNodeData(Node);
+  case Data^.LinkType of
+    ltTrackFuncInfo:
+      begin
+        LoadTrackParentFunctions(Data^.TrackFuncInfo, Node);
+        LoadTrackChildFunctions(Data^.TrackFuncInfo, Node);
+      end;
+  else
+    begin
+      vstTrackFuncParent.Clear;
+      vstTrackFuncChilds.Clear;
+    end;
+  end;
+end;
+
+procedure TMainForm.vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
+var
+  Data: PLinkData;
+  ThData: PThreadData;
+  TrackFuncInfo: TTrackFuncInfo;
+  UnitInfo: TUnitInfo;
+begin
+  CellText := '';
+  Data := vstTrackFuncs.GetNodeData(Node);
+  case Data^.LinkType of
+    ltThread:
+      begin
+        ThData := Data^.ThreadData;
+        case Column of
+          0: CellText := ThData^.ThreadAdvInfo^.AsString;
+        end;
+      end;
+    ltDbgUnitInfo:
+      begin
+        UnitInfo := Data^.DbgUnitInfo;
+        case Column of
+          0: CellText := UnitInfo.ShortName;
+        end;
+      end;
+    ltTrackFuncInfo:
+      begin
+        TrackFuncInfo := Data^.TrackFuncInfo;
+        case Column of
+          0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
+          1: CellText := IntToStr(TrackFuncInfo.CallCount);
+        end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstTrackThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+begin
+  Data := vstTrackThreads.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProcess:
+      LoadTrackProcessFunctions(Data^.ProcessData, Node);
+    ltThread:
+      LoadTrackThreadFunctions(Data^.ThreadData, Node);
+  end;
 end;
 
 procedure TMainForm.WMClose(var Message: TWMClose);
