@@ -1064,7 +1064,7 @@ object MainForm: TMainForm
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
               Position = 2
               Width = 70
-              WideText = 'Ellapsed'
+              WideText = 'CPU time'
             end>
         end
         object pTrackFuncAdv: TPanel
@@ -1131,6 +1131,14 @@ object MainForm: TMainForm
                 Position = 2
                 Width = 70
                 WideText = 'Call count'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 3
+                Width = 70
+                WideText = 'CPU time'
               end>
           end
           object vstTrackFuncChilds: TVirtualStringTree
@@ -1179,6 +1187,14 @@ object MainForm: TMainForm
                 Position = 2
                 Width = 70
                 WideText = 'Call count'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 3
+                Width = 70
+                WideText = 'CPU time'
               end>
           end
         end
@@ -1576,22 +1592,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 858
+        Width = 864
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 356
+        Width = 350
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 871
+      Left = 877
       Top = 0
-      Width = 347
+      Width = 341
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1615,7 +1631,7 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 845
+      Width = 851
       Height = 25
       ActionManager = amMain
       Align = alNone

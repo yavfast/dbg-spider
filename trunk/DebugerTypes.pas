@@ -157,12 +157,27 @@ type
   TBreakpointList = array of TBreakpoint;
 
   PTrackBreakpoint = ^TTrackBreakpoint;
-  TTrackBreakpoint = packed record
+  TTrackBreakpoint = record
     FuncInfo: TObject;
     SaveByte: Byte;
   end;
 
-  TTrackBreakpointList = TDictionary<Pointer,PTrackBreakpoint>;
+  TTrackBreakpointList = class(TDictionary<Pointer,PTrackBreakpoint>)
+  protected
+    procedure ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification); override;
+  end;
+
+  PTrackRETBreakpoint = ^TTrackRETBreakpoint;
+  TTrackRETBreakpoint = record
+    Count: Cardinal;
+    SaveByte: Byte;
+  end;
+
+  TTrackRETBreakpointList = class(TDictionary<Pointer,PTrackRETBreakpoint>)
+  protected
+    procedure ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification); override;
+  end;
+
 
   THWBPIndex = 0..3;
   THWBPSize = (hsByte, hdWord, hsDWord);
@@ -267,20 +282,12 @@ type
     function AsString: String;
   end;
 
-  PTrackPoint = ^TTrackPoint;
-  TTrackPoint = record
-    FuncInfo: TObject;
-    RET: Pointer; // Адрес выхода в вызывающей функции
-    // Stack ???
-    TimeEnter: UInt64;
-    TimeLeave: UInt64;
-  end;
-
   PCallFuncInfo = ^TCallFuncInfo;
   TCallFuncInfo = record
     FuncInfo: TObject;
     LineNo: Cardinal;
     CallCount: UInt64;
+    Ellapsed: UInt64;
   end;
 
   TCallFuncCounter = class(TDictionary<Pointer,PCallFuncInfo>)
@@ -297,6 +304,7 @@ type
   private
     FFuncInfo: TObject;
     FCallCount: UInt64;
+    FEllapsed: UInt64;
     FParentFuncs: TCallFuncCounter;
     FChildFuncs: TCallFuncCounter;
   public
@@ -306,8 +314,11 @@ type
     function AddParentCall(const Addr: Pointer): PCallFuncInfo;
     function AddChildCall(const Addr: Pointer): PCallFuncInfo;
 
+    procedure GrowEllapsed(const Value: UInt64);
+
     property FuncInfo: TObject read FFuncInfo;
     property CallCount: UInt64 read FCallCount;
+    property Ellapsed: UInt64 read FEllapsed;
     property ParentFuncs: TCallFuncCounter read FParentFuncs;
     property ChildFuncs: TCallFuncCounter read FChildFuncs;
   end;
@@ -320,13 +331,24 @@ type
   end;
   TTrackFuncInfoPair = TPair<TObject,TTrackFuncInfo>;
 
+  PTrackStackPoint = ^TTrackStackPoint;
+  TTrackStackPoint = record
+    TrackFuncInfo: TTrackFuncInfo;
+    ParentTrackFuncInfo: TTrackFuncInfo;
+    TrackRETBreakpoint: PTrackRETBreakpoint;
+    Enter: UInt64;
+    Leave: UInt64;
+
+    function Ellapsed: UInt64;
+  end;
+
+  TTrackStack = class(TStack);
+
   TThreadAdvInfoList = TBaseCollectList; //TCollectList<TThreadAdvInfo>;
 
   TThreadPointList = TBaseCollectList; //TCollectList<TThreadPoint>;
 
   TThreadMemInfoList = TBaseCollectList; //TCollectList<TMemInfo>;
-
-  TTrackPointList = TBaseCollectList; //TCollectList<TTrackPoint>;
 
   TThreadState = (tsNone, tsActive, tsFinished, tsSuspended, tsLocked);
 
@@ -339,8 +361,9 @@ type
     Breakpoint: PHardwareBreakpoint;
     Started: Int64;         // момент запуска
     Ellapsed: Int64;        // время выполнения
-    ThreadEllapsed: UInt64; // время использования CPU
-    CPUTime: UInt64;
+
+    ThreadEllapsed: UInt64; // циклы CPU
+    CPUTime: UInt64;        // время использования CPU
 
     DbgPoints: TThreadPointList;
 
@@ -349,10 +372,10 @@ type
 
     DbgExceptions: TThreadList;
 
-    DbgTrackList: TTrackPointList;
     DbgCurTrackAddress: Pointer;
 
     DbgTrackFuncList: TTrackFuncInfoList;
+    DbgTrackStack: TTrackStack;
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -562,11 +585,10 @@ begin
     FreeAndNil(DbgPoints);
   end;
 
-  //FreeAndNil(DbgMemInfo);
   FreeAndNil(DbgGetMemInfo);
   FreeAndNil(DbgExceptions);
-  FreeAndNil(DbgTrackList);
   FreeAndNil(DbgTrackFuncList);
+  FreeAndNil(DbgTrackStack);
 
   FreeMemory(Context);
 
@@ -890,6 +912,8 @@ begin
 
   FFuncInfo := AFuncInfo;
   FCallCount := 0;
+  FEllapsed := 0;
+  //FChildEllapsed := 0;
   FParentFuncs := TCallFuncCounter.Create(256);
   FChildFuncs := TCallFuncCounter.Create(256);
 end;
@@ -900,6 +924,11 @@ begin
   FreeAndNil(FChildFuncs);
 
   inherited;
+end;
+
+procedure TTrackFuncInfo.GrowEllapsed(const Value: UInt64);
+begin
+  Inc(FEllapsed, Value);
 end;
 
 { TTrackFuncInfoList }
@@ -961,6 +990,33 @@ begin
 
   if Action = cnRemoved then
     FreeMemory(Value);
+end;
+
+{ TTrackBreakpointList }
+
+procedure TTrackBreakpointList.ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification);
+begin
+  inherited;
+
+  if Action = cnRemoved then
+    FreeMem(Value);
+end;
+
+{ TTrackRETBreakpointList }
+
+procedure TTrackRETBreakpointList.ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification);
+begin
+  inherited;
+
+  if Action = cnRemoved then
+    FreeMem(Value);
+end;
+
+{ TTrackStackPoint }
+
+function TTrackStackPoint.Ellapsed: UInt64;
+begin
+  Result := Leave - Enter;
 end;
 
 end.
