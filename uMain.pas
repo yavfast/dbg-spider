@@ -317,6 +317,7 @@ type
     procedure SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
 
     function EllapsedToTime(const Ellapsed: UInt64): String;
+    function FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String;
 
     function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
     function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
@@ -1396,6 +1397,25 @@ begin
   vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
 end;
 
+function TMainForm.FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String;
+var
+  F: Extended;
+  FTime: UInt64;
+begin
+  Result := ' ';
+
+  if FuncEllapsed = 0 then
+    Exit;
+
+  F := FuncEllapsed / ThData^.ThreadEllapsed;
+  FTime := Trunc(ThData^.CPUTime * F);
+
+  if FTime > 0 then
+    Result := EllapsedToTime(FTime)
+  else
+    Result := '00:00.000';
+end;
+
 function TMainForm.GetLineTimeOffset: Cardinal;
 var
   F: Double;
@@ -1584,10 +1604,13 @@ var
   FuncInfo: TFuncInfo;
   BaseNode: PVirtualNode;
   UnitNode: PVirtualNode;
+  UnitData: PLinkData;
   Node: PVirtualNode;
   CallFuncCounterPair: TCallFuncCounterPair;
 begin
   vstTrackFuncChilds.Clear;
+
+  if TrackFuncInfo.ChildFuncs.Count = 0 then Exit;
 
   vstTrackFuncChilds.BeginUpdate;
   try
@@ -1607,10 +1630,11 @@ begin
       if UnitNode = nil then
       begin
         UnitNode := vstTrackFuncChilds.AddChild(BaseNode);
-        Data := vstTrackFuncChilds.GetNodeData(UnitNode);
+        UnitData := vstTrackFuncChilds.GetNodeData(UnitNode);
 
-        Data^.LinkType := ltDbgUnitInfo;
-        Data^.DbgUnitInfo := FuncInfo.UnitInfo;
+        UnitData^.LinkType := ltDbgUnitInfo;
+        UnitData^.DbgUnitInfo := FuncInfo.UnitInfo;
+        UnitData^.SyncNode := TrackFuncNode;
       end;
 
       Node := vstTrackFuncChilds.AddChild(UnitNode);
@@ -1639,6 +1663,8 @@ var
   CallFuncCounterPair: TCallFuncCounterPair;
 begin
   vstTrackFuncParent.Clear;
+
+  if TrackFuncInfo.ParentFuncs.Count = 0 then Exit;
 
   vstTrackFuncParent.BeginUpdate;
   try
@@ -2998,10 +3024,32 @@ end;
 
 procedure TMainForm.vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
+
+  function GetThreadData(Data: PLinkData): PThreadData;
+  var
+    SyncNode: PVirtualNode;
+    SyncData: PLinkData;
+  begin
+    Result := nil;
+
+    SyncNode := Data^.SyncNode;
+    SyncData := vstTrackFuncChilds.GetNodeData(SyncNode);
+
+    if SyncData^.LinkType = ltTrackFuncInfo then
+    begin
+      SyncNode := SyncData^.SyncNode;
+      SyncData := vstTrackFuncChilds.GetNodeData(SyncNode);
+
+      if SyncData^.LinkType = ltThread then
+        Result := SyncData^.ThreadData;
+    end;
+  end;
+
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
   TrackFuncInfo: TTrackFuncInfo;
+  ThData: PThreadData;
 begin
   CellText := ' ';
 
@@ -3019,6 +3067,12 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
+          3:
+            begin
+              ThData := GetThreadData(Data);
+              if Assigned(ThData) then
+                CellText := FuncEllapsedToTime(ThData, TrackFuncInfo.Ellapsed);
+            end;
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3028,6 +3082,12 @@ begin
           0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
           2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+          3:
+            begin
+              ThData := GetThreadData(Data);
+              if Assigned(ThData) then
+                CellText := FuncEllapsedToTime(ThData, TrackCallFuncInfo^.Ellapsed);
+            end;
         end;
       end;
   end;
@@ -3035,10 +3095,32 @@ end;
 
 procedure TMainForm.vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
+
+  function GetThreadData(Data: PLinkData): PThreadData;
+  var
+    SyncNode: PVirtualNode;
+    SyncData: PLinkData;
+  begin
+    Result := nil;
+
+    SyncNode := Data^.SyncNode;
+    SyncData := vstTrackFuncParent.GetNodeData(SyncNode);
+
+    if SyncData^.LinkType = ltTrackFuncInfo then
+    begin
+      SyncNode := SyncData^.SyncNode;
+      SyncData := vstTrackFuncParent.GetNodeData(SyncNode);
+
+      if SyncData^.LinkType = ltThread then
+        Result := SyncData^.ThreadData;
+    end;
+  end;
+
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
   TrackFuncInfo: TTrackFuncInfo;
+  ThData: PThreadData;
 begin
   CellText := ' ';
 
@@ -3056,6 +3138,12 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
+          3:
+            begin
+              ThData := GetThreadData(Data);
+              if Assigned(ThData) then
+                CellText := FuncEllapsedToTime(ThData, TrackFuncInfo.Ellapsed);
+            end;
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3065,6 +3153,12 @@ begin
           0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
           2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+          3:
+            begin
+              ThData := GetThreadData(Data);
+              if Assigned(ThData) then
+                CellText := FuncEllapsedToTime(ThData, TrackCallFuncInfo^.Ellapsed);
+            end;
         end;
       end;
   end;
@@ -3093,6 +3187,7 @@ procedure TMainForm.vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtua
   var CellText: string);
 var
   Data: PLinkData;
+  SyncData: PLinkData;
   ThData: PThreadData;
   TrackFuncInfo: TTrackFuncInfo;
   UnitInfo: TUnitInfo;
@@ -3120,6 +3215,13 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackFuncInfo.CallCount);
+          2:
+            begin
+              SyncData := vstTrackFuncs.GetNodeData(Data^.SyncNode);
+              ThData := SyncData^.ThreadData;
+
+              CellText := FuncEllapsedToTime(ThData, TrackFuncInfo.Ellapsed);
+            end;
         end;
       end;
   end;
