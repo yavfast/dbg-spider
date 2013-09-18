@@ -8,11 +8,7 @@ const
   _SEGMENT_SIZE = 16 * 1024;
 
 type
-  {$IFDEF VER230}
   TSysUInt = NativeUInt;
-  {$ELSE}
-  TSysUInt = Cardinal;
-  {$ENDIF}
 
   TSegment<T> = Array of T;
 

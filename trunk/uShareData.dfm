@@ -2952,17 +2952,6 @@ object dmShareData: TdmShareData
       FFFFF00FFFFFFFFFFFF81FFFE00001FF00000000000000000000000000000000
       000000000000}
   end
-  object xpManifest: TXPManifest
-    Left = 40
-    Top = 104
-  end
-  object scmStandart: TStandardColorMap
-    HighlightColor = clBtnHighlight
-    UnusedColor = 13882323
-    MenuColor = clMenu
-    Left = 160
-    Top = 104
-  end
   object synPas1: TSynPasSyn
     Options.AutoDetectEnabled = True
     Options.AutoDetectLineLimit = 0

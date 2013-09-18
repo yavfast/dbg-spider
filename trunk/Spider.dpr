@@ -6,7 +6,7 @@ uses
   Debuger in 'Debuger.pas',
   DebugInfo in 'DebugInfo.pas',
   ClassUtils in 'ClassUtils.pas',
-  DelphiDebugInfo in 'DelphiDebugInfo.pas' {$R *.res},
+  DelphiDebugInfo in 'DelphiDebugInfo.pas',
   EvaluateTypes in 'EvaluateTypes.pas',
   EvaluateProcs in 'EvaluateProcs.pas',
   EvaluateConsts in 'EvaluateConsts.pas',
@@ -22,7 +22,9 @@ uses
   uSpiderOptions in 'uSpiderOptions.pas',
   uShareData in 'uShareData.pas' {dmShareData: TDataModule},
   uSelectSource in 'uSelectSource.pas' {fmSelectSource},
-  WinAPIUtils in 'WinAPIUtils.pas';
+  WinAPIUtils in 'WinAPIUtils.pas',
+  Vcl.Themes,
+  Vcl.Styles;
 
 {$R *.res}
 
@@ -31,6 +33,7 @@ begin
 
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
+  TStyleManager.TrySetStyle('Silver');
   Application.Title := 'Spider';
   Application.CreateForm(TdmShareData, dmShareData);
   Application.CreateForm(TMainForm, MainForm);
