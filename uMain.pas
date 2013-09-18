@@ -10,7 +10,7 @@ uses
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
   RibbonActnMenus, ImgList, ActnColorMaps, XPMan,
-  uActionController, uSpiderOptions, SynEdit, SynMemo;
+  uActionController, uSpiderOptions, SynEdit, SynMemo, System.Actions;
 
 type
   TProgectType = (ptEmpty, ptSpider, ptApplication);

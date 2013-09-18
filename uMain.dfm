@@ -1568,8 +1568,9 @@ object MainForm: TMainForm
       ActionManager = amMain
       AllowHiding = False
       Caption = 'actbMainTabs'
+      ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
+      ColorMap.UnusedColor = 11579568
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
@@ -1592,22 +1593,22 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 864
+        Width = 892
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 350
+        Width = 322
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     object actbStatusInfo: TActionToolBar
-      Left = 877
+      Left = 905
       Top = 0
-      Width = 341
+      Width = 313
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1615,8 +1616,9 @@ object MainForm: TMainForm
       Margins.Bottom = 1
       ActionManager = amMain
       Caption = 'actbStatusInfo'
+      ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
+      ColorMap.UnusedColor = 11579568
       EdgeInner = esNone
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
@@ -1631,14 +1633,15 @@ object MainForm: TMainForm
     object actbStatusInfo2: TActionToolBar
       Left = 11
       Top = 0
-      Width = 851
+      Width = 879
       Height = 25
       ActionManager = amMain
       Align = alNone
       AllowHiding = False
       Caption = 'actbStatusInfo2'
+      ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
+      ColorMap.UnusedColor = 11579568
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11

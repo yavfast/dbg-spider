@@ -734,7 +734,7 @@ constructor TDebuger.Create();
       begin
         tkp.PrivilegeCount := 1;
         tkp.Privileges[0].Attributes := SE_PRIVILEGE_ENABLED;
-        Result := AdjustTokenPrivileges(Token, False, tkp, 0, PTokenPrivileges(nil)^, PDWord(nil)^);
+        Result := AdjustTokenPrivileges(Token, False, tkp, 0, PTokenPrivileges(nil)^, PCardinal(nil)^);
       end;
     end;
   end;

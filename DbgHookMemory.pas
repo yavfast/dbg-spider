@@ -21,24 +21,19 @@ var
   _MemoryMgr: PMemoryManagerEx = nil;
 
 type
-{$IFDEF VER230}
-  TMemSize = NativeUInt;
+  TMemSize = NativeInt;
   TMemUSize = NativeUInt;
-{$ELSE}
-  TMemSize = Integer;
-  TMemUSize = Cardinal;
-{$ENDIF}
 
 var
   _BaseGetMem: function(Size: TMemSize): Pointer;
   _BaseFreeMem: function(P: Pointer): Integer;
   _BaseReallocMem: function(P: Pointer; Size: TMemSize): Pointer;
-  _BaseAllocMem: function(Size: TMemUSize): Pointer;
+  _BaseAllocMem: function(Size: TMemSize): Pointer;
 
 function _HookGetMem(Size: TMemSize): Pointer; forward;
 function _HookFreeMem(P: Pointer): Integer; forward;
 function _HookReallocMem(P: Pointer; Size: TMemSize): Pointer; forward;
-function _HookAllocMem(Size: TMemUSize): Pointer; forward;
+function _HookAllocMem(Size: TMemSize): Pointer; forward;
 
 
 procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: Cardinal);
@@ -229,7 +224,7 @@ begin
   _AddMemInfo(miGetMem, Result, Size);
 end;
 
-function _HookAllocMem(Size: TMemUSize): Pointer;
+function _HookAllocMem(Size: TMemSize): Pointer;
 begin
    Result := _BaseAllocMem(Size);
 

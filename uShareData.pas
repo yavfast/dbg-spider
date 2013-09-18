@@ -12,8 +12,6 @@ type
     ilActionsSmall: TImageList;
     imlMainSmall: TJvImageList;
     imlMain: TJvImageList;
-    xpManifest: TXPManifest;
-    scmStandart: TStandardColorMap;
     synPas1: TSynPasSyn;
     synRegexSearch1: TSynEditRegexSearch;
     synEditSearch1: TSynEditSearch;
