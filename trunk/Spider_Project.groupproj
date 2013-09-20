@@ -1,0 +1,48 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{C7751C4D-EDB7-4931-A6C1-A2320117E406}</ProjectGuid>
+		</PropertyGroup>
+		<ItemGroup>
+			<Projects Include="Spider.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="DbgHook32.dproj">
+				<Dependencies/>
+			</Projects>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Default.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Default.Personality/>
+			</BorlandProject>
+		</ProjectExtensions>
+		<Target Name="Spider">
+			<MSBuild Projects="Spider.dproj"/>
+		</Target>
+		<Target Name="Spider:Clean">
+			<MSBuild Targets="Clean" Projects="Spider.dproj"/>
+		</Target>
+		<Target Name="Spider:Make">
+			<MSBuild Targets="Make" Projects="Spider.dproj"/>
+		</Target>
+		<Target Name="DbgHook32">
+			<MSBuild Projects="DbgHook32.dproj"/>
+		</Target>
+		<Target Name="DbgHook32:Clean">
+			<MSBuild Targets="Clean" Projects="DbgHook32.dproj"/>
+		</Target>
+		<Target Name="DbgHook32:Make">
+			<MSBuild Targets="Make" Projects="DbgHook32.dproj"/>
+		</Target>
+		<Target Name="Build">
+			<CallTarget Targets="Spider;DbgHook32"/>
+		</Target>
+		<Target Name="Clean">
+			<CallTarget Targets="Spider:Clean;DbgHook32:Clean"/>
+		</Target>
+		<Target Name="Make">
+			<CallTarget Targets="Spider:Make;DbgHook32:Make"/>
+		</Target>
+		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+	</Project>

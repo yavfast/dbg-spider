@@ -21,13 +21,14 @@ object frmProcessList: TfrmProcessList
     Left = 0
     Top = 26
     Width = 569
-    Height = 332
+    Height = 331
     Align = alClient
     BorderStyle = bsNone
     ColCount = 1
     DefaultRowHeight = 18
     FixedCols = 0
     TabOrder = 0
+    ExplicitHeight = 332
     ColWidths = (
       519)
   end
@@ -47,13 +48,16 @@ object frmProcessList: TfrmProcessList
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
+    FixedSize = True
+    FixedOrder = True
     object actbTop: TActionToolBar
-      Left = 11
+      Left = 2
       Top = 0
-      Width = 558
+      Width = 567
       Height = 26
       ActionManager = actmgrProcessList
       Caption = 'actbTop'
+      ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
       ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
@@ -61,15 +65,16 @@ object frmProcessList: TfrmProcessList
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
+      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
   end
   object cbActions: TCoolBar
     Left = 0
-    Top = 358
+    Top = 357
     Width = 569
-    Height = 26
+    Height = 27
     Align = alBottom
     AutoSize = True
     Bands = <
@@ -79,17 +84,20 @@ object frmProcessList: TfrmProcessList
         MinHeight = 26
         Width = 567
       end>
-    EdgeInner = esNone
+    EdgeBorders = [ebTop]
     EdgeOuter = esNone
+    FixedSize = True
+    FixedOrder = True
     object actbActions: TActionToolBar
-      Left = 11
+      Left = 2
       Top = 0
-      Width = 558
+      Width = 567
       Height = 26
       ActionManager = actmgrProcessList
       AllowHiding = False
       BiDiMode = bdRightToLeft
       Caption = 'actbActions'
+      ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
       ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
@@ -99,6 +107,7 @@ object frmProcessList: TfrmProcessList
       Font.Style = []
       Orientation = boRightToLeft
       ParentBiDiMode = False
+      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end

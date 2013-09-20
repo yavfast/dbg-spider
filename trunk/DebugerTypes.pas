@@ -368,7 +368,7 @@ type
 
     DbgExceptions: TThreadList;
 
-    DbgCurTrackAddress: Pointer;
+    //DbgCurTrackAddress: Pointer;
 
     DbgTrackFuncList: TTrackFuncInfoList;
     DbgTrackStack: TTrackStack;

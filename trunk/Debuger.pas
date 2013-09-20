@@ -40,6 +40,8 @@ type
     DbgTrackBreakpoints: TTrackBreakpointList;
     DbgTrackRETBreakpoints: TTrackRETBreakpointList;
 
+    DbgCurTrackAddress: Pointer;
+
     // внешние события
     FMainLoopFailed: TNotifyEvent;
     FCreateThread: TCreateThreadEvent;
@@ -1564,10 +1566,10 @@ begin
 
   if Assigned(ThData) then
   begin
-    if Assigned(ThData^.DbgCurTrackAddress) then
+    if Assigned(DbgCurTrackAddress) then
     begin
-      DoRestoreBreakpointF(ThData^.DbgCurTrackAddress);
-      ThData^.DbgCurTrackAddress := nil;
+      DoRestoreBreakpointF(DbgCurTrackAddress);
+      DbgCurTrackAddress := nil;
     end;
 
     Exit;
@@ -1731,7 +1733,7 @@ begin
       ThData^.DbgTrackStack.Push(TrackStackPoint);
 
       // Restore breakpoint byte-code
-      ThData^.DbgCurTrackAddress := Address;
+      DbgCurTrackAddress := Address;
       DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
       SetSingleStepMode(ThData, True);
 
@@ -1790,7 +1792,7 @@ begin
       end;
 
       if TrackRETBp.Count > 0 then
-        ThData^.DbgCurTrackAddress := Address;
+        DbgCurTrackAddress := Address;
 
       // Restore breakpoint byte-code
       DoRemoveBreakpointF(Address, TrackRETBp^.SaveByte);

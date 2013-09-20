@@ -236,6 +236,7 @@ type
     procedure vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
     procedure vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstTrackFuncsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
 
     procedure vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
@@ -3161,6 +3162,32 @@ begin
             end;
         end;
       end;
+  end;
+end;
+
+procedure TMainForm.vstTrackFuncsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Ellapsed1, Ellapsed2: UInt64;
+begin
+  if Column = 2 then
+  begin
+    Data1 := vstTrackFuncs.GetNodeData(Node1);
+    Data2 := vstTrackFuncs.GetNodeData(Node2);
+
+    if (Data1.LinkType = ltTrackFuncInfo) and (Data2.LinkType = ltTrackFuncInfo) then
+    begin
+      Ellapsed1 := Data1.TrackFuncInfo.Ellapsed;
+      Ellapsed2 := Data2.TrackFuncInfo.Ellapsed;
+
+      if Ellapsed1 > Ellapsed2 then
+        Result := 1
+      else
+      if Ellapsed1 < Ellapsed2 then
+        Result := -1
+      else
+        Result := 0;
+    end;
   end;
 end;
 
