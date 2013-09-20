@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ExtCtrls, PlatformDefaultStyleActnCtrls, ActnList, ActnMan,
   ComCtrls, ActnCtrls, ToolWin, StdCtrls, Buttons, ImgList,
-  RibbonSilverStyleActnCtrls;
+  RibbonSilverStyleActnCtrls, System.Actions;
 
 type
   TOpenType = (otNew, otEdit, otSaveAs);

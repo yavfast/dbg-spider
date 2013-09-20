@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Grids, ExtCtrls, ActnList, StdCtrls, Buttons,
   PlatformDefaultStyleActnCtrls, ActnMan, ActnCtrls, ToolWin, ComCtrls,
-  RibbonSilverStyleActnCtrls;
+  RibbonSilverStyleActnCtrls, System.Actions;
 
 type
   TfrmProcessList = class(TForm)

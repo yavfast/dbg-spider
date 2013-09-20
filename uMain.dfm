@@ -136,15 +136,13 @@ object MainForm: TMainForm
         Align = alClient
         BevelEdges = []
         BevelOuter = bvNone
-        DoubleBuffered = True
-        ParentDoubleBuffered = False
         TabOrder = 1
         object pcDbgInfoDetail: TPageControl
           Left = 0
           Top = 0
           Width = 863
           Height = 517
-          ActivePage = tsDbgUnitFunctions
+          ActivePage = tsDbgUnitConsts
           Align = alClient
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
@@ -1032,19 +1030,24 @@ object MainForm: TMainForm
           Header.Font.Height = -11
           Header.Font.Name = 'Tahoma'
           Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+          Header.Options = [hoColumnResize, hoVisible]
+          Header.SortColumn = 2
+          Header.SortDirection = sdDescending
           ScrollBarOptions.AlwaysVisible = True
           TabOrder = 0
+          TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
           TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
           TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
           TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
           OnColumnResize = vstThreadsColumnResize
+          OnCompareNodes = vstTrackFuncsCompareNodes
           OnFocusChanged = vstTrackFuncsFocusChanged
           OnGetText = vstTrackFuncsGetText
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
           Columns = <
             item
               CaptionAlignment = taCenter
+              DefaultSortDirection = sdDescending
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
               Position = 0
               Width = 200
@@ -1053,6 +1056,7 @@ object MainForm: TMainForm
             item
               Alignment = taRightJustify
               CaptionAlignment = taCenter
+              DefaultSortDirection = sdDescending
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
               Position = 1
               Width = 70
@@ -1061,6 +1065,7 @@ object MainForm: TMainForm
             item
               Alignment = taRightJustify
               CaptionAlignment = taCenter
+              DefaultSortDirection = sdDescending
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
               Position = 2
               Width = 70
@@ -1560,22 +1565,25 @@ object MainForm: TMainForm
         Width = 1216
       end>
     EdgeBorders = []
+    FixedSize = True
+    FixedOrder = True
     object actbMainTabs: TActionToolBar
-      Left = 11
+      Left = 2
       Top = 0
-      Width = 1207
+      Width = 1216
       Height = 24
       ActionManager = amMain
       AllowHiding = False
       Caption = 'actbMainTabs'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 11579568
+      ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
+      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
@@ -1593,22 +1601,24 @@ object MainForm: TMainForm
         Break = False
         Control = actbStatusInfo2
         ImageIndex = -1
-        Width = 892
+        Width = 569
       end
       item
         Break = False
         Control = actbStatusInfo
         ImageIndex = -1
         MinHeight = 24
-        Width = 322
+        Width = 645
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
+    FixedSize = True
+    FixedOrder = True
     object actbStatusInfo: TActionToolBar
-      Left = 905
+      Left = 582
       Top = 0
-      Width = 313
+      Width = 636
       Height = 24
       Margins.Left = 1
       Margins.Top = 1
@@ -1618,7 +1628,7 @@ object MainForm: TMainForm
       Caption = 'actbStatusInfo'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 11579568
+      ColorMap.UnusedColor = 13684944
       EdgeInner = esNone
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
@@ -1627,13 +1637,14 @@ object MainForm: TMainForm
       Font.Style = []
       HorzSeparator = False
       Orientation = boRightToLeft
+      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
     object actbStatusInfo2: TActionToolBar
-      Left = 11
+      Left = 2
       Top = 0
-      Width = 879
+      Width = 565
       Height = 25
       ActionManager = amMain
       Align = alNone
@@ -1641,13 +1652,14 @@ object MainForm: TMainForm
       Caption = 'actbStatusInfo2'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 11579568
+      ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
       HorzSeparator = False
+      ParentBackground = True
       ParentFont = False
       Spacing = 0
       object pbProgress: TProgressBar

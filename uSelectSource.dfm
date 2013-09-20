@@ -21,22 +21,26 @@ object fmSelectSource: TfmSelectSource
     Left = 0
     Top = 0
     Width = 537
-    Height = 30
+    Height = 26
     AutoSize = True
     Bands = <
       item
         Control = actbTop
         ImageIndex = -1
         MinHeight = 26
-        Width = 531
+        Width = 535
       end>
+    EdgeBorders = []
+    FixedSize = True
+    FixedOrder = True
     object actbTop: TActionToolBar
-      Left = 11
+      Left = 2
       Top = 0
-      Width = 522
+      Width = 535
       Height = 26
       ActionManager = acmgrSelectSource
       Caption = 'actbTop'
+      ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
       ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
@@ -44,15 +48,16 @@ object fmSelectSource: TfmSelectSource
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
+      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
   end
   object cbActions: TCoolBar
     Left = 0
-    Top = 317
+    Top = 320
     Width = 537
-    Height = 30
+    Height = 27
     Align = alBottom
     AutoSize = True
     Bands = <
@@ -60,16 +65,21 @@ object fmSelectSource: TfmSelectSource
         Control = actbActions
         ImageIndex = -1
         MinHeight = 26
-        Width = 531
+        Width = 535
       end>
+    EdgeBorders = [ebTop]
+    EdgeOuter = esNone
+    FixedSize = True
+    FixedOrder = True
     object actbActions: TActionToolBar
-      Left = 11
+      Left = 2
       Top = 0
-      Width = 522
+      Width = 535
       Height = 26
       ActionManager = acmgrSelectSource
       BiDiMode = bdRightToLeft
       Caption = 'actbActions'
+      ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
       ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
@@ -79,15 +89,16 @@ object fmSelectSource: TfmSelectSource
       Font.Style = []
       Orientation = boRightToLeft
       ParentBiDiMode = False
+      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
   end
   object sgSource: TStringGrid
     Left = 0
-    Top = 30
+    Top = 26
     Width = 537
-    Height = 287
+    Height = 294
     Align = alClient
     BorderStyle = bsNone
     ColCount = 1
@@ -95,6 +106,8 @@ object fmSelectSource: TfmSelectSource
     FixedCols = 0
     FixedRows = 0
     TabOrder = 2
+    ExplicitTop = 30
+    ExplicitHeight = 287
     ColWidths = (
       500)
   end

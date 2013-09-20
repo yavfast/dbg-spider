@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, PlatformDefaultStyleActnCtrls, ActnMan, ActnList, ActnCtrls,
-  ToolWin, ComCtrls, RibbonSilverStyleActnCtrls, Grids;
+  ToolWin, ComCtrls, RibbonSilverStyleActnCtrls, Grids, System.Actions;
 
 type
   TfmSelectSource = class(TForm)

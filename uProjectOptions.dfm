@@ -148,9 +148,9 @@ object fmProjectOptions: TfmProjectOptions
         end
         object cbActions: TCoolBar
           Left = 0
-          Top = 185
+          Top = 188
           Width = 446
-          Height = 30
+          Height = 27
           Align = alBottom
           AutoSize = True
           Bands = <
@@ -159,17 +159,22 @@ object fmProjectOptions: TfmProjectOptions
               HorizontalOnly = True
               ImageIndex = -1
               MinHeight = 26
-              Width = 440
+              Width = 444
             end>
+          EdgeBorders = [ebTop]
+          EdgeOuter = esNone
+          FixedSize = True
+          FixedOrder = True
           object actbActions: TActionToolBar
-            Left = 11
+            Left = 2
             Top = 0
-            Width = 431
+            Width = 444
             Height = 26
             ActionManager = actmgrProjectOpt
             AllowHiding = False
             BiDiMode = bdRightToLeft
             Caption = 'actbActions'
+            ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
             ColorMap.UnusedColor = 13684944
             Font.Charset = DEFAULT_CHARSET
@@ -179,6 +184,7 @@ object fmProjectOptions: TfmProjectOptions
             Font.Style = []
             Orientation = boRightToLeft
             ParentBiDiMode = False
+            ParentBackground = True
             ParentFont = False
             Spacing = 4
           end
