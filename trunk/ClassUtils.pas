@@ -99,6 +99,8 @@ begin
     3: begin r := p; g := q; b := vf; end;
     4: begin r := t; g := p; b := vf; end;
     5: begin r := vf; g := p; b := q; end;
+  else
+    begin r := 0; g := 0; b := 0; end;
   end;
 
   Result := RGB(Round(r * 255), Round(g * 255), Round(b * 255));

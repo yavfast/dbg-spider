@@ -112,8 +112,10 @@ type
     procedure CallUnhandledBreakPointEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 
     procedure ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
+
     function ProcessTrackBreakPoint(DebugEvent: PDebugEvent): Boolean;
     function ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): Boolean;
+
     function ProcessUserBreakPoint(DebugEvent: PDebugEvent): Boolean;
 
     procedure ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
@@ -277,7 +279,8 @@ var
 implementation
 
 uses
-  RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes, WinAPIUtils;
+  RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes, WinAPIUtils,
+  System.Contnrs;
 
 type
   TCollectList<T> = class(TBaseCollectList)
@@ -304,29 +307,44 @@ var
   Idx: Cardinal;
   Seg, Offset: Integer;
 begin
-  Idx := Count;
-  IndexToSegment(Idx, Seg, Offset);
-  CheckSeg(Seg);
-  inherited Add;
+  Lock;
+  try
+    Idx := Count;
+    IndexToSegment(Idx, Seg, Offset);
+    CheckSeg(Seg);
+    inherited Add;
 
-  Result := @FSegList[Seg][Offset];
+    Result := @FSegList[Seg][Offset];
 
-  FillChar(Result^, SizeOf(T), 0);
+    FillChar(Result^, SizeOf(T), 0);
+  finally
+    UnLock;
+  end;
 end;
 
 procedure TCollectList<T>.CheckSeg(const Seg: Integer);
 begin
-  if Length(FSegList) <= Seg then
-  begin
-    SetLength(FSegList, Seg + 1);
-    SetLength(FSegList[Seg], FSegSize);
+  Lock;
+  try
+    if Length(FSegList) <= Seg then
+    begin
+      SetLength(FSegList, Seg + 1);
+      SetLength(FSegList[Seg], FSegSize);
+    end;
+  finally
+    UnLock;
   end;
 end;
 
 procedure TCollectList<T>.Clear;
 begin
-  SetLength(FSegList, 0);
-  inherited Clear;
+  Lock;
+  try
+    SetLength(FSegList, 0);
+    inherited Clear;
+  finally
+    UnLock;
+  end;
 end;
 
 constructor TCollectList<T>.Create;
@@ -350,10 +368,15 @@ var
 begin
   Result := nil;
 
-  if IndexToSegment(Index, Seg, Offset) then
-    Result := @FSegList[Seg][Offset]
-  else
-    RaiseError(@EIndexError, [Index]);
+  Lock;
+  try
+    if IndexToSegment(Index, Seg, Offset) then
+      Result := @FSegList[Seg][Offset]
+    else
+      RaiseError(@EIndexError, [Index]);
+  finally
+    UnLock;
+  end;
 end;
 
 function TCollectList<T>.IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
@@ -425,6 +448,7 @@ begin
 
   Delta := 0;
   Prev := 0;
+  Cur := 0;
 
   case PointType of
     ptStart:
@@ -516,6 +540,7 @@ begin
   Delta := 0;
   PPrev := 0;
   Prev := 0;
+  Cur := 0;
 
   case PointType of
     ptStart, ptException, ptThreadInfo{, ptMemoryInfo}:
@@ -592,9 +617,9 @@ begin
     Result^.Ellapsed := 0;
     Result^.ThreadEllapsed := 0;
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
-    //Result^.DbgMemInfo := TCollectList<TMemInfo>.Create;
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
     Result^.DbgExceptions := TThreadList.Create;
+    Result^.DbgTrackUnitList := TTrackUnitInfoList.Create(512);
     Result^.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
     Result^.DbgTrackStack := TTrackStack.Create;
 
@@ -1463,7 +1488,7 @@ begin
   if not SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL) then
     RaiseDebugCoreException();
 
-  if ResumeThread(hThread) = -1 then
+  if ResumeThread(hThread) = Cardinal(-1) then
     RaiseDebugCoreException();
 
   if WaitAndFree then
@@ -1706,6 +1731,9 @@ begin
     if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
     begin
       TrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo);
+      ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
+
+      TrackFuncInfo.IncCallCount;
 
       ParentFuncAddr := nil;
       ReadData(Pointer(ThData^.Context^.Esp), @ParentFuncAddr, SizeOf(Pointer));
@@ -1718,8 +1746,13 @@ begin
 
       // Add child for parent function
       ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
-      ParentTrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo);
-      ParentTrackFuncInfo.AddChildCall(Address);
+      if Assigned(ParentFuncInfo) then
+      begin
+        ParentTrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo);
+        ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+
+        ParentTrackFuncInfo.AddChildCall(Address);
+      end;
 
       // Init new Track
       TrackStackPoint := GetMemory(SizeOf(TTrackStackPoint));
@@ -1776,8 +1809,9 @@ begin
         // Увеличиваем свой счетчик у родителя
         FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
 
-        if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-          Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
+        if Assigned(TrackStackPoint^.ParentTrackFuncInfo) then
+          if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
+            Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
 
         // Если это вершина стека - выходим
         if TrackStackPoint^.TrackRETBreakpoint = TrackRETBp then
@@ -1993,6 +2027,11 @@ begin
       ProcessDbgMemoryInfo(DebugEvent);
     dstPerfomance:
       ProcessDbgPerfomance(DebugEvent);
+    dstPerfomanceAndMemInfo:
+      begin
+        ProcessDbgPerfomance(DebugEvent);
+        ProcessDbgMemoryInfo(DebugEvent);
+      end;
   end;
 end;
 
@@ -2140,7 +2179,7 @@ begin
   Size := ER^.ExceptionInformation[2];
 
   case DbgInfoType of
-    dstMemInfo:
+    dstMemInfo, dstPerfomanceAndMemInfo:
       LoadMemoryInfoPack(Ptr, Size);
   end;
 end;
@@ -2771,7 +2810,6 @@ end;
 procedure TDebuger.UpdateMemoryInfoObjectTypes;
 var
   Idx: Integer;
-  I: Integer;
   ThData: PThreadData;
   GetMemInfo: TGetMemInfo;
   GetMemInfoItem: TGetMemInfoItem;

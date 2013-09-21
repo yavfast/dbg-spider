@@ -1470,7 +1470,7 @@ implementation
 
 uses
   JclResources,
-  JclSysUtils;
+  JclSysUtils, System.AnsiStrings;
 
 const
   TurboDebuggerSymbolExt = '.tds';
@@ -1990,7 +1990,7 @@ var
   TypeInfo: TJclSymbolTypeInfo;
   Data: Pointer;
 begin
-  FSymbolTypes.Capacity := FSymbolTypes.Capacity + PGlobalTypeInfo(pTypes).Count;
+  FSymbolTypes.Capacity := FSymbolTypes.Capacity + Integer(PGlobalTypeInfo(pTypes).Count);
   for I := 0 To PGlobalTypeInfo(pTypes).Count - 1 do
   begin
     TypeInfo := Nil;
@@ -2310,7 +2310,7 @@ begin
   for I := 0 to FNames.Count - 1 do
   begin
     S := PAnsiChar(FNames[I]);
-    if (S <> Nil) And (L = Integer(StrLen(S))) And (StrLIComp(S, N, L) = 0) then
+    if (S <> Nil) And (L = Integer(System.AnsiStrings.StrLen(S))) And (System.AnsiStrings.StrLIComp(S, N, L) = 0) then
     begin
       Result := I;
       Exit;
@@ -2802,7 +2802,7 @@ var
     Result := ProcName;
     if (Length(ProcName) > 0) and (ProcName[1] = '@') then
     begin
-      pchSecondAt := StrScan(PAnsiChar(Copy(ProcName, 2, Length(ProcName) - 1)), '@');
+      pchSecondAt := System.AnsiStrings.StrScan(PAnsiChar(Copy(ProcName, 2, Length(ProcName) - 1)), '@');
       if pchSecondAt <> nil then
       begin
         Inc(pchSecondAt);
