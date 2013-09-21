@@ -10,7 +10,8 @@ uses
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
   RibbonActnMenus, ImgList, ActnColorMaps, XPMan,
-  uActionController, uSpiderOptions, SynEdit, SynMemo, System.Actions;
+  uActionController, uSpiderOptions, SynEdit, SynMemo, System.Actions,
+  Vcl.Menus;
 
 type
   TProgectType = (ptEmpty, ptSpider, ptApplication);
@@ -171,11 +172,18 @@ type
     acTrackSystemUnits: TAction;
     pTrackAdv: TPanel;
     vstTrackFuncs: TVirtualStringTree;
-    pTrackFuncAdv: TPanel;
-    vstTrackFuncParent: TVirtualStringTree;
-    splTrackFuncAdv: TSplitter;
-    vstTrackFuncChilds: TVirtualStringTree;
     vstTrackThreads: TVirtualStringTree;
+    pcTrackFuncAdv: TPageControl;
+    tsTrackFuncAdvLinks: TTabSheet;
+    tsTrackFuncAdvSrc: TTabSheet;
+    pTrackFuncAdv: TPanel;
+    splTrackFuncAdv: TSplitter;
+    vstTrackFuncParent: TVirtualStringTree;
+    vstTrackFuncChilds: TVirtualStringTree;
+    synmTrackFuncAdvSource: TSynMemo;
+    pmTrackFuncAdvParents: TPopupMenu;
+    acParentViewSource: TAction;
+    Viewsource1: TMenuItem;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -268,6 +276,10 @@ type
     procedure acUseShortNamesExecute(Sender: TObject);
     procedure acCodeTrackingExecute(Sender: TObject);
     procedure acTrackSystemUnitsExecute(Sender: TObject);
+    procedure pTrackFuncAdvResize(Sender: TObject);
+    procedure acParentViewSourceExecute(Sender: TObject);
+    procedure vstTrackFuncParentDblClick(Sender: TObject);
+    procedure vstTrackFuncChildsDblClick(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -304,7 +316,7 @@ type
     procedure LoadVars(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
     procedure LoadFunctions(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
     procedure LoadFunctionParams(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
-    procedure LoadFunctionSource(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
+    function LoadFunctionSource(SrcMemo: TSynMemo; FuncInfo: TFuncInfo; LineNo: Integer = 0): Boolean;
     procedure LoadUnitSource(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 
     procedure LoadTrackProcessFunctions(ProcData: PProcessData; ThreadNode: PVirtualNode);
@@ -329,6 +341,7 @@ type
     function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
     function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
     function FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TUnitInfo): PVirtualNode;
+    function FindTrackFuncNode(vTree: TBaseVirtualTree; const FuncInfo: TFuncInfo): PVirtualNode;
 
     function FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
 
@@ -534,6 +547,21 @@ begin
   end;
 end;
 
+procedure TMainForm.acParentViewSourceExecute(Sender: TObject);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+begin
+  Node := vstTrackFuncParent.FocusedNode;
+  if Assigned(Node) then
+  begin
+    Data := vstTrackFuncParent.GetNodeData(Node);
+    if Data^.LinkType = ltTrackCallFuncInfo then
+      if LoadFunctionSource(synmTrackFuncAdvSource, TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo), Data^.TrackCallFuncInfo^.LineNo) then
+        pcTrackFuncAdv.ActivePage := tsTrackFuncAdvSrc;
+  end;
+end;
+
 procedure TMainForm.HidePCTabs(PC: TPageControl);
 var
   I: Integer;
@@ -661,11 +689,22 @@ begin
   Result := FindNode(vTree, vTree.RootNode, @_Cmp, Pointer(ThreadId));
 end;
 
+function TMainForm.FindTrackFuncNode(vTree: TBaseVirtualTree; const FuncInfo: TFuncInfo): PVirtualNode;
+
+  function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
+  begin
+    Result := (LinkData^.LinkType = ltTrackFuncInfo) and (LinkData^.TrackFuncInfo.FuncInfo = CmpData);
+  end;
+
+begin
+  Result := FindNode(vTree, vTree.RootNode, @_Cmp, FuncInfo);
+end;
+
 function TMainForm.FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TUnitInfo): PVirtualNode;
 
   function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
   begin
-    Result := (LinkData^.LinkType = ltDbgUnitInfo) and (LinkData^.DbgUnitInfo = CmpData);
+    Result := (LinkData^.LinkType = ltTrackUnitInfo) and (LinkData^.TrackUnitInfo = CmpData);
   end;
 
 begin
@@ -867,6 +906,8 @@ begin
     end;
   end;
 
+  ClearTrees;
+
   if Assigned(gvDebugInfo) then
     gvDebugInfo.ClearDebugInfo;
 
@@ -881,8 +922,6 @@ begin
   FProjectType := ptEmpty;
   rbnMain.Caption := 'Empty';
   gvProjectOptions.Clear;
-
-  ClearTrees;
 
   UpdateStatusInfo;
   UpdateMainActions;
@@ -1560,47 +1599,67 @@ begin
   end;
 end;
 
-procedure TMainForm.LoadFunctionSource(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
+function TMainForm.LoadFunctionSource(SrcMemo: TSynMemo; FuncInfo: TFuncInfo; LineNo: Integer = 0): Boolean;
 var
+  UnitInfo: TUnitInfo;
   StartLine: TLineInfo;
   LineIdx: Integer;
   PrevLine: TLineInfo;
-  LineNo: Integer;
 begin
-  synmDbgInfoFuncAdv.Clear;
+  SrcMemo.Clear;
 
-  if FileExists(FuncInfo.UnitInfo.FullUnitName) then
+  Result := False;
+
+  if not Assigned(FuncInfo) then Exit;
+
+  UnitInfo := FuncInfo.UnitInfo;
+  if FileExists(UnitInfo.FullUnitName) then
   begin
-    synmDbgInfoFuncAdv.BeginUpdate;
+    SrcMemo.BeginUpdate;
     try
-      synmDbgInfoFuncAdv.Lines.LoadFromFile(FuncInfo.UnitInfo.FullUnitName);
+      SrcMemo.Lines.LoadFromFile(UnitInfo.FullUnitName);
 
-      if FuncInfo.Lines.Count > 0 then
+      if LineNo = 0 then
       begin
-        StartLine := FuncInfo.Lines[0];
-        LineIdx := FuncInfo.UnitInfo.Lines.IndexOf(StartLine) - 1;
-        if LineIdx >= 0 then
+        if FuncInfo.Lines.Count > 0 then
         begin
-          PrevLine := FuncInfo.UnitInfo.Lines[LineIdx];
-          LineNo := PrevLine.LineNo + 1;
-        end
-        else
-          LineNo := StartLine.LineNo - 2;
+          StartLine := FuncInfo.Lines[0];
+          LineIdx := UnitInfo.Lines.IndexOf(StartLine) - 1;
+          if LineIdx >= 0 then
+          begin
+            PrevLine := UnitInfo.Lines[LineIdx];
+            LineNo := PrevLine.LineNo + 1;
+          end
+          else
+            LineNo := StartLine.LineNo - 2;
 
-        if Abs(StartLine.LineNo - LineNo) < 10 then
-          synmDbgInfoFuncAdv.TopLine := LineNo
-        else
-          synmDbgInfoFuncAdv.GotoLineAndCenter(StartLine.LineNo);
+          if Abs(StartLine.LineNo - LineNo) < 10 then
+            SrcMemo.TopLine := LineNo
+          else
+            SrcMemo.GotoLineAndCenter(StartLine.LineNo);
 
-        synmDbgInfoFuncAdv.SetCaretAndSelection(
-          BufferCoord(1, StartLine.LineNo),
-          BufferCoord(1, StartLine.LineNo),
-          BufferCoord(1, StartLine.LineNo + 1)
+          SrcMemo.SetCaretAndSelection(
+            BufferCoord(1, StartLine.LineNo),
+            BufferCoord(1, StartLine.LineNo),
+            BufferCoord(1, StartLine.LineNo + 1)
+          );
+        end;
+      end
+      else
+      begin
+        SrcMemo.GotoLineAndCenter(LineNo);
+
+        SrcMemo.SetCaretAndSelection(
+          BufferCoord(1, LineNo),
+          BufferCoord(1, LineNo),
+          BufferCoord(1, LineNo + 1)
         );
       end;
     finally
-      synmDbgInfoFuncAdv.EndUpdate;
+      SrcMemo.EndUpdate;
     end;
+
+    Result := True;
   end;
 end;
 
@@ -1924,6 +1983,11 @@ begin
     pStatusAction.Caption := '';
 end;
 
+procedure TMainForm.pTrackFuncAdvResize(Sender: TObject);
+begin
+  vstTrackFuncParent.Height := pTrackFuncAdv.ClientHeight div 2;
+end;
+
 procedure TMainForm.SetProjectName(const ProjectName: String);
 var
   Ext: String;
@@ -2230,7 +2294,7 @@ begin
     FuncInfo := Data^.DbgFuncInfo;
 
     LoadFunctionParams(FuncInfo, Node);
-    LoadFunctionSource(FuncInfo, Node);
+    LoadFunctionSource(synmDbgInfoFuncAdv, FuncInfo);
   end;
 end;
 
@@ -2408,7 +2472,7 @@ procedure TMainForm.vstExceptionCallStackFocusChanged(Sender: TBaseVirtualTree; 
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
-  LineNo: Integer;
+  //LineNo: Integer;
 begin
   synmExceptInfoSource.Clear;
 
@@ -2416,6 +2480,16 @@ begin
   if Data^.LinkType = ltExceptStack then
   begin
     StackEntry := Data^.ExceptStackEntry;
+
+    if Assigned(StackEntry) and Assigned(StackEntry.FuncInfo) then
+    begin
+      if Assigned(StackEntry.LineInfo) then
+        LoadFunctionSource(synmExceptInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+      else
+        LoadFunctionSource(synmExceptInfoSource, StackEntry.FuncInfo);
+    end;
+
+    (*
     if Assigned(StackEntry) and Assigned(StackEntry.UnitInfo) and
       FileExists(StackEntry.UnitInfo.FullUnitName)
     then
@@ -2442,6 +2516,7 @@ begin
         synmExceptInfoSource.EndUpdate;
       end;
     end;
+    *)
   end;
 end;
 
@@ -2859,7 +2934,7 @@ procedure TMainForm.vstMemStackFocusChanged(Sender: TBaseVirtualTree; Node: PVir
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
-  LineNo: Integer;
+  //LineNo: Integer;
 begin
   synmMemInfoSource.Clear;
 
@@ -2869,6 +2944,15 @@ begin
     StackEntry := TStackEntry.Create;
     StackEntry.UpdateInfo(Data^.MemStackPtr);
     try
+      if Assigned(StackEntry.FuncInfo) then
+      begin
+        if Assigned(StackEntry.LineInfo) then
+          LoadFunctionSource(synmMemInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+        else
+          LoadFunctionSource(synmMemInfoSource, StackEntry.FuncInfo);
+      end;
+
+      (*
       if Assigned(StackEntry.UnitInfo) and
         FileExists(StackEntry.UnitInfo.FullUnitName)
       then
@@ -2895,6 +2979,7 @@ begin
           synmMemInfoSource.EndUpdate;
         end;
       end;
+      *)
     finally
       FreeAndNil(StackEntry);
     end;
@@ -3105,6 +3190,68 @@ begin
   end;
 end;
 
+procedure TMainForm.vstTrackFuncParentDblClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  FuncNode: PVirtualNode;
+  LineNo: Cardinal;
+begin
+  Node := vstTrackFuncParent.FocusedNode;
+  if Assigned(Node) then
+  begin
+    Data := vstTrackFuncParent.GetNodeData(Node);
+    if Data^.LinkType = ltTrackCallFuncInfo then
+    begin
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      if Assigned(FuncInfo) then
+      begin
+        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+
+        FuncNode := FindTrackFuncNode(vstTrackFuncs, FuncInfo);
+        if Assigned(FuncNode) then
+        begin
+          vstTrackFuncs.ClearSelection;
+          vstTrackFuncs.FocusedNode := FuncNode;
+          vstTrackFuncs.Selected[FuncNode] := True;
+
+          if LineNo <> 0 then
+            LoadFunctionSource(synmTrackFuncAdvSource, FuncInfo, LineNo);
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TMainForm.vstTrackFuncChildsDblClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  FuncNode: PVirtualNode;
+begin
+  Node := vstTrackFuncChilds.FocusedNode;
+  if Assigned(Node) then
+  begin
+    Data := vstTrackFuncChilds.GetNodeData(Node);
+    if Data^.LinkType = ltTrackCallFuncInfo then
+    begin
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      if Assigned(FuncInfo) then
+      begin
+        FuncNode := FindTrackFuncNode(vstTrackFuncs, FuncInfo);
+        if Assigned(FuncNode) then
+        begin
+          vstTrackFuncs.ClearSelection;
+          vstTrackFuncs.FocusedNode := FuncNode;
+          vstTrackFuncs.Selected[FuncNode] := True;
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TMainForm.vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
 
@@ -3226,12 +3373,16 @@ procedure TMainForm.vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PV
 var
   Data: PLinkData;
 begin
+  synmTrackFuncAdvSource.Clear;
+
   Data := vstTrackFuncs.GetNodeData(Node);
   case Data^.LinkType of
     ltTrackFuncInfo:
       begin
         LoadTrackParentFunctions(Data^.TrackFuncInfo, Node);
         LoadTrackChildFunctions(Data^.TrackFuncInfo, Node);
+
+        LoadFunctionSource(synmTrackFuncAdvSource, TFuncInfo(Data^.TrackFuncInfo.FuncInfo));
       end;
   else
     begin
