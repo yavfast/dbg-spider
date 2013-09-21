@@ -296,11 +296,45 @@ type
   end;
   TCallFuncCounterPair = TPair<Pointer,PCallFuncInfo>;
 
+  TTrackFuncInfo = class;
+
+  TTrackFuncInfoBaseList = TDictionary<TObject,TTrackFuncInfo>;
+
+  TTrackUnitInfo = class
+  private
+    FUnitInfo: TObject;
+    FCallCount: UInt64;
+    FEllapsed: UInt64;
+    FFuncInfoList: TTrackFuncInfoBaseList;
+  public
+    constructor Create(AUnitInfo: TObject);
+    destructor Destroy; override;
+
+    procedure GrowEllapsed(const Value: UInt64);
+    procedure IncCallCount;
+
+    property UnitInfo: TObject read FUnitInfo;
+    property CallCount: UInt64 read FCallCount;
+    property Ellapsed: UInt64 read FEllapsed;
+
+    property FuncInfoList: TTrackFuncInfoBaseList read FFuncInfoList;
+  end;
+
+  TTrackUnitInfoList = class(TDictionary<TObject,TTrackUnitInfo>)
+  protected
+    procedure ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification); override;
+  public
+    function GetTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo;
+    procedure CheckTrackFuncInfo(TrackFuncInfo: TTrackFuncInfo);
+  end;
+  TTrackUnitInfoPair = TPair<TObject,TTrackUnitInfo>;
+
   TTrackFuncInfo = class
   private
     FFuncInfo: TObject;
     FCallCount: UInt64;
     FEllapsed: UInt64;
+    FTrackUnitInfo: TTrackUnitInfo;
     FParentFuncs: TCallFuncCounter;
     FChildFuncs: TCallFuncCounter;
   public
@@ -311,15 +345,17 @@ type
     function AddChildCall(const Addr: Pointer): PCallFuncInfo;
 
     procedure GrowEllapsed(const Value: UInt64);
+    procedure IncCallCount;
 
     property FuncInfo: TObject read FFuncInfo;
     property CallCount: UInt64 read FCallCount;
     property Ellapsed: UInt64 read FEllapsed;
+    property TrackUnitInfo: TTrackUnitInfo read FTrackUnitInfo write FTrackUnitInfo;
     property ParentFuncs: TCallFuncCounter read FParentFuncs;
     property ChildFuncs: TCallFuncCounter read FChildFuncs;
   end;
 
-  TTrackFuncInfoList = class(TDictionary<TObject,TTrackFuncInfo>)
+  TTrackFuncInfoList = class(TTrackFuncInfoBaseList)
   protected
     procedure ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification); override;
   public
@@ -368,8 +404,7 @@ type
 
     DbgExceptions: TThreadList;
 
-    //DbgCurTrackAddress: Pointer;
-
+    DbgTrackUnitList: TTrackUnitInfoList;
     DbgTrackFuncList: TTrackFuncInfoList;
     DbgTrackStack: TTrackStack;
 
@@ -583,6 +618,7 @@ begin
 
   FreeAndNil(DbgGetMemInfo);
   FreeAndNil(DbgExceptions);
+  FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackFuncList);
   FreeAndNil(DbgTrackStack);
 
@@ -599,7 +635,7 @@ begin
 
   L := DbgExceptions.LockList;
   try
-    if (Idx < L.Count) then
+    if (L.Count > 0) and (Idx < Cardinal(L.Count)) then
       Result := TExceptInfo(L[Idx]);
   finally
     DbgExceptions.UnlockList;
@@ -886,20 +922,12 @@ end;
 
 function TTrackFuncInfo.AddChildCall(const Addr: Pointer): PCallFuncInfo;
 begin
-  if Assigned(Addr) then
-    Result := FChildFuncs.AddCallFunc(Addr)
-  else
-    Result := nil;
+  Result := FChildFuncs.AddCallFunc(Addr)
 end;
 
 function TTrackFuncInfo.AddParentCall(const Addr: Pointer): PCallFuncInfo;
 begin
-  Inc(FCallCount);
-
-  if Assigned(Addr) then
-    Result := FParentFuncs.AddCallFunc(Addr)
-  else
-    Result := nil;
+  Result := FParentFuncs.AddCallFunc(Addr)
 end;
 
 constructor TTrackFuncInfo.Create(AFuncInfo: TObject);
@@ -909,7 +937,7 @@ begin
   FFuncInfo := AFuncInfo;
   FCallCount := 0;
   FEllapsed := 0;
-  //FChildEllapsed := 0;
+  FTrackUnitInfo := nil;
   FParentFuncs := TCallFuncCounter.Create(256);
   FChildFuncs := TCallFuncCounter.Create(256);
 end;
@@ -925,12 +953,21 @@ end;
 procedure TTrackFuncInfo.GrowEllapsed(const Value: UInt64);
 begin
   Inc(FEllapsed, Value);
+  FTrackUnitInfo.GrowEllapsed(Value);
+end;
+
+procedure TTrackFuncInfo.IncCallCount;
+begin
+  Inc(FCallCount);
+  FTrackUnitInfo.IncCallCount;
 end;
 
 { TTrackFuncInfoList }
 
 function TTrackFuncInfoList.GetTrackFuncInfo(const FuncInfo: TObject): TTrackFuncInfo;
 begin
+  Assert(Assigned(FuncInfo));
+
   if not TryGetValue(FuncInfo, Result) then
   begin
     Result := TTrackFuncInfo.Create(FuncInfo);
@@ -1013,6 +1050,73 @@ end;
 function TTrackStackPoint.Ellapsed: UInt64;
 begin
   Result := Leave - Enter;
+end;
+
+{ TTrackUnitInfoList }
+
+procedure TTrackUnitInfoList.CheckTrackFuncInfo(TrackFuncInfo: TTrackFuncInfo);
+var
+  FuncInfo: TFuncInfo;
+begin
+  FuncInfo := TFuncInfo(TrackFuncInfo.FuncInfo);
+
+  if Assigned(FuncInfo) then
+  begin
+    if TrackFuncInfo.TrackUnitInfo = nil then
+      TrackFuncInfo.TrackUnitInfo := GetTrackUnitInfo(FuncInfo.UnitInfo);
+
+    if not TrackFuncInfo.TrackUnitInfo.FuncInfoList.ContainsKey(FuncInfo) then
+      TrackFuncInfo.TrackUnitInfo.FuncInfoList.Add(FuncInfo, TrackFuncInfo);
+  end;
+end;
+
+function TTrackUnitInfoList.GetTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo;
+begin
+  if not TryGetValue(UnitInfo, Result) then
+  begin
+    Result := TTrackUnitInfo.Create(UnitInfo);
+
+    Add(UnitInfo, Result);
+  end;
+end;
+
+procedure TTrackUnitInfoList.ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification);
+begin
+  inherited;
+
+  if Action = cnRemoved then
+    Value.Free;
+end;
+
+{ TTrackUnitInfo }
+
+constructor TTrackUnitInfo.Create(AUnitInfo: TObject);
+begin
+  inherited Create;
+
+  FFuncInfoList := TTrackFuncInfoBaseList.Create(128);
+
+  FUnitInfo := AUnitInfo;
+  FCallCount := 0;
+  FEllapsed := 0;
+end;
+
+destructor TTrackUnitInfo.Destroy;
+begin
+  FUnitInfo := nil;
+  FreeAndNil(FFuncInfoList);
+
+  inherited;
+end;
+
+procedure TTrackUnitInfo.GrowEllapsed(const Value: UInt64);
+begin
+  Inc(FEllapsed, Value);
+end;
+
+procedure TTrackUnitInfo.IncCallCount;
+begin
+  Inc(FCallCount);
 end;
 
 end.

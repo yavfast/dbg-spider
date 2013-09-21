@@ -1234,7 +1234,7 @@ begin
   else if (Kind = tkObject) and (BaseType <> Nil) then
     Result := BaseType.Name
   else
-    Result := KindAsString;
+    Result := AnsiString(KindAsString);
 end;
 
 function TTypeInfo.ShortName: String;
@@ -1349,7 +1349,7 @@ end;
 
 function TUnitInfo.FullUnitName: String;
 begin
-  Result := gvDebugInfo.FullUnitName(Name);
+  Result := gvDebugInfo.FullUnitName(String(Name));
 end;
 
 function TUnitInfo.Name: AnsiString;
@@ -1563,7 +1563,7 @@ begin
   for I := 0 to Count - 1 do
   begin
     Result := TNameInfo(List[I]);
-    if (Result.NameId > 0) And SameText(Name, Result.Name) then
+    if (Result.NameId > 0) And SameText(String(Name), String(Result.Name)) then
       Exit;
   end;
 

@@ -108,7 +108,7 @@ Uses
   Math, Variants,
   // Morfik.dcSystem,
   EvaluateTypes, EvaluateProcs,
-  ClassUtils, DebugHook, StrUtils;
+  ClassUtils, DebugHook, StrUtils, System.Contnrs;
 { .............................................................................. }
 
 { .............................................................................. }
@@ -410,8 +410,6 @@ Var
   L: TLineInfo;
   F: TFuncInfo;
 Begin
-  F := Nil;
-
   UnitInfo.Lines.Capacity := UnitInfo.Lines.Capacity + Source.LineCount;
   For I := 0 To Source.LineCount - 1 Do
   Begin
@@ -625,7 +623,7 @@ Begin
         DstType.Members.Capacity := SrcList.Members.Count;
         For I := 0 To SrcList.Members.Count - 1 Do
         Begin
-          DstMember := Nil;
+          //DstMember := Nil;
           SrcMember := TJclTD32MemberSymbolInfo(SrcList.Members[I]);
 
           SrcMemberType := FImage.TD32Scanner.SymbolTypes[SrcMember.TypeIndex];
@@ -1106,12 +1104,9 @@ Var
   UInfo: TUnitInfo;
   TInfo: TTypeInfo;
   FuncJ, FuncU: TFuncInfo;
-  Delta: Double;
 Begin
   if Units.Count = 0 then
     Exit;
-
-  Delta := 20 / Units.Count;
 
   Units.Sorted := True;
 
@@ -1450,7 +1445,7 @@ Function TDelphiDebugInfo.GetExceptionMessage(ExceptionRecord: PExceptionRecord;
 Var
   ExceptTypeAddr: TPointer;
   ExceptMsgPtr: TPointer;
-  ExceptMsg: String;
+  //ExceptMsg: String;
 Begin
   Result := '';
   If ExceptionRecord^.ExceptionCode = cDelphiException Then

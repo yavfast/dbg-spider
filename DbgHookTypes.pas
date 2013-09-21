@@ -6,7 +6,7 @@ const
   DBG_EXCEPTION = $0EEDFFF0;
 
 type
-  TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstMemInfo, dstPerfomance);
+  TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstMemInfo, dstPerfomance, dstPerfomanceAndMemInfo);
 
   TDbgMemInfoType = (miGetMem = 0, miFreeMem);
 

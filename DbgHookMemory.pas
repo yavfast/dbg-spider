@@ -2,14 +2,16 @@ unit DbgHookMemory;
 
 interface
 
+uses DbgHookTypes;
+
 procedure InitMemoryHook(MemoryMgr: Pointer); stdcall;
 procedure ResetMemoryHook; stdcall;
 
-procedure _OutMemInfoBuf;
+function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
 
 implementation
 
-uses Windows, SyncObjs, DbgHookTypes, JclWin32, JclBase, JclDebug, SysUtils;
+uses Windows, SyncObjs, JclWin32, JclBase, JclDebug, SysUtils;
 
 var
   _BaseMemoryMgr: TMemoryManagerEx;
@@ -134,8 +136,10 @@ begin
   end;
 end;
 
-procedure _OutMemInfoBuf;
+function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
 begin
+  Result := False;
+
   if MemInfoList = Nil then Exit;
   if MemInfoLock = Nil then Exit;
 
@@ -143,8 +147,10 @@ begin
   try
     if MemInfoListCnt > 0 then
     begin
-      _MemOutInfo(dstMemInfo, @MemInfoList^[0], MemInfoListCnt);
+      _MemOutInfo(DbgInfoType, @MemInfoList^[0], MemInfoListCnt);
       MemInfoListCnt := 0; // сброс указателя на нулевой элемент
+
+      Result := True;
     end;
   finally
     MemInfoLock.Leave;

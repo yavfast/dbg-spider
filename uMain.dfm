@@ -1041,6 +1041,7 @@ object MainForm: TMainForm
           TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
           OnColumnResize = vstThreadsColumnResize
           OnCompareNodes = vstTrackFuncsCompareNodes
+          OnDrawText = vstTrackFuncsDrawText
           OnFocusChanged = vstTrackFuncsFocusChanged
           OnGetText = vstTrackFuncsGetText
           OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -1084,17 +1085,18 @@ object MainForm: TMainForm
           TabOrder = 1
           object splTrackFuncAdv: TSplitter
             Left = 0
-            Top = 273
+            Top = 329
             Width = 391
             Height = 3
             Cursor = crVSplit
             Align = alTop
+            ExplicitTop = 273
           end
           object vstTrackFuncParent: TVirtualStringTree
             Left = 0
             Top = 0
             Width = 391
-            Height = 273
+            Height = 329
             Align = alTop
             BevelEdges = []
             BevelInner = bvNone
@@ -1148,9 +1150,9 @@ object MainForm: TMainForm
           end
           object vstTrackFuncChilds: TVirtualStringTree
             Left = 0
-            Top = 276
+            Top = 332
             Width = 391
-            Height = 241
+            Height = 185
             Align = alClient
             BevelEdges = []
             BevelInner = bvNone
@@ -1170,6 +1172,8 @@ object MainForm: TMainForm
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
             OnGetText = vstTrackFuncChildsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            ExplicitTop = 276
+            ExplicitHeight = 241
             Columns = <
               item
                 CaptionAlignment = taCenter

@@ -64,14 +64,17 @@ begin
     while not Terminated do
     begin
       Sleep(_Delta);
-      RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
+      //RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
 
-      _OutMemInfoBuf; // Сброс буфера по памяти
+      // Сброс буфера по памяти
+      if not _OutMemInfoBuf(dstPerfomanceAndMemInfo) then
+        RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
     end;
   except
     on E: Exception do
       OutputDebugStringW(PWideChar(Format('Fail perfomance thread: [%s] %s', [E.ClassName, E.Message])));
   end;
+  FreeMemory(DbgInfo);
 end;
 
 end.
