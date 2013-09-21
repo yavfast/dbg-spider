@@ -24,7 +24,7 @@ var
 
 type
   TMemSize = NativeInt;
-  TMemUSize = NativeUInt;
+  //TMemUSize = NativeUInt;
 
 var
   _BaseGetMem: function(Size: TMemSize): Pointer;
@@ -55,15 +55,11 @@ threadvar
 function IsValidCodeAddr(const Addr: Pointer): Boolean;
 const
   _PAGE_CODE: Cardinal = (PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
-//Var
-//  Buf: TMemoryBasicInformation;
 Begin
   Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0) And ((_Buf.Protect And _PAGE_CODE) <> 0);
 end;
 
 function IsValidAddr(const Addr: Pointer): Boolean;
-//Var
-//  Buf: TMemoryBasicInformation;
 Begin
   Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0);
 end;
@@ -100,15 +96,15 @@ asm
   MOV     EAX, FS:[0].NT_TIB32.StackBase
 end;
 
-function GetCallStack(var Stack: TDbgMemInfoStack): Boolean; stdcall;
+procedure GetCallStack(var Stack: TDbgMemInfoStack); //stdcall;
 var
   TopOfStack: TJclAddr;
   BaseOfStack: TJclAddr;
   StackFrame: PStackFrame;
   Level: Integer;
 begin
-  Result := True;
-  try
+  //Result := True;
+  //try
     ZeroMemory(@Stack[0], Length(Stack) * SizeOf(Pointer));
     Level := -2; // это в нашей dll-ке
     StackFrame := GetFramePointer;
@@ -131,9 +127,9 @@ begin
 
       Inc(Level);
     end;
-  except
-    Result := False;
-  end;
+  //except
+  //  Result := False;
+  //end;
 end;
 
 function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
@@ -144,7 +140,7 @@ begin
   if MemInfoLock = Nil then Exit;
 
   MemInfoLock.Enter;
-  try
+  //try
     if MemInfoListCnt > 0 then
     begin
       _MemOutInfo(DbgInfoType, @MemInfoList^[0], MemInfoListCnt);
@@ -152,57 +148,51 @@ begin
 
       Result := True;
     end;
-  finally
+  //finally
     MemInfoLock.Leave;
-  end;
+  //end;
 end;
 
-procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; _Ptr: Pointer; const _Size: Cardinal); stdcall;
-var
-  DbgMemInfo: TDbgMemInfo;
-  //ObjClassName: ShortString;
-begin
-  try
-    // TODO: Переделать на многопоточный вызов
+threadvar
+  _DbgMemInfo: TDbgMemInfo;
 
-    DbgMemInfo.Ptr := _Ptr;
-    DbgMemInfo.ThreadId := GetCurrentThreadId;
-    DbgMemInfo.MemInfoType := _MemInfoType;
-    case DbgMemInfo.MemInfoType of
+procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; const _Ptr: Pointer; const _Size: Cardinal); stdcall;
+var
+  DbgMemInfo: PDbgMemInfo;
+begin
+  //try
+    DbgMemInfo := @_DbgMemInfo;
+
+    DbgMemInfo^.Ptr := _Ptr;
+    DbgMemInfo^.ThreadId := GetCurrentThreadId;
+    DbgMemInfo^.MemInfoType := _MemInfoType;
+    case DbgMemInfo^.MemInfoType of
       miGetMem:
       begin
-        DbgMemInfo.Size := _Size;
-        GetCallStack(DbgMemInfo.Stack);
+        DbgMemInfo^.Size := _Size;
+        GetCallStack(DbgMemInfo^.Stack);
       end;
       miFreeMem:
       begin
-        DbgMemInfo.ObjClassType[0] := #0;
-        (*
-        if _GetObjClassType(_Ptr, ObjClassName) then
-        begin
-          Move(ObjClassName, DbgMemInfo^.ObjClassType[0], Length(ObjClassName) + 1);
-        end
-        else
-          DbgMemInfo^.ObjClassType[0] := #0;
-        *)
+        DbgMemInfo^.ObjClassType[0] := #0;
       end;
     end;
 
     MemInfoLock.Enter;
-    try
+    //try
       if MemInfoList = Nil then Exit;
 
-      MemInfoList^[MemInfoListCnt] := DbgMemInfo;
+      MemInfoList^[MemInfoListCnt] := DbgMemInfo^;
       Inc(MemInfoListCnt);
 
       if MemInfoListCnt = _DbgMemListLength then
         _OutMemInfoBuf;
-    finally
+    //finally
       MemInfoLock.Leave;
-    end;
-  except
+    //end;
+  //except
     // TODO:
-  end;
+  //end;
 end;
 
 function _HookGetMem(Size: TMemSize): Pointer;
@@ -244,7 +234,7 @@ begin
   MemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
   MemInfoLock := TCriticalSection.Create;
   MemInfoLock.Enter;
-  try
+  //try
     _MemoryMgr := MemoryMgr;
     _BaseMemoryMgr := _MemoryMgr^;
     with _MemoryMgr^ do
@@ -261,9 +251,9 @@ begin
       _BaseAllocMem := AllocMem;
       AllocMem := _HookAllocMem;
     end;
-  finally
+  //finally
     MemInfoLock.Leave;
-  end;
+  //end;
   OutputDebugStringA('Init memory hooks - ok');
 end;
 
@@ -275,15 +265,15 @@ begin
 
   OutputDebugStringA('Reset memory hooks...');
   MemInfoLock.Enter;
-  try
+  //try
     _MemoryMgr^ := _BaseMemoryMgr;
     _MemoryMgr := Nil;
 
     FreeMemory(MemInfoList);
     MemInfoList := Nil;
-  finally
+  //finally
     MemInfoLock.Leave;
-  end;
+  //end;
 
   //Sleep(100);
   FreeAndNil(MemInfoLock);

@@ -308,43 +308,34 @@ var
   Seg, Offset: Integer;
 begin
   Lock;
-  try
-    Idx := Count;
-    IndexToSegment(Idx, Seg, Offset);
-    CheckSeg(Seg);
-    inherited Add;
+  Idx := Count;
+  IndexToSegment(Idx, Seg, Offset);
+  CheckSeg(Seg);
+  inherited Add;
 
-    Result := @FSegList[Seg][Offset];
+  Result := @FSegList[Seg][Offset];
 
-    FillChar(Result^, SizeOf(T), 0);
-  finally
-    UnLock;
-  end;
+  FillChar(Result^, SizeOf(T), 0);
+  UnLock;
 end;
 
 procedure TCollectList<T>.CheckSeg(const Seg: Integer);
 begin
   Lock;
-  try
-    if Length(FSegList) <= Seg then
-    begin
-      SetLength(FSegList, Seg + 1);
-      SetLength(FSegList[Seg], FSegSize);
-    end;
-  finally
-    UnLock;
+  if Length(FSegList) <= Seg then
+  begin
+    SetLength(FSegList, Seg + 1);
+    SetLength(FSegList[Seg], FSegSize);
   end;
+  UnLock;
 end;
 
 procedure TCollectList<T>.Clear;
 begin
   Lock;
-  try
-    SetLength(FSegList, 0);
-    inherited Clear;
-  finally
-    UnLock;
-  end;
+  SetLength(FSegList, 0);
+  inherited Clear;
+  UnLock;
 end;
 
 constructor TCollectList<T>.Create;
@@ -369,14 +360,11 @@ begin
   Result := nil;
 
   Lock;
-  try
-    if IndexToSegment(Index, Seg, Offset) then
-      Result := @FSegList[Seg][Offset]
-    else
-      RaiseError(@EIndexError, [Index]);
-  finally
-    UnLock;
-  end;
+  if IndexToSegment(Index, Seg, Offset) then
+    Result := @FSegList[Seg][Offset]
+  else
+    RaiseError(@EIndexError, [Index]);
+  UnLock;
 end;
 
 function TCollectList<T>.IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
