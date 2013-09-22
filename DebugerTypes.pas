@@ -469,6 +469,8 @@ type
 
     DbgExceptions: TThreadList;
 
+    DbgTrackEventCount: UInt64;
+
     CreatedProcessHandle: THandle;
     CreatedThreadHandle: THandle;
     AttachedProcessHandle: THandle;
