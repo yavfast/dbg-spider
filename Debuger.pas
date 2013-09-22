@@ -607,6 +607,7 @@ begin
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
     Result^.DbgExceptions := TThreadList.Create;
+    Result^.DbgTrackEventCount := 0;
     Result^.DbgTrackUnitList := TTrackUnitInfoList.Create(512);
     Result^.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
     Result^.DbgTrackStack := TTrackStack.Create;
@@ -870,6 +871,8 @@ begin
   FProcessData.DbgExceptions := TThreadList.Create;
 
   FProcessData.DbgTrackEventCount := 0;
+  FProcessData.DbgTrackUnitList := TTrackUnitInfoList.Create(4096);
+  FProcessData.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
 
   DbgTrackBreakpoints := nil;
   DbgTrackRETBreakpoints := nil;
@@ -1708,39 +1711,49 @@ var
   ThData: PThreadData;
   Address: Pointer;
   TrackBp: PTrackBreakpoint;
-  TrackFuncInfo: TTrackFuncInfo;
-  TrackRETBreakpoint: PTrackRETBreakpoint;
-  TrackStackPoint: PTrackStackPoint;
-
   ParentFuncAddr: Pointer;
+  TrackRETBreakpoint: PTrackRETBreakpoint;
+
+  TrackFuncInfo: TTrackFuncInfo;
   ParentCallFuncInfo: PCallFuncInfo;
   ParentFuncInfo: TFuncInfo;
   ParentTrackFuncInfo: TTrackFuncInfo;
+
+  TrackStackPoint: PTrackStackPoint;
 begin
-  Result := False;
   ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
   if Assigned(ThData) then
   begin
     Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
     if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
     begin
-      Inc(FProcessData.DbgTrackEventCount);
+      // Получаем адресс выхода в родительской функции
+      ParentFuncAddr := nil;
+      ReadData(Pointer(ThData^.Context^.Esp), @ParentFuncAddr, SizeOf(Pointer));
+
+      // Устанавливаем точку останова на выход
+      TrackRETBreakpoint := SetTrackRETBreakpoint(ParentFuncAddr);
+
+      // Восстанавливаем Code byte для продолжения выполнения
+      DbgCurTrackAddress := Address;
+      DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
+      SetSingleStepMode(ThData, True);
+
+      // --- Регистрация --- //
+      // TODO: Можно вынести обработку в отдельный поток
+
+      // --- Регистрируем вызываемую функцию в текущем потоке --- //
+      Inc(ThData^.DbgTrackEventCount);
 
       TrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo);
       ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 
       TrackFuncInfo.IncCallCount;
 
-      ParentFuncAddr := nil;
-      ReadData(Pointer(ThData^.Context^.Esp), @ParentFuncAddr, SizeOf(Pointer));
-
-      // Set RET breakpoint
-      TrackRETBreakpoint := SetTrackRETBreakpoint(ParentFuncAddr);
-
-      // Add parent function
+      // Добавляем линк с текущей функции на родительскую
       ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
 
-      // Add child for parent function
+      // Добавляем линк с родительской функции на текущую
       ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
       if Assigned(ParentFuncInfo) then
       begin
@@ -1748,27 +1761,59 @@ begin
         ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
 
         ParentTrackFuncInfo.AddChildCall(Address);
-      end;
+      end
+      else
+        ParentTrackFuncInfo := nil;
 
-      // Init new Track
+      // Создание новой записи для Track Stack
       TrackStackPoint := GetMemory(SizeOf(TTrackStackPoint));
+      ZeroMemory(TrackStackPoint, SizeOf(TTrackStackPoint));
+
       TrackStackPoint^.TrackFuncInfo := TrackFuncInfo;
       TrackStackPoint^.ParentTrackFuncInfo := ParentTrackFuncInfo;
       TrackStackPoint^.TrackRETBreakpoint := TrackRETBreakpoint;
       TrackStackPoint^.Enter := _QueryThreadCycleTime(ThData^.ThreadHandle);
-      TrackStackPoint^.Leave := 0;
+      TrackStackPoint^.Ellapsed := 0;
 
-      // Add Track Stack
+      // --- Регистрируем вызываемую функцию в процессе --- //
+      Inc(FProcessData.DbgTrackEventCount);
+
+      TrackFuncInfo := FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo);
+      FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
+
+      TrackFuncInfo.IncCallCount;
+
+      // Добавляем линк с текущей функции на родительскую
+      ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
+
+      // Добавляем линк с родительской функции на текущую
+      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+      if Assigned(ParentFuncInfo) then
+      begin
+        ParentTrackFuncInfo := FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo);
+        FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+
+        ParentTrackFuncInfo.AddChildCall(Address);
+      end
+      else
+        ParentTrackFuncInfo := nil;
+
+      // Записываем инфу для процесса
+      TrackStackPoint^.ProcTrackFuncInfo := TrackFuncInfo;
+      TrackStackPoint^.ProcParentTrackFuncInfo := ParentTrackFuncInfo;
+
+      // Добавляем в Track Stack
       ThData^.DbgTrackStack.Push(TrackStackPoint);
 
-      // Restore breakpoint byte-code
-      DbgCurTrackAddress := Address;
-      DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
-      SetSingleStepMode(ThData, True);
+      // --- Конец Регистрации --- //
 
-      Result := True;
+      // Выходим с признаком успешной регистрации
+      Exit(True);
     end;
   end;
+
+  // Это не Track Breakpoint
+  Exit(False);
 end;
 
 function TDebuger.ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): Boolean;
@@ -1781,7 +1826,6 @@ var
   FuncAddress: Pointer;
   CallFuncInfo: PCallFuncInfo;
 begin
-  Result := False;
   ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
   if Assigned(ThData) then
   begin
@@ -1790,24 +1834,43 @@ begin
     begin
       CurTime := _QueryThreadCycleTime(ThData^.ThreadHandle);
 
+      // Обработка Track-стека текущего потока
       while ThData^.DbgTrackStack.Count > 0 do
       begin
         TrackStackPoint := ThData^.DbgTrackStack.Pop;
 
         // Увеличиваем счетчик самой функции
         TrackStackPoint^.Leave := CurTime;
+        // Thread
         TrackStackPoint^.TrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
+        // Proc
+        TrackStackPoint^.ProcTrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
 
         // Увеличиваем счетчик родителя
+        // Thread
         if TrackStackPoint^.TrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
           Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
 
-        // Увеличиваем свой счетчик у родителя
-        FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
+        // Proc
+        if TrackStackPoint^.ProcTrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
+          Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
 
+        // Увеличиваем свой счетчик у родителя
+        // Thread
         if Assigned(TrackStackPoint^.ParentTrackFuncInfo) then
+        begin
+          FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
           if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
             Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
+        end;
+
+        // Proc
+        if Assigned(TrackStackPoint^.ProcParentTrackFuncInfo) then
+        begin
+          FuncAddress := TFuncInfo(TrackStackPoint^.ProcTrackFuncInfo.FuncInfo).Address;
+          if TrackStackPoint^.ProcParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
+            Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
+        end;
 
         // Если это вершина стека - выходим
         if TrackStackPoint^.TrackRETBreakpoint = TrackRETBp then
@@ -1821,17 +1884,20 @@ begin
         FreeMemory(TrackStackPoint);
       end;
 
+      // Восстанавливаем breakpoint в случае рекурсивного вызова функции
       if TrackRETBp.Count > 0 then
         DbgCurTrackAddress := Address;
 
-      // Restore breakpoint byte-code
+      // Восстанавливаем byte-code для продолжения выполнения
       DoRemoveBreakpointF(Address, TrackRETBp^.SaveByte);
 
       SetSingleStepMode(ThData, True);
 
-      Result := True;
+      Exit(True);
     end;
   end;
+
+  Exit(False);
 end;
 
 function TDebuger.ProcessUserBreakPoint(DebugEvent: PDebugEvent): Boolean;

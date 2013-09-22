@@ -1005,19 +1005,21 @@ object MainForm: TMainForm
       Caption = 'Code tracking'
       ImageIndex = 5
       object pTrackAdv: TPanel
-        Left = 462
+        Left = 527
         Top = 0
-        Width = 748
+        Width = 683
         Height = 517
         Align = alClient
         BevelOuter = bvNone
         Caption = 'pTrackAdv'
         ShowCaption = False
         TabOrder = 0
+        ExplicitLeft = 462
+        ExplicitWidth = 748
         object vstTrackFuncs: TVirtualStringTree
           Left = 0
           Top = 0
-          Width = 357
+          Width = 457
           Height = 517
           Align = alLeft
           BevelEdges = []
@@ -1051,7 +1053,7 @@ object MainForm: TMainForm
               DefaultSortDirection = sdDescending
               Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
               Position = 0
-              Width = 200
+              Width = 300
               WideText = 'Function name'
             end
             item
@@ -1074,19 +1076,22 @@ object MainForm: TMainForm
             end>
         end
         object pcTrackFuncAdv: TPageControl
-          Left = 357
+          Left = 457
           Top = 0
-          Width = 391
+          Width = 226
           Height = 517
           ActivePage = tsTrackFuncAdvLinks
           Align = alClient
           TabOrder = 1
+          ExplicitLeft = 357
+          ExplicitWidth = 391
           object tsTrackFuncAdvLinks: TTabSheet
             Caption = 'Links'
+            ExplicitWidth = 383
             object pTrackFuncAdv: TPanel
               Left = 0
               Top = 0
-              Width = 383
+              Width = 218
               Height = 489
               Align = alClient
               BevelOuter = bvNone
@@ -1094,10 +1099,11 @@ object MainForm: TMainForm
               ShowCaption = False
               TabOrder = 0
               OnResize = pTrackFuncAdvResize
+              ExplicitWidth = 383
               object splTrackFuncAdv: TSplitter
                 Left = 0
                 Top = 329
-                Width = 383
+                Width = 218
                 Height = 3
                 Cursor = crVSplit
                 Align = alTop
@@ -1107,7 +1113,7 @@ object MainForm: TMainForm
               object vstTrackFuncParent: TVirtualStringTree
                 Left = 0
                 Top = 0
-                Width = 383
+                Width = 218
                 Height = 329
                 Align = alTop
                 BevelEdges = []
@@ -1130,6 +1136,7 @@ object MainForm: TMainForm
                 OnDblClick = vstTrackFuncParentDblClick
                 OnGetText = vstTrackFuncParentGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitWidth = 383
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -1165,7 +1172,7 @@ object MainForm: TMainForm
               object vstTrackFuncChilds: TVirtualStringTree
                 Left = 0
                 Top = 332
-                Width = 383
+                Width = 218
                 Height = 157
                 Align = alClient
                 BevelEdges = []
@@ -1187,6 +1194,7 @@ object MainForm: TMainForm
                 OnDblClick = vstTrackFuncChildsDblClick
                 OnGetText = vstTrackFuncChildsGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitWidth = 383
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -1224,10 +1232,11 @@ object MainForm: TMainForm
           object tsTrackFuncAdvSrc: TTabSheet
             Caption = 'Source'
             ImageIndex = 1
+            ExplicitWidth = 383
             object synmTrackFuncAdvSource: TSynMemo
               Left = 0
               Top = 0
-              Width = 383
+              Width = 218
               Height = 489
               Align = alClient
               Font.Charset = DEFAULT_CHARSET
@@ -1247,6 +1256,7 @@ object MainForm: TMainForm
               ReadOnly = True
               RightEdge = 0
               FontSmoothing = fsmNone
+              ExplicitWidth = 383
             end
           end
         end
@@ -1254,7 +1264,7 @@ object MainForm: TMainForm
       object vstTrackThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 462
+        Width = 527
         Height = 517
         Align = alLeft
         BorderStyle = bsNone
@@ -1281,7 +1291,7 @@ object MainForm: TMainForm
         OnColumnResize = vstThreadsColumnResize
         OnDrawText = vstThreadsDrawText
         OnFocusChanged = vstTrackThreadsFocusChanged
-        OnGetText = vstThreadsGetText
+        OnGetText = vstTrackThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
         Columns = <
           item
@@ -1302,8 +1312,16 @@ object MainForm: TMainForm
           item
             Alignment = taRightJustify
             CaptionAlignment = taCenter
-            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
+            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
             Position = 2
+            Width = 65
+            WideText = 'Call Count'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
+            Position = 3
             Width = 70
             WideText = 'CPU time'
           end>

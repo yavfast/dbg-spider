@@ -256,16 +256,21 @@ type
     procedure vstLogResize(Sender: TObject);
     procedure vstLogColumnResize(Sender: TVTHeader; Column: TColumnIndex);
 
+    procedure vstTrackThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
-    procedure vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
-    procedure vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
-    procedure vstTrackFuncsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackFuncsDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
 
+    procedure vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstTrackFuncsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+
     procedure vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstTrackFuncParentDblClick(Sender: TObject);
+
     procedure vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstTrackFuncChildsDblClick(Sender: TObject);
 
     procedure tmrThreadsUpdateTimer(Sender: TObject);
     procedure cbCPUTimeLineClick(Sender: TObject);
@@ -290,8 +295,6 @@ type
     procedure acTrackSystemUnitsExecute(Sender: TObject);
     procedure pTrackFuncAdvResize(Sender: TObject);
     procedure acParentViewSourceExecute(Sender: TObject);
-    procedure vstTrackFuncParentDblClick(Sender: TObject);
-    procedure vstTrackFuncChildsDblClick(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -348,7 +351,8 @@ type
     procedure SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
 
     function EllapsedToTime(const Ellapsed: UInt64): String;
-    function FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String;
+    function FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String; overload;
+    function FuncEllapsedToTime(const FullCPUTime, FullEllapsed, Ellapsed: UInt64): String; overload;
 
     function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
     function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
@@ -359,6 +363,8 @@ type
 
     procedure LoadGUIOptions;
     procedure LoadRecentProjects;
+    function EllapsedTimeToStr(Tree: TBaseVirtualTree; Data: PLinkData;
+      const Ellapsed: UInt64): String;
   public
     procedure OnException(Sender: TObject; E: Exception);
     procedure DoAction(Action: TacAction; const Args: array of Variant);
@@ -1453,23 +1459,26 @@ begin
   vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
 end;
 
-function TMainForm.FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String;
+function TMainForm.FuncEllapsedToTime(const FullCPUTime, FullEllapsed, Ellapsed: UInt64): String;
 var
-  F: Extended;
   FTime: UInt64;
 begin
   Result := ' ';
 
-  if FuncEllapsed = 0 then
+  if (Ellapsed = 0) or (FullEllapsed = 0) then
     Exit;
 
-  F := FuncEllapsed / ThData^.ThreadEllapsed;
-  FTime := Trunc(ThData^.CPUTime * F);
+  FTime := Trunc(FullCPUTime * (Ellapsed / FullEllapsed));
 
   if FTime > 0 then
     Result := EllapsedToTime(FTime)
   else
     Result := '00:00.000';
+end;
+
+function TMainForm.FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String;
+begin
+  Result := FuncEllapsedToTime(ThData^.CPUTime, ThData^.ThreadEllapsed, FuncEllapsed);
 end;
 
 function TMainForm.GetLineTimeOffset: Cardinal;
@@ -1783,10 +1792,59 @@ begin
 end;
 
 procedure TMainForm.LoadTrackProcessFunctions(ProcData: PProcessData; ThreadNode: PVirtualNode);
+var
+  Data: PLinkData;
+
+  TrackFuncInfoPair: TTrackFuncInfoPair;
+  TrackUnitInfoPair: TTrackUnitInfoPair;
+
+  UnitInfo: TUnitInfo;
+
+  BaseNode: PVirtualNode;
+  UnitNode: PVirtualNode;
+  Node: PVirtualNode;
 begin
   vstTrackFuncs.Clear;
   vstTrackFuncParent.Clear;
   vstTrackFuncChilds.Clear;
+
+  vstTrackFuncs.BeginUpdate;
+  try
+    BaseNode := vstTrackFuncs.AddChild(nil);
+    Data := vstTrackFuncs.GetNodeData(BaseNode);
+    Data^.ProcessData := ProcData;
+    Data^.SyncNode := ThreadNode;
+    Data^.LinkType := ltProcess;
+
+    for TrackUnitInfoPair in ProcData^.DbgTrackUnitList do
+    begin
+      UnitInfo := TUnitInfo(TrackUnitInfoPair.Value.UnitInfo);
+      if UnitInfo = nil then Continue;
+
+      UnitNode := vstTrackFuncs.AddChild(BaseNode);
+      Data := vstTrackFuncs.GetNodeData(UnitNode);
+
+      Data^.SyncNode := ThreadNode;
+      Data^.TrackUnitInfo := TrackUnitInfoPair.Value;
+      Data^.LinkType := ltTrackUnitInfo;
+
+      for TrackFuncInfoPair in TrackUnitInfoPair.Value.FuncInfoList do
+      begin
+        Node := vstTrackFuncs.AddChild(UnitNode);
+        Data := vstTrackFuncs.GetNodeData(Node);
+
+        Data^.SyncNode := ThreadNode;
+        Data^.TrackFuncInfo := TrackFuncInfoPair.Value;
+        Data^.LinkType := ltTrackFuncInfo;
+      end;
+
+      vstTrackFuncs.Expanded[UnitNode] := True;
+    end;
+
+    vstTrackFuncs.Expanded[BaseNode] := True;
+  finally
+    vstTrackFuncs.EndUpdate;
+  end;
 end;
 
 procedure TMainForm.LoadTrackThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
@@ -2480,7 +2538,6 @@ procedure TMainForm.vstExceptionCallStackFocusChanged(Sender: TBaseVirtualTree; 
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
-  //LineNo: Integer;
 begin
   synmExceptInfoSource.Clear;
 
@@ -2496,35 +2553,6 @@ begin
       else
         LoadFunctionSource(synmExceptInfoSource, StackEntry.FuncInfo);
     end;
-
-    (*
-    if Assigned(StackEntry) and Assigned(StackEntry.UnitInfo) and
-      FileExists(StackEntry.UnitInfo.FullUnitName)
-    then
-    begin
-      synmExceptInfoSource.BeginUpdate;
-      try
-        synmExceptInfoSource.Lines.LoadFromFile(StackEntry.UnitInfo.FullUnitName);
-
-        if Assigned(StackEntry.LineInfo) then
-        begin
-          LineNo := StackEntry.LineInfo.LineNo;
-          synmExceptInfoSource.GotoLineAndCenter(LineNo);
-          synmExceptInfoSource.SetCaretAndSelection(
-            BufferCoord(1, LineNo),
-            BufferCoord(1, LineNo),
-            BufferCoord(1, LineNo + 1)
-          );
-        end
-        else
-        begin
-          // TODO:
-        end;
-      finally
-        synmExceptInfoSource.EndUpdate;
-      end;
-    end;
-    *)
   end;
 end;
 
@@ -2942,7 +2970,6 @@ procedure TMainForm.vstMemStackFocusChanged(Sender: TBaseVirtualTree; Node: PVir
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
-  //LineNo: Integer;
 begin
   synmMemInfoSource.Clear;
 
@@ -2959,35 +2986,6 @@ begin
         else
           LoadFunctionSource(synmMemInfoSource, StackEntry.FuncInfo);
       end;
-
-      (*
-      if Assigned(StackEntry.UnitInfo) and
-        FileExists(StackEntry.UnitInfo.FullUnitName)
-      then
-      begin
-        synmMemInfoSource.BeginUpdate;
-        try
-          synmMemInfoSource.Lines.LoadFromFile(StackEntry.UnitInfo.FullUnitName);
-
-          if Assigned(StackEntry.LineInfo) then
-          begin
-            LineNo := StackEntry.LineInfo.LineNo;
-            synmMemInfoSource.GotoLineAndCenter(LineNo);
-            synmMemInfoSource.SetCaretAndSelection(
-              BufferCoord(1, LineNo),
-              BufferCoord(1, LineNo),
-              BufferCoord(1, LineNo + 1)
-            );
-          end
-          else
-          begin
-            // TODO:
-          end;
-        finally
-          synmMemInfoSource.EndUpdate;
-        end;
-      end;
-      *)
     finally
       FreeAndNil(StackEntry);
     end;
@@ -3088,8 +3086,7 @@ begin
   Result := FormatDateTime('nn:ss.zzz', Int64ToDateTime(Ellapsed));
 end;
 
-procedure TMainForm.vstThreadsGetText(Sender: TBaseVirtualTree;
-  Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+procedure TMainForm.vstThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
 var
   Data: PLinkData;
@@ -3129,32 +3126,10 @@ end;
 
 procedure TMainForm.vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
-
-  function GetThreadData(Data: PLinkData): PThreadData;
-  var
-    SyncNode: PVirtualNode;
-    SyncData: PLinkData;
-  begin
-    Result := nil;
-
-    SyncNode := Data^.SyncNode;
-    SyncData := vstTrackFuncChilds.GetNodeData(SyncNode);
-
-    if SyncData^.LinkType = ltTrackFuncInfo then
-    begin
-      SyncNode := SyncData^.SyncNode;
-      SyncData := vstTrackFuncChilds.GetNodeData(SyncNode);
-
-      if SyncData^.LinkType = ltThread then
-        Result := SyncData^.ThreadData;
-    end;
-  end;
-
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
   TrackFuncInfo: TTrackFuncInfo;
-  ThData: PThreadData;
 begin
   CellText := ' ';
 
@@ -3172,12 +3147,7 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
-          3:
-            begin
-              ThData := GetThreadData(Data);
-              if Assigned(ThData) then
-                CellText := FuncEllapsedToTime(ThData, TrackFuncInfo.Ellapsed);
-            end;
+          3: CellText := EllapsedTimeToStr(vstTrackFuncChilds, Data, TrackFuncInfo.Ellapsed);
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3187,12 +3157,7 @@ begin
           0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
           2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
-          3:
-            begin
-              ThData := GetThreadData(Data);
-              if Assigned(ThData) then
-                CellText := FuncEllapsedToTime(ThData, TrackCallFuncInfo^.Ellapsed);
-            end;
+          3: CellText := EllapsedTimeToStr(vstTrackFuncChilds, Data, TrackCallFuncInfo.Ellapsed);
         end;
       end;
   end;
@@ -3260,34 +3225,45 @@ begin
   end;
 end;
 
-procedure TMainForm.vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
-  var CellText: string);
+Function TMainForm.EllapsedTimeToStr(Tree: TBaseVirtualTree; Data: PLinkData; const Ellapsed: UInt64): String;
+var
+  SyncNode: PVirtualNode;
+  SyncData: PLinkData;
 
-  function GetThreadData(Data: PLinkData): PThreadData;
-  var
-    SyncNode: PVirtualNode;
-    SyncData: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+begin
+  Result := ' ';
+
+  SyncNode := Data^.SyncNode;
+  SyncData := Tree.GetNodeData(SyncNode);
+
+  if SyncData^.LinkType = ltTrackFuncInfo then
   begin
-    Result := nil;
+    SyncNode := SyncData^.SyncNode;
+    SyncData := Tree.GetNodeData(SyncNode);
 
-    SyncNode := Data^.SyncNode;
-    SyncData := vstTrackFuncParent.GetNodeData(SyncNode);
-
-    if SyncData^.LinkType = ltTrackFuncInfo then
-    begin
-      SyncNode := SyncData^.SyncNode;
-      SyncData := vstTrackFuncParent.GetNodeData(SyncNode);
-
-      if SyncData^.LinkType = ltThread then
-        Result := SyncData^.ThreadData;
+    case SyncData^.LinkType of
+      ltThread:
+        begin
+          ThData := SyncData^.ThreadData;
+          Result := FuncEllapsedToTime(ThData^.CPUTime, ThData^.Ellapsed, Ellapsed);
+        end;
+      ltProcess:
+        begin
+          ProcData := SyncData^.ProcessData;
+          Result := FuncEllapsedToTime(ProcData^.CPUTime, ProcData^.Ellapsed, Ellapsed);
+        end;
     end;
   end;
+end;
 
+procedure TMainForm.vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
   TrackFuncInfo: TTrackFuncInfo;
-  ThData: PThreadData;
 begin
   CellText := ' ';
 
@@ -3305,12 +3281,7 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
-          3:
-            begin
-              ThData := GetThreadData(Data);
-              if Assigned(ThData) then
-                CellText := FuncEllapsedToTime(ThData, TrackFuncInfo.Ellapsed);
-            end;
+          3: CellText := EllapsedTimeToStr(vstTrackFuncParent, Data, TrackFuncInfo.Ellapsed);
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3320,12 +3291,7 @@ begin
           0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
           2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
-          3:
-            begin
-              ThData := GetThreadData(Data);
-              if Assigned(ThData) then
-                CellText := FuncEllapsedToTime(ThData, TrackCallFuncInfo^.Ellapsed);
-            end;
+          3: CellText := EllapsedTimeToStr(vstTrackFuncParent, Data, TrackCallFuncInfo.Ellapsed);
         end;
       end;
   end;
@@ -3373,8 +3339,10 @@ var
   Data: PLinkData;
 begin
   Data := vstTrackFuncs.GetNodeData(Node);
-  if Data^.LinkType = ltTrackUnitInfo then
-    TargetCanvas.Font.Style := [fsBold];
+  case Data^.LinkType of
+    ltProcess, ltThread, ltTrackUnitInfo:
+      TargetCanvas.Font.Style := [fsBold];
+  end;
 end;
 
 procedure TMainForm.vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
@@ -3406,29 +3374,31 @@ var
   Data: PLinkData;
   SyncData: PLinkData;
   ThData: PThreadData;
+  ProcData: PProcessData;
   TrackFuncInfo: TTrackFuncInfo;
   TrackUnitInfo: TTrackUnitInfo;
-  //UnitInfo: TUnitInfo;
 begin
-  CellText := '';
+  CellText := ' ';
   Data := vstTrackFuncs.GetNodeData(Node);
   case Data^.LinkType of
+    ltProcess:
+      begin
+        ProcData := Data^.ProcessData;
+        case Column of
+          0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
+          1: CellText := IntToStr(ProcData^.DbgTrackEventCount);
+          2: CellText := EllapsedToTime(ProcData^.CPUTime);
+        end;
+      end;
     ltThread:
       begin
         ThData := Data^.ThreadData;
         case Column of
           0: CellText := ThData^.ThreadAdvInfo^.AsString;
+          1: CellText := IntToStr(ThData^.DbgTrackEventCount);
+          2: CellText := EllapsedToTime(ThData^.CPUTime);
         end;
       end;
-    (*
-    ltDbgUnitInfo:
-      begin
-        UnitInfo := Data^.DbgUnitInfo;
-        case Column of
-          0: CellText := UnitInfo.ShortName;
-        end;
-      end;
-    *)
     ltTrackFuncInfo:
       begin
         TrackFuncInfo := Data^.TrackFuncInfo;
@@ -3438,9 +3408,18 @@ begin
           2:
             begin
               SyncData := vstTrackFuncs.GetNodeData(Data^.SyncNode);
-              ThData := SyncData^.ThreadData;
-
-              CellText := FuncEllapsedToTime(ThData, TrackFuncInfo.Ellapsed);
+              case SyncData^.LinkType of
+                ltThread:
+                  begin
+                    ThData := SyncData^.ThreadData;
+                    CellText := FuncEllapsedToTime(ThData^.CPUTime, ThData^.Ellapsed, TrackFuncInfo.Ellapsed);
+                  end;
+                ltProcess:
+                  begin
+                    ProcData := SyncData^.ProcessData;
+                    CellText := FuncEllapsedToTime(ProcData^.CPUTime, ProcData^.Ellapsed, TrackFuncInfo.Ellapsed);
+                  end;
+              end;
             end;
         end;
       end;
@@ -3453,9 +3432,18 @@ begin
           2:
             begin
               SyncData := vstTrackFuncs.GetNodeData(Data^.SyncNode);
-              ThData := SyncData^.ThreadData;
-
-              CellText := FuncEllapsedToTime(ThData, TrackUnitInfo.Ellapsed);
+              case SyncData^.LinkType of
+                ltThread:
+                  begin
+                    ThData := SyncData^.ThreadData;
+                    CellText := FuncEllapsedToTime(ThData^.CPUTime, ThData^.Ellapsed, TrackUnitInfo.Ellapsed);
+                  end;
+                ltProcess:
+                  begin
+                    ProcData := SyncData^.ProcessData;
+                    CellText := FuncEllapsedToTime(ProcData^.CPUTime, ProcData^.Ellapsed, TrackUnitInfo.Ellapsed);
+                  end;
+              end;
             end;
         end;
       end;
@@ -3472,6 +3460,39 @@ begin
       LoadTrackProcessFunctions(Data^.ProcessData, Node);
     ltThread:
       LoadTrackThreadFunctions(Data^.ThreadData, Node);
+  end;
+end;
+
+procedure TMainForm.vstTrackThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+begin
+  Data := Sender.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProcess:
+      begin
+        ProcData := Data^.ProcessData;
+        if ProcData <> nil then
+          case Column of
+            0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
+            1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
+            2: CellText := IntToStr(ProcData^.DbgTrackEventCount);
+            3: CellText := EllapsedToTime(ProcData^.CPUTime);
+          end;
+      end;
+    ltThread:
+      begin
+        ThData := Data^.ThreadData;
+        if ThData <> nil then
+          case Column of
+            0: CellText := ThData^.ThreadAdvInfo^.AsString;
+            1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
+            2: CellText := IntToStr(ThData^.DbgTrackEventCount);
+            3: CellText := EllapsedToTime(ThData^.CPUTime);
+          end;
+      end;
   end;
 end;
 
