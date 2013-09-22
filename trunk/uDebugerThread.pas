@@ -88,7 +88,7 @@ procedure TDebugerThread.Execute;
 var
   FRun: Boolean;
 begin
-  //NameThreadForDebugging(AnsiString(ClassName), ThreadId);
+  NameThreadForDebugging(AnsiString(ClassName), ThreadId);
 
   InitDebuger;
   gvDebuger.ClearDbgInfo;
@@ -113,9 +113,16 @@ begin
     if FRun then
     begin
       gvDebuger.PerfomanceMode := (doProfiler in FDbgOptions);
+
+      gvDebuger.MemoryCheckMode := (doMemProfiler in FDbgOptions);
+      gvDebuger.MemoryCallStack := gvDebuger.MemoryCheckMode and (doMemCallStack in FDbgOptions);
+      gvDebuger.MemoryCheckDoubleFree := gvDebuger.MemoryCheckMode and (doMemCheckDoubleFree in FDbgOptions);
+
+      gvDebuger.ExceptionCheckMode := (doExceptions in FDbgOptions);
+      gvDebuger.ExceptionCallStack := gvDebuger.ExceptionCheckMode and (doExceptionCallStack in FDbgOptions);
+
       gvDebuger.CodeTracking := (doCodeTracking in FDbgOptions);
-      if gvDebuger.CodeTracking then
-        gvDebuger.TrackSystemUnits := (doTrackSystemUnits in FDbgOptions);
+      gvDebuger.TrackSystemUnits := gvDebuger.CodeTracking and (doTrackSystemUnits in FDbgOptions);
 
       _AC.Log(dltInfo, 'Start debug process');
       try

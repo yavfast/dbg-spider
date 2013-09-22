@@ -29,6 +29,10 @@ object fmProjectOptions: TfmProjectOptions
     object ts1: TTabSheet
       Caption = 'ts1'
       TabVisible = False
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object p1: TPanel
         Left = 0
         Top = 0
@@ -49,6 +53,10 @@ object fmProjectOptions: TfmProjectOptions
           TabOrder = 0
           object tsProject: TTabSheet
             Caption = 'Project settings'
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object lbeApplication: TLabeledEdit
               Left = 7
               Top = 24
@@ -108,6 +116,10 @@ object fmProjectOptions: TfmProjectOptions
           object tsSources: TTabSheet
             Caption = 'Source settings'
             ImageIndex = 1
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object lbeProjectSource: TLabeledEdit
               Left = 7
               Top = 24
@@ -184,7 +196,6 @@ object fmProjectOptions: TfmProjectOptions
             Font.Style = []
             Orientation = boRightToLeft
             ParentBiDiMode = False
-            ParentBackground = True
             ParentFont = False
             Spacing = 4
           end

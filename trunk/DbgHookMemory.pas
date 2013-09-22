@@ -4,7 +4,7 @@ interface
 
 uses DbgHookTypes;
 
-procedure InitMemoryHook(MemoryMgr: Pointer); stdcall;
+procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
 procedure ResetMemoryHook; stdcall;
 
 function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
@@ -18,6 +18,7 @@ var
 
   MemInfoList: PDbgMemInfoList = nil;
   MemInfoListCnt: Integer = 0;
+  MemCallStack: Boolean = False;
   MemInfoLock: TCriticalSection = nil;
 
   _MemoryMgr: PMemoryManagerEx = nil;
@@ -104,7 +105,7 @@ var
   Level: Integer;
 begin
   //Result := True;
-  //try
+  try
     ZeroMemory(@Stack[0], Length(Stack) * SizeOf(Pointer));
     Level := -2; // это в нашей dll-ке
     StackFrame := GetFramePointer;
@@ -127,9 +128,9 @@ begin
 
       Inc(Level);
     end;
-  //except
+  except
   //  Result := False;
-  //end;
+  end;
 end;
 
 function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
@@ -153,34 +154,31 @@ begin
   end;
 end;
 
-threadvar
-  _DbgMemInfo: TDbgMemInfo;
-
 procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; const _Ptr: Pointer; const _Size: Cardinal); stdcall;
 var
-  DbgMemInfo: PDbgMemInfo;
+  DbgMemInfo: TDbgMemInfo;
 begin
-  DbgMemInfo := @_DbgMemInfo;
+  ZeroMemory(@DbgMemInfo, SizeOf(TDbgMemInfo));
 
-  DbgMemInfo^.Ptr := _Ptr;
-  DbgMemInfo^.ThreadId := GetCurrentThreadId;
-  DbgMemInfo^.MemInfoType := _MemInfoType;
-  case DbgMemInfo^.MemInfoType of
+  DbgMemInfo.Ptr := _Ptr;
+  DbgMemInfo.ThreadId := GetCurrentThreadId;
+  DbgMemInfo.MemInfoType := _MemInfoType;
+  case DbgMemInfo.MemInfoType of
     miGetMem:
     begin
-      DbgMemInfo^.Size := _Size;
-      GetCallStack(DbgMemInfo^.Stack);
+      DbgMemInfo.Size := _Size;
+      GetCallStack(DbgMemInfo.Stack);
     end;
     miFreeMem:
     begin
-      DbgMemInfo^.ObjClassType[0] := #0;
+      DbgMemInfo.ObjClassType[0] := #0;
     end;
   end;
 
   MemInfoLock.Enter;
   if MemInfoList <> Nil then
   begin
-    MemInfoList^[MemInfoListCnt] := DbgMemInfo^;
+    MemInfoList^[MemInfoListCnt] := DbgMemInfo;
     Inc(MemInfoListCnt);
 
     if MemInfoListCnt = _DbgMemListLength then
@@ -223,10 +221,12 @@ begin
   _AddMemInfo(miGetMem, Result, Size);
 end;
 
-procedure InitMemoryHook(MemoryMgr: Pointer); stdcall;
+procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
 begin
   OutputDebugStringA('Init memory hooks...');
   MemInfoListCnt := 0;
+  MemCallStack := MemoryCallStack;
+
   MemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
   MemInfoLock := TCriticalSection.Create;
   MemInfoLock.Enter;

@@ -160,7 +160,7 @@ type
     splExceptInfoAdv: TSplitter;
     synmExceptInfoSource: TSynMemo;
     acUseShortNames: TAction;
-    rbngrpViewOptions: TRibbonGroup;
+    rbngrpDbgInfoOptions: TRibbonGroup;
     tsCodeTracking: TTabSheet;
     acTabCodeTracking: TAction;
     rbngrpCodeTracking: TRibbonGroup;
@@ -196,6 +196,14 @@ type
     pStatusTrackEventCnt: TPanel;
     lbStatusTrackEventCntLabel: TLabel;
     lbStatusTrackEventCntValue: TLabel;
+    rbngrpMemInfoOptions: TRibbonGroup;
+    acMemoryInfo: TAction;
+    acMemInfoCallStack: TAction;
+    acMemInfoDblFree: TAction;
+    acProcessTimeline: TAction;
+    rbngrpExceptionOptions: TRibbonGroup;
+    acExceptions: TAction;
+    acExceptionCallStack: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -272,6 +280,9 @@ type
     procedure vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackFuncChildsDblClick(Sender: TObject);
 
+    procedure vstTrackFuncLinksDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+      const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
+
     procedure tmrThreadsUpdateTimer(Sender: TObject);
     procedure cbCPUTimeLineClick(Sender: TObject);
 
@@ -295,6 +306,12 @@ type
     procedure acTrackSystemUnitsExecute(Sender: TObject);
     procedure pTrackFuncAdvResize(Sender: TObject);
     procedure acParentViewSourceExecute(Sender: TObject);
+    procedure acMemoryInfoExecute(Sender: TObject);
+    procedure acProcessTimelineExecute(Sender: TObject);
+    procedure acMemInfoDblFreeExecute(Sender: TObject);
+    procedure acMemInfoCallStackExecute(Sender: TObject);
+    procedure acExceptionsExecute(Sender: TObject);
+    procedure acExceptionCallStackExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -365,6 +382,7 @@ type
     procedure LoadRecentProjects;
     function EllapsedTimeToStr(Tree: TBaseVirtualTree; Data: PLinkData;
       const Ellapsed: UInt64): String;
+    function GetDebugOptions: TDbgOptions;
   public
     procedure OnException(Sender: TObject; E: Exception);
     procedure DoAction(Action: TacAction; const Args: array of Variant);
@@ -493,6 +511,16 @@ begin
   OpenProjectOptions(otEdit);
 end;
 
+procedure TMainForm.acExceptionCallStackExecute(Sender: TObject);
+begin
+  //
+end;
+
+procedure TMainForm.acExceptionsExecute(Sender: TObject);
+begin
+  //
+end;
+
 procedure TMainForm.acExitExecute(Sender: TObject);
 begin
   FCloseApp := True;
@@ -527,13 +555,48 @@ begin
   end;
 end;
 
+function TMainForm.GetDebugOptions: TDbgOptions;
+begin
+  Result := [];
+
+  if acProcessTimeline.Checked then
+    Include(Result, doProfiler);
+
+  if acMemoryInfo.Checked then
+  begin
+    Include(Result, doMemProfiler);
+
+    if acMemInfoCallStack.Checked then
+      Include(Result, doMemCallStack);
+
+    if acMemInfoDblFree.Checked then
+      Include(Result, doMemCheckDoubleFree);
+  end;
+
+  if acExceptions.Checked then
+  begin
+    Include(Result, doExceptions);
+
+    if acExceptionCallStack.Checked then
+      Include(Result, doExceptionCallStack);
+  end;
+
+  if acCodeTracking.Checked then
+  begin
+    Include(Result, doCodeTracking);
+
+    if acTrackSystemUnits.Checked then
+      Include(Result, doTrackSystemUnits);
+  end;
+end;
+
 procedure TMainForm.acRunExecute(Sender: TObject);
 begin
   acRun.Enabled := False;
 
   ClearDbgTrees;
 
-  _AC.RunDebug([doRun, doProfiler, doMemProfiler, doCodeTracking], FPID);
+  _AC.RunDebug([doRun] + GetDebugOptions, FPID);
 end;
 
 procedure TMainForm.acSaveCopyExecute(Sender: TObject);
@@ -546,6 +609,11 @@ begin
   acStop.Enabled := False;
 
   _AC.StopDebug;
+end;
+
+procedure TMainForm.acProcessTimelineExecute(Sender: TObject);
+begin
+  //
 end;
 
 procedure TMainForm.acTrackSystemUnitsExecute(Sender: TObject);
@@ -615,6 +683,21 @@ begin
   acTabCodeTracking.Checked := (CurTag = acTabCodeTracking.Tag);
 
   pcMain.ActivePageIndex := CurTag;
+end;
+
+procedure TMainForm.acMemInfoCallStackExecute(Sender: TObject);
+begin
+  //
+end;
+
+procedure TMainForm.acMemInfoDblFreeExecute(Sender: TObject);
+begin
+  //
+end;
+
+procedure TMainForm.acMemoryInfoExecute(Sender: TObject);
+begin
+  //
 end;
 
 procedure TMainForm.acNewProjectExecute(Sender: TObject);
@@ -722,7 +805,14 @@ function TMainForm.FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TU
 
   function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
   begin
-    Result := (LinkData^.LinkType = ltTrackUnitInfo) and (LinkData^.TrackUnitInfo = CmpData);
+    case LinkData^.LinkType of
+      ltTrackUnitInfo:
+        Result := (LinkData^.TrackUnitInfo = CmpData);
+      ltDbgUnitInfo:
+        Result := (LinkData^.DbgUnitInfo = CmpData);
+    else
+      Result := False;
+    end;
   end;
 
 begin
@@ -2298,7 +2388,7 @@ end;
 
 procedure TMainForm.vdtTimeLinePaintBackground(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; R: TRect; var Handled: Boolean);
 begin
-  DrawBackground(TargetCanvas, R, clWindow);
+  DrawBackground(TargetCanvas, R, TargetCanvas.Brush.Color);
 
   Handled := True;
 end;
@@ -3197,6 +3287,18 @@ begin
   end;
 end;
 
+procedure TMainForm.vstTrackFuncLinksDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
+var
+  Data: PLinkData;
+begin
+  Data := Sender.GetNodeData(Node);
+  case Data^.LinkType of
+    ltTrackFuncInfo, ltDbgUnitInfo, ltTrackUnitInfo:
+      TargetCanvas.Font.Style := [fsBold];
+  end;
+end;
+
 procedure TMainForm.vstTrackFuncChildsDblClick(Sender: TObject);
 var
   Node: PVirtualNode;
@@ -3338,7 +3440,7 @@ procedure TMainForm.vstTrackFuncsDrawText(Sender: TBaseVirtualTree; TargetCanvas
 var
   Data: PLinkData;
 begin
-  Data := vstTrackFuncs.GetNodeData(Node);
+  Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
     ltProcess, ltThread, ltTrackUnitInfo:
       TargetCanvas.Font.Style := [fsBold];
@@ -3349,8 +3451,6 @@ procedure TMainForm.vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PV
 var
   Data: PLinkData;
 begin
-  synmTrackFuncAdvSource.Clear;
-
   Data := vstTrackFuncs.GetNodeData(Node);
   case Data^.LinkType of
     ltTrackFuncInfo:
@@ -3364,6 +3464,7 @@ begin
     begin
       vstTrackFuncParent.Clear;
       vstTrackFuncChilds.Clear;
+      synmTrackFuncAdvSource.Clear;
     end;
   end;
 end;

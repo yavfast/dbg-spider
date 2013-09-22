@@ -27,10 +27,19 @@ type
     FCurThreadData: PThreadData;
     FDbgState: TDbgState;
 
-    //FDbgPerfomanceThread: TDbgPerfomanceThread;
+    // Debug options
     FPerfomanceMode: Boolean;
-    FPerfCallStacks: Boolean;
+
+    FExceptionCheckMode: Boolean;
+    FExceptionCallStack: Boolean;
+
+    FMemoryCheckMode: Boolean;
+    FMemoryCallStack: Boolean;
+    FMemoryCheckDoubleFree: Boolean;
+
     FCodeTracking: Boolean;
+    FTrackSystemUnits: Boolean;
+    // ---
 
     FPerfomanceCheckPtr: Pointer;
     //FPerfomanceThreadId: TThreadId;
@@ -57,15 +66,19 @@ type
     FExceptioEvents: array [TExceptionCode] of TDefaultExceptionEvent;
     FBreakPoint: TBreakPointEvent;
     FHardwareBreakpoint: THardwareBreakpointEvent;
-    FTrackSystemUnits: Boolean;
 
     function GetExceptionEvent(const Index: TExceptionCode): TDefaultExceptionEvent;
     procedure SetExceptionEvent(const Index: TExceptionCode; const Value: TDefaultExceptionEvent);
     procedure SetCloseDebugProcess(const Value: Boolean);
 
     procedure SetPerfomanceMode(const Value: Boolean);
-    procedure SetPerfCallStacks(const Value: Boolean);
     procedure SetCodeTracking(const Value: Boolean);
+    procedure SetTrackSystemUnits(const Value: Boolean);
+    procedure SetExceptionCallStack(const Value: Boolean);
+    procedure SetExceptionCheckMode(const Value: Boolean);
+    procedure SetMemoryCallStack(const Value: Boolean);
+    procedure SetMemoryCheckDoubleFree(const Value: Boolean);
+    procedure SetMemoryCheckMode(const Value: Boolean);
 
     function FindMemoryPointer(const Ptr: Pointer): PThreadData;
     procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
@@ -77,8 +90,6 @@ type
     procedure DoRemoveBreakpointF(const Address: Pointer; const SaveByte: Byte);
     procedure DoRestoreBreakpoint(const Address: Pointer);
     procedure DoRestoreBreakpointF(const Address: Pointer);
-
-    procedure SetTrackSystemUnits(const Value: Boolean);
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -265,12 +276,18 @@ type
     property ResumeAction: TResumeAction read FResumeAction write FResumeAction;
     property DbgState: TDbgState read FDbgState;
 
+    // Опции профайлера
     property PerfomanceMode: Boolean read FPerfomanceMode write SetPerfomanceMode;
-    property PerfCallStacks: Boolean read FPerfCallStacks write SetPerfCallStacks;
+
+    property ExceptionCheckMode: Boolean read FExceptionCheckMode write SetExceptionCheckMode;
+    property ExceptionCallStack: Boolean read FExceptionCallStack write SetExceptionCallStack;
+
+    property MemoryCheckMode: Boolean read FMemoryCheckMode write SetMemoryCheckMode;
+    property MemoryCallStack: Boolean read FMemoryCallStack write SetMemoryCallStack;
+    property MemoryCheckDoubleFree: Boolean read FMemoryCheckDoubleFree write SetMemoryCheckDoubleFree;
+
     property CodeTracking: Boolean read FCodeTracking write SetCodeTracking;
     property TrackSystemUnits: Boolean read FTrackSystemUnits write SetTrackSystemUnits;
-
-    property DbgShareMem: THandle read FDbgShareMem;
   end;
 
 var
@@ -777,9 +794,7 @@ begin
   FProcessData.State := psNone;
   FProcessData.DbgPoints := Nil;
 
-  //FDbgPerfomanceThread := TDbgPerfomanceThread.Create(Self, 10);
   FPerfomanceMode := False;
-  FPerfCallStacks := False;
   FPerfomanceCheckPtr := Nil; //Pointer($76FED315);
 
   FDbgShareMem :=
@@ -2423,6 +2438,16 @@ begin
   FCodeTracking := Value;
 end;
 
+procedure TDebuger.SetExceptionCallStack(const Value: Boolean);
+begin
+  FExceptionCallStack := Value;
+end;
+
+procedure TDebuger.SetExceptionCheckMode(const Value: Boolean);
+begin
+  FExceptionCheckMode := Value;
+end;
+
 procedure TDebuger.SetExceptionEvent(const Index: TExceptionCode; const Value: TDefaultExceptionEvent);
 begin
   FExceptioEvents[Index] := Value;
@@ -2496,9 +2521,19 @@ begin
   Result := AddNewBreakPoint(Breakpoint);
 end;
 
-procedure TDebuger.SetPerfCallStacks(const Value: Boolean);
+procedure TDebuger.SetMemoryCallStack(const Value: Boolean);
 begin
-  FPerfCallStacks := Value;
+  FMemoryCallStack := Value;
+end;
+
+procedure TDebuger.SetMemoryCheckDoubleFree(const Value: Boolean);
+begin
+  FMemoryCheckDoubleFree := Value;
+end;
+
+procedure TDebuger.SetMemoryCheckMode(const Value: Boolean);
+begin
+  FMemoryCheckMode := Value;
 end;
 
 procedure TDebuger.SetPerfomanceMode(const Value: Boolean);
