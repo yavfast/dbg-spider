@@ -1,6 +1,8 @@
 program Spider;
 
 uses
+  Vcl.Themes,
+  Vcl.Styles,
   Forms,
   uMain in 'uMain.pas' {MainForm},
   Debuger in 'Debuger.pas',
@@ -22,18 +24,14 @@ uses
   uSpiderOptions in 'uSpiderOptions.pas',
   uShareData in 'uShareData.pas' {dmShareData: TDataModule},
   uSelectSource in 'uSelectSource.pas' {fmSelectSource},
-  WinAPIUtils in 'WinAPIUtils.pas',
-  Vcl.Themes,
-  Vcl.Styles;
+  WinAPIUtils in 'WinAPIUtils.pas';
 
 {$R *.res}
 
 begin
-  //ReportMemoryLeaksOnShutdown := True;
-
   Application.Initialize;
-  Application.MainFormOnTaskbar := True;
   TStyleManager.TrySetStyle('Silver');
+  Application.MainFormOnTaskbar := True;
   Application.Title := 'Spider';
   Application.CreateForm(TdmShareData, dmShareData);
   Application.CreateForm(TMainForm, MainForm);

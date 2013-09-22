@@ -96,7 +96,7 @@ asm
   MOV     EAX, FS:[0].NT_TIB32.StackBase
 end;
 
-procedure GetCallStack(var Stack: TDbgMemInfoStack); //stdcall;
+procedure GetCallStack(var Stack: TDbgMemInfoStack); stdcall;
 var
   TopOfStack: TJclAddr;
   BaseOfStack: TJclAddr;
@@ -140,7 +140,7 @@ begin
   if MemInfoLock = Nil then Exit;
 
   MemInfoLock.Enter;
-  //try
+  try
     if MemInfoListCnt > 0 then
     begin
       _MemOutInfo(DbgInfoType, @MemInfoList^[0], MemInfoListCnt);
@@ -148,9 +148,9 @@ begin
 
       Result := True;
     end;
-  //finally
+  finally
     MemInfoLock.Leave;
-  //end;
+  end;
 end;
 
 threadvar
@@ -160,39 +160,33 @@ procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; const _Ptr: Pointer; 
 var
   DbgMemInfo: PDbgMemInfo;
 begin
-  //try
-    DbgMemInfo := @_DbgMemInfo;
+  DbgMemInfo := @_DbgMemInfo;
 
-    DbgMemInfo^.Ptr := _Ptr;
-    DbgMemInfo^.ThreadId := GetCurrentThreadId;
-    DbgMemInfo^.MemInfoType := _MemInfoType;
-    case DbgMemInfo^.MemInfoType of
-      miGetMem:
-      begin
-        DbgMemInfo^.Size := _Size;
-        GetCallStack(DbgMemInfo^.Stack);
-      end;
-      miFreeMem:
-      begin
-        DbgMemInfo^.ObjClassType[0] := #0;
-      end;
+  DbgMemInfo^.Ptr := _Ptr;
+  DbgMemInfo^.ThreadId := GetCurrentThreadId;
+  DbgMemInfo^.MemInfoType := _MemInfoType;
+  case DbgMemInfo^.MemInfoType of
+    miGetMem:
+    begin
+      DbgMemInfo^.Size := _Size;
+      GetCallStack(DbgMemInfo^.Stack);
     end;
+    miFreeMem:
+    begin
+      DbgMemInfo^.ObjClassType[0] := #0;
+    end;
+  end;
 
-    MemInfoLock.Enter;
-    //try
-      if MemInfoList = Nil then Exit;
+  MemInfoLock.Enter;
+  if MemInfoList <> Nil then
+  begin
+    MemInfoList^[MemInfoListCnt] := DbgMemInfo^;
+    Inc(MemInfoListCnt);
 
-      MemInfoList^[MemInfoListCnt] := DbgMemInfo^;
-      Inc(MemInfoListCnt);
-
-      if MemInfoListCnt = _DbgMemListLength then
-        _OutMemInfoBuf;
-    //finally
-      MemInfoLock.Leave;
-    //end;
-  //except
-    // TODO:
-  //end;
+    if MemInfoListCnt = _DbgMemListLength then
+      _OutMemInfoBuf;
+  end;
+  MemInfoLock.Leave;
 end;
 
 function _HookGetMem(Size: TMemSize): Pointer;
@@ -206,7 +200,9 @@ end;
 function _HookFreeMem(P: Pointer): Integer;
 begin
   _AddMemInfo(miFreeMem, P, 0);
-  PCardinal(P)^ := $00000000; // Очистка для TObject
+
+  // !!! Указатель может быть уже невалидным
+  //PCardinal(P)^ := $00000000; // Очистка для TObject
 
   Result := _BaseFreeMem(P);
 end;
@@ -234,7 +230,7 @@ begin
   MemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
   MemInfoLock := TCriticalSection.Create;
   MemInfoLock.Enter;
-  //try
+  try
     _MemoryMgr := MemoryMgr;
     _BaseMemoryMgr := _MemoryMgr^;
     with _MemoryMgr^ do
@@ -251,9 +247,9 @@ begin
       _BaseAllocMem := AllocMem;
       AllocMem := _HookAllocMem;
     end;
-  //finally
+  finally
     MemInfoLock.Leave;
-  //end;
+  end;
   OutputDebugStringA('Init memory hooks - ok');
 end;
 
@@ -265,15 +261,15 @@ begin
 
   OutputDebugStringA('Reset memory hooks...');
   MemInfoLock.Enter;
-  //try
+  try
     _MemoryMgr^ := _BaseMemoryMgr;
     _MemoryMgr := Nil;
 
     FreeMemory(MemInfoList);
     MemInfoList := Nil;
-  //finally
+  finally
     MemInfoLock.Leave;
-  //end;
+  end;
 
   //Sleep(100);
   FreeAndNil(MemInfoLock);

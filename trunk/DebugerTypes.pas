@@ -296,8 +296,10 @@ type
   end;
   TCallFuncCounterPair = TPair<Pointer,PCallFuncInfo>;
 
+  TTrackUnitInfo = class;
   TTrackFuncInfo = class;
 
+  TTrackUnitInfoBaseList = TDictionary<TObject,TTrackUnitInfo>;
   TTrackFuncInfoBaseList = TDictionary<TObject,TTrackFuncInfo>;
 
   TTrackUnitInfo = class
@@ -320,7 +322,7 @@ type
     property FuncInfoList: TTrackFuncInfoBaseList read FFuncInfoList;
   end;
 
-  TTrackUnitInfoList = class(TDictionary<TObject,TTrackUnitInfo>)
+  TTrackUnitInfoList = class(TTrackUnitInfoBaseList)
   protected
     procedure ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification); override;
   public
@@ -365,13 +367,22 @@ type
 
   PTrackStackPoint = ^TTrackStackPoint;
   TTrackStackPoint = record
+  private
+    function GetLeave: UInt64;
+    procedure SetLeave(const Value: UInt64);
+  public
     TrackFuncInfo: TTrackFuncInfo;
     ParentTrackFuncInfo: TTrackFuncInfo;
-    TrackRETBreakpoint: PTrackRETBreakpoint;
-    Enter: UInt64;
-    Leave: UInt64;
 
-    function Ellapsed: UInt64;
+    ProcTrackFuncInfo: TTrackFuncInfo;
+    ProcParentTrackFuncInfo: TTrackFuncInfo;
+
+    TrackRETBreakpoint: PTrackRETBreakpoint;
+
+    Enter: UInt64;
+    Ellapsed: UInt64;
+
+    property Leave: UInt64 read GetLeave write SetLeave;
   end;
 
   TTrackStack = class(TStack);
@@ -404,6 +415,7 @@ type
 
     DbgExceptions: TThreadList;
 
+    DbgTrackEventCount: UInt64;
     DbgTrackUnitList: TTrackUnitInfoList;
     DbgTrackFuncList: TTrackFuncInfoList;
     DbgTrackStack: TTrackStack;
@@ -470,6 +482,8 @@ type
     DbgExceptions: TThreadList;
 
     DbgTrackEventCount: UInt64;
+    DbgTrackUnitList: TTrackUnitInfoList;
+    DbgTrackFuncList: TTrackFuncInfoList;
 
     CreatedProcessHandle: THandle;
     CreatedThreadHandle: THandle;
@@ -543,6 +557,9 @@ begin
 
   FreeAndNil(DbgGetMemInfo);
   FreeAndNil(DbgExceptions);
+
+  FreeAndNil(DbgTrackUnitList);
+  FreeAndNil(DbgTrackFuncList);
 end;
 
 function TProcessData.CurDbgPointIdx: Cardinal;
@@ -1049,10 +1066,6 @@ end;
 
 { TTrackStackPoint }
 
-function TTrackStackPoint.Ellapsed: UInt64;
-begin
-  Result := Leave - Enter;
-end;
 
 { TTrackUnitInfoList }
 
@@ -1119,6 +1132,18 @@ end;
 procedure TTrackUnitInfo.IncCallCount;
 begin
   Inc(FCallCount);
+end;
+
+{ TTrackStackPoint }
+
+function TTrackStackPoint.GetLeave: UInt64;
+begin
+  Result := Enter + Ellapsed;
+end;
+
+procedure TTrackStackPoint.SetLeave(const Value: UInt64);
+begin
+  Ellapsed := Value - Enter + 1;
 end;
 
 end.
