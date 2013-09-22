@@ -8,7 +8,7 @@ uses
 type
   TDebuger = class
   private
-    FProcessData: TProcessData;          // Служебная информация об отлаживаемом процессе
+    FProcessData: PProcessData;          // Служебная информация об отлаживаемом процессе
     FThreadList: TDbgThreadList;            // Данные о потоках отлаживаемого процесса
     FThreadAdvInfoList: TThreadAdvInfoList; // Дополнительная информация о потоках
 
@@ -261,7 +261,7 @@ type
     // расширенные свойства отладчика
     property ContinueStatus: DWORD read FContinueStatus write FContinueStatus;
     property CloseDebugProcessOnFree: Boolean read FCloseDebugProcess write SetCloseDebugProcess;
-    property ProcessData: TProcessData read FProcessData;
+    property ProcessData: PProcessData read FProcessData;
     property ResumeAction: TResumeAction read FResumeAction write FResumeAction;
     property DbgState: TDbgState read FDbgState;
 
@@ -771,7 +771,8 @@ begin
   FThreadList := TCollectList<TThreadData>.Create;
   FThreadAdvInfoList := TCollectList<TThreadAdvInfo>.Create;
 
-  ZeroMemory(@FProcessData, SizeOf(TProcessData));
+  FProcessData := GetMemory(SizeOf(TProcessData));
+  ZeroMemory(FProcessData, SizeOf(TProcessData));
   FProcessData.State := psNone;
   FProcessData.DbgPoints := Nil;
 
@@ -836,6 +837,9 @@ begin
   CloseHandle(FDbgShareMem);
   FDbgShareMem := 0;
 
+  FreeMemory(FProcessData);
+  FProcessData := nil;
+
   inherited;
 end;
 
@@ -864,6 +868,8 @@ begin
   FProcessData.ProcessGetMemSize := 0;
 
   FProcessData.DbgExceptions := TThreadList.Create;
+
+  FProcessData.DbgTrackEventCount := 0;
 
   DbgTrackBreakpoints := nil;
   DbgTrackRETBreakpoints := nil;
@@ -1718,6 +1724,8 @@ begin
     Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
     if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
     begin
+      Inc(FProcessData.DbgTrackEventCount);
+
       TrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo);
       ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 

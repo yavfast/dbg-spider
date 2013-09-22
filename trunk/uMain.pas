@@ -117,7 +117,6 @@ type
     acTabExceptions: TAction;
     acTabLog: TAction;
     cbStatusInfo: TCoolBar;
-    actbStatusInfo: TActionToolBar;
     acStatusDebuger: TAction;
     acStatusDbgInfo: TAction;
     acStausEventCount: TAction;
@@ -133,9 +132,6 @@ type
     vstDbgInfoTypes: TVirtualStringTree;
     vstDbgInfoVars: TVirtualStringTree;
     vstDbgInfoFunctions: TVirtualStringTree;
-    actbStatusInfo2: TActionToolBar;
-    pbProgress: TProgressBar;
-    pStatusAction: TPanel;
     vstLog: TVirtualStringTree;
     ALRecent: TActionList;
     acRecent1: TAction;
@@ -184,6 +180,22 @@ type
     pmTrackFuncAdvParents: TPopupMenu;
     acParentViewSource: TAction;
     Viewsource1: TMenuItem;
+    acRecentProjects: TAction;
+    pStatusBar: TPanel;
+    pbProgress: TProgressBar;
+    lbStatusAction: TLabel;
+    pStatusDbgInfo: TPanel;
+    pStatusDbgState: TPanel;
+    pStatusEventCnt: TPanel;
+    lbStatusDbgInfoValue: TLabel;
+    lbStatusDbgInfoLabel: TLabel;
+    lbStatusDbgStateLabel: TLabel;
+    lbStatusDbgStateValue: TLabel;
+    lbStateEventCntLabel: TLabel;
+    lbStatusEventsCntValue: TLabel;
+    pStatusTrackEventCnt: TPanel;
+    lbStatusTrackEventCntLabel: TLabel;
+    lbStatusTrackEventCntValue: TLabel;
 
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -616,33 +628,33 @@ begin
 
   LinkData := vstThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := TimeLineNode;
-  LinkData^.ProcessData := @gvDebuger.ProcessData;
+  LinkData^.ProcessData := gvDebuger.ProcessData;
   LinkData^.LinkType := ltProcess;
 
   LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
   LinkData^.SyncNode := NameNode;
-  LinkData^.ProcessData := @gvDebuger.ProcessData;
+  LinkData^.ProcessData := gvDebuger.ProcessData;
   LinkData^.LinkType := ltProcess;
 
   // Memory Info
   NameNode := vstMemInfoThreads.AddChild(Nil);
   LinkData := vstMemInfoThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := nil;
-  LinkData^.ProcessData := @gvDebuger.ProcessData;
+  LinkData^.ProcessData := gvDebuger.ProcessData;
   LinkData^.LinkType := ltProcess;
 
   // Exceptions
   NameNode := vstExceptionThreads.AddChild(Nil);
   LinkData := vstExceptionThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := nil;
-  LinkData^.ProcessData := @gvDebuger.ProcessData;
+  LinkData^.ProcessData := gvDebuger.ProcessData;
   LinkData^.LinkType := ltProcess;
 
   // Code Tracking
   NameNode := vstTrackThreads.AddChild(Nil);
   LinkData := vstTrackThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := nil;
-  LinkData^.ProcessData := @gvDebuger.ProcessData;
+  LinkData^.ProcessData := gvDebuger.ProcessData;
   LinkData^.LinkType := ltProcess;
 end;
 
@@ -1422,8 +1434,6 @@ begin
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
 
   actbMainTabs.ParentBackground := True;
-  actbStatusInfo.ParentBackground := True;
-  actbStatusInfo2.ParentBackground := True;
 
   HidePCTabs(pcMain);
   acTabLog.Execute;
@@ -1437,6 +1447,7 @@ procedure TMainForm.FormShow(Sender: TObject);
 begin
   acRunStop.Assign(acRun);
   UpdateMainActions;
+  UpdateStatusInfo;
 
   vstThreadsColumnResize(vstThreads.Header, 0);
   vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
@@ -1976,11 +1987,9 @@ begin
   pbProgress.Position := Progress;
 
   if Action <> '' then
-    //actbStatusInfo2.ActionClient.Items[1].Caption := Action
-    pStatusAction.Caption := Action
+    lbStatusAction.Caption := Action
   else
-    //actbStatusInfo2.ActionClient.Items[1].Caption := ' ';
-    pStatusAction.Caption := '';
+    lbStatusAction.Caption := '';
 end;
 
 procedure TMainForm.pTrackFuncAdvResize(Sender: TObject);
@@ -2117,19 +2126,15 @@ begin
 end;
 
 procedure TMainForm.UpdateStatusInfo;
-Const
-  _DBG_INFO_IDX = 0;
-  _DBG_STATE_IDX = 3;
-  _DBG_EVENTS_IDX = 6;
 var
   Msg: String;
 begin
   if Assigned(gvDebuger) then
   begin
     if Assigned(gvDebugInfo) and (gvDebugInfo.DebugInfoLoaded) then
-      actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := gvDebugInfo.DebugInfoType
+      lbStatusDbgInfoValue.Caption := gvDebugInfo.DebugInfoType
     else
-      actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := 'Not found';
+      lbStatusDbgInfoValue.Caption := 'Not found';
 
     case gvDebuger.DbgState of
       dsNone: Msg := 'none';
@@ -2144,18 +2149,21 @@ begin
       else
         Msg := '';
     end;
-    actbStatusInfo.ActionClient.Items[_DBG_STATE_IDX].Caption := Msg;
+    lbStatusDbgStateValue.Caption := Msg;
 
     if gvDebuger.PerfomanceMode and not(gvDebuger.DbgState in [dsNone]) then
-      actbStatusInfo.ActionClient.Items[_DBG_EVENTS_IDX].Caption := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
+      lbStatusEventsCntValue.Caption := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
     else
-      actbStatusInfo.ActionClient.Items[_DBG_EVENTS_IDX].Caption := '0';
+      lbStatusEventsCntValue.Caption := '0';
+
+    lbStatusTrackEventCntValue.Caption := IntToStr(gvDebuger.ProcessData.DbgTrackEventCount);
   end
   else
   begin
-    actbStatusInfo.ActionClient.Items[_DBG_INFO_IDX].Caption := 'None';
-    actbStatusInfo.ActionClient.Items[_DBG_STATE_IDX].Caption := 'None';
-    actbStatusInfo.ActionClient.Items[_DBG_EVENTS_IDX].Caption := '0';
+    lbStatusDbgInfoValue.Caption := 'None';
+    lbStatusDbgStateValue.Caption := 'None';
+    lbStatusEventsCntValue.Caption := '0';
+    lbStatusTrackEventCntValue.Caption := '0';
   end;
 end;
 

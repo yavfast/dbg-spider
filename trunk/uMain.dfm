@@ -1492,7 +1492,6 @@ object MainForm: TMainForm
         ActionManager = amMain
         Caption = 'Application'
         GroupIndex = 1
-        Rows = 2
       end
       object rbngrpDebug: TRibbonGroup
         Left = 327
@@ -1641,90 +1640,217 @@ object MainForm: TMainForm
     Height = 25
     Align = alBottom
     AutoSize = True
-    BandBorderStyle = bsNone
     Bands = <
       item
         Break = False
-        Control = actbStatusInfo2
+        Control = pStatusBar
+        HorizontalOnly = True
         ImageIndex = -1
-        Width = 560
-      end
-      item
-        Break = False
-        Control = actbStatusInfo
-        ImageIndex = -1
-        MinHeight = 24
-        Width = 654
+        Width = 1216
       end>
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
     FixedSize = True
     FixedOrder = True
-    object actbStatusInfo: TActionToolBar
-      Left = 573
-      Top = 0
-      Width = 645
-      Height = 24
-      Margins.Left = 1
-      Margins.Top = 1
-      Margins.Right = 1
-      Margins.Bottom = 1
-      ActionManager = amMain
-      Caption = 'actbStatusInfo'
-      ColorMap.MenuColor = clMenu
-      ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
-      EdgeInner = esNone
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clBlack
-      Font.Height = -11
-      Font.Name = 'Tahoma'
-      Font.Style = []
-      HorzSeparator = False
-      Orientation = boRightToLeft
-      ParentFont = False
-      Spacing = 0
-    end
-    object actbStatusInfo2: TActionToolBar
+    object pStatusBar: TPanel
       Left = 2
       Top = 0
-      Width = 556
+      Width = 1216
       Height = 25
-      ActionManager = amMain
-      Align = alNone
-      AllowHiding = False
-      Caption = 'actbStatusInfo2'
-      ColorMap.MenuColor = clMenu
-      ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clBlack
-      Font.Height = -11
-      Font.Name = 'Tahoma'
-      Font.Style = []
-      HorzSeparator = False
-      ParentFont = False
-      Spacing = 0
+      BevelEdges = []
+      BevelOuter = bvNone
+      Caption = 'pStatusBar'
+      DoubleBuffered = True
+      ParentDoubleBuffered = False
+      ShowCaption = False
+      TabOrder = 0
+      object lbStatusAction: TLabel
+        Left = 208
+        Top = 6
+        Width = 69
+        Height = 13
+        Caption = 'lbStatusAction'
+      end
       object pbProgress: TProgressBar
-        Left = 5
-        Top = 2
+        Left = 2
+        Top = 3
         Width = 200
         Height = 17
         Position = 20
         Smooth = True
         TabOrder = 0
       end
-      object pStatusAction: TPanel
-        Left = 209
-        Top = 2
-        Width = 316
-        Height = 17
-        Alignment = taLeftJustify
-        BevelEdges = []
-        BevelOuter = bvNone
-        Caption = 'Action'
+      object pStatusDbgInfo: TPanel
+        Left = 1080
+        Top = 0
+        Width = 136
+        Height = 25
+        Align = alRight
+        Caption = 'pStatusDbgInfo'
+        ShowCaption = False
         TabOrder = 1
+        object lbStatusDbgInfoValue: TLabel
+          AlignWithMargins = True
+          Left = 56
+          Top = 3
+          Width = 70
+          Height = 19
+          Margins.Left = 1
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          AutoSize = False
+          Caption = 'External (TDS)'
+          Layout = tlCenter
+          ExplicitLeft = 58
+          ExplicitHeight = 13
+        end
+        object lbStatusDbgInfoLabel: TLabel
+          AlignWithMargins = True
+          Left = 6
+          Top = 3
+          Width = 44
+          Height = 19
+          Margins.Left = 5
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          Caption = 'Dbg info:'
+          Layout = tlCenter
+          ExplicitHeight = 13
+        end
+      end
+      object pStatusDbgState: TPanel
+        Left = 960
+        Top = 0
+        Width = 120
+        Height = 25
+        Align = alRight
+        Caption = 'pStatusDbgState'
+        ShowCaption = False
+        TabOrder = 2
+        object lbStatusDbgStateLabel: TLabel
+          AlignWithMargins = True
+          Left = 6
+          Top = 3
+          Width = 51
+          Height = 19
+          Margins.Left = 5
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          Caption = 'Dbg state:'
+          Layout = tlCenter
+          ExplicitHeight = 13
+        end
+        object lbStatusDbgStateValue: TLabel
+          AlignWithMargins = True
+          Left = 63
+          Top = 3
+          Width = 50
+          Height = 19
+          Margins.Left = 1
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          AutoSize = False
+          Caption = 'Debug Fail'
+          Layout = tlCenter
+          ExplicitLeft = 64
+          ExplicitHeight = 13
+        end
+      end
+      object pStatusEventCnt: TPanel
+        Left = 840
+        Top = 0
+        Width = 120
+        Height = 25
+        Align = alRight
+        Caption = 'pStatusEventCnt'
+        ShowCaption = False
+        TabOrder = 3
+        object lbStateEventCntLabel: TLabel
+          AlignWithMargins = True
+          Left = 6
+          Top = 3
+          Width = 59
+          Height = 19
+          Margins.Left = 5
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          Caption = 'Dbg events:'
+          Layout = tlCenter
+          ExplicitHeight = 13
+        end
+        object lbStatusEventsCntValue: TLabel
+          AlignWithMargins = True
+          Left = 71
+          Top = 3
+          Width = 42
+          Height = 19
+          Margins.Left = 1
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = '0000000'
+          Layout = tlCenter
+          ExplicitLeft = 55
+          ExplicitHeight = 13
+        end
+      end
+      object pStatusTrackEventCnt: TPanel
+        Left = 709
+        Top = 0
+        Width = 131
+        Height = 25
+        Align = alRight
+        Caption = 'pStatusEventCnt'
+        ShowCaption = False
+        TabOrder = 4
+        ExplicitLeft = 733
+        object lbStatusTrackEventCntLabel: TLabel
+          AlignWithMargins = True
+          Left = 6
+          Top = 3
+          Width = 66
+          Height = 19
+          Margins.Left = 5
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          Caption = 'Track events:'
+          Layout = tlCenter
+          ExplicitHeight = 13
+        end
+        object lbStatusTrackEventCntValue: TLabel
+          AlignWithMargins = True
+          Left = 78
+          Top = 3
+          Width = 48
+          Height = 19
+          Margins.Left = 1
+          Margins.Top = 2
+          Margins.Right = 5
+          Margins.Bottom = 2
+          Align = alLeft
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = '00000000'
+          Layout = tlCenter
+          ExplicitLeft = 72
+          ExplicitHeight = 13
+        end
       end
     end
   end
@@ -1912,6 +2038,11 @@ object MainForm: TMainForm
       Caption = 'View source'
       OnExecute = acParentViewSourceExecute
     end
+    object acRecentProjects: TAction
+      Category = 'Project'
+      Caption = 'Recent projects'
+      ImageIndex = 1
+    end
   end
   object OD: TFileOpenDialog
     FavoriteLinks = <>
@@ -2037,10 +2168,52 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
+            Items = <
+              item
+                Action = acRecent0
+                Caption = '&acRecent0'
+              end
+              item
+                Action = acRecent1
+                Caption = 'a&cRecent1'
+              end
+              item
+                Action = acRecent2
+                Caption = 'ac&Recent2'
+              end
+              item
+                Action = acRecent3
+                Caption = 'acR&ecent3'
+              end
+              item
+                Action = acRecent4
+                Caption = 'acRece&nt4'
+              end
+              item
+                Action = acRecent5
+                Caption = 'acRecen&t5'
+              end
+              item
+                Action = acRecent6
+                Caption = 'acRecent&6'
+              end
+              item
+                Action = acRecent7
+                Caption = 'acRecent&7'
+              end
+              item
+                Action = acRecent8
+                Caption = 'acRecent&8'
+              end
+              item
+                Action = acRecent9
+                Caption = 'acRecent&9'
+              end>
             Action = acOpenProject
             Caption = '&Open'
             ImageIndex = 1
             CommandProperties.ButtonSize = bsLarge
+            CommandProperties.ButtonType = btSplit
           end
           item
             Caption = '-'
@@ -2247,7 +2420,6 @@ object MainForm: TMainForm
           item
             Caption = '-'
           end>
-        ActionBar = actbStatusInfo
       end
       item
       end
@@ -2262,22 +2434,14 @@ object MainForm: TMainForm
             Items.HideUnused = False
             Items = <>
             Caption = ' '
-            CommandStyle = csControl
             ShowGlyph = False
             ShowShortCut = False
-            CommandProperties.Width = 204
-            CommandProperties.ContainedControl = pbProgress
-            CommandProperties.Text = ' '
           end
           item
             Items.HideUnused = False
             Items = <>
             Caption = ' '
-            CommandStyle = csControl
-            CommandProperties.Width = 320
-            CommandProperties.ContainedControl = pStatusAction
           end>
-        ActionBar = actbStatusInfo2
       end
       item
         Items = <
