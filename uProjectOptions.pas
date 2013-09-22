@@ -106,7 +106,8 @@ begin
         ExtractFileExt(gvProjectOptions.ProjectName)
       ]);
 
-    if F.ShowModal = mrOk then
+    Result := F.ShowModal;
+    if Result = mrOk then
     begin
       ChangeFileExt(F.ProjectName, '.spider');
       gvProjectOptions.Open(F.ProjectName);

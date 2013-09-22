@@ -1688,15 +1688,15 @@ var
   begin
     Result := Nil;
 
-    if USystem = nil then
-      Exit;
+    if gvDebuger.MemoryCheckMode and Assigned(USystem) then
+    begin
+      _MemoryManager := USystem.FindVarByName(_MemoryManagerStrD10);
+      if _MemoryManager = nil then
+        _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE);
 
-    _MemoryManager := USystem.FindVarByName(_MemoryManagerStrD10);
-    if _MemoryManager = nil then
-      _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE);
-
-    If Assigned(_MemoryManager) Then
-      Result := Pointer(_MemoryManager.Offset);
+      If Assigned(_MemoryManager) Then
+        Result := Pointer(_MemoryManager.Offset);
+    end;
   end;
 
 Begin
@@ -1711,7 +1711,13 @@ Begin
 
   End;
 
-  LoadDbgHookDll(gvDebuger.ProcessData.AttachedProcessHandle, 'DbgHook32.dll', Pointer(FImage.OptionalHeader32.ImageBase), GetMemoryManagerVar);
+  LoadDbgHookDll(
+    gvDebuger.ProcessData.AttachedProcessHandle,
+    'DbgHook32.dll',
+    Pointer(FImage.OptionalHeader32.ImageBase),
+    GetMemoryManagerVar,
+    gvDebuger.MemoryCallStack
+  );
 
 End;
 { ............................................................................... }

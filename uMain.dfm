@@ -23,7 +23,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsCodeTracking
+    ActivePage = tsExceptions
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet
@@ -1014,8 +1014,6 @@ object MainForm: TMainForm
         Caption = 'pTrackAdv'
         ShowCaption = False
         TabOrder = 0
-        ExplicitLeft = 462
-        ExplicitWidth = 748
         object vstTrackFuncs: TVirtualStringTree
           Left = 0
           Top = 0
@@ -1083,11 +1081,8 @@ object MainForm: TMainForm
           ActivePage = tsTrackFuncAdvLinks
           Align = alClient
           TabOrder = 1
-          ExplicitLeft = 357
-          ExplicitWidth = 391
           object tsTrackFuncAdvLinks: TTabSheet
             Caption = 'Links'
-            ExplicitWidth = 383
             object pTrackFuncAdv: TPanel
               Left = 0
               Top = 0
@@ -1099,7 +1094,6 @@ object MainForm: TMainForm
               ShowCaption = False
               TabOrder = 0
               OnResize = pTrackFuncAdvResize
-              ExplicitWidth = 383
               object splTrackFuncAdv: TSplitter
                 Left = 0
                 Top = 329
@@ -1134,9 +1128,9 @@ object MainForm: TMainForm
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
                 OnDblClick = vstTrackFuncParentDblClick
+                OnDrawText = vstTrackFuncLinksDrawText
                 OnGetText = vstTrackFuncParentGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                ExplicitWidth = 383
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -1192,9 +1186,9 @@ object MainForm: TMainForm
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
                 OnDblClick = vstTrackFuncChildsDblClick
+                OnDrawText = vstTrackFuncLinksDrawText
                 OnGetText = vstTrackFuncChildsGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                ExplicitWidth = 383
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -1232,7 +1226,6 @@ object MainForm: TMainForm
           object tsTrackFuncAdvSrc: TTabSheet
             Caption = 'Source'
             ImageIndex = 1
-            ExplicitWidth = 383
             object synmTrackFuncAdvSource: TSynMemo
               Left = 0
               Top = 0
@@ -1256,7 +1249,6 @@ object MainForm: TMainForm
               ReadOnly = True
               RightEdge = 0
               FontSmoothing = fsmNone
-              ExplicitWidth = 383
             end
           end
         end
@@ -1521,33 +1513,50 @@ object MainForm: TMainForm
         GroupIndex = 2
         Rows = 2
       end
-      object rbngrpTimeLineSettings: TRibbonGroup
+      object rbngrpDbgInfoOptions: TRibbonGroup
         Left = 450
-        Top = 3
-        Width = 97
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Timeline'
-        GroupIndex = 3
-        Rows = 2
-      end
-      object rbngrpViewOptions: TRibbonGroup
-        Left = 549
         Top = 3
         Width = 118
         Height = 86
         ActionManager = amMain
-        Caption = 'View options'
+        Caption = 'Debug info options'
+        GroupIndex = 3
+      end
+      object rbngrpTimeLineSettings: TRibbonGroup
+        Left = 570
+        Top = 3
+        Width = 114
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Timeline options'
         GroupIndex = 4
       end
+      object rbngrpMemInfoOptions: TRibbonGroup
+        Left = 686
+        Top = 3
+        Width = 154
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Memory info options'
+        GroupIndex = 5
+      end
+      object rbngrpExceptionOptions: TRibbonGroup
+        Left = 842
+        Top = 3
+        Width = 131
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Exception options'
+        GroupIndex = 6
+      end
       object rbngrpCodeTracking: TRibbonGroup
-        Left = 669
+        Left = 975
         Top = 3
         Width = 127
         Height = 86
         ActionManager = amMain
-        Caption = 'Code tracking'
-        GroupIndex = 5
+        Caption = 'Code tracking options'
+        GroupIndex = 7
       end
     end
     object rbambMain: TRibbonApplicationMenuBar
@@ -1835,7 +1844,6 @@ object MainForm: TMainForm
         Caption = 'pStatusEventCnt'
         ShowCaption = False
         TabOrder = 4
-        ExplicitLeft = 733
         object lbStatusTrackEventCntLabel: TLabel
           AlignWithMargins = True
           Left = 6
@@ -1874,8 +1882,8 @@ object MainForm: TMainForm
   end
   object AL: TActionList
     Images = dmShareData.imlMainSmall
-    Left = 912
-    Top = 88
+    Left = 32
+    Top = 288
     object acAppOpen: TAction
       Category = 'Project'
       Caption = 'Open application'
@@ -1986,19 +1994,19 @@ object MainForm: TMainForm
     object acTabDebugInfo: TAction
       Tag = 1
       Category = 'MainTabs'
-      Caption = 'Debug Info'
+      Caption = 'Debug info'
       OnExecute = acMainTabExecute
     end
     object acTabTimeline: TAction
       Tag = 2
       Category = 'MainTabs'
-      Caption = 'Process Timeline'
+      Caption = 'Process timeline'
       OnExecute = acMainTabExecute
     end
     object acTabMemoryInfo: TAction
       Tag = 3
       Category = 'MainTabs'
-      Caption = 'Memory Info'
+      Caption = 'Memory info'
       OnExecute = acMainTabExecute
     end
     object acTabExceptions: TAction
@@ -2061,6 +2069,47 @@ object MainForm: TMainForm
       Caption = 'Recent projects'
       ImageIndex = 1
     end
+    object acMemoryInfo: TAction
+      Category = 'Options'
+      AutoCheck = True
+      Caption = 'Memory info'
+      Checked = True
+      OnExecute = acMemoryInfoExecute
+    end
+    object acMemInfoCallStack: TAction
+      Category = 'Options'
+      AutoCheck = True
+      Caption = 'GetMem call stack'
+      Checked = True
+      OnExecute = acMemInfoCallStackExecute
+    end
+    object acMemInfoDblFree: TAction
+      Category = 'Options'
+      AutoCheck = True
+      Caption = 'Double FreeMem control'
+      OnExecute = acMemInfoDblFreeExecute
+    end
+    object acProcessTimeline: TAction
+      Category = 'Options'
+      AutoCheck = True
+      Caption = 'Process timeline'
+      Checked = True
+      OnExecute = acProcessTimelineExecute
+    end
+    object acExceptions: TAction
+      Category = 'Options'
+      AutoCheck = True
+      Caption = 'Exceptions'
+      Checked = True
+      OnExecute = acExceptionsExecute
+    end
+    object acExceptionCallStack: TAction
+      Category = 'Options'
+      AutoCheck = True
+      Caption = 'Exception call stack'
+      Checked = True
+      OnExecute = acExceptionCallStackExecute
+    end
   end
   object OD: TFileOpenDialog
     FavoriteLinks = <>
@@ -2082,15 +2131,15 @@ object MainForm: TMainForm
         FileMask = '*.tds'
       end>
     Options = [fdoFileMustExist]
-    Left = 808
-    Top = 88
+    Left = 112
+    Top = 288
   end
   object tmrThreadsUpdate: TTimer
     Enabled = False
     Interval = 500
     OnTimer = tmrThreadsUpdateTimer
-    Left = 808
-    Top = 32
+    Left = 112
+    Top = 232
   end
   object amMain: TActionManager
     ActionBars = <
@@ -2304,6 +2353,12 @@ object MainForm: TMainForm
       item
         Items = <
           item
+            Action = acProcessTimeline
+            Caption = '&Process timeline'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
             Action = acCPUTimeLine
             Caption = '&CPU timeline'
             CommandStyle = csRadioButton
@@ -2328,21 +2383,21 @@ object MainForm: TMainForm
           end
           item
             Action = acTabDebugInfo
-            Caption = '&Debug Info'
+            Caption = '&Debug info'
           end
           item
             Caption = '-'
           end
           item
             Action = acTabTimeline
-            Caption = '&Process Timeline'
+            Caption = '&Process timeline'
           end
           item
             Caption = '-'
           end
           item
             Action = acTabMemoryInfo
-            Caption = '&Memory Info'
+            Caption = '&Memory info'
           end
           item
             Caption = '-'
@@ -2469,7 +2524,7 @@ object MainForm: TMainForm
             CommandStyle = csCheckBox
             CommandProperties.Width = -1
           end>
-        ActionBar = rbngrpViewOptions
+        ActionBar = rbngrpDbgInfoOptions
       end
       item
         Items = <
@@ -2486,6 +2541,44 @@ object MainForm: TMainForm
             CommandProperties.Width = -1
           end>
         ActionBar = rbngrpCodeTracking
+      end
+      item
+        Items = <
+          item
+            Action = acMemoryInfo
+            Caption = '&Memory info'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
+            Action = acMemInfoCallStack
+            Caption = '&GetMem call stack'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
+            Action = acMemInfoDblFree
+            Caption = '&Double FreeMem control'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end>
+        ActionBar = rbngrpMemInfoOptions
+      end
+      item
+        Items = <
+          item
+            Action = acExceptions
+            Caption = '&Exceptions'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
+            Action = acExceptionCallStack
+            Caption = 'E&xception call stack'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end>
+        ActionBar = rbngrpExceptionOptions
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain
@@ -2500,13 +2593,13 @@ object MainForm: TMainForm
         Caption = 'ALRecent'
       end>
     Images = dmShareData.imlMainSmall
-    Left = 976
-    Top = 88
+    Left = 32
+    Top = 232
     StyleName = 'Ribbon - Silver'
   end
   object ALRecent: TActionList
-    Left = 912
-    Top = 32
+    Left = 112
+    Top = 352
     object acRecent0: TAction
       Caption = 'acRecent0'
       OnExecute = acRecentExecute
@@ -2549,8 +2642,8 @@ object MainForm: TMainForm
     end
   end
   object pmTrackFuncAdvParents: TPopupMenu
-    Left = 1008
-    Top = 32
+    Left = 112
+    Top = 408
     object Viewsource1: TMenuItem
       Action = acParentViewSource
     end

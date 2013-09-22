@@ -4,7 +4,7 @@ interface
 
 uses Windows;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: Pointer): Boolean;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: Pointer; MemoryCallStack: Boolean): Boolean;
 function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
 
 implementation
@@ -25,9 +25,10 @@ type
     sDllInitMemoryHook: array[0..16] of AnsiChar;
     sDllInitPerfomance: array[0..16] of AnsiChar;
 
-    ImageBase      : Pointer;
-    MemoryMgr      : Pointer;
-    PerfDelta      : Cardinal;
+    ImageBase        : Pointer;
+    MemoryMgr        : Pointer;
+    MemoryCallStack  : Boolean;
+    PerfDelta        : Cardinal;
   end;
 
 procedure _DbgLoader(DbgLoaderInfo: PDbgLoaderInfo); stdcall;
@@ -36,7 +37,7 @@ var
 
   ExitThread: procedure(uExitCode: UINT); stdcall;
   InitThreadHook: function(ImageBase: Pointer): Boolean; stdcall;
-  InitMemoryHook: procedure(MemoryMgr: Pointer); stdcall;
+  InitMemoryHook: procedure(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
   InitPerfomance: procedure(Delta: Cardinal); stdcall;
 begin
   with DbgLoaderInfo^ do
@@ -54,7 +55,7 @@ begin
       InitPerfomance(PerfDelta);
 
       if MemoryMgr <> Nil then
-        InitMemoryHook(MemoryMgr);
+        InitMemoryHook(MemoryMgr, MemoryCallStack);
     end;
 
     ExitThread(0);
@@ -62,7 +63,7 @@ begin
 end;
 procedure _DbgLoaderEnd; begin end;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: Pointer): Boolean;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: Pointer; MemoryCallStack: Boolean): Boolean;
 var
   DbgLoaderInfo: TDbgLoaderInfo;
 begin
@@ -70,6 +71,7 @@ begin
 
   DbgLoaderInfo.ImageBase := ImageBase;
   DbgLoaderInfo.MemoryMgr := MemoryMgr;
+  DbgLoaderInfo.MemoryCallStack := MemoryCallStack;
   DbgLoaderInfo.PerfDelta := 10;
 
   @DbgLoaderInfo.LoadLibrary    := GetProcAddress(GetModuleHandle('kernel32.dll'), 'LoadLibraryA');
