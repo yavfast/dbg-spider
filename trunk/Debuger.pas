@@ -693,14 +693,33 @@ begin
 end;
 
 procedure TDebuger.CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
+var
+  IsTraceException: Boolean;
 begin
-  ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
+  if gvDebugInfo.CheckDebugException(@DebugEvent^.Exception.ExceptionRecord, IsTraceException) then
+  begin
+    if IsTraceException then
+    begin
+      // TODO:
+    end;
 
-  if AddProcessPointInfo(ptException) then
-    AddThreadPointInfo(CurThreadData, ptException, DebugEvent);
+    ContinueStatus := DBG_CONTINUE;
+  end
+  else
+  begin
+    if DebugEvent^.Exception.dwFirstChance = 1 then
+    begin
+      ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
 
-  if Assigned(FExceptioEvents[Code]) then
-    FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
+      if AddProcessPointInfo(ptException) then
+        AddThreadPointInfo(CurThreadData, ptException, DebugEvent);
+
+      if Assigned(FExceptioEvents[Code]) then
+        FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
+    end
+    else
+      ContinueStatus := DBG_CONTINUE;
+  end;
 end;
 
 procedure TDebuger.CheckBreakpointIndex(Value: Integer);
@@ -2401,8 +2420,8 @@ end;
 function TDebuger.SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
 var
   Breakpoint: TBreakpoint;
-  OldProtect: DWORD;
-  Dummy: TSysUInt;
+  //OldProtect: DWORD;
+  //Dummy: TSysUInt;
 begin
   ZeroMemory(@Breakpoint, SizeOf(TBreakpoint));
 
