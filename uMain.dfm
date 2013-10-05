@@ -23,9 +23,10 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsDebugInfo2
+    ActivePage = tsThreads1
     Align = alClient
     TabOrder = 0
+    OnChange = pcMainChange
     object tsLog: TTabSheet
       Caption = 'Log'
       object vstLog: TVirtualStringTree
@@ -2087,6 +2088,7 @@ object MainForm: TMainForm
       Category = 'Options'
       AutoCheck = True
       Caption = 'Double FreeMem control'
+      Enabled = False
       OnExecute = acMemInfoDblFreeExecute
     end
     object acProcessTimeline: TAction
