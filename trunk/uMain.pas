@@ -368,8 +368,9 @@ type
     procedure SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
 
     function EllapsedToTime(const Ellapsed: UInt64): String;
-    function FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String; overload;
     function FuncEllapsedToTime(const FullCPUTime, FullEllapsed, Ellapsed: UInt64): String; overload;
+
+    function EllapsedTimeToStr(Tree: TBaseVirtualTree; Data: PLinkData; const Ellapsed: UInt64): String;
 
     function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
     function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
@@ -380,8 +381,6 @@ type
 
     procedure LoadGUIOptions;
     procedure LoadRecentProjects;
-    function EllapsedTimeToStr(Tree: TBaseVirtualTree; Data: PLinkData;
-      const Ellapsed: UInt64): String;
     function GetDebugOptions: TDbgOptions;
   public
     procedure OnException(Sender: TObject; E: Exception);
@@ -1415,6 +1414,7 @@ begin
   C.Font.Color := clWindowText;
   C.Font.Size := 8;
 
+  C.Brush.Color := clWhite;
   C.Brush.Style := bsClear;
 
   C.Pen.Color := clWindowText;
@@ -1565,11 +1565,6 @@ begin
     Result := EllapsedToTime(FTime)
   else
     Result := '00:00.000';
-end;
-
-function TMainForm.FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String;
-begin
-  Result := FuncEllapsedToTime(ThData^.CPUTime, ThData^.CPUEllapsed, FuncEllapsed);
 end;
 
 function TMainForm.GetLineTimeOffset: Cardinal;
@@ -2318,32 +2313,40 @@ end;
 
 procedure TMainForm.UpdateTrees;
 begin
-  UpdateLog;
-
-  vstThreads.Invalidate;
-
-  vdtTimeLine.Invalidate;
-  vdtTimeLine.Header.Invalidate(nil);
-
-  vstDbgInfoUnits.Invalidate;
-  vstDbgInfoConsts.Invalidate;
-  vstDbgInfoTypes.Invalidate;
-  vstDbgInfoVars.Invalidate;
-  vstDbgInfoFunctions.Invalidate;
-  vstDbgInfoFuncVars.Invalidate;
-
-  vstMemInfoThreads.Invalidate;
-  vstMemList.Invalidate;
-  vstMemStack.Invalidate;
-
-  vstExceptionThreads.Invalidate;
-  vstExceptionList.Invalidate;
-  vstExceptionCallStack.Invalidate;
-
-  vstTrackThreads.Invalidate;
-  vstTrackFuncs.Invalidate;
-  vstTrackFuncParent.Invalidate;
-  vstTrackFuncChilds.Invalidate;
+  case pcMain.ActivePageIndex of
+    0: begin
+      UpdateLog;
+    end;
+    1: begin
+      vstDbgInfoUnits.Invalidate;
+      vstDbgInfoConsts.Invalidate;
+      vstDbgInfoTypes.Invalidate;
+      vstDbgInfoVars.Invalidate;
+      vstDbgInfoFunctions.Invalidate;
+      vstDbgInfoFuncVars.Invalidate;
+    end;
+    2: begin
+      vstThreads.Invalidate;
+      vdtTimeLine.Invalidate;
+      vdtTimeLine.Header.Invalidate(nil);
+    end;
+    3: begin
+      vstMemInfoThreads.Invalidate;
+      vstMemList.Invalidate;
+      vstMemStack.Invalidate;
+    end;
+    4: begin
+      vstExceptionThreads.Invalidate;
+      vstExceptionList.Invalidate;
+      vstExceptionCallStack.Invalidate;
+    end;
+    5: begin
+      vstTrackThreads.Invalidate;
+      vstTrackFuncs.Invalidate;
+      vstTrackFuncParent.Invalidate;
+      vstTrackFuncChilds.Invalidate;
+    end;
+  end;
 end;
 
 procedure TMainForm.vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader;
