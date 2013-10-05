@@ -333,7 +333,7 @@ type
     procedure ClearTrees;
     procedure ClearDbgTrees;
     procedure ClearDbgInfoTrees;
-    procedure ClearTrackTress;
+    procedure ClearTrackTrees;
 
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
@@ -595,6 +595,7 @@ begin
   acRun.Enabled := False;
 
   ClearDbgTrees;
+  ClearTrackTrees;
 
   _AC.RunDebug([doRun] + GetDebugOptions, FPID);
 end;
@@ -1035,7 +1036,7 @@ begin
   UpdateMainActions;
 end;
 
-procedure TMainForm.ClearTrackTress;
+procedure TMainForm.ClearTrackTrees;
 begin
   vstTrackThreads.Clear;
   vstTrackFuncs.Clear;
@@ -1049,7 +1050,7 @@ begin
 
   ClearDbgTrees;
   ClearDbgInfoTrees;
-  ClearTrackTress;
+  ClearTrackTrees;
 end;
 
 procedure TMainForm.DoAction(Action: TacAction; const Args: array of Variant);
@@ -1568,7 +1569,7 @@ end;
 
 function TMainForm.FuncEllapsedToTime(ThData: PThreadData; const FuncEllapsed: UInt64): String;
 begin
-  Result := FuncEllapsedToTime(ThData^.CPUTime, ThData^.ThreadEllapsed, FuncEllapsed);
+  Result := FuncEllapsedToTime(ThData^.CPUTime, ThData^.CPUEllapsed, FuncEllapsed);
 end;
 
 function TMainForm.GetLineTimeOffset: Cardinal;
@@ -3237,7 +3238,7 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
-          3: CellText := EllapsedTimeToStr(vstTrackFuncChilds, Data, TrackFuncInfo.Ellapsed);
+          3: CellText := EllapsedTimeToStr(vstTrackFuncChilds, Data, TrackFuncInfo.CPUEllapsed);
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3349,12 +3350,12 @@ begin
       ltThread:
         begin
           ThData := SyncData^.ThreadData;
-          Result := FuncEllapsedToTime(ThData^.CPUTime, ThData^.Ellapsed, Ellapsed);
+          Result := FuncEllapsedToTime(ThData^.CPUTime, ThData^.CPUEllapsed, Ellapsed);
         end;
       ltProcess:
         begin
           ProcData := SyncData^.ProcessData;
-          Result := FuncEllapsedToTime(ProcData^.CPUTime, ProcData^.Ellapsed, Ellapsed);
+          Result := FuncEllapsedToTime(ProcData^.CPUTime, ProcData^.CPUEllapsed, Ellapsed);
         end;
     end;
   end;
@@ -3383,7 +3384,7 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
-          3: CellText := EllapsedTimeToStr(vstTrackFuncParent, Data, TrackFuncInfo.Ellapsed);
+          3: CellText := EllapsedTimeToStr(vstTrackFuncParent, Data, TrackFuncInfo.CPUEllapsed);
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3414,14 +3415,15 @@ begin
 
     if (Data1.LinkType = ltTrackFuncInfo) and (Data2.LinkType = ltTrackFuncInfo) then
     begin
-      Ellapsed1 := Data1.TrackFuncInfo.Ellapsed;
-      Ellapsed2 := Data2.TrackFuncInfo.Ellapsed;
+      Ellapsed1 := Data1.TrackFuncInfo.CPUEllapsed;
+      Ellapsed2 := Data2.TrackFuncInfo.CPUEllapsed;
     end
     else
     if (Data1.LinkType = ltTrackUnitInfo) and (Data2.LinkType = ltTrackUnitInfo) then
     begin
-      Ellapsed1 := Data1.TrackUnitInfo.Ellapsed;
-      Ellapsed2 := Data2.TrackUnitInfo.Ellapsed;
+      // Для юнитов считаем по кол-ву вызовов функций
+      Ellapsed1 := Data1.TrackUnitInfo.CallCount;
+      Ellapsed2 := Data2.TrackUnitInfo.CallCount;
     end;
 
     if Ellapsed1 = Ellapsed2 then
@@ -3513,12 +3515,12 @@ begin
                 ltThread:
                   begin
                     ThData := SyncData^.ThreadData;
-                    CellText := FuncEllapsedToTime(ThData^.CPUTime, ThData^.Ellapsed, TrackFuncInfo.Ellapsed);
+                    CellText := FuncEllapsedToTime(ThData^.CPUTime, ThData^.CPUEllapsed, TrackFuncInfo.CPUEllapsed);
                   end;
                 ltProcess:
                   begin
                     ProcData := SyncData^.ProcessData;
-                    CellText := FuncEllapsedToTime(ProcData^.CPUTime, ProcData^.Ellapsed, TrackFuncInfo.Ellapsed);
+                    CellText := FuncEllapsedToTime(ProcData^.CPUTime, ProcData^.CPUEllapsed, TrackFuncInfo.CPUEllapsed);
                   end;
               end;
             end;
@@ -3530,6 +3532,7 @@ begin
         case Column of
           0: CellText := TUnitInfo(TrackUnitInfo.UnitInfo).ShortName;
           1: CellText := IntToStr(TrackUnitInfo.CallCount);
+          (*
           2:
             begin
               SyncData := vstTrackFuncs.GetNodeData(Data^.SyncNode);
@@ -3546,6 +3549,7 @@ begin
                   end;
               end;
             end;
+          *)
         end;
       end;
   end;

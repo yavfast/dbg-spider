@@ -317,7 +317,9 @@ type
 
     property UnitInfo: TObject read FUnitInfo;
     property CallCount: UInt64 read FCallCount;
-    property Ellapsed: UInt64 read FEllapsed;
+
+    // TODO: высчитать общее врем€ выполнени€ функций юнита с учетом вложенности
+    // property Ellapsed: UInt64 read FEllapsed;
 
     property FuncInfoList: TTrackFuncInfoBaseList read FFuncInfoList;
   end;
@@ -335,7 +337,7 @@ type
   private
     FFuncInfo: TObject;
     FCallCount: UInt64;
-    FEllapsed: UInt64;
+    FCPUEllapsed: UInt64;
     FTrackUnitInfo: TTrackUnitInfo;
     FParentFuncs: TCallFuncCounter;
     FChildFuncs: TCallFuncCounter;
@@ -351,7 +353,7 @@ type
 
     property FuncInfo: TObject read FFuncInfo;
     property CallCount: UInt64 read FCallCount;
-    property Ellapsed: UInt64 read FEllapsed;
+    property CPUEllapsed: UInt64 read FCPUEllapsed;
     property TrackUnitInfo: TTrackUnitInfo read FTrackUnitInfo write FTrackUnitInfo;
     property ParentFuncs: TCallFuncCounter read FParentFuncs;
     property ChildFuncs: TCallFuncCounter read FChildFuncs;
@@ -405,7 +407,7 @@ type
     Started: Int64;         // момент запуска
     Ellapsed: Int64;        // врем€ выполнени€
 
-    ThreadEllapsed: UInt64; // циклы CPU
+    CPUEllapsed: UInt64;    // циклы CPU
     CPUTime: UInt64;        // врем€ использовани€ CPU
 
     DbgPoints: TThreadPointList;
@@ -955,7 +957,7 @@ begin
 
   FFuncInfo := AFuncInfo;
   FCallCount := 0;
-  FEllapsed := 0;
+  FCPUEllapsed := 0;
   FTrackUnitInfo := nil;
   FParentFuncs := TCallFuncCounter.Create(256);
   FChildFuncs := TCallFuncCounter.Create(256);
@@ -971,7 +973,7 @@ end;
 
 procedure TTrackFuncInfo.GrowEllapsed(const Value: UInt64);
 begin
-  Inc(FEllapsed, Value);
+  Inc(FCPUEllapsed, Value);
   FTrackUnitInfo.GrowEllapsed(Value);
 end;
 
@@ -1143,7 +1145,7 @@ end;
 
 procedure TTrackStackPoint.SetLeave(const Value: UInt64);
 begin
-  Ellapsed := Value - Enter + 1;
+  Ellapsed := (Value - Enter) + 1;
 end;
 
 end.

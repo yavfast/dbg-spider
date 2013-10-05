@@ -235,7 +235,7 @@ Type
     function ParamsAsString: String;
   End;
 
-  TUnitType = (utUnknown, utSystem, utProject, utExternal);
+  TUnitType = (utUnknown, utProject, utSystem, utExternal);
 
   TUnitInfo = Class(TSegmentCodeInfo)
   public
