@@ -23,7 +23,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsExceptions
+    ActivePage = tsDebugInfo2
     Align = alClient
     TabOrder = 0
     object tsLog: TTabSheet

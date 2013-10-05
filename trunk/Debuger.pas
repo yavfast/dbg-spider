@@ -474,8 +474,8 @@ begin
 
         // Счетчик таймера CPU
         Cur := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
-        Prev := ThreadData^.ThreadEllapsed;
-        ThreadData^.ThreadEllapsed := Cur;
+        Prev := ThreadData^.CPUEllapsed;
+        ThreadData^.CPUEllapsed := Cur;
 
         // Добавляем инфу, когда поток активен
         Result := (Delta > 0);
@@ -504,7 +504,7 @@ begin
 
             ThreadData^.CPUTime := GetThreadCPUTime(ThreadData^.ThreadHandle);
 
-            ThreadData^.ThreadEllapsed := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
+            ThreadData^.CPUEllapsed := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
           end;
         ptException:
           begin
@@ -620,7 +620,7 @@ begin
     Result^.Breakpoint := GetMemory(SizeOf(THardwareBreakpoint));
     Result^.Started := 0;
     Result^.Ellapsed := 0;
-    Result^.ThreadEllapsed := 0;
+    Result^.CPUEllapsed := 0;
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
     Result^.DbgExceptions := TThreadList.Create;
@@ -1754,6 +1754,7 @@ var
   ParentTrackFuncInfo: TTrackFuncInfo;
 
   TrackStackPoint: PTrackStackPoint;
+  CurTime: UInt64;
 begin
   ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
   if Assigned(ThData) then
@@ -1761,9 +1762,12 @@ begin
     Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
     if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
     begin
+      // Текущее время CPU потока
+      CurTime := _QueryThreadCycleTime(ThData^.ThreadHandle);
+
       // Получаем адресс выхода в родительской функции
       ParentFuncAddr := nil;
-      ReadData(Pointer(ThData^.Context^.Esp), @ParentFuncAddr, SizeOf(Pointer));
+      Check(ReadData(Pointer(ThData^.Context^.Esp), @ParentFuncAddr, SizeOf(Pointer)));
 
       // Устанавливаем точку останова на выход
       TrackRETBreakpoint := SetTrackRETBreakpoint(ParentFuncAddr);
@@ -1803,10 +1807,13 @@ begin
       TrackStackPoint := GetMemory(SizeOf(TTrackStackPoint));
       ZeroMemory(TrackStackPoint, SizeOf(TTrackStackPoint));
 
+      // Добавляем в Track Stack
+      ThData^.DbgTrackStack.Push(TrackStackPoint);
+
       TrackStackPoint^.TrackFuncInfo := TrackFuncInfo;
       TrackStackPoint^.ParentTrackFuncInfo := ParentTrackFuncInfo;
       TrackStackPoint^.TrackRETBreakpoint := TrackRETBreakpoint;
-      TrackStackPoint^.Enter := _QueryThreadCycleTime(ThData^.ThreadHandle);
+      TrackStackPoint^.Enter := CurTime;
       TrackStackPoint^.Ellapsed := 0;
 
       // --- Регистрируем вызываемую функцию в процессе --- //
@@ -1835,9 +1842,6 @@ begin
       // Записываем инфу для процесса
       TrackStackPoint^.ProcTrackFuncInfo := TrackFuncInfo;
       TrackStackPoint^.ProcParentTrackFuncInfo := ParentTrackFuncInfo;
-
-      // Добавляем в Track Stack
-      ThData^.DbgTrackStack.Push(TrackStackPoint);
 
       // --- Конец Регистрации --- //
 

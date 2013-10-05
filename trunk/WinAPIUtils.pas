@@ -30,13 +30,25 @@ function DebugBreakProcess(Process: THandle): BOOL; stdcall; external kernel32 n
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall; external kernel32;
 function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall; external kernel32;
 
+type
+  EWinAPIException = class(Exception);
+
+procedure RaiseWinAPIException;
+begin
+  raise EWinAPIException.Create('');
+end;
+
 function _QueryThreadCycleTime(const ThreadHandle: THandle): UInt64;
 var
   Res: PUInt64;
 begin
   GetMem(Res, SizeOf(UInt64));
-  QueryThreadCycleTime(ThreadHandle, Res);
-  Result := Res^;
+
+  if QueryThreadCycleTime(ThreadHandle, Res) then
+    Result := Res^
+  else
+    RaiseWinAPIException;
+
   FreeMem(Res);
 end;
 
@@ -45,23 +57,28 @@ var
   Res: PUInt64;
 begin
   GetMem(Res, SizeOf(UInt64));
-  QueryProcessCycleTime(ProcessHandle, Res);
-  Result := Res^;
+
+  if QueryProcessCycleTime(ProcessHandle, Res) then
+    Result := Res^
+  else
+    RaiseWinAPIException;
+
   FreeMem(Res);
 end;
 
 function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
 var
-  ModifiedTime: TFileTime;
   SystemTime: TSystemTime;
 begin
   Result := 0;
-  if (FileTime.dwLowDateTime = 0) and (FileTime.dwHighDateTime = 0) then
-    Exit;
 
-  if FileTimeToLocalFileTime(FileTime, ModifiedTime) then
-    if FileTimeToSystemTime(ModifiedTime, SystemTime) then
-      Result := SystemTimeToDateTime(SystemTime);
+  if FileTimeToSystemTime(@FileTime, SystemTime) then
+  begin
+    Result := SystemTimeToDateTime(SystemTime);
+    Exit;
+  end;
+
+  RaiseWinAPIException;
 end;
 
 function FileTimeToInt64(const FileTime: TFileTime): UInt64;
@@ -92,9 +109,13 @@ var
 begin
   Result := 0;
   GetMem(FT, SizeOf(RCPUTime));
+
   with FT^ do
     if GetProcessTimes(hProcess, CT, ET, KT, UT) then
-      Result := FileTimeToInt64(KT) + FileTimeToInt64(UT);
+      Result := FileTimeToInt64(KT) + FileTimeToInt64(UT)
+    else
+      RaiseWinAPIException;
+
   FreeMem(FT);
 end;
 
@@ -104,9 +125,13 @@ var
 begin
   Result := 0;
   GetMem(FT, SizeOf(RCPUTime));
+
   with FT^ do
     if GetThreadTimes(hThread, CT, ET, KT, UT) then
-      Result := FileTimeToInt64(KT) + FileTimeToInt64(UT);
+      Result := FileTimeToInt64(KT) + FileTimeToInt64(UT)
+    else
+      RaiseWinAPIException;
+
   FreeMem(FT);
 end;
 
@@ -115,8 +140,12 @@ var
   Res: PInt64;
 begin
   GetMem(Res, SizeOf(Int64));
-  QueryPerformanceCounter(Res^);
-  Result := Res^;
+
+  if QueryPerformanceCounter(Res^) then
+    Result := Res^
+  else
+    RaiseWinAPIException;
+
   FreeMem(Res);
 end;
 
@@ -125,8 +154,12 @@ var
   Res: PInt64;
 begin
   GetMem(Res, SizeOf(Int64));
-  QueryPerformanceFrequency(Res^);
-  Result := Res^;
+
+  if QueryPerformanceFrequency(Res^) then
+    Result := Res^
+  else
+    RaiseWinAPIException;
+
   FreeMem(Res);
 end;
 
