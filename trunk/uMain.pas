@@ -312,6 +312,7 @@ type
     procedure acMemInfoCallStackExecute(Sender: TObject);
     procedure acExceptionsExecute(Sender: TObject);
     procedure acExceptionCallStackExecute(Sender: TObject);
+    procedure pcMainChange(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -433,9 +434,9 @@ begin
     R.Top := Rect.Top + I;
 
     DeltaColor := RGB(
-      Round(GetRValue(LStartRGB) + I * DeltaR),
-      Round(GetGValue(LStartRGB) + I * DeltaG),
-      Round(GetBValue(LStartRGB) + I * DeltaB)
+      GetRValue(LStartRGB) + Round(I * DeltaR),
+      GetGValue(LStartRGB) + Round(I * DeltaG),
+      GetBValue(LStartRGB) + Round(I * DeltaB)
     );
 
     if R.Left = R.Right then
@@ -1176,23 +1177,17 @@ begin
 
   if ProcData^.DbgPointsCount > 0 then
   begin
-    I := 0;
-    While I < ProcData^.DbgPointsCount do
+    for I := CurOffset to ProcData^.DbgPointsCount - 1 do
     begin
-      try
-        ProcPoint := ProcData^.DbgPointByIdx(I);
-        if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
-          (ProcPoint^.PointType = ptException) then
-        begin
-          T1 := I;
-          X1 := R.Left + Integer(T1 - CurOffset) - 1;
-          if (X1 < R.Left) then Continue;
-          if (X1 > R.Right) then Continue;
+      ProcPoint := ProcData^.DbgPointByIdx(I);
+      if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
+        (ProcPoint^.PointType = ptException) then
+      begin
+        X1 := R.Left + Integer(I - CurOffset) - 1;
+        if (X1 < R.Left) then Continue;
+        if (X1 > R.Right) then Break;
 
-          DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
-        end;
-      finally
-        Inc(I);
+        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
       end;
     end;
   end;
@@ -1203,6 +1198,7 @@ var
   X1, X2, Y1, Y2: Integer;
   T1, T2, F: Int64;
   OffsetT1, OffsetT2, Offset: Cardinal;
+  IdxL, IdxR, Idx: Cardinal;
   I: Cardinal;
   ProcPoint: PProcessPoint;
 begin
@@ -1246,24 +1242,39 @@ begin
 
   if ProcData^.DbgPointsCount > 0 then
   begin
-    I := 0;
-    While I < ProcData^.DbgPointsCount do
-    begin
-      try
-        ProcPoint := ProcData^.DbgPointByIdx(I);
-        if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
-          (ProcPoint^.PointType = ptException) then
-        begin
-          T1 := ProcPoint^.FromStart;
-          OffsetT1 := T1 div F;
-          X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
-          if (X1 < R.Left) then Continue;
-          if (X1 > R.Right) then Continue;
+    IdxL := 0;
 
-          DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
-        end;
-      finally
-        Inc(I);
+    // »щем начальный индекс дл€ первого видимого событи€
+    if Offset > 0 then
+    begin
+      IdxR := ProcData^.DbgPointsCount - 1;
+
+      repeat
+        Idx := (IdxL + IdxR) div 2;
+        ProcPoint := ProcData^.DbgPointByIdx(Idx);
+
+        if (ProcPoint^.FromStart div F) > Offset then
+          IdxR := Idx
+        else
+          IdxL := Idx;
+      until IdxR - IdxL <= 1;
+    end;
+
+    for I := IdxL to ProcData^.DbgPointsCount - 1 do
+    begin
+      ProcPoint := ProcData^.DbgPointByIdx(I);
+      if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
+        (ProcPoint^.PointType = ptException) then
+      begin
+        OffsetT1 := ProcPoint^.FromStart div F;
+        X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
+
+        if (X1 < R.Left) then
+          Continue;
+        if (X1 > R.Right) then
+          Break;
+
+        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
       end;
     end;
   end;
@@ -1274,6 +1285,8 @@ var
   X1, X2, Y1, Y2: Integer;
   T1, T2: Int64;
   I: Cardinal;
+
+  IdxL, IdxR, Idx: Cardinal;
   ThPoint: PThreadPoint;
 begin
   DrawBackground(C, R, C.Brush.Color);
@@ -1305,24 +1318,40 @@ begin
 
   if ThData^.DbgPointsCount > 0 then
   begin
-    I := 0;
-    While I < ThData^.DbgPointsCount do
+    IdxL := 0;
+
+    // »щем начальный индекс дл€ первого видимого событи€
+    if CurOffset > 0 then
     begin
-      try
-        ThPoint := ThData^.DbgPointByIdx(I);
+      IdxR := ThData^.DbgPointsCount - 1;
 
-        if ThPoint = nil then
-          Continue;
+      repeat
+        Idx := (IdxL + IdxR) div 2;
+        ThPoint := ThData^.DbgPointByIdx(Idx);
 
-        T1 := ThPoint^.PerfIdx;
-        X1 := R.Left + Integer(T1 - CurOffset) - 1;
-        if (X1 < R.Left) then Continue;
-        if (X1 > R.Right) then Continue;
+        if ThPoint^.PerfIdx > CurOffset then
+          IdxR := Idx
+        else
+          IdxL := Idx;
+      until IdxR - IdxL <= 1;
+    end;
 
-        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
-      finally
-        Inc(I);
-      end;
+    for I := IdxL to ThData^.DbgPointsCount - 1 do
+    begin
+      ThPoint := ThData^.DbgPointByIdx(I);
+
+      if ThPoint = nil then
+        Continue;
+
+      T1 := ThPoint^.PerfIdx;
+      X1 := R.Left + Integer(T1 - CurOffset) - 1;
+
+      if (X1 < R.Left) then
+        Continue;
+      if (X1 > R.Right) then
+        Break;
+
+      DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
     end;
   end;
 end;
@@ -1332,6 +1361,7 @@ var
   X1, X2, Y1, Y2: Integer;
   T1, T2, F: Int64;
   OffsetT1, OffsetT2, Offset: Cardinal;
+  IdxL, IdxR, Idx: Cardinal;
   I: Cardinal;
   ThPoint: PThreadPoint;
   ProcPoint: PProcessPoint;
@@ -1377,28 +1407,43 @@ begin
 
   if ThData^.DbgPointsCount > 0 then
   begin
-    I := 0;
-    While I < ThData^.DbgPointsCount do
+    IdxL := 0;
+
+    // »щем начальный индекс дл€ первого видимого событи€
+    if Offset > 0 then
     begin
-      try
-        ThPoint := ThData^.DbgPointByIdx(I);
+      IdxR := ThData^.DbgPointsCount - 1;
 
-        if ThPoint = nil then
-          Continue;
-
+      repeat
+        Idx := (IdxL + IdxR) div 2;
+        ThPoint := ThData^.DbgPointByIdx(Idx);
         ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
 
-        T1 := ProcPoint^.FromStart;
-        OffsetT1 := T1 div F;
-        X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
+        if (ProcPoint^.FromStart div F) > Offset then
+          IdxR := Idx
+        else
+          IdxL := Idx;
+      until IdxR - IdxL <= 1;
+    end;
 
-        if (X1 < R.Left) then Continue;
-        if (X1 > R.Right) then Continue;
+    for I := IdxL to ThData^.DbgPointsCount - 1 do
+    begin
+      ThPoint := ThData^.DbgPointByIdx(I);
 
-        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
-      finally
-        Inc(I);
-      end;
+      if ThPoint = nil then
+        Continue;
+
+      ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
+
+      OffsetT1 := ProcPoint^.FromStart div F;
+      X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
+
+      if (X1 < R.Left) then
+        Continue;
+      if (X1 > R.Right) then
+        Break;
+
+      DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
     end;
   end;
 end;
@@ -1477,6 +1522,11 @@ end;
 procedure TMainForm.OnException(Sender: TObject; E: Exception);
 begin
   OutputDebugString(PWideChar(E.Message));
+end;
+
+procedure TMainForm.pcMainChange(Sender: TObject);
+begin
+  UpdateTrees;
 end;
 
 procedure TMainForm.LoadRecentProjects;
