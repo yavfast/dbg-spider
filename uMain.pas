@@ -166,17 +166,7 @@ type
     rbngrpCodeTracking: TRibbonGroup;
     acCodeTracking: TAction;
     acTrackSystemUnits: TAction;
-    pTrackAdv: TPanel;
-    vstTrackFuncs: TVirtualStringTree;
     vstTrackThreads: TVirtualStringTree;
-    pcTrackFuncAdv: TPageControl;
-    tsTrackFuncAdvLinks: TTabSheet;
-    tsTrackFuncAdvSrc: TTabSheet;
-    pTrackFuncAdv: TPanel;
-    splTrackFuncAdv: TSplitter;
-    vstTrackFuncParent: TVirtualStringTree;
-    vstTrackFuncChilds: TVirtualStringTree;
-    synmTrackFuncAdvSource: TSynMemo;
     pmTrackFuncAdvParents: TPopupMenu;
     acParentViewSource: TAction;
     Viewsource1: TMenuItem;
@@ -204,8 +194,35 @@ type
     rbngrpExceptionOptions: TRibbonGroup;
     acExceptions: TAction;
     acExceptionCallStack: TAction;
+    pCodeTrackingInfo: TPanel;
+    pTrackAdv: TPanel;
+    vstTrackFuncs: TVirtualStringTree;
+    pcTrackFuncAdv: TPageControl;
+    tsTrackFuncAdvLinks: TTabSheet;
+    pTrackFuncAdv: TPanel;
+    splTrackFuncAdv: TSplitter;
+    vstTrackFuncParent: TVirtualStringTree;
+    vstTrackFuncChilds: TVirtualStringTree;
+    tsTrackFuncAdvSrc: TTabSheet;
+    synmTrackFuncAdvSource: TSynMemo;
+    cbCodeTrackingInfo: TCoolBar;
+    actbCodeTrackingInfo: TActionToolBar;
+    acCodeTrackHistoryBack: TAction;
+    alCodeTrackHistory: TActionList;
+    acFunc1: TAction;
+    acFunc2: TAction;
+    acFunc3: TAction;
+    acFunc4: TAction;
+    acFunc5: TAction;
+    acFunc6: TAction;
+    acFunc7: TAction;
+    acFunc8: TAction;
+    acFunc9: TAction;
+    acFunc0: TAction;
+    acCodeTrackRefresh: TAction;
 
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 
@@ -266,6 +283,8 @@ type
 
     procedure vstTrackThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstTrackThreadsFocusChanging(Sender: TBaseVirtualTree; OldNode, NewNode: PVirtualNode; OldColumn, NewColumn: TColumnIndex;
+      var Allowed: Boolean);
 
     procedure vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackFuncsDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
@@ -273,6 +292,8 @@ type
 
     procedure vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
     procedure vstTrackFuncsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstTrackFuncsFocusChanging(Sender: TBaseVirtualTree; OldNode, NewNode: PVirtualNode; OldColumn, NewColumn: TColumnIndex;
+      var Allowed: Boolean);
 
     procedure vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackFuncParentDblClick(Sender: TObject);
@@ -313,9 +334,13 @@ type
     procedure acExceptionsExecute(Sender: TObject);
     procedure acExceptionCallStackExecute(Sender: TObject);
     procedure pcMainChange(Sender: TObject);
+    procedure acCodeTrackHistoryBackExecute(Sender: TObject);
+    procedure acCodeTrackRefreshExecute(Sender: TObject);
+    procedure acFuncExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
+    FTrackHistory: TList;
 
     FPID: DWORD;
 
@@ -357,6 +382,10 @@ type
     procedure LoadTrackParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
     procedure LoadTrackChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
 
+    procedure AddTrackHistory(TrackFuncInfo: TTrackFuncInfo);
+    procedure UpdateTrackHistoryList;
+    procedure ClearTrackHistoryList;
+
     procedure DrawTimeLineHeader(C: TCanvas; const R: TRect; const Offset: Integer);
     procedure DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
     procedure DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
@@ -397,7 +426,7 @@ implementation
 {$R *.dfm}
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
-  uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes;
+  uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types;
 
 
 type
@@ -492,6 +521,16 @@ begin
   ClearProject;
 end;
 
+procedure TMainForm.acCodeTrackHistoryBackExecute(Sender: TObject);
+begin
+  vstTrackFuncs.OnFocusChanging := nil;
+  try
+    acFunc0.Execute;
+  finally
+    vstTrackFuncs.OnFocusChanging := vstTrackFuncsFocusChanging;
+  end;
+end;
+
 procedure TMainForm.acCodeTrackingExecute(Sender: TObject);
 begin
   if Assigned(gvDebuger) then
@@ -499,6 +538,11 @@ begin
     gvDebuger.CodeTracking := acCodeTracking.Checked;
     acTrackSystemUnits.Enabled := gvDebuger.CodeTracking;
   end;
+end;
+
+procedure TMainForm.acCodeTrackRefreshExecute(Sender: TObject);
+begin
+  vstTrackThreadsFocusChanged(vstTrackThreads, vstTrackThreads.FocusedNode, 0);
 end;
 
 procedure TMainForm.acCPUTimeLineExecute(Sender: TObject);
@@ -525,6 +569,33 @@ procedure TMainForm.acExitExecute(Sender: TObject);
 begin
   FCloseApp := True;
   Close;
+end;
+
+procedure TMainForm.acFuncExecute(Sender: TObject);
+var
+  Action: TAction;
+  TrackFuncInfo: TTrackFuncInfo;
+  FuncNode: PVirtualNode;
+begin
+  if Sender is TAction then
+  begin
+    Action := TAction(Sender);
+    if Action.Tag <> 0 then
+    begin
+      TrackFuncInfo := TTrackFuncInfo(Action.Tag);
+
+      FTrackHistory.Remove(TrackFuncInfo);
+      UpdateTrackHistoryList;
+
+      FuncNode := FindTrackFuncNode(vstTrackFuncs, TFuncInfo(TrackFuncInfo.FuncInfo));
+      if Assigned(FuncNode) then
+      begin
+        vstTrackFuncs.ClearSelection;
+        vstTrackFuncs.FocusedNode := FuncNode;
+        vstTrackFuncs.Selected[FuncNode] := True;
+      end;
+    end;
+  end;
 end;
 
 procedure TMainForm.acOpenProjectExecute(Sender: TObject);
@@ -684,6 +755,8 @@ begin
   acTabCodeTracking.Checked := (CurTag = acTabCodeTracking.Tag);
 
   pcMain.ActivePageIndex := CurTag;
+
+  UpdateTrees;
 end;
 
 procedure TMainForm.acMemInfoCallStackExecute(Sender: TObject);
@@ -970,6 +1043,14 @@ begin
   end;
 end;
 
+procedure TMainForm.AddTrackHistory(TrackFuncInfo: TTrackFuncInfo);
+begin
+  FTrackHistory.Remove(TrackFuncInfo);
+  FTrackHistory.Insert(0, TrackFuncInfo);
+
+  UpdateTrackHistoryList;
+end;
+
 procedure TMainForm.cbCPUTimeLineClick(Sender: TObject);
 begin
   UpdateTrees;
@@ -1034,6 +1115,13 @@ begin
 
   UpdateStatusInfo;
   UpdateMainActions;
+end;
+
+procedure TMainForm.ClearTrackHistoryList;
+begin
+  FTrackHistory.Clear;
+
+  UpdateTrackHistoryList;
 end;
 
 procedure TMainForm.ClearTrackTrees;
@@ -1578,6 +1666,8 @@ begin
   FCloseApp := False;
   FProjectType := ptEmpty;
 
+  FTrackHistory := TList.Create;
+
   TThread.NameThreadForDebugging(AnsiString(ClassName), MainThreadID);
 
   actbMainTabs.ParentBackground := True;
@@ -1588,6 +1678,11 @@ begin
   ProgressAction('', 0);
 
   //LoadLibrary('DbgHook32.dll'); // Для дебага этой самой DLL
+end;
+
+procedure TMainForm.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FTrackHistory);
 end;
 
 procedure TMainForm.FormShow(Sender: TObject);
@@ -2361,6 +2456,39 @@ begin
   end;
 end;
 
+procedure TMainForm.UpdateTrackHistoryList;
+var
+  I: Integer;
+  Action: TContainedAction;
+  TrackFuncInfo: TTrackFuncInfo;
+  F: Boolean;
+begin
+  F := False;
+  for I := 0 to alCodeTrackHistory.ActionCount - 1 do
+  begin
+    Action := alCodeTrackHistory.Actions[I];
+    if I < FTrackHistory.Count then
+    begin
+      TrackFuncInfo := TTrackFuncInfo(FTrackHistory[I]);
+
+      TAction(Action).Caption := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
+      TAction(Action).Tag := NativeInt(TrackFuncInfo);
+
+      TAction(Action).Enabled := True;
+      TAction(Action).Visible := True;
+
+      F := True;
+    end
+    else
+    begin
+      TAction(Action).Enabled := False;
+      TAction(Action).Visible := False;
+    end;
+  end;
+
+  acCodeTrackHistoryBack.Enabled := F;
+end;
+
 procedure TMainForm.UpdateTrees;
 begin
   case pcMain.ActivePageIndex of
@@ -2395,6 +2523,8 @@ begin
       vstTrackFuncs.Invalidate;
       vstTrackFuncParent.Invalidate;
       vstTrackFuncChilds.Invalidate;
+
+      UpdateTrackHistoryList;
     end;
   end;
 end;
@@ -3524,6 +3654,21 @@ begin
   end;
 end;
 
+procedure TMainForm.vstTrackFuncsFocusChanging(Sender: TBaseVirtualTree; OldNode, NewNode: PVirtualNode; OldColumn, NewColumn: TColumnIndex;
+  var Allowed: Boolean);
+var
+  Data: PLinkData;
+begin
+  if Assigned(OldNode) then
+  begin
+    Data := vstTrackFuncs.GetNodeData(OldNode);
+    case Data^.LinkType of
+      ltTrackFuncInfo:
+        AddTrackHistory(Data^.TrackFuncInfo);
+    end;
+  end;
+end;
+
 procedure TMainForm.vstTrackFuncsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
 var
@@ -3612,6 +3757,8 @@ procedure TMainForm.vstTrackThreadsFocusChanged(Sender: TBaseVirtualTree; Node: 
 var
   Data: PLinkData;
 begin
+  if Node = nil then Exit;
+  
   Data := vstTrackThreads.GetNodeData(Node);
   case Data^.LinkType of
     ltProcess:
@@ -3619,6 +3766,12 @@ begin
     ltThread:
       LoadTrackThreadFunctions(Data^.ThreadData, Node);
   end;
+end;
+
+procedure TMainForm.vstTrackThreadsFocusChanging(Sender: TBaseVirtualTree; OldNode, NewNode: PVirtualNode; OldColumn, NewColumn: TColumnIndex;
+  var Allowed: Boolean);
+begin
+  ClearTrackHistoryList;
 end;
 
 procedure TMainForm.vstTrackThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);

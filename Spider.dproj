@@ -3,7 +3,7 @@
         <ProjectGuid>{99256B98-0F1D-4707-BC25-85850B6A52B7}</ProjectGuid>
         <ProjectVersion>14.6</ProjectVersion>
         <MainSource>Spider.dpr</MainSource>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
@@ -133,7 +133,7 @@
                     <VersionInfo Name="MajorVer">0</VersionInfo>
                     <VersionInfo Name="MinorVer">1</VersionInfo>
                     <VersionInfo Name="Release">1</VersionInfo>
-                    <VersionInfo Name="Build">236</VersionInfo>
+                    <VersionInfo Name="Build">237</VersionInfo>
                     <VersionInfo Name="Debug">False</VersionInfo>
                     <VersionInfo Name="PreRelease">False</VersionInfo>
                     <VersionInfo Name="Special">False</VersionInfo>
@@ -145,7 +145,7 @@
                 <VersionInfoKeys>
                     <VersionInfoKeys Name="CompanyName"/>
                     <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="FileVersion">0.1.1.236</VersionInfoKeys>
+                    <VersionInfoKeys Name="FileVersion">0.1.1.237</VersionInfoKeys>
                     <VersionInfoKeys Name="InternalName"/>
                     <VersionInfoKeys Name="LegalCopyright"/>
                     <VersionInfoKeys Name="LegalTrademarks"/>

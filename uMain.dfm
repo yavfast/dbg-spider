@@ -15,6 +15,7 @@ object MainForm: TMainForm
   WindowState = wsMaximized
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -23,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsThreads1
+    ActivePage = tsCodeTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -1005,255 +1006,6 @@ object MainForm: TMainForm
     object tsCodeTracking: TTabSheet
       Caption = 'Code tracking'
       ImageIndex = 5
-      object pTrackAdv: TPanel
-        Left = 527
-        Top = 0
-        Width = 683
-        Height = 517
-        Align = alClient
-        BevelOuter = bvNone
-        Caption = 'pTrackAdv'
-        ShowCaption = False
-        TabOrder = 0
-        object vstTrackFuncs: TVirtualStringTree
-          Left = 0
-          Top = 0
-          Width = 457
-          Height = 517
-          Align = alLeft
-          BevelEdges = []
-          BevelInner = bvNone
-          BevelOuter = bvNone
-          BorderStyle = bsNone
-          Header.AutoSizeIndex = 0
-          Header.Font.Charset = DEFAULT_CHARSET
-          Header.Font.Color = clWindowText
-          Header.Font.Height = -11
-          Header.Font.Name = 'Tahoma'
-          Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoVisible]
-          Header.SortColumn = 2
-          Header.SortDirection = sdDescending
-          ScrollBarOptions.AlwaysVisible = True
-          TabOrder = 0
-          TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
-          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-          TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-          TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-          OnColumnResize = vstThreadsColumnResize
-          OnCompareNodes = vstTrackFuncsCompareNodes
-          OnDrawText = vstTrackFuncsDrawText
-          OnFocusChanged = vstTrackFuncsFocusChanged
-          OnGetText = vstTrackFuncsGetText
-          OnGetNodeDataSize = vstThreadsGetNodeDataSize
-          Columns = <
-            item
-              CaptionAlignment = taCenter
-              DefaultSortDirection = sdDescending
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
-              Position = 0
-              Width = 300
-              WideText = 'Function name'
-            end
-            item
-              Alignment = taRightJustify
-              CaptionAlignment = taCenter
-              DefaultSortDirection = sdDescending
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-              Position = 1
-              Width = 70
-              WideText = 'Call count'
-            end
-            item
-              Alignment = taRightJustify
-              CaptionAlignment = taCenter
-              DefaultSortDirection = sdDescending
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-              Position = 2
-              Width = 70
-              WideText = 'CPU time'
-            end>
-        end
-        object pcTrackFuncAdv: TPageControl
-          Left = 457
-          Top = 0
-          Width = 226
-          Height = 517
-          ActivePage = tsTrackFuncAdvLinks
-          Align = alClient
-          TabOrder = 1
-          object tsTrackFuncAdvLinks: TTabSheet
-            Caption = 'Links'
-            object pTrackFuncAdv: TPanel
-              Left = 0
-              Top = 0
-              Width = 218
-              Height = 489
-              Align = alClient
-              BevelOuter = bvNone
-              Caption = 'pTrackFuncAdv'
-              ShowCaption = False
-              TabOrder = 0
-              OnResize = pTrackFuncAdvResize
-              object splTrackFuncAdv: TSplitter
-                Left = 0
-                Top = 329
-                Width = 218
-                Height = 3
-                Cursor = crVSplit
-                Align = alTop
-                ExplicitTop = 273
-                ExplicitWidth = 391
-              end
-              object vstTrackFuncParent: TVirtualStringTree
-                Left = 0
-                Top = 0
-                Width = 218
-                Height = 329
-                Align = alTop
-                BevelEdges = []
-                BevelInner = bvNone
-                BevelOuter = bvNone
-                BorderStyle = bsNone
-                Header.AutoSizeIndex = 0
-                Header.Font.Charset = DEFAULT_CHARSET
-                Header.Font.Color = clWindowText
-                Header.Font.Height = -11
-                Header.Font.Name = 'Tahoma'
-                Header.Font.Style = []
-                Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
-                PopupMenu = pmTrackFuncAdvParents
-                ScrollBarOptions.AlwaysVisible = True
-                TabOrder = 0
-                TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-                TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-                OnDblClick = vstTrackFuncParentDblClick
-                OnDrawText = vstTrackFuncLinksDrawText
-                OnGetText = vstTrackFuncParentGetText
-                OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                Columns = <
-                  item
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
-                    Position = 0
-                    Width = 300
-                    WideText = 'Parent function name'
-                  end
-                  item
-                    Alignment = taRightJustify
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                    Position = 1
-                    WideText = 'LineNo'
-                  end
-                  item
-                    Alignment = taRightJustify
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                    Position = 2
-                    Width = 70
-                    WideText = 'Call count'
-                  end
-                  item
-                    Alignment = taRightJustify
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                    Position = 3
-                    Width = 70
-                    WideText = 'CPU time'
-                  end>
-              end
-              object vstTrackFuncChilds: TVirtualStringTree
-                Left = 0
-                Top = 332
-                Width = 218
-                Height = 157
-                Align = alClient
-                BevelEdges = []
-                BevelInner = bvNone
-                BevelOuter = bvNone
-                BorderStyle = bsNone
-                Header.AutoSizeIndex = 0
-                Header.Font.Charset = DEFAULT_CHARSET
-                Header.Font.Color = clWindowText
-                Header.Font.Height = -11
-                Header.Font.Name = 'Tahoma'
-                Header.Font.Style = []
-                Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
-                ScrollBarOptions.AlwaysVisible = True
-                TabOrder = 1
-                TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-                TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-                OnDblClick = vstTrackFuncChildsDblClick
-                OnDrawText = vstTrackFuncLinksDrawText
-                OnGetText = vstTrackFuncChildsGetText
-                OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                Columns = <
-                  item
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
-                    Position = 0
-                    Width = 300
-                    WideText = 'Child function name'
-                  end
-                  item
-                    Alignment = taRightJustify
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                    Position = 1
-                    WideText = 'LineNo'
-                  end
-                  item
-                    Alignment = taRightJustify
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                    Position = 2
-                    Width = 70
-                    WideText = 'Call count'
-                  end
-                  item
-                    Alignment = taRightJustify
-                    CaptionAlignment = taCenter
-                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                    Position = 3
-                    Width = 70
-                    WideText = 'CPU time'
-                  end>
-              end
-            end
-          end
-          object tsTrackFuncAdvSrc: TTabSheet
-            Caption = 'Source'
-            ImageIndex = 1
-            object synmTrackFuncAdvSource: TSynMemo
-              Left = 0
-              Top = 0
-              Width = 218
-              Height = 489
-              Align = alClient
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWindowText
-              Font.Height = -13
-              Font.Name = 'Courier New'
-              Font.Style = []
-              TabOrder = 0
-              Gutter.AutoSize = True
-              Gutter.Font.Charset = DEFAULT_CHARSET
-              Gutter.Font.Color = clWindowText
-              Gutter.Font.Height = -11
-              Gutter.Font.Name = 'Courier New'
-              Gutter.Font.Style = []
-              Gutter.ShowLineNumbers = True
-              Highlighter = dmShareData.synPas1
-              ReadOnly = True
-              RightEdge = 0
-              FontSmoothing = fsmNone
-            end
-          end
-        end
-      end
       object vstTrackThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -1276,7 +1028,7 @@ object MainForm: TMainForm
         Header.Options = [hoColumnResize, hoVisible]
         Header.Style = hsPlates
         ScrollBarOptions.AlwaysVisible = True
-        TabOrder = 1
+        TabOrder = 0
         TreeOptions.AutoOptions = [toAutoTristateTracking, toAutoDeleteMovedNodes]
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
@@ -1284,6 +1036,7 @@ object MainForm: TMainForm
         OnColumnResize = vstThreadsColumnResize
         OnDrawText = vstThreadsDrawText
         OnFocusChanged = vstTrackThreadsFocusChanged
+        OnFocusChanging = vstTrackThreadsFocusChanging
         OnGetText = vstTrackThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
         Columns = <
@@ -1318,6 +1071,322 @@ object MainForm: TMainForm
             Width = 70
             WideText = 'CPU time'
           end>
+      end
+      object pCodeTrackingInfo: TPanel
+        Left = 527
+        Top = 0
+        Width = 683
+        Height = 517
+        Align = alClient
+        BevelOuter = bvNone
+        Caption = 'pCodeTrackingInfo'
+        ShowCaption = False
+        TabOrder = 1
+        ExplicitLeft = 664
+        ExplicitTop = 88
+        ExplicitWidth = 185
+        ExplicitHeight = 41
+        object pTrackAdv: TPanel
+          Left = 0
+          Top = 26
+          Width = 683
+          Height = 491
+          Align = alClient
+          BevelOuter = bvNone
+          Caption = 'pTrackAdv'
+          ShowCaption = False
+          TabOrder = 0
+          ExplicitTop = 96
+          ExplicitHeight = 421
+          object vstTrackFuncs: TVirtualStringTree
+            Left = 0
+            Top = 0
+            Width = 457
+            Height = 491
+            Align = alLeft
+            BevelEdges = []
+            BevelInner = bvNone
+            BevelOuter = bvNone
+            BorderStyle = bsNone
+            Header.AutoSizeIndex = 0
+            Header.Font.Charset = DEFAULT_CHARSET
+            Header.Font.Color = clWindowText
+            Header.Font.Height = -11
+            Header.Font.Name = 'Tahoma'
+            Header.Font.Style = []
+            Header.Options = [hoColumnResize, hoVisible]
+            Header.SortColumn = 2
+            Header.SortDirection = sdDescending
+            ScrollBarOptions.AlwaysVisible = True
+            TabOrder = 0
+            TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
+            TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            OnColumnResize = vstThreadsColumnResize
+            OnCompareNodes = vstTrackFuncsCompareNodes
+            OnDrawText = vstTrackFuncsDrawText
+            OnFocusChanged = vstTrackFuncsFocusChanged
+            OnFocusChanging = vstTrackFuncsFocusChanging
+            OnGetText = vstTrackFuncsGetText
+            OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            ExplicitHeight = 517
+            Columns = <
+              item
+                CaptionAlignment = taCenter
+                DefaultSortDirection = sdDescending
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                Position = 0
+                Width = 300
+                WideText = 'Function name'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                DefaultSortDirection = sdDescending
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 1
+                Width = 70
+                WideText = 'Call count'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                DefaultSortDirection = sdDescending
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 2
+                Width = 70
+                WideText = 'CPU time'
+              end>
+          end
+          object pcTrackFuncAdv: TPageControl
+            Left = 457
+            Top = 0
+            Width = 226
+            Height = 491
+            ActivePage = tsTrackFuncAdvLinks
+            Align = alClient
+            TabOrder = 1
+            ExplicitHeight = 517
+            object tsTrackFuncAdvLinks: TTabSheet
+              Caption = 'Links'
+              ExplicitLeft = 0
+              ExplicitTop = 0
+              ExplicitWidth = 0
+              ExplicitHeight = 489
+              object pTrackFuncAdv: TPanel
+                Left = 0
+                Top = 0
+                Width = 218
+                Height = 463
+                Align = alClient
+                BevelOuter = bvNone
+                Caption = 'pTrackFuncAdv'
+                ShowCaption = False
+                TabOrder = 0
+                OnResize = pTrackFuncAdvResize
+                ExplicitHeight = 489
+                object splTrackFuncAdv: TSplitter
+                  Left = 0
+                  Top = 329
+                  Width = 218
+                  Height = 3
+                  Cursor = crVSplit
+                  Align = alTop
+                  ExplicitTop = 273
+                  ExplicitWidth = 391
+                end
+                object vstTrackFuncParent: TVirtualStringTree
+                  Left = 0
+                  Top = 0
+                  Width = 218
+                  Height = 329
+                  Align = alTop
+                  BevelEdges = []
+                  BevelInner = bvNone
+                  BevelOuter = bvNone
+                  BorderStyle = bsNone
+                  Header.AutoSizeIndex = 0
+                  Header.Font.Charset = DEFAULT_CHARSET
+                  Header.Font.Color = clWindowText
+                  Header.Font.Height = -11
+                  Header.Font.Name = 'Tahoma'
+                  Header.Font.Style = []
+                  Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+                  PopupMenu = pmTrackFuncAdvParents
+                  ScrollBarOptions.AlwaysVisible = True
+                  TabOrder = 0
+                  TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                  TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                  OnDblClick = vstTrackFuncParentDblClick
+                  OnDrawText = vstTrackFuncLinksDrawText
+                  OnGetText = vstTrackFuncParentGetText
+                  OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  Columns = <
+                    item
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                      Position = 0
+                      Width = 300
+                      WideText = 'Parent function name'
+                    end
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 1
+                      WideText = 'LineNo'
+                    end
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 2
+                      Width = 70
+                      WideText = 'Call count'
+                    end
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 3
+                      Width = 70
+                      WideText = 'CPU time'
+                    end>
+                end
+                object vstTrackFuncChilds: TVirtualStringTree
+                  Left = 0
+                  Top = 332
+                  Width = 218
+                  Height = 131
+                  Align = alClient
+                  BevelEdges = []
+                  BevelInner = bvNone
+                  BevelOuter = bvNone
+                  BorderStyle = bsNone
+                  Header.AutoSizeIndex = 0
+                  Header.Font.Charset = DEFAULT_CHARSET
+                  Header.Font.Color = clWindowText
+                  Header.Font.Height = -11
+                  Header.Font.Name = 'Tahoma'
+                  Header.Font.Style = []
+                  Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+                  ScrollBarOptions.AlwaysVisible = True
+                  TabOrder = 1
+                  TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                  TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                  OnDblClick = vstTrackFuncChildsDblClick
+                  OnDrawText = vstTrackFuncLinksDrawText
+                  OnGetText = vstTrackFuncChildsGetText
+                  OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  ExplicitHeight = 157
+                  Columns = <
+                    item
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                      Position = 0
+                      Width = 300
+                      WideText = 'Child function name'
+                    end
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 1
+                      WideText = 'LineNo'
+                    end
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 2
+                      Width = 70
+                      WideText = 'Call count'
+                    end
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 3
+                      Width = 70
+                      WideText = 'CPU time'
+                    end>
+                end
+              end
+            end
+            object tsTrackFuncAdvSrc: TTabSheet
+              Caption = 'Source'
+              ImageIndex = 1
+              ExplicitHeight = 393
+              object synmTrackFuncAdvSource: TSynMemo
+                Left = 0
+                Top = 0
+                Width = 218
+                Height = 463
+                Align = alClient
+                Font.Charset = DEFAULT_CHARSET
+                Font.Color = clWindowText
+                Font.Height = -13
+                Font.Name = 'Courier New'
+                Font.Style = []
+                TabOrder = 0
+                Gutter.AutoSize = True
+                Gutter.Font.Charset = DEFAULT_CHARSET
+                Gutter.Font.Color = clWindowText
+                Gutter.Font.Height = -11
+                Gutter.Font.Name = 'Courier New'
+                Gutter.Font.Style = []
+                Gutter.ShowLineNumbers = True
+                Highlighter = dmShareData.synPas1
+                ReadOnly = True
+                RightEdge = 0
+                FontSmoothing = fsmNone
+                ExplicitHeight = 393
+              end
+            end
+          end
+        end
+        object cbCodeTrackingInfo: TCoolBar
+          Left = 0
+          Top = 0
+          Width = 683
+          Height = 26
+          AutoSize = True
+          BandBorderStyle = bsNone
+          Bands = <
+            item
+              Control = actbCodeTrackingInfo
+              ImageIndex = -1
+              MinHeight = 26
+              Width = 681
+            end>
+          EdgeBorders = []
+          FixedSize = True
+          FixedOrder = True
+          object actbCodeTrackingInfo: TActionToolBar
+            Left = 2
+            Top = 0
+            Width = 681
+            Height = 26
+            ActionManager = amMain
+            Caption = 'actbCodeTrackingInfo'
+            Color = clMenuBar
+            ColorMap.DisabledFontColor = 7171437
+            ColorMap.HighlightColor = 13684944
+            ColorMap.BtnSelectedFont = clBlack
+            ColorMap.UnusedColor = 13684944
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clBlack
+            Font.Height = -11
+            Font.Name = 'Tahoma'
+            Font.Style = []
+            ParentBackground = True
+            ParentFont = False
+            Spacing = 0
+          end
+        end
       end
     end
   end
@@ -2112,6 +2181,18 @@ object MainForm: TMainForm
       Checked = True
       OnExecute = acExceptionCallStackExecute
     end
+    object acCodeTrackRefresh: TAction
+      Category = 'CodeTrack'
+      Caption = 'Refresh'
+      ImageIndex = 17
+      OnExecute = acCodeTrackRefreshExecute
+    end
+    object acCodeTrackHistoryBack: TAction
+      Category = 'CodeTrack'
+      Caption = 'History'
+      ImageIndex = 15
+      OnExecute = acCodeTrackHistoryBackExecute
+    end
   end
   object OD: TFileOpenDialog
     FavoriteLinks = <>
@@ -2581,6 +2662,55 @@ object MainForm: TMainForm
             CommandProperties.Width = -1
           end>
         ActionBar = rbngrpExceptionOptions
+      end
+      item
+        Items = <
+          item
+            Items = <
+              item
+                Action = acFunc0
+              end
+              item
+                Action = acFunc1
+              end
+              item
+                Action = acFunc2
+              end
+              item
+                Action = acFunc3
+              end
+              item
+                Action = acFunc4
+              end
+              item
+                Action = acFunc5
+              end
+              item
+                Action = acFunc6
+              end
+              item
+                Action = acFunc7
+              end
+              item
+                Action = acFunc8
+              end
+              item
+                Action = acFunc9
+              end>
+            Action = acCodeTrackHistoryBack
+            Caption = '&History'
+            ImageIndex = 15
+            CommandProperties.ButtonType = btSplit
+          end
+          item
+            Caption = '-'
+          end
+          item
+            Action = acCodeTrackRefresh
+            Caption = '&Refresh'
+            ImageIndex = 17
+          end>
+        ActionBar = actbCodeTrackingInfo
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain
@@ -2593,6 +2723,10 @@ object MainForm: TMainForm
       item
         ActionList = ALRecent
         Caption = 'ALRecent'
+      end
+      item
+        ActionList = alCodeTrackHistory
+        Caption = 'alCodeTrackHistory'
       end>
     Images = dmShareData.imlMainSmall
     Left = 32
@@ -2648,6 +2782,50 @@ object MainForm: TMainForm
     Top = 408
     object Viewsource1: TMenuItem
       Action = acParentViewSource
+    end
+  end
+  object alCodeTrackHistory: TActionList
+    Left = 200
+    Top = 352
+    object acFunc0: TAction
+      Caption = 'acFunc0'
+      OnExecute = acFuncExecute
+    end
+    object acFunc1: TAction
+      Caption = 'acFunc1'
+      OnExecute = acFuncExecute
+    end
+    object acFunc2: TAction
+      Caption = 'acFunc2'
+      OnExecute = acFuncExecute
+    end
+    object acFunc3: TAction
+      Caption = 'acFunc3'
+      OnExecute = acFuncExecute
+    end
+    object acFunc4: TAction
+      Caption = 'acFunc4'
+      OnExecute = acFuncExecute
+    end
+    object acFunc5: TAction
+      Caption = 'acFunc5'
+      OnExecute = acFuncExecute
+    end
+    object acFunc6: TAction
+      Caption = 'acFunc6'
+      OnExecute = acFuncExecute
+    end
+    object acFunc7: TAction
+      Caption = 'acFunc7'
+      OnExecute = acFuncExecute
+    end
+    object acFunc8: TAction
+      Caption = 'acFunc8'
+      OnExecute = acFuncExecute
+    end
+    object acFunc9: TAction
+      Caption = 'acFunc9'
+      OnExecute = acFuncExecute
     end
   end
 end
