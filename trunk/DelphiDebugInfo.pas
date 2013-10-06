@@ -1356,6 +1356,9 @@ End;
 { ............................................................................... }
 Procedure TDelphiDebugInfo.ClearDebugInfo;
 Begin
+  if Assigned(FImage) then
+    FreeAndNil(FImage);
+
   Inherited;
 End;
 { ............................................................................... }
@@ -1683,6 +1686,7 @@ var
   const
     _MemoryManagerStrD10: AnsiString = '@@MemoryManager';
     _MemoryManagerStrXE: AnsiString = '@System@MemoryManager';
+    _MemoryManagerStrXE4: AnsiString = '_MemoryManager';
   Var
     _MemoryManager: TVarInfo;
   begin
@@ -1690,9 +1694,12 @@ var
 
     if gvDebuger.MemoryCheckMode and Assigned(USystem) then
     begin
+      // TODO: add support delphi version
       _MemoryManager := USystem.FindVarByName(_MemoryManagerStrD10);
       if _MemoryManager = nil then
         _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE);
+      if _MemoryManager = nil then
+        _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE4);
 
       If Assigned(_MemoryManager) Then
         Result := Pointer(_MemoryManager.Offset);
