@@ -1372,17 +1372,14 @@ object MainForm: TMainForm
             Height = 26
             ActionManager = amMain
             Caption = 'actbCodeTrackingInfo'
-            Color = clMenuBar
-            ColorMap.DisabledFontColor = 7171437
-            ColorMap.HighlightColor = 13684944
-            ColorMap.BtnSelectedFont = clBlack
+            ColorMap.MenuColor = clMenu
+            ColorMap.BtnSelectedColor = clBtnFace
             ColorMap.UnusedColor = 13684944
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
             Font.Name = 'Tahoma'
             Font.Style = []
-            ParentBackground = True
             ParentFont = False
             Spacing = 0
           end
@@ -2120,7 +2117,6 @@ object MainForm: TMainForm
       Category = 'Options'
       AutoCheck = True
       Caption = 'Code tracking'
-      Checked = True
       OnExecute = acCodeTrackingExecute
     end
     object acTrackSystemUnits: TAction

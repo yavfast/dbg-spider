@@ -38,16 +38,23 @@ function _HookFreeMem(P: Pointer): Integer; forward;
 function _HookReallocMem(P: Pointer; Size: TMemSize): Pointer; forward;
 function _HookAllocMem(Size: TMemSize): Pointer; forward;
 
+type
+  PMemOutDbgInfo = ^TMemOutDbgInfo;
+  TMemOutDbgInfo = array[0..2] of Cardinal;
+
+threadvar
+  _MemOutDbgInfo: TMemOutDbgInfo;
 
 procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: Cardinal);
 var
-  DbgInfo: array[0..2] of Cardinal;
+  MemOutDbgInfo: PMemOutDbgInfo;
 begin
-  DbgInfo[0] := Cardinal(DbgInfoType);
-  DbgInfo[1] := Cardinal(Ptr);
-  DbgInfo[2] := Count;
+  MemOutDbgInfo := @_MemOutDbgInfo;
+  MemOutDbgInfo[0] := Cardinal(DbgInfoType);
+  MemOutDbgInfo[1] := Cardinal(Ptr);
+  MemOutDbgInfo[2] := Count;
 
-  RaiseException(DBG_EXCEPTION, 0, 3, @DbgInfo[0]);
+  RaiseException(DBG_EXCEPTION, 0, 3, @MemOutDbgInfo[0]);
 end;
 
 threadvar
@@ -104,13 +111,14 @@ var
   StackFrame: PStackFrame;
   Level: Integer;
 begin
-  //Result := True;
   try
     ZeroMemory(@Stack[0], Length(Stack) * SizeOf(Pointer));
+
     Level := -2; // это в нашей dll-ке
     StackFrame := GetFramePointer;
     BaseOfStack := TJclAddr(StackFrame) - 1;
     TopOfStack := GetStackTop;
+
     while (Level < Length(Stack)) and (
       (Level < 0) or (
         (BaseOfStack < TJclAddr(StackFrame)) and
@@ -129,7 +137,7 @@ begin
       Inc(Level);
     end;
   except
-  //  Result := False;
+    //
   end;
 end;
 
@@ -154,11 +162,15 @@ begin
   end;
 end;
 
+threadvar
+  _DbgMemInfo: TDbgMemInfo;
+
 procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; const _Ptr: Pointer; const _Size: Cardinal); stdcall;
 var
-  DbgMemInfo: TDbgMemInfo;
+  DbgMemInfo: PDbgMemInfo;
 begin
-  ZeroMemory(@DbgMemInfo, SizeOf(TDbgMemInfo));
+  DbgMemInfo := @_DbgMemInfo;
+  ZeroMemory(DbgMemInfo, SizeOf(TDbgMemInfo));
 
   DbgMemInfo.Ptr := _Ptr;
   DbgMemInfo.ThreadId := GetCurrentThreadId;
@@ -178,7 +190,7 @@ begin
   MemInfoLock.Enter;
   if MemInfoList <> Nil then
   begin
-    MemInfoList^[MemInfoListCnt] := DbgMemInfo;
+    MemInfoList^[MemInfoListCnt] := DbgMemInfo^;
     Inc(MemInfoListCnt);
 
     if MemInfoListCnt = _DbgMemListLength then

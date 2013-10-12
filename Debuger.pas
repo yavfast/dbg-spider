@@ -80,7 +80,7 @@ type
     procedure SetMemoryCheckDoubleFree(const Value: Boolean);
     procedure SetMemoryCheckMode(const Value: Boolean);
 
-    function FindMemoryPointer(const Ptr: Pointer): PThreadData;
+    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
     procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
     procedure UpdateMemoryInfoObjectTypes;
 
@@ -2135,32 +2135,40 @@ begin
   end;
 end;
 
-function TDebuger.FindMemoryPointer(const Ptr: Pointer): PThreadData;
+function TDebuger.FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
 var
   Idx: Integer;
 begin
-  Idx := 0;
-  repeat
-    Result := GetThreadDataByIdx(Idx);
-    if Result <> Nil then
-    begin
-      if Result^.DbgGetMemInfo.ContainsKey(Ptr) then
-        Exit;
+  Result := False;
 
-      Inc(Idx);
-    end;
-  until Result = Nil;
+  if ThData <> Nil then
+    Result := ThData^.DbgGetMemInfo.TryGetValue(Ptr, MemInfo);
+
+  if not Result then
+  begin
+    Idx := 0;
+    repeat
+      ThData := GetThreadDataByIdx(Idx);
+      if ThData <> Nil then
+      begin
+        Result := ThData^.DbgGetMemInfo.TryGetValue(Ptr, MemInfo);
+
+        Inc(Idx);
+      end;
+    until Result or (ThData = Nil);
+  end;
 end;
 
 var
   _DbgMemInfoList: PDbgMemInfoList = Nil;
 
-  procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
+procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
 var
   Idx: Integer;
   DbgMemInfo: PDbgMemInfo;
   CurPerfIdx: Cardinal;
   ThData: PThreadData;
+  FoundThData: PThreadData;
   MemInfo: PGetMemInfo;
   NewMemInfo: PGetMemInfo;
 begin
@@ -2180,30 +2188,20 @@ begin
         case DbgMemInfo^.MemInfoType of
           miGetMem:
           begin
-            // Если такой указатель ещё есть, то это потеряшка
-            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
+            // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
+            // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
+            FoundThData := ThData;
+            if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
             begin
-              // Переносим инфу в процесс
-              Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
+              Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
               Dec(FProcessData.ProcessGetMemCount);
-              Dec(FProcessData.ProcessGetMemSize, MemInfo.Size);
+              Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
 
-              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-
-              NewMemInfo := GetMemory(SizeOf(RGetMemInfo));
-              NewMemInfo^.PerfIdx := MemInfo^.PerfIdx;
-              NewMemInfo^.Size := MemInfo^.Size;
-              NewMemInfo^.Stack := MemInfo^.Stack;
-              NewMemInfo^.ObjectType := MemInfo^.ObjectType;
-
-              ProcessData.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
-              Inc(FProcessData.DbgGetMemInfoSize, NewMemInfo^.Size);
-
-              Inc(FProcessData.ProcessGetMemCount);
-              Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
+              FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
             end;
 
+            // Добавляем инфу про новый объект
             NewMemInfo := GetMemory(SizeOf(RGetMemInfo));
             NewMemInfo^.PerfIdx := CurPerfIdx;
             NewMemInfo^.Size := DbgMemInfo^.Size;
@@ -2218,45 +2216,19 @@ begin
           end;
           miFreeMem:
           begin
-            // Ищем в своем потоке
-            if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
+            FoundThData := ThData;
+            if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
             begin
-              Dec(ThData^.DbgGetMemInfoSize, MemInfo^.Size);
+              Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
               Dec(FProcessData.ProcessGetMemCount);
               Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
 
-              ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+              FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
             end
             else
             begin
-              // Ищем во всех потоках
-              ThData := FindMemoryPointer(DbgMemInfo^.Ptr);
-              if ThData <> Nil then
-              begin
-                if ThData^.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
-                begin
-                  Dec(ThData^.DbgGetMemInfoSize, MemInfo^.Size);
-
-                  Dec(FProcessData.ProcessGetMemCount);
-                  Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
-
-                  ThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-                end
-                else
-                begin
-                  // Ищем в потеряшках
-                  if ProcessData.DbgGetMemInfo.TryGetValue(DbgMemInfo^.Ptr, MemInfo) then
-                  begin
-                    Dec(FProcessData.DbgGetMemInfoSize, MemInfo^.Size);
-
-                    Dec(FProcessData.ProcessGetMemCount);
-                    Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
-
-                    ProcessData.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-                  end;
-                end;
-              end;
+              // TODO: Double free ???
             end;
           end;
         end;
@@ -2951,12 +2923,14 @@ begin
   until ThData = Nil;
 
   // Потеряшки
+  (*
   GetMemInfo := ProcessData.DbgGetMemInfo;
   if GetMemInfo.Count > 0 then
   begin
     for GetMemInfoItem in GetMemInfo do
       GetMemInfoItem.Value^.ObjectType := GetMemInfoItem.Value^.GetObjectType(GetMemInfoItem.Key);
   end;
+  *)
 end;
 
 function TDebuger.UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;

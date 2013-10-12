@@ -102,12 +102,11 @@ Uses
   JclPeImage,
   // ApiConsts,
   // DebugInfoUtils,
-  // EvaluateProcs,
-  // EvaluateTypes,
+  EvaluateProcs,
+  EvaluateTypes,
   // ExpressionEvaluator,
   Math, Variants,
   // Morfik.dcSystem,
-  EvaluateTypes, EvaluateProcs,
   ClassUtils, DebugHook, StrUtils, System.Contnrs;
 { .............................................................................. }
 
@@ -173,7 +172,6 @@ begin
   Else
     Result := 'Unsupported data type';
 end;
-
 { ............................................................................... }
 
 { ............................................................................... }

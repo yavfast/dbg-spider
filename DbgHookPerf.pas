@@ -64,12 +64,12 @@ begin
     while not Terminated do
     begin
       Sleep(_Delta);
-      RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
+      //RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
 
       // Сброс буфера по памяти
-      _OutMemInfoBuf;
-      //if not _OutMemInfoBuf(dstPerfomanceAndMemInfo) then
-      //  RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
+      //_OutMemInfoBuf;
+      if not _OutMemInfoBuf(dstPerfomanceAndMemInfo) then
+        RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
     end;
   except
     on E: Exception do
