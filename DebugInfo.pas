@@ -3,7 +3,7 @@ Unit DebugInfo;
 Interface
 
 Uses
-  SysUtils, Windows, Classes, Debuger, DebugerTypes, Generics.Collections;
+  SysUtils, Windows, Classes, Debuger, DebugerTypes, Generics.Collections, Generics.Defaults;
 { .............................................................................. }
 
 Type
@@ -22,6 +22,8 @@ Type
     LineNo: Integer;
     Address: Pointer;
   End;
+
+  TLineInfoList = TObjectList<TLineInfo>;
   { .............................................................................. }
 
   { ............................................................................... }
@@ -202,7 +204,7 @@ Type
     Vars: TNameList;
     Funcs: TNameList;
 
-    Lines: TList;
+    Lines: TLineInfoList;
 
     Constructor Create;
     Destructor Destroy; Override;
@@ -214,6 +216,25 @@ Type
     function FindFuncByNameId(const FuncNameId: Integer): TFuncInfo;
     function FindConstByName(const ConstName: AnsiString): TConstInfo;
     function FindVarByName(const VarName: AnsiString): TVarInfo;
+  End;
+
+  ISegmentCodeInfoComparer = IComparer<TSegmentCodeInfo>;
+
+  TSegmentCodeInfoComparer = class(TInterfacedObject, ISegmentCodeInfoComparer)
+  public
+    function Compare(const Left, Right: TSegmentCodeInfo): Integer;
+  end;
+
+  TSegmentCodeInfoList = Class(TList<TSegmentCodeInfo>)
+  private
+    FSorted: Boolean;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure CheckSorted;
+
+    function FindByAddress(const Address: Pointer): TSegmentCodeInfo;
   End;
 
   TFuncInfo = Class(TSegmentCodeInfo)
@@ -241,6 +262,7 @@ Type
   public
     Segments: TList;
     UsedUnits: TStringList;
+    FuncsByAddr: TSegmentCodeInfoList;
 
     CodeSize: Cardinal;
     DataSize: Cardinal;
@@ -281,15 +303,15 @@ Type
   TDebugInfoProgressCallback = procedure(const Action: String; const Progress: Integer) of object;
 
   TDbgSourceDirs = TDictionary<String, String>;
-  TDbgSourceList = Array [ Low(TUnitType) .. High(TUnitType)] of TDbgSourceDirs;
+  TDbgSourceList = Array [Low(TUnitType) .. High(TUnitType)] of TDbgSourceDirs;
 
   TDebugInfoClass = Class Of TDebugInfo;
 
   TDebugInfo = Class
   Private
-    // FSourceDirs: String;
     FDirs: TDbgSourceList;
-    FUnits: TStringList;
+    FUnits: TStringList; // Sorted by name
+    FUnitsByAddr: TSegmentCodeInfoList; // Sorted by Address
     FDbgLog: TDbgLog;
 
     FExeFileName: String;
@@ -324,9 +346,9 @@ Type
     Function GetAddrInfo(Var Addr: Pointer; Const FileName: String; Line: Cardinal): TFindResult; Virtual; abstract;
     Procedure GetCallStackItems(const ThreadID: TThreadId; Const ExceptAddr, ExceptFrame: Pointer; StackItems: TList); Virtual;
 
-    Function GetLineInfo(Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
+    Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
       GetPrevLine: Boolean): TFindResult; Virtual; abstract;
-    Function GetLineInformation(Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: Boolean): TFindResult;
+    Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: Boolean): TFindResult;
       Virtual; abstract;
 
     procedure UpdateSourceDirs(const SourceType: TUnitType; const SourceDirs: String); virtual;
@@ -374,6 +396,7 @@ Type
     // Property SourceDirs: String read FSourceDirs;
     Property Dirs[const SourceType: TUnitType]: TDbgSourceDirs Read GetDirs;
     Property Units: TStringList Read FUnits;
+    Property UnitsByAddr: TSegmentCodeInfoList read FUnitsByAddr;
 
     Property DbgLog: TDbgLog read FDbgLog;
 
@@ -416,6 +439,7 @@ Begin
     FDirs[ST] := TDbgSourceDirs.Create(4096);
 
   FUnits := TStringList.Create;
+  FUnitsByAddr := TSegmentCodeInfoList.Create;
 
   FDbgLog := TDbgLog.Create;
 
@@ -435,6 +459,7 @@ var
 Begin
   ClearDebugInfo;
 
+  FreeAndNil(FUnitsByAddr);
   FreeAndNil(FUnits);
 
   for ST := Low(TUnitType) to High(TUnitType) do
@@ -514,6 +539,8 @@ Begin
     FDebugInfoLoaded := False;
 
     ClearDirs;
+
+    FUnitsByAddr.Clear;
     ClearStringList(FUnits);
 
     FDbgLog.ClearLog;
@@ -1321,7 +1348,10 @@ begin
   if Assigned(UsedUnits) then
     UsedUnits.Clear;
 
-  ClearList(Lines);
+  Lines.Clear;
+
+  if Assigned(FuncsByAddr) then
+    FuncsByAddr.Clear;
 
   inherited Clear;
 end;
@@ -1332,6 +1362,9 @@ begin
 
   UsedUnits := TStringList.Create;
   Segments := TList.Create;
+  FuncsByAddr := TSegmentCodeInfoList.Create;
+
+  Lines.OwnsObjects := True;
 
   CodeSize := 0;
   DataSize := 0;
@@ -1343,6 +1376,7 @@ begin
 
   FreeAndNil(UsedUnits);
   FreeAndNil(Segments);
+  FreeAndNil(FuncsByAddr);
 
   Inherited;
 end;
@@ -1454,7 +1488,7 @@ begin
   Vars := TNameList.Create;
   Funcs := TNameList.Create;
 
-  Lines := TList.Create;
+  Lines := TLineInfoList.Create(False);
 end;
 
 destructor TSegmentCodeInfo.Destroy;
@@ -1632,6 +1666,71 @@ end;
 function TEnumInfo.ShortName: String;
 begin
   Result := String(Name);
+end;
+
+{ TSegmentCodeInfoList }
+
+procedure TSegmentCodeInfoList.CheckSorted;
+begin
+  if not FSorted then
+  begin
+    Sort;
+    FSorted := True;
+  end;
+end;
+
+constructor TSegmentCodeInfoList.Create;
+begin
+  inherited Create(TSegmentCodeInfoComparer.Create);
+
+  FSorted := False;
+end;
+
+destructor TSegmentCodeInfoList.Destroy;
+begin
+
+  inherited;
+end;
+
+function TSegmentCodeInfoList.FindByAddress(const Address: Pointer): TSegmentCodeInfo;
+var
+  SearchItem: TSegmentCodeInfo;
+  Idx: Integer;
+begin
+  Result := Nil;
+
+  CheckSorted;
+
+  SearchItem := TSegmentCodeInfo.Create;
+  try
+    SearchItem.Address := Address;
+
+    if BinarySearch(SearchItem, Idx) then
+      Result := Items[Idx]
+    else
+    if (Idx >= 0) and (Idx < Count) then
+      Result := Items[Idx - 1];
+  finally
+    FreeAndNil(SearchItem);
+  end;
+end;
+
+{ TSegmentCodeInfoComparer }
+
+function TSegmentCodeInfoComparer.Compare(const Left, Right: TSegmentCodeInfo): Integer;
+var
+  L, R: NativeUInt;
+begin
+  L := NativeUInt(Left.Address);
+  R := NativeUInt(Right.Address);
+
+  if L > R then
+    Result := 1
+  else
+  if L < R then
+    Result := -1
+  else
+    Result := 0;
 end;
 
 End.

@@ -35,8 +35,8 @@ Type
     Procedure ResolveUnits;
 
     Function FindUnitByAddr(const Addr: Pointer): TUnitInfo;
-    Function FindFuncByAddr(UnitInfo: TUnitInfo; const Addr: Pointer): TFuncInfo;
-    Function FindLineByAddr(FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
+    Function FindFuncByAddr(const UnitInfo: TUnitInfo; const Addr: Pointer): TFuncInfo;
+    Function FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
 
     function CustomVariantAsString(const Value: Variant): String;
     procedure SetDelphiVersion(const Value: TDelphiVersion);
@@ -58,12 +58,14 @@ Type
     function ParseStructMemberName(StructMember: TStructMember): String; override;
 
     Procedure ClearDebugInfo; Override;
+
     Function HasDebugInfo(Const FileName: String): Boolean; Override;
+
     Function GetAddrInfo(Var Addr: Pointer; Const FileName: String; Line: Cardinal): TFindResult; Override;
-    Function GetLineInfo(Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
-      GetPrevLine: Boolean): TFindResult; Override;
-    Function GetLineInformation(Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: Boolean): TFindResult;
-      Override;
+
+    Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo; GetPrevLine: Boolean): TFindResult; Override;
+    Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: Boolean): TFindResult; Override;
+
     Function MakeFuncDbgFullName(Const ClassName, MethodName: AnsiString): AnsiString; Override;
     Function MakeFuncShortName(Const MethodName: AnsiString): AnsiString; Override;
     Function MakeFuncNativeName(Const MethodName: AnsiString): AnsiString; Override;
@@ -289,6 +291,7 @@ Begin
 
   // Result.FullUnitName := GetUnitFileName(String(Result.Name));
   Units.AddObject(Result.ShortName, Result);
+  UnitsByAddr.Add(Result);
 
   LoadSegments(Result, Module);
   LoadUsedUnits(Result, Module);
@@ -370,14 +373,20 @@ Begin
 
     S := TUnitSegmentInfo.Create;
     S.Offset := SegmentInfo.Offset + FImage.ImageSectionHeaders[SegmentInfo.Segment - 1].VirtualAddress + ImageBase;
+
     S.Size := SegmentInfo.Size;
     S.SegType := TUnitSegmentType(SegmentInfo.Flags);
+
+    if (S.SegType = ustCode) and ((UnitInfo.Address = Nil) or (Cardinal(UnitInfo.Address) > S.Offset)) then
+      UnitInfo.Address := Pointer(S.Offset);
 
     case S.SegType of
       ustData:
         Inc(UnitInfo.DataSize, S.Size);
       ustCode:
         Inc(UnitInfo.CodeSize, S.Size);
+      else
+        RaiseDebugCoreException('');
     end;
 
     UnitInfo.Segments.Add(S);
@@ -1037,6 +1046,7 @@ Var
 Begin
   UnitInfo.Types.Capacity := 128;
   UnitInfo.Funcs.Capacity := 128;
+  UnitInfo.FuncsByAddr.Capacity := 128;
   UnitInfo.Vars.Capacity := 32;
   UnitInfo.Consts.Capacity := 32;
 
@@ -1093,6 +1103,7 @@ Begin
   end;
 
   UnitInfo.Funcs.Add(FuncInfo);
+  UnitInfo.FuncsByAddr.Add(FuncInfo);
 End;
 
 Procedure TDelphiDebugInfo.ResolveUnits;
@@ -1133,6 +1144,7 @@ Begin
         End;
     End;
 
+    UInfo.FuncsByAddr.Capacity := UInfo.Funcs.Count;
     For J := 0 To UInfo.Funcs.Count - 1 Do
     begin
       FuncJ := TFuncInfo(UInfo.Funcs[J]);
@@ -1164,23 +1176,8 @@ end;
 
 { ............................................................................... }
 Function TDelphiDebugInfo.FindUnitByAddr(const Addr: Pointer): TUnitInfo;
-Var
-  I, S: Integer;
-  USegInfo: TUnitSegmentInfo;
-  Diff: Integer;
 Begin
-  For I := 0 To Units.Count - 1 Do
-  Begin
-    Result := TUnitInfo(Units.Objects[I]);
-    For S := 0 To Result.Segments.Count - 1 Do
-    Begin
-      USegInfo := TUnitSegmentInfo(Result.Segments[S]);
-      Diff := Cardinal(Addr) - USegInfo.Offset;
-      if (Diff >= 0) And (Cardinal(Diff) < USegInfo.Size) then
-        Exit;
-    End;
-  End;
-  Result := Nil;
+  Result := TUnitInfo(UnitsByAddr.FindByAddress(Addr));
 End;
 { ............................................................................... }
 
@@ -1231,26 +1228,38 @@ begin
   FSystemUnits.Sorted := True;
 end;
 
-Function TDelphiDebugInfo.FindFuncByAddr(UnitInfo: TUnitInfo; const Addr: TPointer): TFuncInfo;
-Var
-  I: Integer;
+Function TDelphiDebugInfo.FindFuncByAddr(const UnitInfo: TUnitInfo; const Addr: TPointer): TFuncInfo;
 Begin
-  For I := 0 To UnitInfo.Funcs.Count - 1 Do
-  Begin
-    Result := TFuncInfo(UnitInfo.Funcs[I]);
-
-    if (Cardinal(Result.Address) <= Cardinal(Addr)) and (Cardinal(Addr) < Cardinal(Result.Address) + Result.CodeSize) then
-      Exit;
-  End;
-  Result := Nil;
+  Result := TFuncInfo(UnitInfo.FuncsByAddr.FindByAddress(Addr));
 End;
 { ............................................................................... }
 
 { ............................................................................... }
-Function TDelphiDebugInfo.FindLineByAddr(FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
+Function TDelphiDebugInfo.FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
 Var
   LineIdx: Integer;
+  //SearchLine: TLineInfo;
 Begin
+  (*
+  Result := Nil;
+
+  SearchLine := TLineInfo.Create;
+  try
+    SearchLine.Address := Addr;
+    FuncInfo.Lines.BinarySearch(SearchLine, LineIdx);
+  finally
+    FreeAndNil(SearchLine);
+  end;
+
+  if (LineIdx >= 0) and (LineIdx < FuncInfo.Lines.Count) then
+  begin
+    if (LineIdx > 0) and GetPrevLine then
+      Dec(LineIdx);
+
+    Result := FuncInfo.Lines[LineIdx];
+  end;
+  *)
+
   LineIdx := FuncInfo.Lines.Count - 1;
 
   While (LineIdx >= 0) Do
@@ -1482,7 +1491,7 @@ End;
 { ............................................................................... }
 
 { ............................................................................... }
-Function TDelphiDebugInfo.GetLineInfo(Addr: TPointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
+Function TDelphiDebugInfo.GetLineInfo(const Addr: TPointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
   GetPrevLine: Boolean): TFindResult;
 Begin
   FuncInfo := Nil;
@@ -1510,7 +1519,7 @@ End;
 { ............................................................................... }
 
 { ............................................................................... }
-Function TDelphiDebugInfo.GetLineInformation(Addr: TPointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt;
+Function TDelphiDebugInfo.GetLineInformation(const Addr: TPointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt;
   GetPrevLine: Boolean): TFindResult;
 Var
   UnitInfo: TUnitInfo;
