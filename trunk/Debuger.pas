@@ -81,7 +81,7 @@ type
     procedure SetMemoryCheckMode(const Value: Boolean);
 
     function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
-    procedure LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
+    procedure LoadMemoryInfoPack(const MemInfoPack: Pointer; const Count: Cardinal);
     procedure UpdateMemoryInfoObjectTypes;
 
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
@@ -614,16 +614,25 @@ begin
     Result^.ThreadID := ThreadID;
     Result^.State := tsActive;
     Result^.ThreadHandle := ThreadHandle;
+
     Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
     Result^.ThreadAdvInfo^.ThreadData := Result;
+
     Result^.Context := GetMemory(SizeOf(TContext));
     Result^.Breakpoint := GetMemory(SizeOf(THardwareBreakpoint));
+
     Result^.Started := 0;
     Result^.Ellapsed := 0;
     Result^.CPUEllapsed := 0;
+
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
+
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
+    Result^.DbgGetMemUnitList := TTrackUnitInfoList.Create(512);
+    //Result^.DbgGetMemFuncList := TTrackFuncInfoList.Create(4096);
+
     Result^.DbgExceptions := TThreadList.Create;
+
     Result^.DbgTrackEventCount := 0;
     Result^.DbgTrackUnitList := TTrackUnitInfoList.Create(512);
     Result^.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
@@ -2162,7 +2171,7 @@ end;
 var
   _DbgMemInfoList: PDbgMemInfoList = Nil;
 
-procedure TDebuger.LoadMemoryInfoPack(MemInfoPack: Pointer; const Count: Cardinal);
+procedure TDebuger.LoadMemoryInfoPack(const MemInfoPack: Pointer; const Count: Cardinal);
 var
   Idx: Integer;
   DbgMemInfo: PDbgMemInfo;
@@ -2213,12 +2222,16 @@ begin
 
             Inc(FProcessData.ProcessGetMemCount);
             Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
+
+            //ThData^.DbgGetMemUnitList.LoadStack(NewMemInfo^.Stack, True);
           end;
           miFreeMem:
           begin
             FoundThData := ThData;
             if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
             begin
+              //ThData^.DbgGetMemUnitList.LoadStack(MemInfo^.Stack, False);
+
               Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
               Dec(FProcessData.ProcessGetMemCount);

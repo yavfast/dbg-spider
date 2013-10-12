@@ -222,8 +222,16 @@ type
   end;
 
   TGetMemInfo = class(TDictionary<Pointer,PGetMemInfo>)
+  private
+    FLock: TCriticalSection;
   protected
     procedure ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification); override;
+  public
+    constructor Create(ACapacity: Integer = 0);
+    destructor Destroy; override;
+
+    procedure Lock; inline;
+    procedure UnLock; inline;
   end;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
@@ -305,18 +313,32 @@ type
   TTrackUnitInfo = class
   private
     FUnitInfo: TObject;
-    FCallCount: UInt64;
-    FEllapsed: UInt64;
     FFuncInfoList: TTrackFuncInfoBaseList;
+
+    FCallCount: UInt64;
+    FCurCount: Int64;
+
+    FTrackData: Int64;
+    FTrackDataU: UInt64;
   public
     constructor Create(AUnitInfo: TObject);
     destructor Destroy; override;
 
-    procedure GrowEllapsed(const Value: UInt64);
-    procedure IncCallCount;
+    procedure GrowEllapsed(const Value: UInt64); inline;
+    procedure GrowSize(const Value: Int64); inline;
+
+    procedure IncCallCount; inline;
+
+    procedure IncCurCount; inline;
+    procedure DecCurCount; inline;
 
     property UnitInfo: TObject read FUnitInfo;
+
     property CallCount: UInt64 read FCallCount;
+    property CurCount: Int64 read FCurCount;
+
+    property TrackDataU: UInt64 read FTrackDataU;
+    property TrackData: Int64 read FTrackData;
 
     // TODO: высчитать общее время выполнения функций юнита с учетом вложенности
     // property Ellapsed: UInt64 read FEllapsed;
@@ -330,15 +352,21 @@ type
   public
     function GetTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo;
     procedure CheckTrackFuncInfo(TrackFuncInfo: TTrackFuncInfo);
+    procedure LoadStack(var Stack: TDbgMemInfoStack; const IsInc: Boolean = True);
   end;
   TTrackUnitInfoPair = TPair<TObject,TTrackUnitInfo>;
 
   TTrackFuncInfo = class
   private
     FFuncInfo: TObject;
-    FCallCount: UInt64;
-    FCPUEllapsed: UInt64;
     FTrackUnitInfo: TTrackUnitInfo;
+
+    FCallCount: UInt64;
+    FCurCount: Int64;
+
+    FTrackData: Int64;
+    FTrackDataU: UInt64;
+
     FParentFuncs: TCallFuncCounter;
     FChildFuncs: TCallFuncCounter;
   public
@@ -348,12 +376,25 @@ type
     function AddParentCall(const Addr: Pointer): PCallFuncInfo;
     function AddChildCall(const Addr: Pointer): PCallFuncInfo;
 
-    procedure GrowEllapsed(const Value: UInt64);
-    procedure IncCallCount;
+    procedure GrowEllapsed(const Value: UInt64); inline;
+    procedure GrowSize(const Value: Int64); inline;
+
+    procedure IncCallCount; inline;
+
+    procedure IncCurCount; inline;
+    procedure DecCurCount; inline;
 
     property FuncInfo: TObject read FFuncInfo;
+
     property CallCount: UInt64 read FCallCount;
-    property CPUEllapsed: UInt64 read FCPUEllapsed;
+    property CurCount: Int64 read FCurCount;
+
+    property CPUEllapsed: UInt64 read FTrackDataU;
+    property Size: Int64 read FTrackData;
+
+    property TrackDataU: UInt64 read FTrackDataU;
+    property TrackData: Int64 read FTrackData;
+
     property TrackUnitInfo: TTrackUnitInfo read FTrackUnitInfo write FTrackUnitInfo;
     property ParentFuncs: TCallFuncCounter read FParentFuncs;
     property ChildFuncs: TCallFuncCounter read FChildFuncs;
@@ -415,6 +456,9 @@ type
     DbgGetMemInfo: TGetMemInfo;
     DbgGetMemInfoSize: Cardinal;
 
+    DbgGetMemUnitList: TTrackUnitInfoList;
+    //DbgGetMemFuncList: TTrackFuncInfoList;
+
     DbgExceptions: TThreadList;
 
     DbgTrackEventCount: UInt64;
@@ -427,6 +471,8 @@ type
 
     function DbgExceptionsCount: Cardinal;
     function DbgExceptionsByIdx(const Idx: Cardinal): TExceptInfo;
+
+    procedure UpdateGetMemUnitList;
 
     procedure Clear;
   end;
@@ -638,6 +684,8 @@ begin
   end;
 
   FreeAndNil(DbgGetMemInfo);
+  FreeAndNil(DbgGetMemUnitList);
+  //FreeAndNil(DbgGetMemFuncList);
   FreeAndNil(DbgExceptions);
   FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackFuncList);
@@ -686,6 +734,21 @@ end;
 function TThreadData.DbgPointsCount: Cardinal;
 begin
   Result := DbgPoints.Count;
+end;
+
+procedure TThreadData.UpdateGetMemUnitList;
+var
+  GetMemInfoItem: TGetMemInfoItem;
+begin
+  DbgGetMemUnitList.Clear;
+
+  DbgGetMemInfo.Lock;
+  try
+    for GetMemInfoItem in DbgGetMemInfo do
+      DbgGetMemUnitList.LoadStack(GetMemInfoItem.Value^.Stack);
+  finally
+    DbgGetMemInfo.UnLock;
+  end;
 end;
 
 { TThreadPoint }
@@ -821,12 +884,44 @@ end;
 
 { TGetMemInfo }
 
+constructor TGetMemInfo.Create(ACapacity: Integer);
+begin
+  inherited Create(ACapacity);
+
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TGetMemInfo.Destroy;
+begin
+  Lock;
+  Clear;
+  UnLock;
+
+  FreeAndNil(FLock);
+
+  inherited;
+end;
+
+procedure TGetMemInfo.Lock;
+begin
+  FLock.Enter;
+end;
+
+procedure TGetMemInfo.UnLock;
+begin
+  FLock.Leave;
+end;
+
 procedure TGetMemInfo.ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification);
 begin
   inherited;
 
   if Action = cnRemoved then
+  begin
+    Lock;
     FreeMemory(Value);
+    UnLock;
+  end;
 end;
 
 { RGetMemInfo }
@@ -957,10 +1052,16 @@ begin
 
   FFuncInfo := AFuncInfo;
   FCallCount := 0;
-  FCPUEllapsed := 0;
+  FTrackData := 0;
   FTrackUnitInfo := nil;
   FParentFuncs := TCallFuncCounter.Create(256);
   FChildFuncs := TCallFuncCounter.Create(256);
+end;
+
+procedure TTrackFuncInfo.DecCurCount;
+begin
+  Dec(FCurCount);
+  FTrackUnitInfo.DecCurCount;
 end;
 
 destructor TTrackFuncInfo.Destroy;
@@ -973,14 +1074,26 @@ end;
 
 procedure TTrackFuncInfo.GrowEllapsed(const Value: UInt64);
 begin
-  Inc(FCPUEllapsed, Value);
+  Inc(FTrackDataU, Value);
   FTrackUnitInfo.GrowEllapsed(Value);
+end;
+
+procedure TTrackFuncInfo.GrowSize(const Value: Int64);
+begin
+  Inc(FTrackData, Value);
+  FTrackUnitInfo.GrowSize(Value);
 end;
 
 procedure TTrackFuncInfo.IncCallCount;
 begin
   Inc(FCallCount);
   FTrackUnitInfo.IncCallCount;
+end;
+
+procedure TTrackFuncInfo.IncCurCount;
+begin
+  Inc(FCurCount);
+  FTrackUnitInfo.IncCurCount;
 end;
 
 { TTrackFuncInfoList }
@@ -1097,6 +1210,49 @@ begin
   end;
 end;
 
+procedure TTrackUnitInfoList.LoadStack(var Stack: TDbgMemInfoStack; const IsInc: Boolean = True);
+var
+  I: Integer;
+  StackEntry: TStackEntry;
+  TrackUnitInfo: TTrackUnitInfo;
+  TrackFuncInfo: TTrackFuncInfo;
+begin
+  StackEntry := TStackEntry.Create;
+  try
+    for I := 0 to High(Stack) do
+    begin
+      if StackEntry.UpdateInfo(Stack[I]) in [slFoundExact, slFoundNotExact] then
+      begin
+        TrackUnitInfo := GetTrackUnitInfo(StackEntry.UnitInfo);
+
+        if not TrackUnitInfo.FuncInfoList.TryGetValue(StackEntry.FuncInfo, TrackFuncInfo) then
+        begin
+          TrackFuncInfo := TTrackFuncInfo.Create(StackEntry.FuncInfo);
+          TrackFuncInfo.TrackUnitInfo := TrackUnitInfo;
+
+          TrackUnitInfo.FuncInfoList.Add(StackEntry.FuncInfo, TrackFuncInfo);
+        end;
+
+        if IsInc then
+        begin
+          TrackFuncInfo.IncCallCount;
+          TrackFuncInfo.IncCurCount;
+
+          if I > 0 then
+            TrackFuncInfo.AddChildCall(Stack[I - 1]);
+
+          if I < High(Stack) then
+            TrackFuncInfo.AddParentCall(Stack[I + 1]);
+        end
+        else
+          TrackFuncInfo.DecCurCount;
+      end;
+    end;
+  finally
+    FreeAndNil(StackEntry);
+  end;
+end;
+
 procedure TTrackUnitInfoList.ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification);
 begin
   inherited;
@@ -1115,7 +1271,12 @@ begin
 
   FUnitInfo := AUnitInfo;
   FCallCount := 0;
-  FEllapsed := 0;
+  FTrackData := 0;
+end;
+
+procedure TTrackUnitInfo.DecCurCount;
+begin
+  Dec(FCurCount);
 end;
 
 destructor TTrackUnitInfo.Destroy;
@@ -1128,12 +1289,22 @@ end;
 
 procedure TTrackUnitInfo.GrowEllapsed(const Value: UInt64);
 begin
-  Inc(FEllapsed, Value);
+  Inc(FTrackDataU, Value);
+end;
+
+procedure TTrackUnitInfo.GrowSize(const Value: Int64);
+begin
+  Inc(FTrackData, Value);
 end;
 
 procedure TTrackUnitInfo.IncCallCount;
 begin
   Inc(FCallCount);
+end;
+
+procedure TTrackUnitInfo.IncCurCount;
+begin
+  Inc(FCurCount);
 end;
 
 { TTrackStackPoint }

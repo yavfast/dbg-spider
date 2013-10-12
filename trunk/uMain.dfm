@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsCodeTracking
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -608,6 +608,8 @@ object MainForm: TMainForm
         OnFocusChanged = vstMemInfoThreadsFocusChanged
         OnGetText = vstMemInfoThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        ExplicitLeft = 206
+        ExplicitTop = 16
         Columns = <
           item
             CaptionAlignment = taCenter
@@ -640,158 +642,563 @@ object MainForm: TMainForm
             WideText = 'Size'
           end>
       end
-      object pnl1: TPanel
+      object pMemInfoClient: TPanel
         Left = 470
         Top = 0
         Width = 740
         Height = 517
         Align = alClient
+        BevelEdges = []
         BevelOuter = bvNone
+        Caption = 'pMemInfoClient'
+        ShowCaption = False
         TabOrder = 1
-        object vstMemList: TVirtualStringTree
+        ExplicitLeft = 632
+        ExplicitTop = 152
+        ExplicitWidth = 185
+        ExplicitHeight = 41
+        object cbMemInfo: TCoolBar
           Left = 0
           Top = 0
-          Width = 305
-          Height = 517
-          Align = alLeft
-          Header.AutoSizeIndex = 0
-          Header.Font.Charset = DEFAULT_CHARSET
-          Header.Font.Color = clWindowText
-          Header.Font.Height = -11
-          Header.Font.Name = 'Tahoma'
-          Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoVisible]
-          Header.SortDirection = sdDescending
-          Header.Style = hsFlatButtons
-          ScrollBarOptions.AlwaysVisible = True
-          TabOrder = 0
-          TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
-          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-          TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-          TreeOptions.SelectionOptions = [toFullRowSelect]
-          OnColumnResize = vstThreadsColumnResize
-          OnFocusChanged = vstMemListFocusChanged
-          OnGetText = vstMemListGetText
-          OnGetNodeDataSize = vstThreadsGetNodeDataSize
-          Columns = <
+          Width = 740
+          Height = 24
+          AutoSize = True
+          BandBorderStyle = bsNone
+          Bands = <
             item
-              CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
-              Position = 0
-              Width = 150
-              WideText = 'Object type'
-            end
-            item
-              Alignment = taRightJustify
-              CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-              Position = 1
-              Width = 70
-              WideText = 'Pointer'
-            end
-            item
-              Alignment = taRightJustify
-              CaptionAlignment = taCenter
-              DefaultSortDirection = sdDescending
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-              Position = 2
-              Width = 65
-              WideText = 'Size'
+              Control = actbMemInfo
+              ImageIndex = -1
+              MinHeight = 24
+              Width = 738
             end>
-        end
-        object pMemoryInfoAdv: TPanel
-          Left = 305
-          Top = 0
-          Width = 435
-          Height = 517
-          Align = alClient
-          BevelOuter = bvNone
-          Caption = 'pMemoryInfoAdv'
-          ShowCaption = False
-          TabOrder = 1
-          object splMemInfoAdv: TSplitter
-            Left = 0
-            Top = 225
-            Width = 435
-            Height = 3
-            Cursor = crVSplit
-            Align = alTop
-          end
-          object vstMemStack: TVirtualStringTree
-            Left = 0
+          EdgeBorders = []
+          EdgeInner = esNone
+          EdgeOuter = esNone
+          FixedOrder = True
+          object actbMemInfo: TActionToolBar
+            Left = 2
             Top = 0
-            Width = 435
-            Height = 225
-            Align = alTop
-            Header.AutoSizeIndex = 0
-            Header.Font.Charset = DEFAULT_CHARSET
-            Header.Font.Color = clWindowText
-            Header.Font.Height = -11
-            Header.Font.Name = 'Tahoma'
-            Header.Font.Style = []
-            Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
-            Header.Style = hsFlatButtons
-            ScrollBarOptions.AlwaysVisible = True
-            TabOrder = 0
-            TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-            OnFocusChanged = vstMemStackFocusChanged
-            OnGetText = vstMemStackGetText
-            OnGetNodeDataSize = vstThreadsGetNodeDataSize
-            Columns = <
-              item
-                Alignment = taRightJustify
-                CaptionAlignment = taCenter
-                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
-                Position = 0
-                Width = 70
-                WideText = 'Address'
-              end
-              item
-                CaptionAlignment = taCenter
-                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                Position = 1
-                Width = 120
-                WideText = 'Unit'
-              end
-              item
-                Alignment = taRightJustify
-                CaptionAlignment = taCenter
-                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-                Position = 2
-                WideText = 'Line'
-              end
-              item
-                Position = 3
-                Width = 500
-                WideText = 'Call stack function'
-              end>
-          end
-          object synmMemInfoSource: TSynMemo
-            Left = 0
-            Top = 228
-            Width = 435
-            Height = 289
-            Align = alClient
+            Width = 738
+            Height = 24
+            ActionManager = amMain
+            Caption = 'actbMemInfo'
+            Color = clMenuBar
+            ColorMap.DisabledFontColor = 7171437
+            ColorMap.HighlightColor = 13684944
+            ColorMap.BtnSelectedFont = clBlack
+            ColorMap.UnusedColor = 13684944
+            EdgeInner = esNone
             Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindowText
-            Font.Height = -13
-            Font.Name = 'Courier New'
+            Font.Color = clBlack
+            Font.Height = -11
+            Font.Name = 'Tahoma'
             Font.Style = []
-            TabOrder = 1
-            Gutter.AutoSize = True
-            Gutter.Font.Charset = DEFAULT_CHARSET
-            Gutter.Font.Color = clWindowText
-            Gutter.Font.Height = -11
-            Gutter.Font.Name = 'Courier New'
-            Gutter.Font.Style = []
-            Gutter.ShowLineNumbers = True
-            Highlighter = dmShareData.synPas1
-            ReadOnly = True
-            RightEdge = 0
-            SearchEngine = dmShareData.synRegexSearch1
-            FontSmoothing = fsmNone
+            ParentBackground = True
+            ParentFont = False
+            Spacing = 0
+          end
+        end
+        object pcMemInfo: TPageControl
+          Left = 0
+          Top = 24
+          Width = 740
+          Height = 493
+          ActivePage = tsMemInfoTreeView
+          Align = alClient
+          TabOrder = 1
+          object tsMemInfoViewStack: TTabSheet
+            Caption = 'Objects'
+            object pnl1: TPanel
+              Left = 0
+              Top = 0
+              Width = 732
+              Height = 465
+              Align = alClient
+              BevelOuter = bvNone
+              TabOrder = 0
+              ExplicitTop = 72
+              ExplicitWidth = 740
+              ExplicitHeight = 445
+              object pMemoryInfoAdv: TPanel
+                Left = 305
+                Top = 0
+                Width = 427
+                Height = 465
+                Align = alClient
+                BevelOuter = bvNone
+                Caption = 'pMemoryInfoAdv'
+                ShowCaption = False
+                TabOrder = 0
+                ExplicitLeft = 288
+                ExplicitWidth = 452
+                ExplicitHeight = 493
+                object splMemInfoAdv: TSplitter
+                  Left = 0
+                  Top = 225
+                  Width = 427
+                  Height = 3
+                  Cursor = crVSplit
+                  Align = alTop
+                  ExplicitWidth = 435
+                end
+                object vstMemStack: TVirtualStringTree
+                  Left = 0
+                  Top = 0
+                  Width = 427
+                  Height = 225
+                  Align = alTop
+                  Header.AutoSizeIndex = 0
+                  Header.Font.Charset = DEFAULT_CHARSET
+                  Header.Font.Color = clWindowText
+                  Header.Font.Height = -11
+                  Header.Font.Name = 'Tahoma'
+                  Header.Font.Style = []
+                  Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+                  Header.Style = hsFlatButtons
+                  ScrollBarOptions.AlwaysVisible = True
+                  TabOrder = 0
+                  TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                  TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                  OnFocusChanged = vstMemStackFocusChanged
+                  OnGetText = vstMemStackGetText
+                  OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  ExplicitWidth = 345
+                  Columns = <
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+                      Position = 0
+                      Width = 70
+                      WideText = 'Address'
+                    end
+                    item
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 1
+                      Width = 120
+                      WideText = 'Unit'
+                    end
+                    item
+                      Alignment = taRightJustify
+                      CaptionAlignment = taCenter
+                      Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                      Position = 2
+                      WideText = 'Line'
+                    end
+                    item
+                      Position = 3
+                      Width = 500
+                      WideText = 'Call stack function'
+                    end>
+                end
+                object synmMemInfoSource: TSynMemo
+                  Left = 0
+                  Top = 228
+                  Width = 427
+                  Height = 237
+                  Align = alClient
+                  Font.Charset = DEFAULT_CHARSET
+                  Font.Color = clWindowText
+                  Font.Height = -13
+                  Font.Name = 'Courier New'
+                  Font.Style = []
+                  TabOrder = 1
+                  Gutter.AutoSize = True
+                  Gutter.Font.Charset = DEFAULT_CHARSET
+                  Gutter.Font.Color = clWindowText
+                  Gutter.Font.Height = -11
+                  Gutter.Font.Name = 'Courier New'
+                  Gutter.Font.Style = []
+                  Gutter.ShowLineNumbers = True
+                  Highlighter = dmShareData.synPas1
+                  ReadOnly = True
+                  RightEdge = 0
+                  SearchEngine = dmShareData.synRegexSearch1
+                  FontSmoothing = fsmNone
+                  ExplicitWidth = 435
+                end
+              end
+              object vstMemList: TVirtualStringTree
+                Left = 0
+                Top = 0
+                Width = 305
+                Height = 465
+                Align = alLeft
+                Header.AutoSizeIndex = 0
+                Header.Font.Charset = DEFAULT_CHARSET
+                Header.Font.Color = clWindowText
+                Header.Font.Height = -11
+                Header.Font.Name = 'Tahoma'
+                Header.Font.Style = []
+                Header.Options = [hoColumnResize, hoVisible]
+                Header.SortDirection = sdDescending
+                Header.Style = hsFlatButtons
+                ScrollBarOptions.AlwaysVisible = True
+                TabOrder = 1
+                TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
+                TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                TreeOptions.SelectionOptions = [toFullRowSelect]
+                OnColumnResize = vstThreadsColumnResize
+                OnFocusChanged = vstMemListFocusChanged
+                OnGetText = vstMemListGetText
+                OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitHeight = 493
+                Columns = <
+                  item
+                    CaptionAlignment = taCenter
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                    Position = 0
+                    Width = 150
+                    WideText = 'Object type'
+                  end
+                  item
+                    Alignment = taRightJustify
+                    CaptionAlignment = taCenter
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                    Position = 1
+                    Width = 70
+                    WideText = 'Pointer'
+                  end
+                  item
+                    Alignment = taRightJustify
+                    CaptionAlignment = taCenter
+                    DefaultSortDirection = sdDescending
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                    Position = 2
+                    Width = 65
+                    WideText = 'Size'
+                  end>
+              end
+            end
+          end
+          object tsMemInfoTreeView: TTabSheet
+            Caption = 'Functions'
+            ImageIndex = 1
+            object pMemInfoTreeLeft: TPanel
+              Left = 0
+              Top = 0
+              Width = 457
+              Height = 465
+              Align = alLeft
+              BevelEdges = []
+              BevelOuter = bvNone
+              Caption = 'pMemInfoTreeLeft'
+              ShowCaption = False
+              TabOrder = 0
+              object spl1: TSplitter
+                Left = 0
+                Top = 157
+                Width = 457
+                Height = 3
+                Cursor = crVSplit
+                Align = alBottom
+                ExplicitTop = 217
+                ExplicitWidth = 248
+              end
+              object vstMemInfoFuncTree: TVirtualStringTree
+                Left = 0
+                Top = 0
+                Width = 457
+                Height = 157
+                Align = alClient
+                BevelEdges = []
+                BevelInner = bvNone
+                BevelOuter = bvNone
+                BorderStyle = bsNone
+                Header.AutoSizeIndex = 0
+                Header.Font.Charset = DEFAULT_CHARSET
+                Header.Font.Color = clWindowText
+                Header.Font.Height = -11
+                Header.Font.Name = 'Tahoma'
+                Header.Font.Style = []
+                Header.Options = [hoColumnResize, hoVisible]
+                Header.SortColumn = 2
+                Header.SortDirection = sdDescending
+                ScrollBarOptions.AlwaysVisible = True
+                TabOrder = 0
+                TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
+                TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                OnColumnResize = vstThreadsColumnResize
+                OnFocusChanged = vstMemInfoFuncTreeFocusChanged
+                OnGetText = vstMemInfoFuncTreeGetText
+                OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitWidth = 377
+                ExplicitHeight = 217
+                Columns = <
+                  item
+                    CaptionAlignment = taCenter
+                    DefaultSortDirection = sdDescending
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                    Position = 0
+                    Width = 300
+                    WideText = 'Function name'
+                  end
+                  item
+                    Alignment = taRightJustify
+                    CaptionAlignment = taCenter
+                    DefaultSortDirection = sdDescending
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                    Position = 1
+                    Width = 70
+                    WideText = 'Count'
+                  end
+                  item
+                    Alignment = taRightJustify
+                    CaptionAlignment = taCenter
+                    DefaultSortDirection = sdDescending
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                    Position = 2
+                    Width = 70
+                    WideText = 'Size'
+                  end>
+              end
+              object vstMemInfoObjects: TVirtualStringTree
+                Left = 0
+                Top = 160
+                Width = 457
+                Height = 305
+                Align = alBottom
+                Header.AutoSizeIndex = 0
+                Header.Font.Charset = DEFAULT_CHARSET
+                Header.Font.Color = clWindowText
+                Header.Font.Height = -11
+                Header.Font.Name = 'Tahoma'
+                Header.Font.Style = []
+                Header.Options = [hoColumnResize, hoVisible]
+                Header.SortDirection = sdDescending
+                Header.Style = hsFlatButtons
+                ScrollBarOptions.AlwaysVisible = True
+                TabOrder = 1
+                TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
+                TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                TreeOptions.SelectionOptions = [toFullRowSelect]
+                OnColumnResize = vstThreadsColumnResize
+                OnFocusChanged = vstMemListFocusChanged
+                OnGetText = vstMemListGetText
+                OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitWidth = 377
+                Columns = <
+                  item
+                    CaptionAlignment = taCenter
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                    Position = 0
+                    Width = 150
+                    WideText = 'Object type'
+                  end
+                  item
+                    Alignment = taRightJustify
+                    CaptionAlignment = taCenter
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                    Position = 1
+                    Width = 70
+                    WideText = 'Pointer'
+                  end
+                  item
+                    Alignment = taRightJustify
+                    CaptionAlignment = taCenter
+                    DefaultSortDirection = sdDescending
+                    Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                    Position = 2
+                    Width = 65
+                    WideText = 'Size'
+                  end>
+              end
+            end
+            object pcMemInfoFuncInfo: TPageControl
+              Left = 457
+              Top = 0
+              Width = 275
+              Height = 465
+              ActivePage = tsMemInfoFuncLinks
+              Align = alClient
+              TabOrder = 1
+              ExplicitWidth = 226
+              ExplicitHeight = 517
+              object tsMemInfoFuncLinks: TTabSheet
+                Caption = 'Links'
+                ExplicitLeft = 0
+                ExplicitTop = 0
+                ExplicitWidth = 0
+                ExplicitHeight = 489
+                object Panel1: TPanel
+                  Left = 0
+                  Top = 0
+                  Width = 267
+                  Height = 437
+                  Align = alClient
+                  BevelOuter = bvNone
+                  Caption = 'pTrackFuncAdv'
+                  ShowCaption = False
+                  TabOrder = 0
+                  OnResize = pTrackFuncAdvResize
+                  ExplicitWidth = 218
+                  ExplicitHeight = 489
+                  object Splitter1: TSplitter
+                    Left = 0
+                    Top = 329
+                    Width = 267
+                    Height = 3
+                    Cursor = crVSplit
+                    Align = alTop
+                    ExplicitTop = 273
+                    ExplicitWidth = 391
+                  end
+                  object vstMemInfoFuncParents: TVirtualStringTree
+                    Left = 0
+                    Top = 0
+                    Width = 267
+                    Height = 329
+                    Align = alTop
+                    BevelEdges = []
+                    BevelInner = bvNone
+                    BevelOuter = bvNone
+                    BorderStyle = bsNone
+                    Header.AutoSizeIndex = 0
+                    Header.Font.Charset = DEFAULT_CHARSET
+                    Header.Font.Color = clWindowText
+                    Header.Font.Height = -11
+                    Header.Font.Name = 'Tahoma'
+                    Header.Font.Style = []
+                    Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+                    ScrollBarOptions.AlwaysVisible = True
+                    TabOrder = 0
+                    TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                    TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                    TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                    OnGetText = vstMemInfoFuncParentsGetText
+                    OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                    ExplicitWidth = 218
+                    Columns = <
+                      item
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                        Position = 0
+                        Width = 300
+                        WideText = 'Parent function name'
+                      end
+                      item
+                        Alignment = taRightJustify
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                        Position = 1
+                        WideText = 'LineNo'
+                      end
+                      item
+                        Alignment = taRightJustify
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                        Position = 2
+                        Width = 70
+                        WideText = 'Count'
+                      end
+                      item
+                        Alignment = taRightJustify
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                        Position = 3
+                        Width = 70
+                        WideText = 'Size'
+                      end>
+                  end
+                  object vstMemInfoFuncChilds: TVirtualStringTree
+                    Left = 0
+                    Top = 332
+                    Width = 267
+                    Height = 105
+                    Align = alClient
+                    BevelEdges = []
+                    BevelInner = bvNone
+                    BevelOuter = bvNone
+                    BorderStyle = bsNone
+                    Header.AutoSizeIndex = 0
+                    Header.Font.Charset = DEFAULT_CHARSET
+                    Header.Font.Color = clWindowText
+                    Header.Font.Height = -11
+                    Header.Font.Name = 'Tahoma'
+                    Header.Font.Style = []
+                    Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+                    ScrollBarOptions.AlwaysVisible = True
+                    TabOrder = 1
+                    TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+                    TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+                    TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                    OnGetText = vstMemInfoFuncChildsGetText
+                    OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                    ExplicitWidth = 218
+                    ExplicitHeight = 157
+                    Columns = <
+                      item
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                        Position = 0
+                        Width = 300
+                        WideText = 'Child function name'
+                      end
+                      item
+                        Alignment = taRightJustify
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                        Position = 1
+                        WideText = 'LineNo'
+                      end
+                      item
+                        Alignment = taRightJustify
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                        Position = 2
+                        Width = 70
+                        WideText = 'Count'
+                      end
+                      item
+                        Alignment = taRightJustify
+                        CaptionAlignment = taCenter
+                        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                        Position = 3
+                        Width = 70
+                        WideText = 'Size'
+                      end>
+                  end
+                end
+              end
+              object tsMemInfoFuncSrc: TTabSheet
+                Caption = 'Source'
+                ImageIndex = 1
+                ExplicitWidth = 347
+                object synmMemInfoFuncSrc: TSynMemo
+                  Left = 0
+                  Top = 0
+                  Width = 267
+                  Height = 437
+                  Align = alClient
+                  Font.Charset = DEFAULT_CHARSET
+                  Font.Color = clWindowText
+                  Font.Height = -13
+                  Font.Name = 'Courier New'
+                  Font.Style = []
+                  TabOrder = 0
+                  Gutter.AutoSize = True
+                  Gutter.Font.Charset = DEFAULT_CHARSET
+                  Gutter.Font.Color = clWindowText
+                  Gutter.Font.Height = -11
+                  Gutter.Font.Name = 'Courier New'
+                  Gutter.Font.Style = []
+                  Gutter.ShowLineNumbers = True
+                  Highlighter = dmShareData.synPas1
+                  ReadOnly = True
+                  RightEdge = 0
+                  FontSmoothing = fsmNone
+                  ExplicitLeft = 2
+                  ExplicitTop = 6
+                  ExplicitWidth = 347
+                end
+              end
+            end
           end
         end
       end
@@ -1380,6 +1787,7 @@ object MainForm: TMainForm
             Font.Height = -11
             Font.Name = 'Tahoma'
             Font.Style = []
+            ParentBackground = True
             ParentFont = False
             Spacing = 0
           end
@@ -2189,6 +2597,18 @@ object MainForm: TMainForm
       ImageIndex = 15
       OnExecute = acCodeTrackHistoryBackExecute
     end
+    object acMemInfoRefresh: TAction
+      Category = 'MemInfo'
+      Caption = 'Refresh'
+      ImageIndex = 17
+      OnExecute = acMemInfoRefreshExecute
+    end
+    object acMemInfoHistory: TAction
+      Category = 'MemInfo'
+      Caption = 'History'
+      ImageIndex = 15
+      OnExecute = acMemInfoHistoryExecute
+    end
   end
   object OD: TFileOpenDialog
     FavoriteLinks = <>
@@ -2665,33 +3085,43 @@ object MainForm: TMainForm
             Items = <
               item
                 Action = acFunc0
+                Caption = '&acFunc0'
               end
               item
                 Action = acFunc1
+                Caption = 'a&cFunc1'
               end
               item
                 Action = acFunc2
+                Caption = 'ac&Func2'
               end
               item
                 Action = acFunc3
+                Caption = 'acF&unc3'
               end
               item
                 Action = acFunc4
+                Caption = 'acFu&nc4'
               end
               item
                 Action = acFunc5
+                Caption = 'acFunc&5'
               end
               item
                 Action = acFunc6
+                Caption = 'acFunc&6'
               end
               item
                 Action = acFunc7
+                Caption = 'acFunc&7'
               end
               item
                 Action = acFunc8
+                Caption = 'acFunc&8'
               end
               item
                 Action = acFunc9
+                Caption = 'acFunc&9'
               end>
             Action = acCodeTrackHistoryBack
             Caption = '&History'
@@ -2699,14 +3129,26 @@ object MainForm: TMainForm
             CommandProperties.ButtonType = btSplit
           end
           item
-            Caption = '-'
-          end
-          item
             Action = acCodeTrackRefresh
             Caption = '&Refresh'
             ImageIndex = 17
           end>
         ActionBar = actbCodeTrackingInfo
+      end
+      item
+        Items = <
+          item
+            Action = acMemInfoHistory
+            Caption = '&History'
+            ImageIndex = 15
+            CommandProperties.ButtonType = btSplit
+          end
+          item
+            Action = acMemInfoRefresh
+            Caption = '&Refresh'
+            ImageIndex = 17
+          end>
+        ActionBar = actbMemInfo
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain
