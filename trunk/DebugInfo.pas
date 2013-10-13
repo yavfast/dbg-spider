@@ -7,7 +7,7 @@ Uses
 { .............................................................................. }
 
 Type
-  TFindResult = (slNotFound, slFoundExact, slFoundNotExact, slFoundWithoutLine);
+  TFindResult = (slNotFound = 0, slFoundExact, slFoundNotExact, slFoundWithoutLine);
 
   { .............................................................................. }
 Type
@@ -283,6 +283,27 @@ Type
 
   End;
   { ............................................................................... }
+
+  PAddressInfo = ^RAddressInfo;
+  RAddressInfo = record
+    Addr: Pointer;
+    UnitInfo: TUnitInfo;
+    FuncInfo: TFuncInfo;
+    LineInfo: TLineInfo;
+    FindResult: TFindResult;
+  end;
+
+  TAddressInfoList = class(TDictionary<Pointer,PAddressInfo>)
+  private
+    FLock: TMREWSync;
+  protected
+    procedure ValueNotify(const Value: PAddressInfo; Action: TCollectionNotification); override;
+  public
+    constructor Create(ACapacity: Integer = 0);
+    destructor Destroy; override;
+
+    property Lock: TMREWSync read FLock;
+  end;
 
   { ............................................................................... }
   TStackEntry = Class
@@ -1731,6 +1752,32 @@ begin
     Result := -1
   else
     Result := 0;
+end;
+
+{ TAddressInfoList }
+
+constructor TAddressInfoList.Create(ACapacity: Integer);
+begin
+  inherited Create(ACapacity);
+
+  FLock := TMREWSync.Create;
+end;
+
+destructor TAddressInfoList.Destroy;
+begin
+  Clear;
+
+  FreeAndNil(FLock);
+
+  inherited;
+end;
+
+procedure TAddressInfoList.ValueNotify(const Value: PAddressInfo; Action: TCollectionNotification);
+begin
+  inherited;
+
+  if Action = cnRemoved then
+    FreeMemory(Value);
 end;
 
 End.

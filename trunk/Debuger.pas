@@ -176,8 +176,8 @@ type
     procedure ProcessDebugEvents;
 
     // чтение запись данных
-    Function AllocMem(const Size: Cardinal): Pointer;
-    Procedure FreeMem(Data : Pointer; const Size: Cardinal = 0);
+    Function ProcAllocMem(const Size: Cardinal): Pointer;
+    Procedure ProcFreeMem(Data : Pointer; const Size: Cardinal = 0);
 
     procedure InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer;
       aParamsSize: Cardinal; WaitAndFree: Boolean = True);
@@ -324,7 +324,7 @@ var
   Idx: Cardinal;
   Seg, Offset: Integer;
 begin
-  Lock;
+  BeginWrite;
   Idx := Count;
   IndexToSegment(Idx, Seg, Offset);
   CheckSeg(Seg);
@@ -333,26 +333,28 @@ begin
   Result := @FSegList[Seg][Offset];
 
   FillChar(Result^, SizeOf(T), 0);
-  UnLock;
+  EndWrite;
 end;
 
 procedure TCollectList<T>.CheckSeg(const Seg: Integer);
 begin
-  Lock;
+  BeginRead;
   if Length(FSegList) <= Seg then
   begin
+    BeginWrite;
     SetLength(FSegList, Seg + 1);
     SetLength(FSegList[Seg], FSegSize);
+    EndWrite;
   end;
-  UnLock;
+  EndRead;
 end;
 
 procedure TCollectList<T>.Clear;
 begin
-  Lock;
+  BeginWrite;
   SetLength(FSegList, 0);
   inherited Clear;
-  UnLock;
+  EndWrite;
 end;
 
 constructor TCollectList<T>.Create;
@@ -376,12 +378,14 @@ var
 begin
   Result := nil;
 
-  Lock;
   if IndexToSegment(Index, Seg, Offset) then
-    Result := @FSegList[Seg][Offset]
+  begin
+    BeginRead;
+    Result := @FSegList[Seg][Offset];
+    EndRead;
+  end
   else
     RaiseError(@EIndexError, [Index]);
-  UnLock;
 end;
 
 function TCollectList<T>.IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
@@ -484,7 +488,7 @@ begin
 
   if Result then
   begin
-    ThreadData^.DbgPoints.Lock;
+    ThreadData^.DbgPoints.BeginRead;
     try
       ThPoint := PThreadPoint(ThreadData^.DbgPoints.Add);
 
@@ -520,7 +524,7 @@ begin
           end;
       end;
     finally
-      ThreadData^.DbgPoints.UnLock;
+      ThreadData^.DbgPoints.EndRead;
     end;
   end;
 end;
@@ -583,7 +587,7 @@ begin
 
   if Result then
   begin
-    FProcessData.DbgPoints.Lock;
+    FProcessData.DbgPoints.BeginRead;
     try
       ProcPoint := FProcessData.DbgPoints.Add;
 
@@ -600,14 +604,14 @@ begin
           end;
       end;
     finally
-      FProcessData.DbgPoints.UnLock;
+      FProcessData.DbgPoints.EndRead;
     end;
   end;
 end;
 
 function TDebuger.AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
 begin
-  FThreadList.Lock;
+  FThreadList.BeginWrite;
   try
     Result := FThreadList.Add;
 
@@ -641,23 +645,23 @@ begin
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(Result, ptStart);
   finally
-    FThreadList.UnLock;
+    FThreadList.EndWrite;
   end;
 end;
 
 function TDebuger.AddThreadInfo(const ThreadId: TThreadId): PThreadAdvInfo;
 begin
-  FThreadAdvInfoList.Lock;
+  FThreadAdvInfoList.BeginWrite;
   try
     Result := FThreadAdvInfoList.Add;
     Result^.ThreadId := ThreadId;
     Result^.ThreadData := Nil;
   finally
-    FThreadAdvInfoList.UnLock;
+    FThreadAdvInfoList.EndWrite;
   end;
 end;
 
-function TDebuger.AllocMem(const Size: Cardinal): Pointer;
+function TDebuger.ProcAllocMem(const Size: Cardinal): Pointer;
 begin
   // TODO: Проверить выделение памяти для маленьких Size
   Result := VirtualAllocEx(FProcessData.AttachedProcessHandle, Nil, Size, MEM_COMMIT Or MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -817,8 +821,7 @@ begin
   FThreadList := TCollectList<TThreadData>.Create;
   FThreadAdvInfoList := TCollectList<TThreadAdvInfo>.Create;
 
-  FProcessData := GetMemory(SizeOf(TProcessData));
-  ZeroMemory(FProcessData, SizeOf(TProcessData));
+  FProcessData := AllocMem(SizeOf(TProcessData));
   FProcessData.State := psNone;
   FProcessData.DbgPoints := Nil;
 
@@ -844,8 +847,8 @@ end;
 
 function TDebuger.DebugNewProcess(const FilePath: string; SentEntryPointBreakPoint: Boolean): Boolean;
 var
-  PI: TProcessInformation;
-  SI: TStartupInfo;
+  PI: PProcessInformation;
+  SI: PStartupInfo;
 begin
   LoadLibrary('DbgHook32.dll'); // Для быстрой загрузки в процессе
 
@@ -855,18 +858,25 @@ begin
 
   FSetEntryPointBreakPoint := SentEntryPointBreakPoint;
 
-  ZeroMemory(@SI, SizeOf(TStartupInfo));
-  SI.cb := SizeOf(TStartupInfo);
-  SI.dwFlags := STARTF_USESHOWWINDOW;
-  SI.wShowWindow := SW_SHOWNORMAL;
+  PI := AllocMem(SizeOf(TProcessInformation));
+  SI := AllocMem(SizeOf(TStartupInfo));
+  try
+    SI.cb := SizeOf(TStartupInfo);
+    SI.dwFlags := STARTF_USESHOWWINDOW;
+    SI.wShowWindow := SW_SHOWNORMAL;
 
-  Result := CreateProcess(PChar(FilePath), nil, nil, nil, False, DEBUG_PROCESS or DEBUG_ONLY_THIS_PROCESS, nil, nil, SI, PI);
 
-  if Result then
-  begin
-    FProcessData.ProcessID := TProcessId(PI.dwProcessId);
-    FProcessData.CreatedProcessHandle := PI.hProcess;
-    FProcessData.CreatedThreadHandle := PI.hThread;
+    Result := CreateProcess(PChar(FilePath), nil, nil, nil, False, DEBUG_PROCESS or DEBUG_ONLY_THIS_PROCESS, nil, nil, SI^, PI^);
+
+    if Result then
+    begin
+      FProcessData.ProcessID := TProcessId(PI.dwProcessId);
+      FProcessData.CreatedProcessHandle := PI.hProcess;
+      FProcessData.CreatedThreadHandle := PI.hThread;
+    end;
+  finally
+    FreeMemory(PI);
+    FreeMemory(SI);
   end;
 end;
 
@@ -889,7 +899,7 @@ end;
 
 procedure TDebuger.DoCreateProcess(DebugEvent: PDebugEvent);
 var
-  CreateThreadInfo: TCreateThreadDebugInfo;
+  CreateThreadInfo: PCreateThreadDebugInfo;
 begin
   FDbgState := dsStarted;
 
@@ -940,9 +950,13 @@ begin
 
   if Assigned(FCreateThread) then
   begin
-    ZeroMemory(@CreateThreadInfo, SizeOf(CreateThreadInfo));
-    CreateThreadInfo.hThread := FProcessData.AttachedThreadHandle;
-    FCreateThread(Self, DebugEvent^.dwThreadId, @CreateThreadInfo);
+    CreateThreadInfo := AllocMem(SizeOf(TCreateThreadDebugInfo));
+    try
+      CreateThreadInfo.hThread := FProcessData.AttachedThreadHandle;
+      FCreateThread(Self, DebugEvent^.dwThreadId, CreateThreadInfo);
+    finally
+      FreeMemory(CreateThreadInfo);
+    end;
   end;
 
   DoResumeAction(DebugEvent^.dwThreadId);
@@ -1151,7 +1165,7 @@ begin
 
 end;
 
-procedure TDebuger.FreeMem(Data: Pointer; const Size: Cardinal = 0);
+procedure TDebuger.ProcFreeMem(Data: Pointer; const Size: Cardinal = 0);
 begin
   if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) = nil then
     RaiseLastOSError;
@@ -1312,7 +1326,7 @@ function TDebuger.GetThreadIndex(const ThreadID: TThreadId; const UseFinished: B
 var
   ThData: PThreadData;
 begin
-  FThreadList.Lock;
+  FThreadList.BeginRead;
   try
     for Result := FThreadList.Count - 1 downto 0 do
     begin
@@ -1321,7 +1335,7 @@ begin
         Exit;
     end;
   finally
-    FThreadList.UnLock;
+    FThreadList.EndRead;
   end;
 
   Result := -1;
@@ -1333,13 +1347,13 @@ var
 begin
   Result := Nil;
 
-  FThreadAdvInfoList.Lock;
+  FThreadAdvInfoList.BeginRead;
   try
     Idx := GetThreadInfoIndex(ThreadId);
     if Idx >= 0 then
       Result := FThreadAdvInfoList[Idx];
   finally
-    FThreadAdvInfoList.UnLock;
+    FThreadAdvInfoList.EndRead;
   end;
 end;
 
@@ -1347,7 +1361,7 @@ function TDebuger.GetThreadInfoIndex(const ThreadId: TThreadId): Integer;
 var
   ThInfo: PThreadAdvInfo;
 begin
-  FThreadAdvInfoList.Lock;
+  FThreadAdvInfoList.BeginRead;
   try
     for Result := FThreadAdvInfoList.Count - 1 downto 0 do
     begin
@@ -1358,7 +1372,7 @@ begin
         Exit;
     end;
   finally
-    FThreadAdvInfoList.UnLock;
+    FThreadAdvInfoList.EndRead;
   end;
 
   Result := -1;
@@ -1383,12 +1397,12 @@ end;
 function TDebuger.GetThreadDataByIdx(const Idx: Cardinal): PThreadData;
 begin
   Result := Nil;
-  FThreadList.Lock;
+  FThreadList.BeginRead;
   try
     if Idx < FThreadList.Count then
       Result := FThreadList[Idx];
   finally
-    FThreadList.UnLock;
+    FThreadList.EndRead;
   end;
 end;
 
@@ -1813,8 +1827,7 @@ begin
         ParentTrackFuncInfo := nil;
 
       // Создание новой записи для Track Stack
-      TrackStackPoint := GetMemory(SizeOf(TTrackStackPoint));
-      ZeroMemory(TrackStackPoint, SizeOf(TTrackStackPoint));
+      TrackStackPoint := AllocMem(SizeOf(TTrackStackPoint));
 
       // Добавляем в Track Stack
       ThData^.DbgTrackStack.Push(TrackStackPoint);
@@ -1896,11 +1909,11 @@ begin
         // Увеличиваем счетчик родителя
         // Thread
         if TrackStackPoint^.TrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-          Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
+          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
 
         // Proc
         if TrackStackPoint^.ProcTrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-          Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
+          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
 
         // Увеличиваем свой счетчик у родителя
         // Thread
@@ -1908,7 +1921,7 @@ begin
         begin
           FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
           if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-            Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
+            Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
         end;
 
         // Proc
@@ -1916,7 +1929,7 @@ begin
         begin
           FuncAddress := TFuncInfo(TrackStackPoint^.ProcTrackFuncInfo.FuncInfo).Address;
           if TrackStackPoint^.ProcParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-            Inc(CallFuncInfo^.Ellapsed, TrackStackPoint^.Ellapsed);
+            Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
         end;
 
         // Если это вершина стека - выходим
@@ -1989,7 +2002,7 @@ begin
   if AddProcessPointInfo(ptPerfomance) then
   begin
     // Если процесс активен, то добавляем инфу про активные потоки
-    FThreadList.Lock;
+    FThreadList.BeginRead;
     try
       for I := 0 to FThreadList.Count - 1 do
       begin
@@ -1998,7 +2011,7 @@ begin
           AddThreadPointInfo(ThData, ptPerfomance);
       end;
     finally
-      FThreadList.UnLock;
+      FThreadList.EndRead;
     end;
   end;
 end;
@@ -2101,7 +2114,7 @@ procedure TDebuger.RemoveThread(const ThreadID: TThreadId);
 var
   ThData: PThreadData;
 begin
-  FThreadList.Lock;
+  FThreadList.BeginWrite;
   try
     ThData := GetThreadData(ThreadID);
     if ThData <> nil then
@@ -2120,7 +2133,7 @@ begin
       UpdateMemoryInfoObjectTypes;
     end;
   finally
-    FThreadList.UnLock;
+    FThreadList.EndWrite;
   end;
 end;
 
@@ -2211,8 +2224,9 @@ begin
             end;
 
             // Добавляем инфу про новый объект
-            NewMemInfo := GetMemory(SizeOf(RGetMemInfo));
+            NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
             NewMemInfo^.PerfIdx := CurPerfIdx;
+            NewMemInfo^.ObjAddr := DbgMemInfo^.Ptr;
             NewMemInfo^.Size := DbgMemInfo^.Size;
             NewMemInfo^.Stack := DbgMemInfo^.Stack;
             NewMemInfo^.ObjectType := ''; // На этот момент тип ещё может быть неопределен
@@ -2302,10 +2316,8 @@ var
   ExceptionCode: DWORD;
   CallNextLoopIteration: Boolean;
 begin
-  DebugEvent := GetMemory(SizeOf(TDebugEvent));
+  DebugEvent := AllocMem(SizeOf(TDebugEvent));
   try
-    ZeroMemory(DebugEvent, SizeOf(TDebugEvent));
-
     repeat
       ContinueStatus := DBG_CONTINUE;
 
@@ -2877,9 +2889,8 @@ begin
   if ThData = nil then
     Exit;
 
-  GetMem(Context, SizeOf(TContext));
+  Context := AllocMem(SizeOf(TContext));
   try
-    ZeroMemory(@Context, SizeOf(TContext));
     Context.ContextFlags := CONTEXT_DEBUG_REGISTERS;
 
     Breakpoint := ThData^.Breakpoint;
@@ -2928,7 +2939,7 @@ begin
       if GetMemInfo.Count > 0 then
       begin
         for GetMemInfoItem in GetMemInfo do
-          GetMemInfoItem.Value^.ObjectType := GetMemInfoItem.Value^.GetObjectType(GetMemInfoItem.Key);
+          GetMemInfoItem.Value^.CheckObjectType;
       end;
 
       Inc(Idx);

@@ -259,7 +259,7 @@ Begin
     // Allocate memory
     ValueToWrite := AnsiString(Value);
     Len := (Length(ValueToWrite) + 1) + StrRectSize;
-    Param.Value := FDebuger.AllocMem(Len);
+    Param.Value := FDebuger.ProcAllocMem(Len);
 
     PRefCount := PByte(ValueToWrite);
     If PRefCount <> Nil Then
@@ -282,7 +282,7 @@ Var
     ValueToWrite : ShortString;
 Begin
     Len := SizeOf(ShortString);
-    Param.Value := FDebuger.AllocMem(Len);
+    Param.Value := FDebuger.ProcAllocMem(Len);
     ValueToWrite := ShortString(AnsiString(Value));
     FDebuger.WriteData(@ValueToWrite, Param.Value, Len);
 End;
@@ -300,7 +300,7 @@ Begin
     // Allocate memory
     ValueToWrite := Value;
     Len := (Length(ValueToWrite) + 1) * SizeOf(WideChar) + StrRectSize;
-    Param.Value := FDebuger.AllocMem(Len);
+    Param.Value := FDebuger.ProcAllocMem(Len);
 
     Data := PByte(ValueToWrite);
     If Data <> Nil Then
@@ -316,12 +316,12 @@ End;
 {..............................................................................}
 Procedure TEvaluator.AllocateExceptionStuff;
 Begin
-    FFailedAddr := FDebuger.AllocMem(SizeOf(Boolean));
+    FFailedAddr := FDebuger.ProcAllocMem(SizeOf(Boolean));
 
-    FExceptionClass := FDebuger.AllocMem(SizeOf(Pointer));
+    FExceptionClass := FDebuger.ProcAllocMem(SizeOf(Pointer));
     ZeroString(FDebuger, FExceptionClass);
 
-    FExceptionMessage := FDebuger.AllocMem(SizeOf(Pointer));
+    FExceptionMessage := FDebuger.ProcAllocMem(SizeOf(Pointer));
     ZeroString(FDebuger, FExceptionMessage);
 End;
 {..............................................................................}
@@ -450,7 +450,7 @@ Begin
         //TODO: Add check if this is procedure
     End;
 
-    Result := FDebuger.AllocMem(Size);
+    Result := FDebuger.ProcAllocMem(Size);
     InitResultMemory(TypeInfo, Result);
 End;
 {..............................................................................}
@@ -971,7 +971,7 @@ begin
     Inherited Create;
 
     FDebuger := Debuger;
-    FMemory := Debuger.AllocMem(cDebuggeeMemorySize);
+    FMemory := Debuger.ProcAllocMem(cDebuggeeMemorySize);
     FCurrentData := FMemory;
     FDataLeft := cDebuggeeMemorySize;
 end;
@@ -980,7 +980,7 @@ destructor TDebugerMemory.Destroy;
 begin
     If FMemory <> Nil Then
     Begin
-       FDebuger.FreeMem(FMemory);
+       FDebuger.ProcFreeMem(FMemory);
        FMemory := Nil;
     End;
 
