@@ -16,6 +16,7 @@ Type
     FImage: TJclPeBorTD32Image;
     FDelphiVersion: TDelphiVersion;
     FSystemUnits: TStringList;
+    FAddressInfoList: TAddressInfoList;
 
     Function ImageBase: Cardinal;
     Function ImageNames(const Index: TNameId): AnsiString;
@@ -155,6 +156,8 @@ Begin
   FImage := Nil;
   FDelphiVersion := dvAuto;
   FSystemUnits := TStringList.Create;
+  FAddressInfoList := TAddressInfoList.Create(16 * 1024);
+
   FillSystemUnits;
 End;
 
@@ -181,6 +184,7 @@ Destructor TDelphiDebugInfo.Destroy;
 Begin
   FreeAndNil(FImage);
   FreeAndNil(FSystemUnits);
+  FreeAndNil(FAddressInfoList);
 
   Inherited;
 End;
@@ -1366,6 +1370,10 @@ Begin
   if Assigned(FImage) then
     FreeAndNil(FImage);
 
+  FDelphiVersion := dvAuto;
+  FSystemUnits.Clear;
+  FAddressInfoList.Clear;
+
   Inherited;
 End;
 { ............................................................................... }
@@ -1493,28 +1501,59 @@ End;
 { ............................................................................... }
 Function TDelphiDebugInfo.GetLineInfo(const Addr: TPointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
   GetPrevLine: Boolean): TFindResult;
+var
+  AddressInfo: PAddressInfo;
 Begin
   FuncInfo := Nil;
   Result := slNotFound;
 
-  UnitInfo := FindUnitByAddr(Addr);
-  If UnitInfo <> Nil Then
-  Begin
-    FuncInfo := FindFuncByAddr(UnitInfo, Addr);
-    If FuncInfo <> Nil Then
-    Begin
-      LineInfo := FindLineByAddr(FuncInfo, Addr, GetPrevLine);
-      If LineInfo = Nil Then
-        Result := slFoundWithoutLine
-      Else
+  FAddressInfoList.Lock.BeginRead;
+  try
+    if FAddressInfoList.TryGetValue(Addr, AddressInfo) then
+    begin
+      UnitInfo := AddressInfo.UnitInfo;
+      FuncInfo := AddressInfo.FuncInfo;
+      LineInfo := AddressInfo.LineInfo;
+      Result := AddressInfo.FindResult;
+    end
+    else
+    begin
+      UnitInfo := FindUnitByAddr(Addr);
+      If UnitInfo <> Nil Then
       Begin
-        If LineInfo.Address = Addr Then
-          Result := slFoundExact
-        Else
-          Result := slFoundNotExact;
+        FuncInfo := FindFuncByAddr(UnitInfo, Addr);
+        If FuncInfo <> Nil Then
+        Begin
+          LineInfo := FindLineByAddr(FuncInfo, Addr, GetPrevLine);
+          If LineInfo = Nil Then
+            Result := slFoundWithoutLine
+          Else
+          Begin
+            If LineInfo.Address = Addr Then
+              Result := slFoundExact
+            Else
+              Result := slFoundNotExact;
+          End;
+        End;
       End;
-    End;
-  End;
+
+      AddressInfo := AllocMem(SizeOf(RAddressInfo));
+      AddressInfo.Addr := Addr;
+      AddressInfo.UnitInfo := UnitInfo;
+      AddressInfo.FuncInfo := FuncInfo;
+      AddressInfo.LineInfo := LineInfo;
+      AddressInfo.FindResult := Result;
+
+      FAddressInfoList.Lock.BeginWrite;
+      try
+        FAddressInfoList.AddOrSetValue(Addr, AddressInfo);
+      finally
+        FAddressInfoList.Lock.EndWrite;
+      end;
+    end;
+  finally
+    FAddressInfoList.Lock.EndRead;
+  end;
 End;
 { ............................................................................... }
 

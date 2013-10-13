@@ -230,16 +230,18 @@ type
     tsMemInfoTreeView: TTabSheet;
     pMemInfoTreeLeft: TPanel;
     vstMemInfoFuncTree: TVirtualStringTree;
-    spl1: TSplitter;
-    vstMemInfoObjects: TVirtualStringTree;
     pcMemInfoFuncInfo: TPageControl;
     tsMemInfoFuncLinks: TTabSheet;
-    Panel1: TPanel;
-    Splitter1: TSplitter;
+    pMemInfoFuncLinks: TPanel;
+    spl1: TSplitter;
     vstMemInfoFuncParents: TVirtualStringTree;
     vstMemInfoFuncChilds: TVirtualStringTree;
     tsMemInfoFuncSrc: TTabSheet;
     synmMemInfoFuncSrc: TSynMemo;
+    spl2: TSplitter;
+    pMemInfoButtom: TPanel;
+    vstMemInfoObjects: TVirtualStringTree;
+    vstMemInfoObjStack: TVirtualStringTree;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -272,9 +274,12 @@ type
     procedure vstMemInfoFuncTreeFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
     procedure vstMemInfoFuncParentsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstMemInfoFuncParentsDblClick(Sender: TObject);
 
     procedure vstMemInfoFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
+    procedure vstMemInfoObjectsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstMemInfoObjectsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
     procedure vstMemStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstMemStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
@@ -367,6 +372,9 @@ type
     procedure acFuncExecute(Sender: TObject);
     procedure acMemInfoRefreshExecute(Sender: TObject);
     procedure acMemInfoHistoryExecute(Sender: TObject);
+    procedure vstMemInfoFuncChildsDblClick(Sender: TObject);
+    procedure pcMemInfoChange(Sender: TObject);
+    procedure pMemInfoFuncLinksResize(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -390,6 +398,7 @@ type
     procedure ClearDbgTrees;
     procedure ClearDbgInfoTrees;
     procedure ClearTrackTrees;
+    procedure ClearMemInfoTrees;
 
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
@@ -415,6 +424,8 @@ type
     procedure LoadMemInfoThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
     procedure LoadMemInfoParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
     procedure LoadMemInfoChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
+    procedure LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfo; SyncNode: PVirtualNode);
+    procedure LoadMemInfoObjectStack(Tree: TBaseVirtualTree; MemInfo: PGetMemInfo; SyncNode: PVirtualNode);
 
     procedure AddTrackHistory(TrackFuncInfo: TTrackFuncInfo);
     procedure UpdateTrackHistoryList;
@@ -1117,15 +1128,28 @@ begin
   vstThreads.Clear;
   vdtTimeLine.Clear;
 
-  vstMemInfoThreads.Clear;
-  vstMemList.Clear;
-  vstMemStack.Clear;
-  synmMemInfoSource.Clear;
+  ClearMemInfoTrees;
 
   vstExceptionThreads.Clear;
   vstExceptionList.Clear;
   vstExceptionCallStack.Clear;
   synmExceptInfoSource.Clear;
+end;
+
+procedure TMainForm.ClearMemInfoTrees;
+begin
+  vstMemInfoThreads.Clear;
+
+  vstMemList.Clear;
+  vstMemStack.Clear;
+  synmMemInfoSource.Clear;
+
+  vstMemInfoFuncTree.Clear;
+  vstMemInfoObjects.Clear;
+  vstMemInfoObjStack.Clear;
+  vstMemInfoFuncParents.Clear;
+  vstMemInfoFuncChilds.Clear;
+  synmMemInfoFuncSrc.Clear;
 end;
 
 procedure TMainForm.ClearProject;
@@ -1661,6 +1685,16 @@ begin
   UpdateTrees;
 end;
 
+procedure TMainForm.pcMemInfoChange(Sender: TObject);
+begin
+  acMemInfoRefresh.Execute;
+end;
+
+procedure TMainForm.pMemInfoFuncLinksResize(Sender: TObject);
+begin
+  vstMemInfoFuncParents.Height := pMemInfoFuncLinks.ClientHeight div 2;
+end;
+
 procedure TMainForm.LoadRecentProjects;
 var
   RL: TStringList;
@@ -1755,6 +1789,65 @@ begin
   end;
 end;
 
+procedure TMainForm.LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfo; SyncNode: PVirtualNode);
+var
+  MItem: TGetMemInfoItem;
+  MemNode: PVirtualNode;
+  Data: PLinkData;
+begin
+  Tree.BeginUpdate;
+  try
+    if MemInfo <> Nil then
+    begin
+        Tree.Clear;
+
+        MemInfo.Lock.BeginRead;
+        try
+          for MItem in MemInfo do
+          begin
+            MemNode := Tree.AddChild(nil);
+            Data := Tree.GetNodeData(MemNode);
+            Data^.SyncNode := SyncNode;
+            Data^.MemPtr := MItem.Key;
+            Data^.LinkType := ltMemInfo;
+          end;
+        finally
+          MemInfo.Lock.EndRead;
+        end;
+    end;
+  finally
+    Tree.EndUpdate;
+  end;
+end;
+
+procedure TMainForm.LoadMemInfoObjectStack(Tree: TBaseVirtualTree; MemInfo: PGetMemInfo; SyncNode: PVirtualNode);
+var
+  Idx: Integer;
+  StackNode: PVirtualNode;
+  StackData: PLinkData;
+  Ptr: Pointer;
+begin
+  Tree.BeginUpdate;
+  try
+    Tree.Clear;
+
+    for Idx := 0 to High(MemInfo.Stack) do
+    begin
+      Ptr := MemInfo.Stack[Idx];
+      if Ptr = nil then Break;
+
+      StackNode := Tree.AddChild(nil);
+      StackData := Tree.GetNodeData(StackNode);
+
+      StackData^.MemStackPtr := Ptr;
+      StackData^.SyncNode := SyncNode;
+      StackData^.LinkType := ltMemStack;
+    end;
+  finally
+    Tree.EndUpdate;
+  end;
+end;
+
 procedure TMainForm.LoadMemInfoParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
 var
   Data: PLinkData;
@@ -1810,60 +1903,73 @@ end;
 
 procedure TMainForm.LoadMemInfoThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
 var
-  Data: PLinkData;
-
-  TrackFuncInfoPair: TTrackFuncInfoPair;
-  TrackUnitInfoPair: TTrackUnitInfoPair;
-
-  UnitInfo: TUnitInfo;
-
-  BaseNode: PVirtualNode;
-  UnitNode: PVirtualNode;
-  Node: PVirtualNode;
+  Th: TThread;
 begin
   vstMemInfoFuncTree.Clear;
   vstMemInfoFuncParents.Clear;
   vstMemInfoFuncChilds.Clear;
 
-  ThData^.UpdateGetMemUnitList;
-
-  vstMemInfoFuncTree.BeginUpdate;
-  try
-    BaseNode := vstMemInfoFuncTree.AddChild(nil);
-    Data := vstMemInfoFuncTree.GetNodeData(BaseNode);
-    Data^.ThreadData := ThData;
-    Data^.SyncNode := ThreadNode;
-    Data^.LinkType := ltThread;
-
-    for TrackUnitInfoPair in ThData^.DbgGetMemUnitList do
+  Th := TThread.CreateAnonymousThread(
+    procedure
     begin
-      UnitInfo := TUnitInfo(TrackUnitInfoPair.Value.UnitInfo);
-      if UnitInfo = nil then Continue;
+      ThData^.UpdateGetMemUnitList;
 
-      UnitNode := vstMemInfoFuncTree.AddChild(BaseNode);
-      Data := vstMemInfoFuncTree.GetNodeData(UnitNode);
+      TThread.Synchronize(nil,
+        procedure
+        var
+          Data: PLinkData;
 
-      Data^.SyncNode := ThreadNode;
-      Data^.TrackUnitInfo := TrackUnitInfoPair.Value;
-      Data^.LinkType := ltTrackUnitInfo;
+          TrackFuncInfoPair: TTrackFuncInfoPair;
+          TrackUnitInfoPair: TTrackUnitInfoPair;
 
-      for TrackFuncInfoPair in TrackUnitInfoPair.Value.FuncInfoList do
-      begin
-        Node := vstMemInfoFuncTree.AddChild(UnitNode);
-        Data := vstMemInfoFuncTree.GetNodeData(Node);
+          UnitInfo: TUnitInfo;
 
-        Data^.SyncNode := ThreadNode;
-        Data^.TrackFuncInfo := TrackFuncInfoPair.Value;
-        Data^.LinkType := ltTrackFuncInfo;
-      end;
+          BaseNode: PVirtualNode;
+          UnitNode: PVirtualNode;
+          Node: PVirtualNode;
+        begin
+          vstMemInfoFuncTree.BeginUpdate;
+          try
+            BaseNode := vstMemInfoFuncTree.AddChild(nil);
+            Data := vstMemInfoFuncTree.GetNodeData(BaseNode);
+            Data^.ThreadData := ThData;
+            Data^.SyncNode := ThreadNode;
+            Data^.LinkType := ltThread;
 
-      vstMemInfoFuncTree.Expanded[UnitNode] := True;
-    end;
+            for TrackUnitInfoPair in ThData^.DbgGetMemUnitList do
+            begin
+              UnitInfo := TUnitInfo(TrackUnitInfoPair.Value.UnitInfo);
+              if UnitInfo = nil then Continue;
 
-    vstMemInfoFuncTree.Expanded[BaseNode] := True;
-  finally
-    vstMemInfoFuncTree.EndUpdate;
-  end;
+              UnitNode := vstMemInfoFuncTree.AddChild(BaseNode);
+              Data := vstMemInfoFuncTree.GetNodeData(UnitNode);
+
+              Data^.SyncNode := ThreadNode;
+              Data^.TrackUnitInfo := TrackUnitInfoPair.Value;
+              Data^.LinkType := ltTrackUnitInfo;
+
+              for TrackFuncInfoPair in TrackUnitInfoPair.Value.FuncInfoList do
+              begin
+                Node := vstMemInfoFuncTree.AddChild(UnitNode);
+                Data := vstMemInfoFuncTree.GetNodeData(Node);
+
+                Data^.SyncNode := ThreadNode;
+                Data^.TrackFuncInfo := TrackFuncInfoPair.Value;
+                Data^.LinkType := ltTrackFuncInfo;
+              end;
+
+              vstMemInfoFuncTree.Expanded[UnitNode] := True;
+            end;
+
+            vstMemInfoFuncTree.Expanded[BaseNode] := True;
+          finally
+            vstMemInfoFuncTree.EndUpdate;
+          end;
+        end
+      );
+    end
+  );
+  Th.Suspended := False;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -3257,6 +3363,40 @@ begin
   vstLog.Header.Columns[1].Width := vstLog.ClientWidth - vstLog.Header.Columns[0].Width - 1;
 end;
 
+procedure TMainForm.vstMemInfoFuncChildsDblClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  FuncNode: PVirtualNode;
+  LineNo: Cardinal;
+begin
+  Node := vstMemInfoFuncChilds.FocusedNode;
+  if Assigned(Node) then
+  begin
+    Data := vstMemInfoFuncChilds.GetNodeData(Node);
+    if Data^.LinkType = ltTrackCallFuncInfo then
+    begin
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      if Assigned(FuncInfo) then
+      begin
+        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+
+        FuncNode := FindTrackFuncNode(vstMemInfoFuncTree, FuncInfo);
+        if Assigned(FuncNode) then
+        begin
+          vstMemInfoFuncTree.ClearSelection;
+          vstMemInfoFuncTree.FocusedNode := FuncNode;
+          vstMemInfoFuncTree.Selected[FuncNode] := True;
+
+          if LineNo <> 0 then
+            LoadFunctionSource(synmMemInfoFuncSrc, FuncInfo, LineNo);
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TMainForm.vstMemInfoFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
 var
@@ -3280,7 +3420,7 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CurCount);
-          //3: CellText := ;
+          3: CellText := IntToStr(TrackFuncInfo.Size);
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3290,9 +3430,43 @@ begin
           0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
           2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
-          //3: CellText := ;
+          3: CellText := IntToStr(TrackCallFuncInfo^.Size);
         end;
       end;
+  end;
+end;
+
+procedure TMainForm.vstMemInfoFuncParentsDblClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  FuncNode: PVirtualNode;
+  LineNo: Cardinal;
+begin
+  Node := vstMemInfoFuncParents.FocusedNode;
+  if Assigned(Node) then
+  begin
+    Data := vstMemInfoFuncParents.GetNodeData(Node);
+    if Data^.LinkType = ltTrackCallFuncInfo then
+    begin
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      if Assigned(FuncInfo) then
+      begin
+        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+
+        FuncNode := FindTrackFuncNode(vstMemInfoFuncTree, FuncInfo);
+        if Assigned(FuncNode) then
+        begin
+          vstMemInfoFuncTree.ClearSelection;
+          vstMemInfoFuncTree.FocusedNode := FuncNode;
+          vstMemInfoFuncTree.Selected[FuncNode] := True;
+
+          if LineNo <> 0 then
+            LoadFunctionSource(synmMemInfoFuncSrc, FuncInfo, LineNo);
+        end;
+      end;
+    end;
   end;
 end;
 
@@ -3319,7 +3493,7 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CurCount);
-          //3: CellText := ;
+          3: CellText := IntToStr(TrackFuncInfo.Size);
         end;
       end;
     ltTrackCallFuncInfo:
@@ -3327,9 +3501,10 @@ begin
         TrackCallFuncInfo := Data^.TrackCallFuncInfo;
         case Column of
           0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
-          1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
+          1: if TrackCallFuncInfo^.LineNo > 0 then
+            CellText := IntToStr(TrackCallFuncInfo^.LineNo);
           2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
-          //3: CellText := ;
+          3: CellText := IntToStr(TrackCallFuncInfo^.Size);
         end;
       end;
   end;
@@ -3343,6 +3518,8 @@ begin
   case Data^.LinkType of
     ltTrackFuncInfo:
       begin
+        vstMemInfoObjStack.Clear;
+        LoadMemInfoObjects(vstMemInfoObjects, Data^.TrackFuncInfo.GetMemList, Node);
         LoadMemInfoParentFunctions(Data^.TrackFuncInfo, Node);
         LoadMemInfoChildFunctions(Data^.TrackFuncInfo, Node);
 
@@ -3350,6 +3527,8 @@ begin
       end;
   else
     begin
+      vstMemInfoObjects.Clear;
+      vstMemInfoObjStack.Clear;
       vstMemInfoFuncParents.Clear;
       vstMemInfoFuncChilds.Clear;
       synmMemInfoFuncSrc.Clear;
@@ -3361,7 +3540,6 @@ procedure TMainForm.vstMemInfoFuncTreeGetText(Sender: TBaseVirtualTree; Node: PV
   var CellText: string);
 var
   Data: PLinkData;
-  SyncData: PLinkData;
   ThData: PThreadData;
   ProcData: PProcessData;
   TrackFuncInfo: TTrackFuncInfo;
@@ -3394,22 +3572,7 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackFuncInfo.CurCount);
-          2:
-            begin
-              SyncData := vstMemInfoFuncTree.GetNodeData(Data^.SyncNode);
-              case SyncData^.LinkType of
-                ltThread:
-                  begin
-                    ThData := SyncData^.ThreadData;
-                    //CellText := ;
-                  end;
-                ltProcess:
-                  begin
-                    ProcData := SyncData^.ProcessData;
-                    //CellText := ;
-                  end;
-              end;
-            end;
+          2: CellText := IntToStr(TrackFuncInfo.Size);
         end;
       end;
     ltTrackUnitInfo:
@@ -3417,7 +3580,134 @@ begin
         TrackUnitInfo := Data^.TrackUnitInfo;
         case Column of
           0: CellText := TUnitInfo(TrackUnitInfo.UnitInfo).ShortName;
-          1: CellText := IntToStr(TrackUnitInfo.CurCount);
+          //1: CellText := IntToStr(TrackUnitInfo.CurCount);
+        end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstMemInfoObjectsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+
+  FuncNode: PVirtualNode;
+  FuncLinkData: PLinkData;
+
+  ThNode: PVirtualNode;
+  ThLinkData: PLinkData;
+
+  ThData: PThreadData;
+  ProcData: PProcessData;
+  MemInfo: TGetMemInfo;
+  GetMemInfo: PGetMemInfo;
+begin
+  vstMemInfoObjStack.Clear;
+
+  Data := vstMemInfoObjects.GetNodeData(Node);
+
+  FuncNode := Data^.SyncNode;
+  if FuncNode = Nil then Exit;
+
+  FuncLinkData := vstMemInfoFuncTree.GetNodeData(FuncNode);
+
+  ThNode := FuncLinkData^.SyncNode;
+  if ThNode = Nil then Exit;
+
+  ThLinkData := vstMemInfoThreads.GetNodeData(ThNode);
+  if ThLinkData = Nil then Exit;
+
+  MemInfo := Nil;
+  case ThLinkData^.LinkType of
+    ltProcess:
+    begin
+      ProcData := ThLinkData^.ProcessData;
+      MemInfo := ProcData^.DbgGetMemInfo;
+    end;
+    ltThread:
+    begin
+      ThData := ThLinkData^.ThreadData;
+      MemInfo := ThData^.DbgGetMemInfo;
+    end;
+  end;
+
+  if (MemInfo <> Nil) then
+  begin
+    MemInfo.Lock.BeginRead;
+    try
+      if MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+        LoadMemInfoObjectStack(vstMemInfoObjStack, GetMemInfo, Node);
+    finally
+      MemInfo.Lock.EndRead;
+    end;
+  end;
+end;
+
+procedure TMainForm.vstMemInfoObjectsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+var
+  Data: PLinkData;
+
+  FuncNode: PVirtualNode;
+  FuncLinkData: PLinkData;
+
+  ThNode: PVirtualNode;
+  ThLinkData: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+
+  MemInfo: TGetMemInfo;
+  GetMemInfo: PGetMemInfo;
+begin
+  MemInfo := Nil;
+  CellText := '';
+
+  Data := vstMemInfoObjects.GetNodeData(Node);
+
+  FuncNode := Data^.SyncNode;
+  if FuncNode = Nil then Exit;
+
+  FuncLinkData := vstMemInfoFuncTree.GetNodeData(FuncNode);
+
+  //if FuncLinkData^.LinkType <> ltTrackFuncInfo then Exit;
+
+  ThNode := FuncLinkData^.SyncNode;
+  if ThNode = Nil then Exit;
+
+  ThLinkData := vstMemInfoThreads.GetNodeData(ThNode);
+  if ThLinkData = Nil then Exit;
+
+  case ThLinkData^.LinkType of
+    ltProcess:
+    begin
+      ProcData := ThLinkData^.ProcessData;
+      MemInfo := ProcData^.DbgGetMemInfo;
+    end;
+    ltThread:
+    begin
+      ThData := ThLinkData^.ThreadData;
+      MemInfo := ThData^.DbgGetMemInfo;
+    end;
+  end;
+
+  case Column of
+    0:
+      begin
+        if (MemInfo <> Nil) then
+        begin
+          MemInfo.Lock.BeginRead;
+          if MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+            CellText := GetMemInfo.GetObjectType;
+          MemInfo.Lock.EndRead;
+        end;
+      end;
+    1: CellText := Format('%p', [Data^.MemPtr]);
+    2:
+      begin
+        if (MemInfo <> Nil) then
+        begin
+          MemInfo.Lock.BeginRead;
+          if MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+            CellText := IntToStr(GetMemInfo.Size);
+          MemInfo.Lock.EndRead;
         end;
       end;
   end;
@@ -3429,51 +3719,43 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfo;
-  MItem: TGetMemInfoItem;
-  MemNode: PVirtualNode;
 begin
-  MemInfo := Nil;
-  ThData := Nil;
-  ProcData := Nil;
+  vstMemList.Clear;
+  vstMemStack.Clear;
+  synmMemInfoSource.Clear;
 
-  Data := Sender.GetNodeData(Node);
+  vstMemInfoFuncTree.Clear;
+  vstMemInfoObjects.Clear;
+  vstMemInfoObjStack.Clear;
+  vstMemInfoFuncParents.Clear;
+  vstMemInfoFuncChilds.Clear;
+  synmMemInfoFuncSrc.Clear;
+
+  if Node = nil then Exit;
+
+  Data := vstMemInfoThreads.GetNodeData(Node);
   case Data^.LinkType of
     ltProcess:
     begin
       ProcData := Data^.ProcessData;
       MemInfo := ProcData^.DbgGetMemInfo;
+
+      case pcMemInfo.ActivePageIndex of
+        0: LoadMemInfoObjects(vstMemList, MemInfo, Node);
+        //1: LoadMemInfoThreadFunctions(ThData, Node);
+      end;
     end;
     ltThread:
     begin
       ThData := Data^.ThreadData;
       MemInfo := ThData^.DbgGetMemInfo;
+
+      case pcMemInfo.ActivePageIndex of
+        0: LoadMemInfoObjects(vstMemList, MemInfo, Node);
+        1: LoadMemInfoThreadFunctions(ThData, Node);
+      end;
     end;
   end;
-
-  vstMemStack.Clear;
-  synmMemInfoSource.Clear;
-
-  vstMemList.BeginUpdate;
-  try
-    if MemInfo <> Nil then
-    begin
-        vstMemList.Clear;
-
-        for MItem in MemInfo do
-        begin
-          MemNode := vstMemList.AddChild(nil);
-          Data := vstMemList.GetNodeData(MemNode);
-          Data^.SyncNode := Node;
-          Data^.MemPtr := MItem.Key;
-          Data^.LinkType := ltMemInfo;
-        end;
-    end;
-  finally
-    vstMemList.EndUpdate;
-  end;
-
-  if ThData <> Nil then
-    LoadMemInfoThreadFunctions(ThData, Node);
 end;
 
 procedure TMainForm.vstMemInfoThreadsGetText(Sender: TBaseVirtualTree;
@@ -3527,11 +3809,6 @@ var
   ProcData: PProcessData;
   MemInfo: TGetMemInfo;
   GetMemInfo: PGetMemInfo;
-
-  StackNode: PVirtualNode;
-  StackData: PLinkData;
-  Idx: Integer;
-  Ptr: Pointer;
 begin
   vstMemStack.Clear;
   synmMemInfoSource.Clear;
@@ -3558,22 +3835,14 @@ begin
     end;
   end;
 
-  if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+  if (MemInfo <> Nil) then
   begin
-    vstMemStack.BeginUpdate;
+    MemInfo.Lock.BeginRead;
     try
-      for Idx := 0 to High(GetMemInfo.Stack) do
-      begin
-        Ptr := GetMemInfo.Stack[Idx];
-        if Ptr = nil then Break;
-
-        StackNode := vstMemStack.AddChild(nil);
-        StackData := vstMemStack.GetNodeData(StackNode);
-        StackData^.MemStackPtr := Ptr;
-        StackData^.LinkType := ltMemStack;
-      end;
+      if MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+        LoadMemInfoObjectStack(vstMemStack, GetMemInfo, Node);
     finally
-      vstMemStack.EndUpdate;
+      MemInfo.Lock.EndRead;
     end;
   end;
 end;
@@ -3615,14 +3884,24 @@ begin
   case Column of
     0:
       begin
-        if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
-          CellText := GetMemInfo.GetObjectType(Data^.MemPtr);
+        if (MemInfo <> Nil) then
+        begin
+          MemInfo.Lock.BeginRead;
+          if MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+            CellText := GetMemInfo.GetObjectType;
+          MemInfo.Lock.EndRead;
+        end;
       end;
     1: CellText := Format('%p', [Data^.MemPtr]);
     2:
       begin
-        if (MemInfo <> Nil) and MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
-          CellText := IntToStr(GetMemInfo.Size);
+        if (MemInfo <> Nil) then
+        begin
+          MemInfo.Lock.BeginRead;
+          if MemInfo.TryGetValue(Data^.MemPtr, GetMemInfo) then
+            CellText := IntToStr(GetMemInfo.Size);
+          MemInfo.Lock.EndRead;
+        end;
       end;
   end;
 end;
@@ -3660,7 +3939,7 @@ var
 begin
   CellText := ' ';
 
-  Data := vstMemStack.GetNodeData(Node);
+  Data := Sender.GetNodeData(Node);
   if Data^.LinkType = ltMemStack then
   begin
     StackEntry := TStackEntry.Create;
