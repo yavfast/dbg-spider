@@ -63,6 +63,9 @@ type
     FRip: TRipEvent;
     FEndDebug: TNotifyEvent;
 
+    FDbgLog: TDbgLogEvent;
+    FDbgLogMode: Boolean; // Дебажный режим
+
     FExceptioEvents: array [TExceptionCode] of TDefaultExceptionEvent;
     FBreakPoint: TBreakPointEvent;
     FHardwareBreakpoint: THardwareBreakpointEvent;
@@ -117,6 +120,8 @@ type
     procedure DoEndDebug;
     procedure DoDebugerFailed;
     procedure DoResumeAction(const ThreadID: TThreadId);
+
+    procedure DoDbgLog(const ThreadId: TThreadId; const LogData: String);
 
     // обработчики отладочных событий второй очереди
     procedure CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
@@ -258,6 +263,9 @@ type
     property OnUnloadDll: TUnLoadDllEvent read FUnLoadDll write FUnLoadDll;
     property OnDebugString: TDebugStringEvent read FDebugString write FDebugString;
     property OnRip: TRipEvent read FRip write FRip;
+    property OnDbgLog: TDbgLogEvent read FDbgLog write FDbgLog;
+
+    property DbgLogMode: Boolean read FDbgLogMode write FDbgLogMode;
 
     // обработчики исключений
     property OnBreakPoint: TBreakPointEvent read FBreakPoint write FBreakPoint;
@@ -817,6 +825,7 @@ begin
   FRestoredThread := 0;
   FCloseDebugProcess := True;
   FSetEntryPointBreakPoint := False;
+  FDbgLogMode := False;
 
   FThreadList := TCollectList<TThreadData>.Create;
   FThreadAdvInfoList := TCollectList<TThreadAdvInfo>.Create;
@@ -1052,6 +1061,12 @@ begin
     DoResumeAction(DebugEvent^.dwThreadId);
   end;
   //CloseHandle(DebugEvent^.LoadDll.hFile); ???
+end;
+
+procedure TDebuger.DoDbgLog(const ThreadId: TThreadId; const LogData: String);
+begin
+  if FDbgLogMode and Assigned(FDbgLog) then
+    FDbgLog(Self, ThreadId, LogData);
 end;
 
 procedure TDebuger.DoDebugerFailed;
@@ -2212,11 +2227,15 @@ begin
         case DbgMemInfo^.MemInfoType of
           miGetMem:
           begin
+            DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+
             // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
             // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
             FoundThData := ThData;
             if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
             begin
+              DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
+
               Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
               Dec(FProcessData.ProcessGetMemCount);
@@ -2243,6 +2262,8 @@ begin
           end;
           miFreeMem:
           begin
+            DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+
             FoundThData := ThData;
             if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
             begin
@@ -2257,6 +2278,8 @@ begin
             end
             else
             begin
+              DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
+
               // TODO: Double free ???
             end;
           end;
@@ -2992,7 +3015,7 @@ end;
 
 
 initialization
-  _DbgMemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
+  _DbgMemInfoList := AllocMem(SizeOf(TDbgMemInfoList));
 
 finalization
   FreeMemory(_DbgMemInfoList);

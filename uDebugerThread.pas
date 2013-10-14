@@ -25,7 +25,7 @@ type
     procedure OnUnknownException(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
     procedure OnUnknownBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
     procedure OnBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord; BreakPointIndex: Integer; var ReleaseBreakpoint: Boolean);
-
+    procedure OnDbgLog(Sender: TObject; ThreadId: TThreadId; const Data: String);
     procedure OnProgress(const Action: String; const Progress: Integer);
 
     procedure InitDebuger;
@@ -169,6 +169,7 @@ begin
   gvDebuger.OnUnknownException := OnUnknownException;
   gvDebuger.OnUnknownBreakPoint := OnUnknownBreakPoint;
   gvDebuger.OnBreakPoint := OnBreakPoint;
+  gvDebuger.OnDbgLog := OnDbgLog;
 end;
 
 procedure TDebugerThread.InitDebugInfo;
@@ -228,12 +229,27 @@ begin
   _AC.DoAction(acAddThread, [ThreadID]);
 end;
 
+procedure TDebugerThread.OnDbgLog(Sender: TObject; ThreadId: TThreadId; const Data: String);
+begin
+  _AC.Log(dltDebugOutput, Format('Debug log: [%d] %s', [ThreadId, Data]));
+end;
+
 procedure TDebugerThread.OnDebugString(Sender: TObject; ThreadId: TThreadId; Data: POutputDebugStringInfo);
+var
+  Msg: String;
 begin
   if Data^.fUnicode = 1 then
-    _AC.Log(dltDebugOutput, 'Debug String: ' + PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
+    Msg := String(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength))
   else
-    _AC.Log(dltDebugOutput, 'Debug String: ' + PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
+    Msg := String(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength));
+
+  _AC.Log(dltDebugOutput, 'Debug String: ' + Msg);
+
+  if Msg = '### DBG_MODE_ON ###' then
+    gvDebuger.DbgLogMode := True;
+
+  if Msg = '### DBG_MODE_OFF ###' then
+    gvDebuger.DbgLogMode := False;
 end;
 
 procedure TDebugerThread.OnExitProcess(Sender: TObject; ProcessId: TProcessId; Data: PExitProcessDebugInfo);
