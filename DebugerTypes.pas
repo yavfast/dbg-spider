@@ -619,7 +619,7 @@ begin
     FreeAndNil(DbgPoints);
 
   FreeAndNil(DbgGetMemInfo);
-  FreeAndNil(DbgExceptions);
+  DbgExceptions.Clear;
 
   FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackFuncList);
@@ -966,15 +966,20 @@ var
 begin
   inherited Create;
 
-  ThreadID := DebugEvent^.dwThreadId;
-  ER := @DebugEvent^.Exception.ExceptionRecord;
-  Address := gvDebugInfo.GetExceptionAddress(ER);
-  Frame := gvDebugInfo.GetExceptionFrame(ER);
-  ExceptionName := gvDebugInfo.GetExceptionName(ER);
-  Message := gvDebugInfo.GetExceptionMessage(ER, ThreadID);
-
   Stack := TObjectList.Create;
-  gvDebugInfo.GetCallStackItems(ThreadID, Address, Frame, Stack);
+
+  if Assigned(DebugEvent) then
+  begin
+    ThreadID := DebugEvent^.dwThreadId;
+
+    ER := @DebugEvent^.Exception.ExceptionRecord;
+    Address := gvDebugInfo.GetExceptionAddress(ER);
+    Frame := gvDebugInfo.GetExceptionFrame(ER);
+    ExceptionName := gvDebugInfo.GetExceptionName(ER);
+    Message := gvDebugInfo.GetExceptionMessage(ER, ThreadID);
+
+    gvDebugInfo.GetCallStackItems(ThreadID, Address, Frame, Stack);
+  end;
 end;
 
 destructor TExceptInfo.Destroy;

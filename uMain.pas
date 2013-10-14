@@ -84,8 +84,6 @@ type
     vstMemInfoThreads: TVirtualStringTree;
     tsExceptions: TTabSheet;
     vstExceptionThreads: TVirtualStringTree;
-    pnl2: TPanel;
-    vstExceptionList: TVirtualStringTree;
     amMain: TActionManager;
     rbnMain: TRibbon;
     rbpMain: TRibbonPage;
@@ -149,10 +147,6 @@ type
     splDbgInfoFuncAdv: TSplitter;
     synmDbgInfoUnitSource: TSynMemo;
     synmDbgInfoFuncAdv: TSynMemo;
-    pExceptInfoAdv: TPanel;
-    vstExceptionCallStack: TVirtualStringTree;
-    splExceptInfoAdv: TSplitter;
-    synmExceptInfoSource: TSynMemo;
     acUseShortNames: TAction;
     rbngrpDbgInfoOptions: TRibbonGroup;
     tsCodeTracking: TTabSheet;
@@ -242,6 +236,16 @@ type
     pMemInfoButtom: TPanel;
     vstMemInfoObjects: TVirtualStringTree;
     vstMemInfoObjStack: TVirtualStringTree;
+    pExceptionInfo: TPanel;
+    pnl2: TPanel;
+    vstExceptionList: TVirtualStringTree;
+    pExceptInfoAdv: TPanel;
+    splExceptInfoAdv: TSplitter;
+    vstExceptionCallStack: TVirtualStringTree;
+    synmExceptInfoSource: TSynMemo;
+    cbExceptionInfo: TCoolBar;
+    actbExceptionInfo: TActionToolBar;
+    acAddressInfo: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -375,6 +379,7 @@ type
     procedure vstMemInfoFuncChildsDblClick(Sender: TObject);
     procedure pcMemInfoChange(Sender: TObject);
     procedure pMemInfoFuncLinksResize(Sender: TObject);
+    procedure acAddressInfoExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -537,6 +542,57 @@ begin
   C2 := HSV2RGB(H, S, V - Delta);
 
   DrawVGradientRect(Canvas, Rect, C1, C2);
+end;
+
+procedure TMainForm.acAddressInfoExecute(Sender: TObject);
+var
+  AddressListStr: String;
+  AddressList: TStringList;
+  ExceptInfo: TExceptInfo;
+  I: Integer;
+  StackEntry: TStackEntry;
+  AddressStr: String;
+  Address: Integer;
+begin
+  AddressListStr := '';
+  if InputQuery('Get address info', 'Address', AddressListStr) then
+  begin
+    AddressList := TStringList.Create;
+    try
+      AddressList.DelimitedText := AddressListStr;
+      if AddressList.Count > 0 then
+      begin
+        ExceptInfo := TExceptInfo.Create(nil);
+        ExceptInfo.ExceptionName := '### DBG_ADDRESS_INFO';
+        ExceptInfo.Message := AddressListStr;
+
+        ExceptInfo.Stack.Capacity := AddressList.Count;
+        for I := 0 to AddressList.Count - 1 do
+        begin
+          AddressStr := AddressList[I];
+          if AddressStr <> '' then
+          begin
+            if AddressStr[1] <> '$' then
+              AddressStr := '$' + AddressStr;
+
+            if TryStrToInt(AddressStr, Address) then
+            begin
+              StackEntry := TStackEntry.Create;
+              StackEntry.UpdateInfo(Pointer(Address));
+
+              ExceptInfo.Stack.Add(StackEntry);
+            end;
+          end;
+        end;
+
+        gvDebuger.ProcessData^.DbgExceptions.Add(ExceptInfo);
+
+        vstExceptionThreadsFocusChanged(nil, nil, 0);
+      end;
+    finally
+      FreeAndNil(AddressList);
+    end;
+  end;
 end;
 
 procedure TMainForm.acAppOpenExecute(Sender: TObject);
@@ -3237,19 +3293,30 @@ begin
   vstExceptionCallStack.Clear;
   synmExceptInfoSource.Clear;
 
+  if gvDebuger = Nil then Exit;
+
   ExceptList := Nil;
-  Data := Sender.GetNodeData(Node);
-  case Data^.LinkType of
-    ltProcess:
-    begin
-      ProcData := Data^.ProcessData;
-      ExceptList := ProcData^.DbgExceptions;
+  if Assigned(Node) then
+  begin
+    Data := Sender.GetNodeData(Node);
+    case Data^.LinkType of
+      ltProcess:
+      begin
+        ProcData := Data^.ProcessData;
+        ExceptList := ProcData^.DbgExceptions;
+      end;
+      ltThread:
+      begin
+        ThData := Data^.ThreadData;
+        ExceptList := ThData^.DbgExceptions;
+      end;
     end;
-    ltThread:
-    begin
-      ThData := Data^.ThreadData;
-      ExceptList := ThData^.DbgExceptions;
-    end;
+  end
+  else
+  begin
+    // Для получения списка Address info
+    ProcData := gvDebuger.ProcessData;
+    ExceptList := ProcData^.DbgExceptions;
   end;
 
   vstExceptionList.BeginUpdate;
