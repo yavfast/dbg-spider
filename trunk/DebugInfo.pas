@@ -1729,7 +1729,7 @@ begin
     if BinarySearch(SearchItem, Idx) then
       Result := Items[Idx]
     else
-    if (Idx >= 0) and (Idx < Count) then
+    if (Idx > 0) and (Idx < Count) then
       Result := Items[Idx - 1];
   finally
     FreeAndNil(SearchItem);
