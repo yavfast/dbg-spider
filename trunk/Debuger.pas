@@ -824,6 +824,7 @@ begin
   FProcessData := AllocMem(SizeOf(TProcessData));
   FProcessData.State := psNone;
   FProcessData.DbgPoints := Nil;
+  FProcessData.DbgExceptions := TThreadList.Create;
 
   FPerfomanceMode := False;
   FPerfomanceCheckPtr := Nil; //Pointer($76FED315);
@@ -891,6 +892,7 @@ begin
   CloseHandle(FDbgShareMem);
   FDbgShareMem := 0;
 
+  FreeAndNil(FProcessData.DbgExceptions);
   FreeMemory(FProcessData);
   FProcessData := nil;
 
@@ -921,7 +923,7 @@ begin
   FProcessData.ProcessGetMemCount := 0;
   FProcessData.ProcessGetMemSize := 0;
 
-  FProcessData.DbgExceptions := TThreadList.Create;
+  FProcessData.DbgExceptions.Clear;
 
   FProcessData.DbgTrackEventCount := 0;
   FProcessData.DbgTrackUnitList := TTrackUnitInfoList.Create(4096);

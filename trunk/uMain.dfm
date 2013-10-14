@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsMemInfo
+    ActivePage = tsExceptions
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -1325,157 +1325,217 @@ object MainForm: TMainForm
             WideText = 'Count'
           end>
       end
-      object pnl2: TPanel
+      object pExceptionInfo: TPanel
         Left = 396
         Top = 0
         Width = 814
         Height = 517
         Align = alClient
+        BevelEdges = []
         BevelOuter = bvNone
+        Caption = 'pExceptionInfo'
+        ShowCaption = False
         TabOrder = 1
-        object vstExceptionList: TVirtualStringTree
+        ExplicitLeft = 536
+        ExplicitTop = 56
+        ExplicitWidth = 185
+        ExplicitHeight = 41
+        object pnl2: TPanel
           Left = 0
-          Top = 0
-          Width = 511
-          Height = 517
-          Align = alLeft
-          Header.AutoSizeIndex = 0
-          Header.Font.Charset = DEFAULT_CHARSET
-          Header.Font.Color = clWindowText
-          Header.Font.Height = -11
-          Header.Font.Name = 'Tahoma'
-          Header.Font.Style = []
-          Header.Options = [hoColumnResize, hoVisible]
-          Header.SortDirection = sdDescending
-          Header.Style = hsFlatButtons
-          ScrollBarOptions.AlwaysVisible = True
-          TabOrder = 0
-          TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
-          TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-          TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-          TreeOptions.SelectionOptions = [toFullRowSelect]
-          OnColumnResize = vstThreadsColumnResize
-          OnFocusChanged = vstExceptionListFocusChanged
-          OnGetText = vstExceptionListGetText
-          OnGetNodeDataSize = vstThreadsGetNodeDataSize
-          Columns = <
-            item
-              Alignment = taRightJustify
-              CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
-              Position = 0
-              Width = 70
-              WideText = 'Pointer'
-            end
-            item
-              CaptionAlignment = taCenter
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
-              Position = 1
-              Width = 120
-              WideText = 'Exception type'
-            end
-            item
-              CaptionAlignment = taCenter
-              DefaultSortDirection = sdDescending
-              Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
-              Position = 2
-              Width = 300
-              WideText = 'Message'
-            end>
-        end
-        object pExceptInfoAdv: TPanel
-          Left = 511
-          Top = 0
-          Width = 303
-          Height = 517
+          Top = 24
+          Width = 814
+          Height = 493
           Align = alClient
-          BevelEdges = []
           BevelOuter = bvNone
-          Caption = 'pExceptInfoAdv'
-          ShowCaption = False
-          TabOrder = 1
-          object splExceptInfoAdv: TSplitter
-            Left = 0
-            Top = 217
-            Width = 303
-            Height = 3
-            Cursor = crVSplit
-            Align = alTop
-          end
-          object vstExceptionCallStack: TVirtualStringTree
+          TabOrder = 0
+          ExplicitTop = 160
+          ExplicitHeight = 357
+          object vstExceptionList: TVirtualStringTree
             Left = 0
             Top = 0
-            Width = 303
-            Height = 217
-            Align = alTop
+            Width = 511
+            Height = 493
+            Align = alLeft
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
             Header.Font.Height = -11
             Header.Font.Name = 'Tahoma'
             Header.Font.Style = []
-            Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+            Header.Options = [hoColumnResize, hoVisible]
+            Header.SortDirection = sdDescending
             Header.Style = hsFlatButtons
             ScrollBarOptions.AlwaysVisible = True
             TabOrder = 0
+            TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
-            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-            OnFocusChanged = vstExceptionCallStackFocusChanged
-            OnGetText = vstExceptionCallStackGetText
+            TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+            TreeOptions.SelectionOptions = [toFullRowSelect]
+            OnColumnResize = vstThreadsColumnResize
+            OnFocusChanged = vstExceptionListFocusChanged
+            OnGetText = vstExceptionListGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            ExplicitHeight = 517
             Columns = <
               item
                 Alignment = taRightJustify
                 CaptionAlignment = taCenter
-                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                 Position = 0
                 Width = 70
-                WideText = 'Address'
+                WideText = 'Pointer'
               end
               item
                 CaptionAlignment = taCenter
-                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                 Position = 1
                 Width = 120
-                WideText = 'Unit'
+                WideText = 'Exception type'
               end
               item
-                Alignment = taRightJustify
                 CaptionAlignment = taCenter
-                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                DefaultSortDirection = sdDescending
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coSmartResize, coAllowFocus, coUseCaptionAlignment]
                 Position = 2
-                WideText = 'Line'
-              end
-              item
-                Position = 3
-                Width = 500
-                WideText = 'Call stack function'
+                Width = 300
+                WideText = 'Message'
               end>
           end
-          object synmExceptInfoSource: TSynMemo
-            Left = 0
-            Top = 220
+          object pExceptInfoAdv: TPanel
+            Left = 511
+            Top = 0
             Width = 303
-            Height = 297
+            Height = 493
             Align = alClient
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindowText
-            Font.Height = -13
-            Font.Name = 'Courier New'
-            Font.Style = []
+            BevelEdges = []
+            BevelOuter = bvNone
+            Caption = 'pExceptInfoAdv'
+            ShowCaption = False
             TabOrder = 1
-            Gutter.AutoSize = True
-            Gutter.Font.Charset = DEFAULT_CHARSET
-            Gutter.Font.Color = clWindowText
-            Gutter.Font.Height = -11
-            Gutter.Font.Name = 'Courier New'
-            Gutter.Font.Style = []
-            Gutter.ShowLineNumbers = True
-            Highlighter = dmShareData.synPas1
-            ReadOnly = True
-            RightEdge = 0
-            FontSmoothing = fsmNone
+            ExplicitHeight = 517
+            object splExceptInfoAdv: TSplitter
+              Left = 0
+              Top = 217
+              Width = 303
+              Height = 3
+              Cursor = crVSplit
+              Align = alTop
+            end
+            object vstExceptionCallStack: TVirtualStringTree
+              Left = 0
+              Top = 0
+              Width = 303
+              Height = 217
+              Align = alTop
+              Header.AutoSizeIndex = 0
+              Header.Font.Charset = DEFAULT_CHARSET
+              Header.Font.Color = clWindowText
+              Header.Font.Height = -11
+              Header.Font.Name = 'Tahoma'
+              Header.Font.Style = []
+              Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+              Header.Style = hsFlatButtons
+              ScrollBarOptions.AlwaysVisible = True
+              TabOrder = 0
+              TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+              TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnFocusChanged = vstExceptionCallStackFocusChanged
+              OnGetText = vstExceptionCallStackGetText
+              OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              Columns = <
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+                  Position = 0
+                  Width = 70
+                  WideText = 'Address'
+                end
+                item
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 1
+                  Width = 120
+                  WideText = 'Unit'
+                end
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 2
+                  WideText = 'Line'
+                end
+                item
+                  Position = 3
+                  Width = 500
+                  WideText = 'Call stack function'
+                end>
+            end
+            object synmExceptInfoSource: TSynMemo
+              Left = 0
+              Top = 220
+              Width = 303
+              Height = 273
+              Align = alClient
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -13
+              Font.Name = 'Courier New'
+              Font.Style = []
+              TabOrder = 1
+              Gutter.AutoSize = True
+              Gutter.Font.Charset = DEFAULT_CHARSET
+              Gutter.Font.Color = clWindowText
+              Gutter.Font.Height = -11
+              Gutter.Font.Name = 'Courier New'
+              Gutter.Font.Style = []
+              Gutter.ShowLineNumbers = True
+              Highlighter = dmShareData.synPas1
+              ReadOnly = True
+              RightEdge = 0
+              FontSmoothing = fsmNone
+              ExplicitHeight = 297
+            end
+          end
+        end
+        object cbExceptionInfo: TCoolBar
+          Left = 0
+          Top = 0
+          Width = 814
+          Height = 24
+          AutoSize = True
+          BandBorderStyle = bsNone
+          Bands = <
+            item
+              Control = actbExceptionInfo
+              ImageIndex = -1
+              MinHeight = 24
+              Width = 812
+            end>
+          EdgeBorders = [ebTop]
+          EdgeInner = esNone
+          EdgeOuter = esNone
+          FixedOrder = True
+          object actbExceptionInfo: TActionToolBar
+            Left = 2
+            Top = 0
+            Width = 812
+            Height = 24
+            ActionManager = amMain
+            Caption = 'actbExceptionInfo'
+            Color = clMenuBar
+            ColorMap.DisabledFontColor = 7171437
+            ColorMap.HighlightColor = 13684944
+            ColorMap.BtnSelectedFont = clBlack
+            ColorMap.UnusedColor = 13684944
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clBlack
+            Font.Height = -11
+            Font.Name = 'Tahoma'
+            Font.Style = []
+            ParentFont = False
+            Spacing = 0
           end
         end
       end
@@ -2679,6 +2739,12 @@ object MainForm: TMainForm
       ImageIndex = 15
       OnExecute = acMemInfoHistoryExecute
     end
+    object acAddressInfo: TAction
+      Category = 'ExceptInfo'
+      Caption = 'Address info'
+      ImageIndex = 5
+      OnExecute = acAddressInfoExecute
+    end
   end
   object OD: TFileOpenDialog
     FavoriteLinks = <>
@@ -3219,6 +3285,15 @@ object MainForm: TMainForm
             ImageIndex = 17
           end>
         ActionBar = actbMemInfo
+      end
+      item
+        Items = <
+          item
+            Action = acAddressInfo
+            Caption = '&Address info'
+            ImageIndex = 5
+          end>
+        ActionBar = actbExceptionInfo
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain
