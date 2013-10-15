@@ -191,6 +191,19 @@ Type
   End;
   { .............................................................................. }
 
+  TUnitSourceModuleInfo = Class(TNameInfo)
+  public
+    Lines: TLineInfoList;
+
+    Constructor Create;
+    Destructor Destroy; Override;
+
+    Procedure Clear; Virtual;
+
+    function Name: AnsiString; Override;
+    function ShortName: String; override;
+  End;
+
   { .............................................................................. }
   TDebugInfo = Class;
 
@@ -216,6 +229,8 @@ Type
     function FindFuncByNameId(const FuncNameId: Integer): TFuncInfo;
     function FindConstByName(const ConstName: AnsiString): TConstInfo;
     function FindVarByName(const VarName: AnsiString): TVarInfo;
+
+    function CheckAddress(const Addr: Pointer): Integer;
   End;
 
   ISegmentCodeInfoComparer = IComparer<TSegmentCodeInfo>;
@@ -233,6 +248,7 @@ Type
     destructor Destroy; override;
 
     procedure CheckSorted;
+    procedure UpdateSort;
 
     function FindByAddress(const Address: Pointer): TSegmentCodeInfo;
   End;
@@ -261,6 +277,7 @@ Type
   TUnitInfo = Class(TSegmentCodeInfo)
   public
     Segments: TList;
+    SourceSegments: TList;
     UsedUnits: TStringList;
     FuncsByAddr: TSegmentCodeInfoList;
 
@@ -1365,6 +1382,7 @@ end;
 procedure TUnitInfo.Clear;
 begin
   ClearList(Segments);
+  ClearList(SourceSegments);
 
   if Assigned(UsedUnits) then
     UsedUnits.Clear;
@@ -1383,6 +1401,7 @@ begin
 
   UsedUnits := TStringList.Create;
   Segments := TList.Create;
+  SourceSegments := TList.Create;
   FuncsByAddr := TSegmentCodeInfoList.Create;
 
   Lines.OwnsObjects := True;
@@ -1397,6 +1416,7 @@ begin
 
   FreeAndNil(UsedUnits);
   FreeAndNil(Segments);
+  FreeAndNil(SourceSegments);
   FreeAndNil(FuncsByAddr);
 
   Inherited;
@@ -1489,6 +1509,17 @@ begin
 end;
 
 { TSegmentCodeInfo }
+
+function TSegmentCodeInfo.CheckAddress(const Addr: Pointer): Integer;
+begin
+  if NativeUInt(Addr) < NativeUInt(Address) then
+    Result := -1
+  else
+  if NativeUInt(Addr) > (NativeUInt(Address) + NativeUInt(CodeSize)) then
+    Result := 1
+  else
+    Result := 0;
+end;
 
 procedure TSegmentCodeInfo.Clear;
 begin
@@ -1717,8 +1748,11 @@ function TSegmentCodeInfoList.FindByAddress(const Address: Pointer): TSegmentCod
 var
   SearchItem: TSegmentCodeInfo;
   Idx: Integer;
+  D: Integer;
 begin
   Result := Nil;
+
+  if Count = 0 then Exit;
 
   CheckSorted;
 
@@ -1726,32 +1760,52 @@ begin
   try
     SearchItem.Address := Address;
 
-    if BinarySearch(SearchItem, Idx) then
-      Result := Items[Idx]
-    else
-    if (Idx > 0) and (Idx < Count) then
-      Result := Items[Idx - 1];
+    BinarySearch(SearchItem, Idx); // !!! ошибка поиска Idx +- 1
+
+    if (Idx >= 0) and (Idx < Count) then
+      Result := Items[Idx];
+
+    if (Result <> Nil) then
+    begin
+      D := Result.CheckAddress(Address);
+
+      if D <> 0 then
+      begin
+        Inc(Idx, D);
+
+        if (Idx >= 0) and (Idx < Count) then
+        begin
+          Result := Items[Idx];
+
+          if Result.CheckAddress(Address) <> 0 then
+            Result := Nil;
+        end
+        else
+          Result := Nil;
+      end;
+    end;
   finally
     FreeAndNil(SearchItem);
   end;
+end;
+
+procedure TSegmentCodeInfoList.UpdateSort;
+begin
+  FSorted := False;
+  Sort;
+  FSorted := True;
 end;
 
 { TSegmentCodeInfoComparer }
 
 function TSegmentCodeInfoComparer.Compare(const Left, Right: TSegmentCodeInfo): Integer;
 var
-  L, R: NativeUInt;
+  L, R: NativeInt;
 begin
-  L := NativeUInt(Left.Address);
-  R := NativeUInt(Right.Address);
+  L := NativeInt(Left.Address);
+  R := NativeInt(Right.Address);
 
-  if L > R then
-    Result := 1
-  else
-  if L < R then
-    Result := -1
-  else
-    Result := 0;
+  Result := Integer(L - R);
 end;
 
 { TAddressInfoList }
@@ -1778,6 +1832,38 @@ begin
 
   if Action = cnRemoved then
     FreeMemory(Value);
+end;
+
+{ TUnitSourceModuleInfo }
+
+procedure TUnitSourceModuleInfo.Clear;
+begin
+  Lines.Clear;
+end;
+
+constructor TUnitSourceModuleInfo.Create;
+begin
+  inherited Create;
+
+  Lines := TLineInfoList.Create(False);
+end;
+
+destructor TUnitSourceModuleInfo.Destroy;
+begin
+  Clear;
+  FreeAndNil(Lines);
+
+  inherited;
+end;
+
+function TUnitSourceModuleInfo.Name: AnsiString;
+begin
+  Result := gvDebugInfo.GetNameById(NameId);
+end;
+
+function TUnitSourceModuleInfo.ShortName: String;
+begin
+  Result := String(Name);
 end;
 
 End.

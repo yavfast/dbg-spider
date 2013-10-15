@@ -26,7 +26,9 @@ Type
     function GetUnitFileName(const UnitName: String): String;
     procedure LoadConst(OwnerInfo: TSegmentCodeInfo; ConstSymbol: TJclTD32ConstantSymbolInfo);
     procedure LoadLines(UnitInfo: TUnitInfo; Source: TJclTD32SourceModuleInfo);
+    procedure LoadSourceLines(UnitInfo: TUnitInfo; UnitSourceModuleInfo: TUnitSourceModuleInfo; Source: TJclTD32SourceModuleInfo);
     procedure LoadSegments(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
+    procedure LoadSourceModules(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
     function LoadType(UnitInfo: TUnitInfo; const TypeIndex: Integer; out DstType: TTypeInfo): Integer;
     procedure LoadUsedUnits(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
     function RegisterIndex(const Index: Byte): Integer;
@@ -279,11 +281,6 @@ begin
 end;
 
 Function TDelphiDebugInfo.ParseUnit(Module: TJclTD32ModuleInfo): TUnitInfo;
-Var
-  I: Integer;
-  // UnitFileName: String;
-  // ModuleName: AnsiString;
-  SourceModuleInfo: TJclTD32SourceModuleInfo;
 Begin
   Result := TUnitInfo.Create;
   Result.SymbolInfo := Module;
@@ -293,22 +290,13 @@ Begin
   Else
     Result.NameId := Module.NameIndex;
 
-  // Result.FullUnitName := GetUnitFileName(String(Result.Name));
   Units.AddObject(Result.ShortName, Result);
   UnitsByAddr.Add(Result);
 
   LoadSegments(Result, Module);
   LoadUsedUnits(Result, Module);
   LoadSymbols(Result, Module);
-
-  If Module.SourceModuleCount > 0 Then
-  Begin
-    For I := 0 To Module.SourceModuleCount - 1 Do
-    Begin
-      SourceModuleInfo := Module.SourceModules[I];
-      LoadLines(Result, SourceModuleInfo);
-    End;
-  End;
+  LoadSourceModules(Result, Module);
 End;
 
 function TDelphiDebugInfo.ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String;
@@ -396,6 +384,52 @@ Begin
     UnitInfo.Segments.Add(S);
   End;
 End;
+
+procedure TDelphiDebugInfo.LoadSourceLines(UnitInfo: TUnitInfo; UnitSourceModuleInfo: TUnitSourceModuleInfo; Source: TJclTD32SourceModuleInfo);
+Var
+  I: Integer;
+  LineInfo: TJclTD32LineInfo;
+  L: TLineInfo;
+  F: TFuncInfo;
+Begin
+  UnitSourceModuleInfo.Lines.Capacity := Source.LineCount;
+  For I := 0 To Source.LineCount - 1 Do
+  Begin
+    LineInfo := Source.Line[I];
+
+    L := TLineInfo.Create;
+    L.LineNo := LineInfo.LineNo; // - 1; ???
+    L.Address := Pointer(LineInfo.Offset + FImage.ImageSectionHeaders[LineInfo.Segment - 1].VirtualAddress + ImageBase);
+    UnitSourceModuleInfo.Lines.Add(L);
+
+    UnitInfo.Lines.Add(L);
+
+    F := FindFuncByAddr(UnitInfo, L.Address);
+    If F <> Nil Then
+      F.Lines.Add(L);
+  End;
+end;
+
+procedure TDelphiDebugInfo.LoadSourceModules(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
+Var
+  I: Integer;
+  SourceModuleInfo: TJclTD32SourceModuleInfo;
+  SM: TUnitSourceModuleInfo;
+begin
+  For I := 0 To Module.SourceModuleCount - 1 Do
+  Begin
+    SourceModuleInfo := Module.SourceModules[I];
+
+    SM := TUnitSourceModuleInfo.Create;
+    SM.NameId := SourceModuleInfo.NameIndex;
+    SM.SymbolInfo := SourceModuleInfo;
+
+    //LoadLines(UnitInfo, SourceModuleInfo);
+    LoadSourceLines(UnitInfo, SM, SourceModuleInfo);
+
+    UnitInfo.SourceSegments.Add(SM);
+  End;
+end;
 
 Procedure TDelphiDebugInfo.LoadUsedUnits(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
 Var
@@ -1180,8 +1214,27 @@ end;
 
 { ............................................................................... }
 Function TDelphiDebugInfo.FindUnitByAddr(const Addr: Pointer): TUnitInfo;
+var
+  I, J: Integer;
+  Segment: TUnitSegmentInfo;
 Begin
-  Result := TUnitInfo(UnitsByAddr.FindByAddress(Addr));
+  //Result := TUnitInfo(UnitsByAddr.FindByAddress(Addr));
+
+  for I := 0 to Units.Count - 1 do
+  begin
+    Result := TUnitInfo(Units.Objects[I]);
+    for J := 0 to Result.Segments.Count - 1 do
+    begin
+      Segment := Result.Segments[J];
+
+      if (Segment.SegType = ustCode) and
+        (Cardinal(Addr) >= Segment.Offset) and (Cardinal(Addr) <= Cardinal(Segment.Offset + Segment.Size))
+      then
+        Exit;
+    end;
+  end;
+
+  Result := Nil;
 End;
 { ............................................................................... }
 
