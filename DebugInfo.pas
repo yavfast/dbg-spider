@@ -210,7 +210,7 @@ Type
   TSegmentCodeInfo = Class(TNameInfo)
   public
     Address: Pointer;
-    CodeSize: Cardinal;
+    Size: Cardinal;
 
     Consts: TNameList;
     Types: TNameList;
@@ -280,9 +280,6 @@ Type
     SourceSegments: TList;
     UsedUnits: TStringList;
     FuncsByAddr: TSegmentCodeInfoList;
-
-    CodeSize: Cardinal;
-    DataSize: Cardinal;
 
     Constructor Create;
     Destructor Destroy; Override;
@@ -1405,9 +1402,6 @@ begin
   FuncsByAddr := TSegmentCodeInfoList.Create;
 
   Lines.OwnsObjects := True;
-
-  CodeSize := 0;
-  DataSize := 0;
 end;
 
 destructor TUnitInfo.Destroy;
@@ -1515,7 +1509,7 @@ begin
   if NativeUInt(Addr) < NativeUInt(Address) then
     Result := -1
   else
-  if NativeUInt(Addr) > (NativeUInt(Address) + NativeUInt(CodeSize)) then
+  if NativeUInt(Addr) > (NativeUInt(Address) + NativeUInt(Size)) then
     Result := 1
   else
     Result := 0;
