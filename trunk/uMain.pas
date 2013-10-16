@@ -3039,7 +3039,7 @@ begin
         case Column of
           0: CellText := FuncInfo.ShortName;
           1: CellText := Format('%p', [FuncInfo.Address]);
-          2: CellText := Format('%d', [FuncInfo.CodeSize]);
+          2: CellText := Format('%d', [FuncInfo.Size]);
         end;
       end;
   end;
@@ -3146,12 +3146,17 @@ var
   Data: PLinkData;
   UnitInfo: TUnitInfo;
 begin
+  CellText := ' ';
   Data := vstDbgInfoUnits.GetNodeData(Node);
-  UnitInfo := Data^.DbgUnitInfo;
-  case Column of
-    0: CellText := UnitInfo.ShortName;
-    1: CellText := Format('%d', [UnitInfo.CodeSize]);
-    2: CellText := Format('%d', [UnitInfo.DataSize]);
+  case Data^.LinkType of
+    ltDbgUnitInfo:
+      begin
+        UnitInfo := Data^.DbgUnitInfo;
+        case Column of
+          0: CellText := UnitInfo.ShortName;
+          3: CellText := Format('%d', [UnitInfo.Size]);
+        end;
+      end;
   end;
 end;
 

@@ -374,9 +374,9 @@ Begin
 
     case S.SegType of
       ustData:
-        Inc(UnitInfo.DataSize, S.Size);
+        Inc(UnitInfo.Size, S.Size);
       ustCode:
-        Inc(UnitInfo.CodeSize, S.Size);
+        Inc(UnitInfo.Size, S.Size);
       else
         RaiseDebugCoreException('');
     end;
@@ -1114,7 +1114,7 @@ Begin
   FuncInfo.NameId := FuncSymbol.NameIndex;
   FuncInfo.SymbolInfo := FuncSymbol;
   FuncInfo.Address := Pointer(FuncSymbol.Offset + FImage.ImageSectionHeaders[FuncSymbol.Segment - 1].VirtualAddress + ImageBase);
-  FuncInfo.CodeSize := FuncSymbol.Size;
+  FuncInfo.Size := FuncSymbol.Size;
   FuncInfo.UnitInfo := UnitInfo;
   FuncInfo.ID := FuncSymbol;
   FuncInfo.ParentID := FuncSymbol.Parent;
@@ -1297,7 +1297,7 @@ Begin
   Begin
     Result := TFuncInfo(UnitInfo.Funcs[I]);
 
-    if (Cardinal(Result.Address) <= Cardinal(Addr)) and (Cardinal(Addr) < Cardinal(Result.Address) + Result.CodeSize) then
+    if (Cardinal(Result.Address) <= Cardinal(Addr)) and (Cardinal(Addr) < Cardinal(Result.Address) + Result.Size) then
       Exit;
   End;
   Result := Nil;
