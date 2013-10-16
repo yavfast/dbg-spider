@@ -1886,6 +1886,7 @@ procedure TJclTD32InfoParser.Analyse;
 var
   I, M: Integer;
   pDirHeader: PDirectoryHeader;
+  DirEntry: TDirectoryEntry;
   pSubsection: Pointer;
 begin
   pDirHeader := PDirectoryHeader(LfaToVa(PJclTD32FileSignature(LfaToVa(0)).Offset));
@@ -1895,30 +1896,30 @@ begin
     M := 0;
     {$RANGECHECKS OFF}
     for I := 0 to pDirHeader.DirEntryCount - 1 do
-      with pDirHeader.DirEntries[I] do
-      begin
-        pSubsection := LfaToVa(Offset);
-        case SubsectionType of
-          SUBSECTION_TYPE_MODULE:
-            AnalyseModules(pSubsection, Size);
-          SUBSECTION_TYPE_ALIGN_SYMBOLS:
-          begin
-            AnalyseAlignSymbols(pSubsection, Size, M);
-            Inc(M);
-          end;
-          SUBSECTION_TYPE_SOURCE_MODULE:
-            AnalyseSourceModules(pSubsection, Size, M);
-          SUBSECTION_TYPE_NAMES:
-            AnalyseNames(pSubsection, Size);
-          SUBSECTION_TYPE_GLOBAL_TYPES:
-          begin
-            FSymbolTypes.Count := $1000; // Reserve space for primitive types that will be created dinamically
-            AnalyseGlobalTypes(pSubsection, Size);
-          end
-        else
-          AnalyseUnknownSubSection(pSubsection, Size);
+    begin
+      DirEntry := pDirHeader.DirEntries[I];
+      pSubsection := LfaToVa(DirEntry.Offset);
+      case DirEntry.SubsectionType of
+        SUBSECTION_TYPE_MODULE:
+          AnalyseModules(pSubsection, DirEntry.Size);
+        SUBSECTION_TYPE_ALIGN_SYMBOLS:
+        begin
+          AnalyseAlignSymbols(pSubsection, DirEntry.Size, M);
+          Inc(M);
         end;
+        SUBSECTION_TYPE_SOURCE_MODULE:
+          AnalyseSourceModules(pSubsection, DirEntry.Size, M);
+        SUBSECTION_TYPE_NAMES:
+          AnalyseNames(pSubsection, DirEntry.Size);
+        SUBSECTION_TYPE_GLOBAL_TYPES:
+        begin
+          FSymbolTypes.Count := $1000; // Reserve space for primitive types that will be created dinamically
+          AnalyseGlobalTypes(pSubsection, DirEntry.Size);
+        end
+      else
+        AnalyseUnknownSubSection(pSubsection, DirEntry.Size);
       end;
+    end;
     {$IFDEF RANGECHECKS_ON}
     {$RANGECHECKS ON}
     {$ENDIF RANGECHECKS_ON}
@@ -2225,8 +2226,11 @@ begin
 end;
 
 procedure TJclTD32InfoParser.AnalyseModules(pModInfo: PModuleInfo; const Size: DWORD);
+var
+  ModuleInfo: TJclTD32ModuleInfo;
 begin
-  FModules.Add(TJclTD32ModuleInfo.Create(pModInfo));
+  ModuleInfo := TJclTD32ModuleInfo.Create(pModInfo);
+  FModules.Add(ModuleInfo);
 end;
 
 procedure TJclTD32InfoParser.AnalyseSourceModules(pSrcModInfo: PSourceModuleInfo; const Size: DWORD; const ModuleIndex: Integer);
