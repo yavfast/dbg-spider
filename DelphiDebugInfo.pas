@@ -1218,6 +1218,7 @@ var
   I, J: Integer;
   Segment: TUnitSegmentInfo;
 Begin
+  // TODO:
   //Result := TUnitInfo(UnitsByAddr.FindByAddress(Addr));
 
   for I := 0 to Units.Count - 1 do
@@ -1286,8 +1287,20 @@ begin
 end;
 
 Function TDelphiDebugInfo.FindFuncByAddr(const UnitInfo: TUnitInfo; const Addr: TPointer): TFuncInfo;
+Var
+  I: Integer;
 Begin
-  Result := TFuncInfo(UnitInfo.FuncsByAddr.FindByAddress(Addr));
+  // TODO:
+  //Result := TFuncInfo(UnitInfo.FuncsByAddr.FindByAddress(Addr));
+
+  For I := 0 To UnitInfo.Funcs.Count - 1 Do
+  Begin
+    Result := TFuncInfo(UnitInfo.Funcs[I]);
+
+    if (Cardinal(Result.Address) <= Cardinal(Addr)) and (Cardinal(Addr) < Cardinal(Result.Address) + Result.CodeSize) then
+      Exit;
+  End;
+  Result := Nil;
 End;
 { ............................................................................... }
 
