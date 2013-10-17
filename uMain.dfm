@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsDebugInfo2
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -947,7 +947,7 @@ object MainForm: TMainForm
                 Top = 0
                 Width = 276
                 Height = 213
-                ActivePage = tsMemInfoFuncLinks
+                ActivePage = tsMemInfoFuncSrc
                 Align = alClient
                 TabOrder = 1
                 object tsMemInfoFuncLinks: TTabSheet
@@ -1199,6 +1199,7 @@ object MainForm: TMainForm
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                OnDblClick = vstMemInfoObjStackDblClick
                 OnGetText = vstMemStackGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
                 Columns = <

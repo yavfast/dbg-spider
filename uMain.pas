@@ -380,6 +380,7 @@ type
     procedure pcMemInfoChange(Sender: TObject);
     procedure pMemInfoFuncLinksResize(Sender: TObject);
     procedure acAddressInfoExecute(Sender: TObject);
+    procedure vstMemInfoObjStackDblClick(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -3782,6 +3783,35 @@ begin
           MemInfo.Lock.EndRead;
         end;
       end;
+  end;
+end;
+
+procedure TMainForm.vstMemInfoObjStackDblClick(Sender: TObject);
+var
+  Data: PLinkData;
+  StackEntry: TStackEntry;
+begin
+  synmMemInfoFuncSrc.Clear;
+
+  if vstMemInfoObjStack.FocusedNode = Nil then
+    Exit;
+
+  Data := vstMemInfoObjStack.GetNodeData(vstMemInfoObjStack.FocusedNode);
+  if Data^.LinkType = ltMemStack then
+  begin
+    StackEntry := TStackEntry.Create;
+    StackEntry.UpdateInfo(Data^.MemStackPtr);
+    try
+      if Assigned(StackEntry.FuncInfo) then
+      begin
+        if Assigned(StackEntry.LineInfo) then
+          LoadFunctionSource(synmMemInfoFuncSrc, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+        else
+          LoadFunctionSource(synmMemInfoFuncSrc, StackEntry.FuncInfo);
+      end;
+    finally
+      FreeAndNil(StackEntry);
+    end;
   end;
 end;
 
