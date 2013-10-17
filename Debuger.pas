@@ -2227,14 +2227,14 @@ begin
         case DbgMemInfo^.MemInfoType of
           miGetMem:
           begin
-            DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+            //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
 
             // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
             // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
             FoundThData := ThData;
             if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
             begin
-              DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
+              //DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
 
               Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
@@ -2262,7 +2262,7 @@ begin
           end;
           miFreeMem:
           begin
-            DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+            //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
 
             FoundThData := ThData;
             if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
@@ -2278,7 +2278,7 @@ begin
             end
             else
             begin
-              DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
+              //DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
 
               // TODO: Double free ???
             end;

@@ -7,7 +7,7 @@ procedure ResetThreadHook; stdcall;
 
 implementation
 
-uses Windows, SysUtils, Classes, JclPEImage, SyncObjs, DbgHookTypes;
+uses Windows, SysUtils, Classes, SyncObjs, DbgHookTypes, JclPEImage{TODO: Remove JCL};
 
 type
   TKernel32_CreateThread = function(SecurityAttributes: Pointer; StackSize: LongWord;
