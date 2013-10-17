@@ -3155,7 +3155,8 @@ begin
         UnitInfo := Data^.DbgUnitInfo;
         case Column of
           0: CellText := UnitInfo.ShortName;
-          3: CellText := Format('%d', [UnitInfo.Size]);
+          1: CellText := Format('%p', [UnitInfo.Address]);
+          2: CellText := Format('%d', [UnitInfo.Size]);
         end;
       end;
   end;

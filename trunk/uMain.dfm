@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsMemInfo
+    ActivePage = tsDebugInfo2
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -82,7 +82,7 @@ object MainForm: TMainForm
       object vstDbgInfoUnits: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 398
+        Width = 362
         Height = 517
         Align = alLeft
         BevelEdges = []
@@ -118,47 +118,45 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
             Position = 1
-            Width = 60
+            Width = 75
             WideText = 'Offset'
-          end
-          item
-            CaptionAlignment = taCenter
-            Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-            Position = 2
-            WideText = 'Type'
           end
           item
             Alignment = taRightJustify
             CaptionAlignment = taCenter
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
-            Position = 3
+            Position = 2
             Width = 60
             WideText = 'Size'
           end>
       end
       object pDbgInfoDetail: TPanel
-        Left = 398
+        Left = 362
         Top = 0
-        Width = 812
+        Width = 848
         Height = 517
         Align = alClient
         BevelEdges = []
         BevelOuter = bvNone
         TabOrder = 1
+        ExplicitLeft = 398
+        ExplicitWidth = 812
         object pcDbgInfoDetail: TPageControl
           Left = 0
           Top = 0
-          Width = 812
+          Width = 848
           Height = 517
           ActivePage = tsDbgUnitFunctions
           Align = alClient
           TabOrder = 0
+          ExplicitWidth = 812
           object tsDbgUnitConsts: TTabSheet
             Caption = 'Consts'
+            ExplicitWidth = 804
             object vstDbgInfoConsts: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 804
+              Width = 840
               Height = 489
               Align = alClient
               BevelEdges = []
@@ -179,6 +177,7 @@ object MainForm: TMainForm
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
               OnGetText = vstDbgInfoConstsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              ExplicitWidth = 804
               Columns = <
                 item
                   CaptionAlignment = taCenter
@@ -207,10 +206,11 @@ object MainForm: TMainForm
           object tsDbgUnitTypes: TTabSheet
             Caption = 'Types'
             ImageIndex = 1
+            ExplicitWidth = 804
             object vstDbgInfoTypes: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 804
+              Width = 840
               Height = 489
               Align = alClient
               BevelEdges = []
@@ -231,6 +231,7 @@ object MainForm: TMainForm
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
               OnGetText = vstDbgInfoTypesGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              ExplicitWidth = 804
               Columns = <
                 item
                   CaptionAlignment = taCenter
@@ -251,10 +252,11 @@ object MainForm: TMainForm
           object tsDbgUnitVars: TTabSheet
             Caption = 'Vars'
             ImageIndex = 2
+            ExplicitWidth = 804
             object vstDbgInfoVars: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 804
+              Width = 840
               Height = 489
               Align = alClient
               BevelEdges = []
@@ -275,6 +277,7 @@ object MainForm: TMainForm
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
               OnGetText = vstDbgInfoVarsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              ExplicitWidth = 804
               Columns = <
                 item
                   CaptionAlignment = taCenter
@@ -303,6 +306,7 @@ object MainForm: TMainForm
           object tsDbgUnitFunctions: TTabSheet
             Caption = 'Functions'
             ImageIndex = 3
+            ExplicitWidth = 804
             object vstDbgInfoFunctions: TVirtualStringTree
               Left = 0
               Top = 0
@@ -357,7 +361,7 @@ object MainForm: TMainForm
             object pDbgInfoFuncAdv: TPanel
               Left = 547
               Top = 0
-              Width = 257
+              Width = 293
               Height = 489
               Align = alClient
               BevelEdges = []
@@ -365,18 +369,20 @@ object MainForm: TMainForm
               Caption = 'pDbgInfoFuncAdv'
               ShowCaption = False
               TabOrder = 1
+              ExplicitWidth = 257
               object splDbgInfoFuncAdv: TSplitter
                 Left = 0
                 Top = 193
-                Width = 257
+                Width = 293
                 Height = 3
                 Cursor = crVSplit
                 Align = alTop
+                ExplicitWidth = 257
               end
               object vstDbgInfoFuncVars: TVirtualStringTree
                 Left = 0
                 Top = 0
-                Width = 257
+                Width = 293
                 Height = 193
                 Align = alTop
                 BevelEdges = []
@@ -397,6 +403,7 @@ object MainForm: TMainForm
                 TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
                 OnGetText = vstDbgInfoFuncVarsGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitWidth = 257
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -421,7 +428,7 @@ object MainForm: TMainForm
               object synmDbgInfoFuncAdv: TSynMemo
                 Left = 0
                 Top = 196
-                Width = 257
+                Width = 293
                 Height = 293
                 Align = alClient
                 Font.Charset = DEFAULT_CHARSET
@@ -442,16 +449,18 @@ object MainForm: TMainForm
                 RightEdge = 0
                 SearchEngine = dmShareData.synRegexSearch1
                 FontSmoothing = fsmNone
+                ExplicitWidth = 257
               end
             end
           end
           object tsDbgUnitSource: TTabSheet
             Caption = 'Source'
             ImageIndex = 4
+            ExplicitWidth = 804
             object synmDbgInfoUnitSource: TSynMemo
               Left = 0
               Top = 0
-              Width = 804
+              Width = 840
               Height = 489
               Align = alClient
               Font.Charset = DEFAULT_CHARSET
@@ -472,6 +481,7 @@ object MainForm: TMainForm
               RightEdge = 0
               SearchEngine = dmShareData.synRegexSearch1
               FontSmoothing = fsmNone
+              ExplicitWidth = 804
             end
           end
         end
@@ -684,7 +694,7 @@ object MainForm: TMainForm
             Caption = 'actbMemInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 11579568
+            ColorMap.UnusedColor = 13684944
             EdgeInner = esNone
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
@@ -1480,7 +1490,7 @@ object MainForm: TMainForm
             Caption = 'actbExceptionInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 11579568
+            ColorMap.UnusedColor = 13684944
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -1845,7 +1855,7 @@ object MainForm: TMainForm
             Caption = 'actbCodeTrackingInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 11579568
+            ColorMap.UnusedColor = 13684944
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2188,7 +2198,7 @@ object MainForm: TMainForm
       Caption = 'actbMainTabs'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 11579568
+      ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
@@ -2283,6 +2293,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg info:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
       end
       object pStatusDbgState: TPanel
@@ -2307,6 +2318,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg state:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
         object lbStatusDbgStateValue: TLabel
           AlignWithMargins = True
@@ -2346,6 +2358,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg events:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
         object lbStatusEventsCntValue: TLabel
           AlignWithMargins = True
@@ -2386,6 +2399,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Track events:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
         object lbStatusTrackEventCntValue: TLabel
           AlignWithMargins = True
@@ -2657,6 +2671,7 @@ object MainForm: TMainForm
     object acMemInfoHistory: TAction
       Category = 'MemInfo'
       Caption = 'History'
+      Enabled = False
       ImageIndex = 15
       OnExecute = acMemInfoHistoryExecute
     end
