@@ -337,7 +337,7 @@ Begin
   S := AnsiLowerCase(ExtractFileName(UnitName));
 
   Ext := ExtractFileExt(S);
-  If (Ext <> '.pas') and (Ext <> '.inc') Then
+  If (Ext <> '.pas') and (Ext <> '.inc') and (Ext <> '.dpr') Then
     S := S + '.pas';
 
   for ST := Low(TUnitType) to High(TUnitType) do

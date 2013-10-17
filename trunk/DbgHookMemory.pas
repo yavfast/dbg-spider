@@ -11,7 +11,7 @@ function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
 
 implementation
 
-uses Windows, SyncObjs, JclWin32, JclBase, JclDebug, SysUtils;
+uses Windows, SyncObjs, SysUtils{, JclWin32, JclBase, JclDebug};
 
 var
   _BaseMemoryMgr: TMemoryManagerEx;
@@ -44,6 +44,33 @@ type
 
 threadvar
   _MemOutDbgInfo: TMemOutDbgInfo;
+
+{ --- From JCL --- }
+type
+  NT_TIB32 = packed record
+    ExceptionList: DWORD;
+    StackBase: DWORD;
+    StackLimit: DWORD;
+    SubSystemTib: DWORD;
+    case Integer of
+      0 : (
+        FiberData: DWORD;
+        ArbitraryUserPointer: DWORD;
+        Self: DWORD;
+      );
+      1 : (
+        Version: DWORD;
+      );
+  end;
+
+  TJclAddr = NativeInt;
+
+  PStackFrame = ^TStackFrame;
+  TStackFrame = record
+    CallerFrame: TJclAddr;
+    CallerAddr: TJclAddr;
+  end;
+{ --- From JCL --- }
 
 procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: Cardinal);
 var
