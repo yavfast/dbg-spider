@@ -640,6 +640,7 @@ begin
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
 
     Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
+    Result^.DbgGetMemInfo.OwnsValues := True;
     Result^.DbgGetMemUnitList := TTrackUnitInfoList.Create(512);
     //Result^.DbgGetMemFuncList := TTrackFuncInfoList.Create(4096);
 
@@ -927,7 +928,8 @@ begin
 
   FProcessData.Started := _QueryPerformanceCounter;
   FProcessData.DbgPoints := TCollectList<TProcessPoint>.Create;
-  FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1000);
+  FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1024);
+  FProcessData.DbgGetMemInfo.OwnsValues := True;
 
   FProcessData.ProcessGetMemCount := 0;
   FProcessData.ProcessGetMemSize := 0;
@@ -1492,7 +1494,9 @@ end;
 procedure TDebuger.InitDbgTracking(const Capacity: Integer);
 begin
   DbgTrackBreakpoints := TTrackBreakpointList.Create(Capacity);
+  DbgTrackBreakpoints.OwnsValues := True;
   DbgTrackRETBreakpoints := TTrackRETBreakpointList.Create(Capacity);
+  DbgTrackRETBreakpoints.OwnsValues := True;
 end;
 
 function TDebuger.InjectFunc(Func: Pointer; const CodeSize: Cardinal): Pointer;

@@ -1,0 +1,48 @@
+package Collections;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl;
+
+contains
+  Collections.Bags in 'Collections.Bags.pas',
+  Collections.Base in 'Collections.Base.pas',
+  Collections.BidiDictionaries in 'Collections.BidiDictionaries.pas',
+  Collections.BidiMaps in 'Collections.BidiMaps.pas',
+  Collections.Dictionaries in 'Collections.Dictionaries.pas',
+  Collections.Dynamic in 'Collections.Dynamic.pas',
+  Collections.Lists in 'Collections.Lists.pas',
+  Collections.MultiMaps in 'Collections.MultiMaps.pas',
+  Collections.Queues in 'Collections.Queues.pas',
+  Collections.Sets in 'Collections.Sets.pas',
+  Collections.Stacks in 'Collections.Stacks.pas',
+  Collections.Serialization in 'Collections.Serialization.pas';
+
+end.
+

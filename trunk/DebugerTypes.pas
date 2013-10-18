@@ -2,7 +2,8 @@ unit DebugerTypes;
 
 interface
 
-uses SysUtils, Windows, Classes, JclPeImage, SyncObjs, ClassUtils, Generics.Collections, DbgHookTypes, Contnrs;
+uses SysUtils, Windows, Classes, JclPeImage, SyncObjs, ClassUtils, DbgHookTypes, Contnrs,
+  Generics.Collections, Collections.Dictionaries;
 
 const
   _SEGMENT_SIZE = 16 * 1024;
@@ -162,10 +163,11 @@ type
     SaveByte: Byte;
   end;
 
-  TTrackBreakpointList = class(TDictionary<Pointer,PTrackBreakpoint>)
-  protected
-    procedure ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification); override;
-  end;
+  TTrackBreakpointList = class(TPointerDictionary<Pointer,PTrackBreakpoint>);
+//  TTrackBreakpointList = class(TDictionary<Pointer,PTrackBreakpoint>)
+//  protected
+//    procedure ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification); override;
+//  end;
 
   PTrackRETBreakpoint = ^TTrackRETBreakpoint;
   TTrackRETBreakpoint = record
@@ -173,10 +175,11 @@ type
     SaveByte: Byte;
   end;
 
-  TTrackRETBreakpointList = class(TDictionary<Pointer,PTrackRETBreakpoint>)
-  protected
-    procedure ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification); override;
-  end;
+  TTrackRETBreakpointList = class(TPointerDictionary<Pointer,PTrackRETBreakpoint>);
+//  TTrackRETBreakpointList = class(TDictionary<Pointer,PTrackRETBreakpoint>)
+//  protected
+//    procedure ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification); override;
+//  end;
 
 
   THWBPIndex = 0..3;
@@ -227,18 +230,17 @@ type
     procedure CheckObjectType;
   end;
 
-  TGetMemInfo = class(TDictionary<Pointer,PGetMemInfo>)
+  TGetMemInfo = class(TPointerDictionary<Pointer,PGetMemInfo>)
   private
     FLock: TMREWSync;
-    FFreeValue: Boolean;
   protected
-    procedure ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification); override;
+    procedure HandleValueRemoved(const AValue: PGetMemInfo); override;
+    //procedure ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification); override;
   public
     constructor Create(ACapacity: Integer = 0);
     destructor Destroy; override;
 
     property Lock: TMREWSync read FLock;
-    property FreeValue: Boolean read FFreeValue write FFreeValue;
   end;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
@@ -304,11 +306,11 @@ type
     property Size: UInt64 read Data write Data;
   end;
 
-  TCallFuncCounter = class(TDictionary<Pointer,PCallFuncInfo>)
+  TCallFuncCounter = class(TObjectDictionary<Pointer,PCallFuncInfo>)
   private
     function AddNewCallFunc(const Addr: Pointer): PCallFuncInfo;
   protected
-    procedure ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification); override;
+    //procedure ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification); override;
   public
     function AddCallFunc(const Addr: Pointer): PCallFuncInfo;
   end;
@@ -317,8 +319,8 @@ type
   TTrackUnitInfo = class;
   TTrackFuncInfo = class;
 
-  TTrackUnitInfoBaseList = TDictionary<TObject,TTrackUnitInfo>;
-  TTrackFuncInfoBaseList = TDictionary<TObject,TTrackFuncInfo>;
+  TTrackUnitInfoBaseList = TObjectDictionary<TObject,TTrackUnitInfo>;
+  TTrackFuncInfoBaseList = TObjectDictionary<TObject,TTrackFuncInfo>;
 
   TTrackUnitInfo = class
   private
@@ -358,7 +360,7 @@ type
 
   TTrackUnitInfoList = class(TTrackUnitInfoBaseList)
   protected
-    procedure ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification); override;
+    //procedure ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification); override;
   public
     function GetTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo;
     procedure CheckTrackFuncInfo(TrackFuncInfo: TTrackFuncInfo);
@@ -418,7 +420,7 @@ type
 
   TTrackFuncInfoList = class(TTrackFuncInfoBaseList)
   protected
-    procedure ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification); override;
+    //procedure ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification); override;
   public
     function GetTrackFuncInfo(const FuncInfo: TObject): TTrackFuncInfo;
   end;
@@ -915,7 +917,6 @@ begin
   inherited Create(ACapacity);
 
   FLock := TMREWSync.Create;
-  FFreeValue := True;
 end;
 
 destructor TGetMemInfo.Destroy;
@@ -929,17 +930,24 @@ begin
   inherited;
 end;
 
-procedure TGetMemInfo.ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification);
+procedure TGetMemInfo.HandleValueRemoved(const AValue: PGetMemInfo);
 begin
+  //FLock.BeginWrite;
   inherited;
-
-  if (Action = cnRemoved) and FFreeValue then
-  begin
-    FLock.BeginWrite;
-    FreeMemory(Value);
-    FLock.EndWrite;
-  end;
+  //FLock.EndWrite;
 end;
+
+//procedure TGetMemInfo.ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification);
+//begin
+//  inherited;
+//
+//  if (Action = cnRemoved) and FFreeValue then
+//  begin
+//    FLock.BeginWrite;
+//    FreeMemory(Value);
+//    FLock.EndWrite;
+//  end;
+//end;
 
 { RGetMemInfo }
 
@@ -1072,7 +1080,7 @@ begin
   if FGetMemList = Nil then
   begin
     FGetMemList := TGetMemInfo.Create(256);
-    FGetMemList.FreeValue := False;
+    FGetMemList.OwnsValues := False;
   end;
 
   FGetMemList.AddOrSetValue(GetMemInfo^.ObjAddr, GetMemInfo);
@@ -1092,7 +1100,9 @@ begin
   FTrackData := 0;
   FTrackUnitInfo := nil;
   FParentFuncs := TCallFuncCounter.Create(256);
+  FParentFuncs.OwnsValues := True;
   FChildFuncs := TCallFuncCounter.Create(256);
+  FChildFuncs.OwnsValues := True;
   FGetMemList := nil;
 end;
 
@@ -1148,13 +1158,13 @@ begin
   end;
 end;
 
-procedure TTrackFuncInfoList.ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification);
-begin
-  inherited;
-
-  if Action = cnRemoved then
-    Value.Free;
-end;
+//procedure TTrackFuncInfoList.ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification);
+//begin
+//  inherited;
+//
+//  if Action = cnRemoved then
+//    Value.Free;
+//end;
 
 { TCallCounter }
 
@@ -1189,33 +1199,33 @@ begin
   end;
 end;
 
-procedure TCallFuncCounter.ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification);
-begin
-  inherited;
-
-  if Action = cnRemoved then
-    FreeMemory(Value);
-end;
+//procedure TCallFuncCounter.ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification);
+//begin
+//  inherited;
+//
+//  if Action = cnRemoved then
+//    FreeMemory(Value);
+//end;
 
 { TTrackBreakpointList }
 
-procedure TTrackBreakpointList.ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification);
-begin
-  inherited;
-
-  if Action = cnRemoved then
-    FreeMem(Value);
-end;
+//procedure TTrackBreakpointList.ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification);
+//begin
+//  inherited;
+//
+//  if Action = cnRemoved then
+//    FreeMem(Value);
+//end;
 
 { TTrackRETBreakpointList }
 
-procedure TTrackRETBreakpointList.ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification);
-begin
-  inherited;
-
-  if Action = cnRemoved then
-    FreeMem(Value);
-end;
+//procedure TTrackRETBreakpointList.ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification);
+//begin
+//  inherited;
+//
+//  if Action = cnRemoved then
+//    FreeMem(Value);
+//end;
 
 { TTrackStackPoint }
 
@@ -1299,13 +1309,13 @@ begin
   end;
 end;
 
-procedure TTrackUnitInfoList.ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification);
-begin
-  inherited;
-
-  if Action = cnRemoved then
-    Value.Free;
-end;
+//procedure TTrackUnitInfoList.ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification);
+//begin
+//  inherited;
+//
+//  if Action = cnRemoved then
+//    Value.Free;
+//end;
 
 { TTrackUnitInfo }
 

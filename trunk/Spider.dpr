@@ -24,7 +24,19 @@ uses
   uSpiderOptions in 'uSpiderOptions.pas',
   uShareData in 'uShareData.pas' {dmShareData: TDataModule},
   uSelectSource in 'uSelectSource.pas' {fmSelectSource},
-  WinAPIUtils in 'WinAPIUtils.pas';
+  WinAPIUtils in 'WinAPIUtils.pas',
+  Collections.Bags in 'Collections\Collections.Bags.pas',
+  Collections.Base in 'Collections\Collections.Base.pas',
+  Collections.BidiDictionaries in 'Collections\Collections.BidiDictionaries.pas',
+  Collections.BidiMaps in 'Collections\Collections.BidiMaps.pas',
+  Collections.Dictionaries in 'Collections\Collections.Dictionaries.pas',
+  Collections.Dynamic in 'Collections\Collections.Dynamic.pas',
+  Collections.Lists in 'Collections\Collections.Lists.pas',
+  Collections.MultiMaps in 'Collections\Collections.MultiMaps.pas',
+  Collections.Queues in 'Collections\Collections.Queues.pas',
+  Collections.Serialization in 'Collections\Collections.Serialization.pas',
+  Collections.Sets in 'Collections\Collections.Sets.pas',
+  Collections.Stacks in 'Collections\Collections.Stacks.pas';
 
 {$R *.res}
 
