@@ -395,7 +395,7 @@ begin
 
   FreeOnTerminate := False; // free on finalization
 
-  FHTTP := TIdHTTP.Create(nil);
+  //FHTTP := TIdHTTP.Create(nil);
   FQueue := TGAQueue.Create;
   FQueueEvent := TEvent.Create;
   FQueueCS := TCriticalSection.Create;
@@ -417,7 +417,7 @@ begin
     FreeAndNil(FQueueCS);
     FreeAndNil(FQueueEvent);
 
-    FreeAndNil(FHTTP);
+    //FreeAndNil(FHTTP);
   except
     // Здесь Log уже убитый
   end;
@@ -428,10 +428,17 @@ end;
 function TGASender.DoSend(const Data: string): Boolean;
 var
   S: TStringStream;
+
 begin
   {.$IFDEF DEBUG}
   //Result := True;
   {.$ELSE}
+  if (Self = Nil) or Terminated then
+  begin
+    Result := True;
+    Exit;
+  end;
+
   Result := False;
 
   S := TStringStream.Create(Data);
@@ -456,27 +463,32 @@ var
 begin
   NameThreadForDebugging('TGASender');
   try
-    while not Terminated do
-    begin
-      if FQueueEvent.WaitFor(100) = wrSignaled then
-        while not Terminated and (FQueue.Count > 0) do
-        begin
-          FQueueCS.Enter;
-          try
-            Data := FQueue.Dequeue;
-            FQueueEvent.ResetEvent;
-          finally
-            FQueueCS.Leave;
-          end;
-
-          while not DoSend(Data) do
+    FHTTP := TIdHTTP.Create(nil);
+    try
+      while (Self <> nil) and not Terminated do
+      begin
+        if FQueueEvent.WaitFor(100) = wrSignaled then
+          while not Terminated and (FQueue.Count > 0) do
           begin
-            if (Self = Nil) or Terminated then Exit;
-            ThSleep(GA_TIMEOUT * 60);
-          end;
+            FQueueCS.Enter;
+            try
+              Data := FQueue.Dequeue;
+              FQueueEvent.ResetEvent;
+            finally
+              FQueueCS.Leave;
+            end;
 
-          ThSleep(GA_TIMEOUT);
-        end;
+            while not DoSend(Data) do
+            begin
+              if (Self = Nil) or Terminated then Exit;
+              ThSleep(GA_TIMEOUT * 60);
+            end;
+
+            ThSleep(GA_TIMEOUT);
+          end;
+      end;
+    finally
+      FreeAndNil(FHTTP);
     end;
   except
     // Игнорим все ошибки
@@ -496,7 +508,7 @@ end;
 
 procedure TGASender.ThSleep(MSec: Integer);
 begin
-  while not Terminated and (MSec > 0) do
+  while (Self <> Nil) and not Terminated and (MSec > 0) do
   begin
     Sleep(50);
     Dec(MSec, 50);
