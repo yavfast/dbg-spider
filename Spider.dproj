@@ -128,6 +128,10 @@
         <DCCReference Include="Collections\Collections.Stacks.pas"/>
         <DCCReference Include="uGA.pas"/>
         <DCCReference Include="uUpdateInfo.pas"/>
+        <DCCReference Include="uFeedback.pas">
+            <Form>frmFeedback</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

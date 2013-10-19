@@ -46,6 +46,9 @@ begin
   Result := Copy(Result, 2, Length(Result) - 2);
 end;
 
+var
+  _AppVersion: String = '';
+
 function GetFileVersion(const AFileName: string): String;
 var
   FileName: string;
@@ -55,7 +58,10 @@ var
   VerSize: DWORD;
   Major1, Major2, Minor1, Minor2: Cardinal;
 begin
-  Result := '';
+  Result := _AppVersion;
+
+  if Result <> '' then Exit;
+  
   FileName := AFileName;
   UniqueString(FileName);
   InfoSize := GetFileVersionInfoSize(PChar(FileName), Wnd);
@@ -71,7 +77,8 @@ begin
           Minor1 := FI.dwFileVersionLS shr 16;
           Minor2 := FI.dwFileVersionLS and $FFFF;
 
-          Result:= Format('%d.%d.%d.%d', [Major1, Major2, Minor1, Minor2]);
+          _AppVersion := Format('%d.%d.%d.%d', [Major1, Major2, Minor1, Minor2]);
+          Result := _AppVersion;
         end;
     finally
       FreeMem(VerBuf);

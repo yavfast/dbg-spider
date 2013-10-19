@@ -259,6 +259,8 @@ type
     acOpenSite: TAction;
     cbUpdateInfo: TCoolBar;
     actbUpdateInfo: TActionToolBar;
+    acFeedback: TAction;
+    rbngrpFeedback: TRibbonGroup;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -399,6 +401,7 @@ type
     procedure acAddressInfoExecute(Sender: TObject);
     procedure vstMemInfoObjStackDblClick(Sender: TObject);
     procedure acOpenSiteExecute(Sender: TObject);
+    procedure acFeedbackExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -418,6 +421,10 @@ type
     procedure HidePCTabs(PC: TPageControl);
 
     procedure SendGAEvent(const Category, Action: String; const ELabel: String = '');
+    procedure SendGAFeedback(const FeedbackType, FeedbackText: String);
+    procedure StartGASession;
+    procedure FinishGASession;
+
     procedure LoadUpdateInfo;
 
     procedure ClearProject;
@@ -501,8 +508,12 @@ implementation
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
   uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types,
-  uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI;
+  uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI, uFeedback;
 
+const
+  _TrackingID_web = 'UA-44820931-1';
+  _TrackingID_app = 'UA-44820931-2';
+  _AppName = 'Spider';
 
 type
   THookBaseVirtualTree = class(TBaseVirtualTree);
@@ -695,6 +706,22 @@ procedure TMainForm.acExitExecute(Sender: TObject);
 begin
   FCloseApp := True;
   Close;
+end;
+
+procedure TMainForm.acFeedbackExecute(Sender: TObject);
+var
+  F: TfrmFeedback;
+begin
+  Application.CreateForm(TfrmFeedback, F);
+  try
+    if F.ShowModal = mrOk then
+    begin
+      SendGAEvent('Feedback', F.FeedbackType, F.FeedbackText);
+      //SendGAFeedback(F.FeedbackType, F.FeedbackText);
+    end;
+  finally
+    FreeAndNil(F);
+  end;
 end;
 
 procedure TMainForm.acFuncExecute(Sender: TObject);
@@ -1034,6 +1061,27 @@ function TMainForm.FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TU
 
 begin
   Result := FindNode(vTree, vTree.RootNode, @_Cmp, UnitInfo);
+end;
+
+procedure TMainForm.FinishGASession;
+var
+  GA: TGA;
+begin
+  {$IFDEF DEBUG}
+  //Exit;
+  {$ENDIF}
+
+  GA := TGA.Create;
+  try
+    GA.TrackingID := _TrackingID_app;
+    GA.AppName := _AppName;
+    GA.ClientID := GetAppID;
+    GA.AppVersion := GetFileVersion(Application.ExeName);
+
+    GA.SessionEnd;
+  finally
+    FreeAndNil(GA);
+  end;
 end;
 
 procedure TMainForm.AddThread(const ThreadID: Cardinal);
@@ -1749,6 +1797,8 @@ begin
 
   if CanClose then
   begin
+    FinishGASession;
+
     if acStop.Enabled then
     begin
       acStop.Execute;
@@ -2095,7 +2145,8 @@ end;
 
 procedure TMainForm.FormShow(Sender: TObject);
 begin
-  SendGAEvent('Event', 'Start');
+  StartGASession;
+  SendGAEvent('Run Spider', GetAppID, 'Start');
 
   acRunStop.Assign(acRun);
   UpdateMainActions;
@@ -2783,6 +2834,9 @@ begin
   vstTrackFuncParent.Height := pTrackFuncAdv.ClientHeight div 2;
 end;
 
+var
+  _AppID: String = '';
+
 function TMainForm.GetAppID: String;
 const
   _RegKey = 'Software\Spider\';
@@ -2790,7 +2844,10 @@ const
 var
   Reg: TRegistry;
 begin
-  Result := '';
+  Result := _AppID;
+
+  if Result <> '' then Exit;
+
   Reg := TRegistry.Create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
@@ -2799,38 +2856,69 @@ begin
       Result := Reg.GetDataAsString(_RegAppID);
       if Result = '' then
       begin
-        Result := GetGUID;
+        _AppID := GetGUID;
         Reg.WriteString(_RegAppID, Result);
       end;
     finally
       Reg.CloseKey;
     end
     else
-      Result := GetGUID;
+      _AppID := GetGUID;
   finally
     FreeAndNil(Reg);
   end;
+
+  Result := _AppID;
 end;
 
 procedure TMainForm.SendGAEvent(const Category, Action, ELabel: String);
-const
-  _TrackingID = 'UA-44820931-2';
-  _AppName = 'Spider';
 var
   GA: TGA;
 begin
   {$IFDEF DEBUG}
-  Exit;
+  //Exit;
   {$ENDIF}
 
   GA := TGA.Create;
   try
-    GA.TrackingID := _TrackingID;
+    GA.TrackingID := _TrackingID_app;
     GA.AppName := _AppName;
     GA.ClientID := GetAppID;
     GA.AppVersion := GetFileVersion(Application.ExeName);
 
     GA.SendEvent(Category, Action, ELabel);
+  finally
+    FreeAndNil(GA);
+  end;
+end;
+
+procedure TMainForm.SendGAFeedback(const FeedbackType, FeedbackText: String);
+var
+  GA: TGA;
+//  S: String;
+//  Idx: Integer;
+begin
+  GA := TGA.Create;
+  try
+    GA.TrackingID := _TrackingID_app;
+    GA.AppName := _AppName;
+    GA.ClientID := GetAppID;
+    GA.AppVersion := GetFileVersion(Application.ExeName);
+
+    GA.SendEvent('Feedback', FeedbackType, FeedbackText);
+
+    //GA.SendFeedback('spider', FeedbackType, FeedbackText);
+
+    (*
+    S := StringReplace(FeedbackText, #13#10, ' # ', [rfReplaceAll]);
+    Idx := 1;
+    while S <> ''  do
+    begin
+      GA.SendEvent(FeedbackType, Format('%s #%d', [GetAppID, Idx]), Copy(S, 1, 250));
+      Delete(S, 1, 250);
+      Inc(Idx);
+    end;
+    *)
   finally
     FreeAndNil(GA);
   end;
@@ -2870,6 +2958,27 @@ begin
   _AC.RunDebug([doDebugInfo]);
 
   UpdateMainActions;
+end;
+
+procedure TMainForm.StartGASession;
+var
+  GA: TGA;
+begin
+  {$IFDEF DEBUG}
+  //Exit;
+  {$ENDIF}
+
+  GA := TGA.Create;
+  try
+    GA.TrackingID := _TrackingID_app;
+    GA.AppName := _AppName;
+    GA.ClientID := GetAppID;
+    GA.AppVersion := GetFileVersion(Application.ExeName);
+
+    GA.SessionStart;
+  finally
+    FreeAndNil(GA);
+  end;
 end;
 
 procedure TMainForm.SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);

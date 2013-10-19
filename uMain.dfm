@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsMemInfo
+    ActivePage = tsUpdateInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -1853,7 +1853,7 @@ object MainForm: TMainForm
       end
     end
     object tsUpdateInfo: TTabSheet
-      Caption = 'Update Info'
+      Caption = 'Update info'
       ImageIndex = 6
       object vstUpdateInfo: TVirtualStringTree
         Left = 0
@@ -1905,17 +1905,14 @@ object MainForm: TMainForm
           Height = 24
           ActionManager = amMain
           Caption = 'actbUpdateInfo'
-          Color = clMenuBar
-          ColorMap.DisabledFontColor = 7171437
-          ColorMap.HighlightColor = 13684944
-          ColorMap.BtnSelectedFont = clBlack
+          ColorMap.MenuColor = clMenu
+          ColorMap.BtnSelectedColor = clBtnFace
           ColorMap.UnusedColor = 13684944
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clBlack
           Font.Height = -11
           Font.Name = 'Tahoma'
           Font.Style = []
-          ParentBackground = True
           ParentFont = False
           Spacing = 0
         end
@@ -2159,6 +2156,16 @@ object MainForm: TMainForm
         ActionManager = amMain
         Caption = 'Code tracking options'
         GroupIndex = 7
+      end
+      object rbngrpFeedback: TRibbonGroup
+        Left = 1104
+        Top = 3
+        Width = 61
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Feedback'
+        GroupIndex = 8
+        Rows = 1
       end
     end
     object rbambMain: TRibbonApplicationMenuBar
@@ -2748,6 +2755,12 @@ object MainForm: TMainForm
       ImageIndex = 18
       OnExecute = acOpenSiteExecute
     end
+    object acFeedback: TAction
+      Category = 'Spider'
+      Caption = 'Add comment'
+      ImageIndex = 19
+      OnExecute = acFeedbackExecute
+    end
   end
   object OD: TFileOpenDialog
     FavoriteLinks = <>
@@ -3321,6 +3334,15 @@ object MainForm: TMainForm
             ImageIndex = 18
           end>
         ActionBar = actbUpdateInfo
+      end
+      item
+        Items = <
+          item
+            Action = acFeedback
+            ImageIndex = 19
+            CommandProperties.ButtonSize = bsLarge
+          end>
+        ActionBar = rbngrpFeedback
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain
