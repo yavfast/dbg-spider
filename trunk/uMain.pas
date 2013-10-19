@@ -11,14 +11,15 @@ uses
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
   RibbonActnMenus, ImgList, ActnColorMaps, XPMan,
   uActionController, uSpiderOptions, SynEdit, SynMemo, System.Actions,
-  Vcl.Menus;
+  Vcl.Menus, uUpdateInfo;
 
 type
   TProgectType = (ptEmpty, ptSpider, ptApplication);
 
   TLinkType = (ltNone = 0, ltProject, ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
     ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
-    ltDbgFuncParamInfo, ltDbgLogItem, ltTrackFuncInfo, ltTrackUnitInfo, ltTrackCallFuncInfo);
+    ltDbgFuncParamInfo, ltDbgLogItem, ltTrackFuncInfo, ltTrackUnitInfo, ltTrackCallFuncInfo,
+    ltSpiderInfo, ltVersionInfo, ltChangeLogItemInfo);
 
   PLinkData = ^TLinkData;
   TLinkData = record
@@ -62,6 +63,12 @@ type
         (TrackUnitInfo: TTrackUnitInfo);
       ltTrackCallFuncInfo:
         (TrackCallFuncInfo: PCallFuncInfo);
+      ltSpiderInfo:
+        ();
+      ltVersionInfo:
+        (VersionInfo: TChangeLogVersionInfo);
+      ltChangeLogItemInfo:
+        (ChangeLogItem: TChangeLogItem);
   end;
 
   TCheckFunc = function(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -246,6 +253,12 @@ type
     cbExceptionInfo: TCoolBar;
     actbExceptionInfo: TActionToolBar;
     acAddressInfo: TAction;
+    acTabUpdateInfo: TAction;
+    tsUpdateInfo: TTabSheet;
+    vstUpdateInfo: TVirtualStringTree;
+    acOpenSite: TAction;
+    cbUpdateInfo: TCoolBar;
+    actbUpdateInfo: TActionToolBar;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -341,6 +354,10 @@ type
     procedure vstTrackFuncLinksDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
 
+    procedure vstUpdateInfoGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstUpdateInfoDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+      const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
+
     procedure tmrThreadsUpdateTimer(Sender: TObject);
     procedure cbCPUTimeLineClick(Sender: TObject);
 
@@ -381,6 +398,7 @@ type
     procedure pMemInfoFuncLinksResize(Sender: TObject);
     procedure acAddressInfoExecute(Sender: TObject);
     procedure vstMemInfoObjStackDblClick(Sender: TObject);
+    procedure acOpenSiteExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -400,6 +418,7 @@ type
     procedure HidePCTabs(PC: TPageControl);
 
     procedure SendGAEvent(const Category, Action: String; const ELabel: String = '');
+    procedure LoadUpdateInfo;
 
     procedure ClearProject;
     procedure ClearTrees;
@@ -466,6 +485,7 @@ type
     procedure LoadRecentProjects;
     function GetDebugOptions: TDbgOptions;
     function GetAppID: String;
+    procedure FillUpdateInfo(Sender: TObject);
   public
     procedure OnException(Sender: TObject; E: Exception);
     procedure DoAction(Action: TacAction; const Args: array of Variant);
@@ -481,7 +501,7 @@ implementation
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
   uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types,
-  uGA, System.Win.Registry;
+  uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI;
 
 
 type
@@ -708,6 +728,13 @@ procedure TMainForm.acOpenProjectExecute(Sender: TObject);
 begin
   if OD.Execute then
     SetProjectName(OD.FileName);
+end;
+
+procedure TMainForm.acOpenSiteExecute(Sender: TObject);
+const
+  _SPIDER_URL = 'http://dbg-spider.net';
+begin
+  ShellExecute(WindowHandle, 'open', _SPIDER_URL, nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TMainForm.acOptionsExecute(Sender: TObject);
@@ -2072,6 +2099,8 @@ begin
 
   vstThreadsColumnResize(vstThreads.Header, 0);
   vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
+
+  LoadUpdateInfo;
 end;
 
 function TMainForm.FuncEllapsedToTime(const FullCPUTime, FullEllapsed, Ellapsed: UInt64): String;
@@ -2608,6 +2637,91 @@ begin
       synmDbgInfoUnitSource.EndUpdate;
     end;
   end;
+end;
+
+procedure TMainForm.FillUpdateInfo(Sender: TObject);
+var
+  AllVersions: TStringList;
+  I, J: Integer;
+  Ver: String;
+  Info: TChangeLogVersionInfo;
+  Data: PLinkData;
+  RootNode: PVirtualNode;
+  VerNode: PVirtualNode;
+  ItemNode: PVirtualNode;
+begin
+  vstUpdateInfo.Clear;
+
+  if gvUpdateInfo.LastVersion = gvUpdateInfo.CurrentVersion then Exit;
+
+  AllVersions := TStringList.Create;
+  try
+    if gvUpdateInfo.GetAllVersions(AllVersions) then
+    begin
+      vstUpdateInfo.BeginUpdate;
+      try
+        RootNode := vstUpdateInfo.AddChild(nil);
+        Data := vstUpdateInfo.GetNodeData(RootNode);
+
+        Data^.LinkType := ltSpiderInfo;
+
+        for I := 0 to AllVersions.Count - 1 do
+        begin
+          Ver := AllVersions[I];
+
+          Info := TChangeLogVersionInfo.Create(False);
+          if gvUpdateInfo.GetVersionInfo(Ver, Info) then
+          begin
+            VerNode := vstUpdateInfo.AddChild(RootNode);
+            Data := vstUpdateInfo.GetNodeData(VerNode);
+
+            Data^.LinkType := ltVersionInfo;
+            Data^.VersionInfo := Info;
+
+            for J := 0 to Info.Count - 1 do
+            begin
+              ItemNode := vstUpdateInfo.AddChild(VerNode);
+              Data := vstUpdateInfo.GetNodeData(ItemNode);
+
+              Data^.LinkType := ltChangeLogItemInfo;
+              Data^.ChangeLogItem := Info[J];
+            end;
+
+            vstUpdateInfo.Expanded[VerNode] := True;
+          end;
+        end;
+
+        vstUpdateInfo.Expanded[RootNode] := True;
+      finally
+        vstUpdateInfo.EndUpdate;
+      end;
+
+      acTabUpdateInfo.Caption := Format('New version: %s', [gvUpdateInfo.LastVersion]);
+      acTabUpdateInfo.Visible := True;
+    end;
+  finally
+    FreeAndNil(AllVersions);
+  end;
+end;
+
+procedure TMainForm.LoadUpdateInfo;
+
+var
+  Th: TThread;
+begin
+  Th := TThread.CreateAnonymousThread(
+    procedure
+    begin
+      CoInitializeEx(nil, COINIT_MULTITHREADED);
+      try
+        gvUpdateInfo.Load;
+      finally
+        CoUninitialize;
+      end;
+    end
+  );
+  Th.OnTerminate := FillUpdateInfo;
+  Th.Start;
 end;
 
 procedure TMainForm.LoadVars(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
@@ -4632,6 +4746,38 @@ begin
             3: CellText := EllapsedToTime(ThData^.CPUTime);
           end;
       end;
+  end;
+end;
+
+procedure TMainForm.vstUpdateInfoDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
+var
+  Data: PLinkData;
+begin
+  Data := vstUpdateInfo.GetNodeData(Node);
+  case Data^.LinkType of
+    ltSpiderInfo:
+      TargetCanvas.Font.Style := [fsBold];
+    ltVersionInfo:
+      TargetCanvas.Font.Style := [fsBold];
+  end;
+end;
+
+procedure TMainForm.vstUpdateInfoGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
+var
+  Data: PLinkData;
+begin
+  CellText := ' ';
+
+  Data := vstUpdateInfo.GetNodeData(Node);
+  case Data^.LinkType of
+    ltSpiderInfo:
+      CellText := Format('Current version: %s; Last version: %s', [gvUpdateInfo.CurrentVersion, gvUpdateInfo.LastVersion]);
+    ltVersionInfo:
+      CellText := Format('Changes for version: %s (%s)', [Data^.VersionInfo.Version, Data^.VersionInfo.Date]);
+    ltChangeLogItemInfo:
+      CellText := Format('%s: %s', [TChangeLogItem.ItemTypeAsStr(Data^.ChangeLogItem.ItemType), Data^.ChangeLogItem.ItemText]);
   end;
 end;
 
