@@ -2016,6 +2016,10 @@ begin
           UnitNode: PVirtualNode;
           Node: PVirtualNode;
         begin
+          vstMemInfoFuncTree.Clear;
+          vstMemInfoFuncParents.Clear;
+          vstMemInfoFuncChilds.Clear;
+
           vstMemInfoFuncTree.BeginUpdate;
           try
             BaseNode := vstMemInfoFuncTree.AddChild(nil);
@@ -3982,6 +3986,8 @@ begin
           LoadFunctionSource(synmMemInfoFuncSrc, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
         else
           LoadFunctionSource(synmMemInfoFuncSrc, StackEntry.FuncInfo);
+
+        pcMemInfoFuncInfo.ActivePageIndex := 1;
       end;
     finally
       FreeAndNil(StackEntry);

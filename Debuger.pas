@@ -639,7 +639,7 @@ begin
 
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
 
-    Result^.DbgGetMemInfo := TGetMemInfo.Create(1024);
+    Result^.DbgGetMemInfo := TGetMemInfo.Create(1024, True);
     Result^.DbgGetMemInfo.OwnsValues := True;
     Result^.DbgGetMemUnitList := TTrackUnitInfoList.Create(512);
     //Result^.DbgGetMemFuncList := TTrackFuncInfoList.Create(4096);
@@ -928,7 +928,7 @@ begin
 
   FProcessData.Started := _QueryPerformanceCounter;
   FProcessData.DbgPoints := TCollectList<TProcessPoint>.Create;
-  FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1024);
+  FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1024, True);
   FProcessData.DbgGetMemInfo.OwnsValues := True;
 
   FProcessData.ProcessGetMemCount := 0;

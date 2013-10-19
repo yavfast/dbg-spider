@@ -230,18 +230,7 @@ type
     procedure CheckObjectType;
   end;
 
-  TGetMemInfo = class(TPointerDictionary<Pointer,PGetMemInfo>)
-  private
-    FLock: TMREWSync;
-  protected
-    procedure HandleValueRemoved(const AValue: PGetMemInfo); override;
-    //procedure ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification); override;
-  public
-    constructor Create(ACapacity: Integer = 0);
-    destructor Destroy; override;
-
-    property Lock: TMREWSync read FLock;
-  end;
+  TGetMemInfo = class(TPointerDictionary<Pointer,PGetMemInfo>);
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
   TStackPointList = Array of TStackPoint;
@@ -760,12 +749,12 @@ var
 begin
   DbgGetMemUnitList.Clear;
 
-  DbgGetMemInfo.Lock.BeginWrite;
+  DbgGetMemInfo.LockForRead;
   try
     for GetMemInfoItem in DbgGetMemInfo do
       DbgGetMemUnitList.LoadStack(GetMemInfoItem.Value);
   finally
-    DbgGetMemInfo.Lock.EndWrite;
+    DbgGetMemInfo.UnLockForRead;
   end;
 end;
 
@@ -910,45 +899,6 @@ begin
   FLock.EndWrite;
 end;
 
-{ TGetMemInfo }
-
-constructor TGetMemInfo.Create(ACapacity: Integer);
-begin
-  inherited Create(ACapacity);
-
-  FLock := TMREWSync.Create;
-end;
-
-destructor TGetMemInfo.Destroy;
-begin
-  FLock.BeginWrite;
-  Clear;
-  FLock.EndWrite;
-
-  FreeAndNil(FLock);
-
-  inherited;
-end;
-
-procedure TGetMemInfo.HandleValueRemoved(const AValue: PGetMemInfo);
-begin
-  //FLock.BeginWrite;
-  inherited;
-  //FLock.EndWrite;
-end;
-
-//procedure TGetMemInfo.ValueNotify(const Value: PGetMemInfo; Action: TCollectionNotification);
-//begin
-//  inherited;
-//
-//  if (Action = cnRemoved) and FFreeValue then
-//  begin
-//    FLock.BeginWrite;
-//    FreeMemory(Value);
-//    FLock.EndWrite;
-//  end;
-//end;
-
 { RGetMemInfo }
 
 procedure RGetMemInfo.CheckObjectType;
@@ -1079,7 +1029,7 @@ procedure TTrackFuncInfo.AddGetMemInfo(const GetMemInfo: PGetMemInfo);
 begin
   if FGetMemList = Nil then
   begin
-    FGetMemList := TGetMemInfo.Create(256);
+    FGetMemList := TGetMemInfo.Create(256, True);
     FGetMemList.OwnsValues := False;
   end;
 
@@ -1281,7 +1231,7 @@ begin
           TrackFuncInfo := TTrackFuncInfo.Create(StackEntry.FuncInfo);
           TrackFuncInfo.TrackUnitInfo := TrackUnitInfo;
 
-          TrackUnitInfo.FuncInfoList.Add(StackEntry.FuncInfo, TrackFuncInfo);
+          TrackUnitInfo.FuncInfoList.AddOrSetValue(StackEntry.FuncInfo, TrackFuncInfo);
         end;
 
         TrackFuncInfo.IncCallCount;
