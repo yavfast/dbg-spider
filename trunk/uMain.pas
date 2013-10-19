@@ -2853,11 +2853,11 @@ begin
     Reg.RootKey := HKEY_CURRENT_USER;
     if Reg.OpenKey(_RegKey, not Reg.KeyExists(_RegKey)) then
     try
-      Result := Reg.GetDataAsString(_RegAppID);
-      if Result = '' then
+      _AppID := Reg.GetDataAsString(_RegAppID);
+      if _AppID = '' then
       begin
         _AppID := GetGUID;
-        Reg.WriteString(_RegAppID, Result);
+        Reg.WriteString(_RegAppID, _AppID);
       end;
     finally
       Reg.CloseKey;
