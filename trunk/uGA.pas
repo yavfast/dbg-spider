@@ -438,7 +438,9 @@ begin
   try
     try
       FHTTP.Post(GA_URL, S);
-      Result := (FHTTP.ResponseCode = 200);
+
+      if (Self <> Nil) and not Terminated then
+        Result := (FHTTP.ResponseCode = 200);
     except
       // Игнорим все ошибки
     end;
@@ -469,7 +471,7 @@ begin
 
           while not DoSend(Data) do
           begin
-            if Terminated then Exit;
+            if (Self = Nil) or Terminated then Exit;
             ThSleep(GA_TIMEOUT * 60);
           end;
 
@@ -506,6 +508,7 @@ initialization
 
 finalization
   try
+    gvGASender.Terminate;
     FreeAndNil(gvGASender);
   except end;
 

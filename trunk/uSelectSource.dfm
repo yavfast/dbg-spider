@@ -1,7 +1,8 @@
 object fmSelectSource: TfmSelectSource
   Left = 0
   Top = 0
-  BorderStyle = bsDialog
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsSingle
   Caption = 'Select source'
   ClientHeight = 347
   ClientWidth = 537
@@ -48,48 +49,6 @@ object fmSelectSource: TfmSelectSource
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
-      ParentBackground = True
-      ParentFont = False
-      Spacing = 0
-    end
-  end
-  object cbActions: TCoolBar
-    Left = 0
-    Top = 320
-    Width = 537
-    Height = 27
-    Align = alBottom
-    AutoSize = True
-    Bands = <
-      item
-        Control = actbActions
-        ImageIndex = -1
-        MinHeight = 26
-        Width = 535
-      end>
-    EdgeBorders = [ebTop]
-    EdgeOuter = esNone
-    FixedSize = True
-    FixedOrder = True
-    object actbActions: TActionToolBar
-      Left = 2
-      Top = 0
-      Width = 535
-      Height = 26
-      ActionManager = acmgrSelectSource
-      BiDiMode = bdRightToLeft
-      Caption = 'actbActions'
-      ColorMap.MenuColor = clMenu
-      ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clBlack
-      Font.Height = -11
-      Font.Name = 'Tahoma'
-      Font.Style = []
-      Orientation = boRightToLeft
-      ParentBiDiMode = False
-      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
@@ -98,18 +57,46 @@ object fmSelectSource: TfmSelectSource
     Left = 0
     Top = 26
     Width = 537
-    Height = 294
+    Height = 278
     Align = alClient
     BorderStyle = bsNone
     ColCount = 1
     DefaultRowHeight = 18
     FixedCols = 0
     FixedRows = 0
-    TabOrder = 2
-    ExplicitTop = 30
-    ExplicitHeight = 287
+    TabOrder = 1
+    ExplicitHeight = 247
     ColWidths = (
       500)
+  end
+  object pActions: TPanel
+    Left = 0
+    Top = 304
+    Width = 537
+    Height = 43
+    Align = alBottom
+    BevelOuter = bvNone
+    Caption = 'pActions'
+    ShowCaption = False
+    TabOrder = 2
+    object btnOk: TBitBtn
+      Left = 359
+      Top = 10
+      Width = 75
+      Height = 25
+      Action = acOk
+      Caption = 'Save'
+      TabOrder = 0
+    end
+    object btnCancel: TBitBtn
+      Left = 448
+      Top = 10
+      Width = 75
+      Height = 25
+      Action = acCancel
+      Caption = 'Cancel'
+      TabOrder = 1
+    end
   end
   object alSelectSource: TActionList
     Images = dmShareData.ilActionsSmall
@@ -156,7 +143,6 @@ object fmSelectSource: TfmSelectSource
             Caption = '&Save'
             ImageIndex = 1
           end>
-        ActionBar = actbActions
       end
       item
         Items = <

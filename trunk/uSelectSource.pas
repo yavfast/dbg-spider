@@ -5,7 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, PlatformDefaultStyleActnCtrls, ActnMan, ActnList, ActnCtrls,
-  ToolWin, ComCtrls, RibbonSilverStyleActnCtrls, Grids, System.Actions;
+  ToolWin, ComCtrls, RibbonSilverStyleActnCtrls, Grids, System.Actions,
+  Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.Buttons;
 
 type
   TfmSelectSource = class(TForm)
@@ -17,11 +18,12 @@ type
     acRemove: TAction;
     acEdit: TAction;
     cbTop: TCoolBar;
-    cbActions: TCoolBar;
     actbTop: TActionToolBar;
-    actbActions: TActionToolBar;
     sgSource: TStringGrid;
     odSelectSource: TFileOpenDialog;
+    pActions: TPanel;
+    btnOk: TBitBtn;
+    btnCancel: TBitBtn;
     procedure acOkExecute(Sender: TObject);
     procedure acCancelExecute(Sender: TObject);
     procedure acAddExecute(Sender: TObject);
@@ -137,7 +139,6 @@ end;
 procedure TfmSelectSource.FormCreate(Sender: TObject);
 begin
   actbTop.ParentBackground := True;
-  actbActions.ParentBackground := True;
 
   FList := TStringList.Create;
   FList.Duplicates := dupIgnore;
