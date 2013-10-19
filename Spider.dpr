@@ -37,7 +37,8 @@ uses
   Collections.Serialization in 'Collections\Collections.Serialization.pas',
   Collections.Sets in 'Collections\Collections.Sets.pas',
   Collections.Stacks in 'Collections\Collections.Stacks.pas',
-  uGA in 'uGA.pas';
+  uGA in 'uGA.pas',
+  uUpdateInfo in 'uUpdateInfo.pas';
 
 {$R *.res}
 
