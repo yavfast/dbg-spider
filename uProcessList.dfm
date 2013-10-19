@@ -1,9 +1,10 @@
 object frmProcessList: TfrmProcessList
   Left = 0
   Top = 0
-  BorderStyle = bsDialog
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsSingle
   Caption = 'Process list'
-  ClientHeight = 384
+  ClientHeight = 413
   ClientWidth = 569
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -21,14 +22,14 @@ object frmProcessList: TfrmProcessList
     Left = 0
     Top = 26
     Width = 569
-    Height = 331
+    Height = 342
     Align = alClient
     BorderStyle = bsNone
     ColCount = 1
     DefaultRowHeight = 18
     FixedCols = 0
     TabOrder = 0
-    ExplicitHeight = 332
+    ExplicitHeight = 331
     ColWidths = (
       519)
   end
@@ -48,14 +49,13 @@ object frmProcessList: TfrmProcessList
     EdgeBorders = []
     EdgeInner = esNone
     EdgeOuter = esNone
-    FixedSize = True
     FixedOrder = True
     object actbTop: TActionToolBar
       Left = 2
       Top = 0
       Width = 567
       Height = 26
-      ActionManager = actmgrProcessList
+      ActionManager = acmgr1
       Caption = 'actbTop'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
@@ -65,51 +65,42 @@ object frmProcessList: TfrmProcessList
       Font.Height = -11
       Font.Name = 'Tahoma'
       Font.Style = []
-      ParentBackground = True
       ParentFont = False
       Spacing = 0
     end
   end
-  object cbActions: TCoolBar
+  object pActions: TPanel
     Left = 0
-    Top = 357
+    Top = 368
     Width = 569
-    Height = 27
+    Height = 45
     Align = alBottom
-    AutoSize = True
-    Bands = <
-      item
-        Control = actbActions
-        ImageIndex = -1
-        MinHeight = 26
-        Width = 567
-      end>
-    EdgeBorders = [ebTop]
-    EdgeOuter = esNone
-    FixedSize = True
-    FixedOrder = True
-    object actbActions: TActionToolBar
-      Left = 2
-      Top = 0
-      Width = 567
-      Height = 26
-      ActionManager = actmgrProcessList
-      AllowHiding = False
-      BiDiMode = bdRightToLeft
-      Caption = 'actbActions'
-      ColorMap.MenuColor = clMenu
-      ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clBlack
-      Font.Height = -11
-      Font.Name = 'Tahoma'
-      Font.Style = []
-      Orientation = boRightToLeft
-      ParentBiDiMode = False
-      ParentBackground = True
-      ParentFont = False
-      Spacing = 0
+    BevelOuter = bvNone
+    Caption = 'pActions'
+    ShowCaption = False
+    TabOrder = 2
+    DesignSize = (
+      569
+      45)
+    object btnAttach: TBitBtn
+      Left = 387
+      Top = 11
+      Width = 75
+      Height = 25
+      Action = acOk
+      Anchors = [akRight, akBottom]
+      Caption = 'Attach'
+      TabOrder = 0
+    end
+    object btnCancel: TBitBtn
+      Left = 475
+      Top = 11
+      Width = 75
+      Height = 25
+      Action = acCancel
+      Anchors = [akRight, akBottom]
+      Caption = 'Cancel'
+      TabOrder = 1
     end
   end
   object AL: TActionList
@@ -135,7 +126,7 @@ object frmProcessList: TfrmProcessList
       OnExecute = acRefreshExecute
     end
   end
-  object actmgrProcessList: TActionManager
+  object acmgr1: TActionManager
     ActionBars = <
       item
         Items = <
@@ -146,33 +137,16 @@ object frmProcessList: TfrmProcessList
             ShortCut = 116
           end>
         ActionBar = actbTop
-      end
-      item
-        Items = <
-          item
-            Action = acCancel
-            Caption = '&Cancel'
-            ImageIndex = 2
-            ShortCut = 27
-          end
-          item
-            Action = acOk
-            Caption = '&Attach'
-            Default = True
-            ImageIndex = 1
-            ShortCut = 13
-          end>
-        ActionBar = actbActions
       end>
-    DisabledImages = dmShareData.ilActionsSmall
+    LargeImages = dmShareData.imlMain
     LinkedActionLists = <
       item
         ActionList = AL
         Caption = 'AL'
       end>
-    Images = dmShareData.ilActionsSmall
-    Left = 416
-    Top = 176
-    StyleName = 'Ribbon - Silver'
+    Images = dmShareData.imlMainSmall
+    Left = 432
+    Top = 152
+    StyleName = 'Platform Default'
   end
 end

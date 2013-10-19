@@ -12,16 +12,16 @@ type
   TOpenType = (otNew, otEdit, otSaveAs);
 
   TfmProjectOptions = class(TForm)
-    actmgrProjectOpt: TActionManager;
     alProjectOpt: TActionList;
     acSave: TAction;
     acCancel: TAction;
     acOpenApplication: TAction;
     acSaveProjectName: TAction;
     acSaveProjectStorage: TAction;
-    pcBackground: TPageControl;
-    ts1: TTabSheet;
-    p1: TPanel;
+    odApplication: TFileOpenDialog;
+    sdProjectName: TFileSaveDialog;
+    acDelphiSource: TAction;
+    acProjectSource: TAction;
     pcProjectOpt: TPageControl;
     tsProject: TTabSheet;
     lbeApplication: TLabeledEdit;
@@ -31,16 +31,13 @@ type
     btnSaveProjectName: TBitBtn;
     btnSaveProjectStorage: TBitBtn;
     tsSources: TTabSheet;
-    cbActions: TCoolBar;
-    actbActions: TActionToolBar;
-    odApplication: TFileOpenDialog;
-    sdProjectName: TFileSaveDialog;
     lbeProjectSource: TLabeledEdit;
     btnProjectSource: TBitBtn;
     lbeDelphiSource: TLabeledEdit;
     btnDelphiSource: TBitBtn;
-    acDelphiSource: TAction;
-    acProjectSource: TAction;
+    pActions: TPanel;
+    btnOk: TBitBtn;
+    btnCancel: TBitBtn;
     procedure acSaveExecute(Sender: TObject);
     procedure acCancelExecute(Sender: TObject);
     procedure acOpenApplicationExecute(Sender: TObject);
@@ -224,8 +221,6 @@ begin
 
   pcProjectOpt.ActivePage := tsProject;
   ActiveControl := lbeApplication;
-
-  actbActions.ParentBackground := True;
 end;
 
 procedure TfmProjectOptions.FormShow(Sender: TObject);

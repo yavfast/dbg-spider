@@ -15,11 +15,12 @@ type
     acOk: TAction;
     acCancel: TAction;
     acRefresh: TAction;
-    actmgrProcessList: TActionManager;
     cbTop: TCoolBar;
-    cbActions: TCoolBar;
     actbTop: TActionToolBar;
-    actbActions: TActionToolBar;
+    pActions: TPanel;
+    btnAttach: TBitBtn;
+    btnCancel: TBitBtn;
+    acmgr1: TActionManager;
     procedure acRefreshExecute(Sender: TObject);
     procedure acOkExecute(Sender: TObject);
     procedure acCancelExecute(Sender: TObject);
@@ -107,7 +108,6 @@ end;
 procedure TfrmProcessList.FormCreate(Sender: TObject);
 begin
   actbTop.ParentBackground := True;
-  actbActions.ParentBackground := True;
 end;
 
 procedure TfrmProcessList.FormShow(Sender: TObject);
