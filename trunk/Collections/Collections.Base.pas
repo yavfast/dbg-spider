@@ -1618,8 +1618,6 @@ type
     FVersion: NativeInt;
 
   protected
-    const CDefaultSize = 32;
-
     ///  <summary>Returns the number of elements in the collection.</summary>
     ///  <returns>A positive value specifying the number of elements in the collection.</returns>
     ///  <remarks>A call to this method can be costly because some
@@ -1630,6 +1628,8 @@ type
     ///  <remarks>This method must be called by descending classes in order to update the version of the collection.</remarks>
     procedure NotifyCollectionChanged(); virtual;
   public
+    const CDefaultSize = 32;
+
     ///  <summary>Returns the current version of the collection.</summary>
     ///  <returns>An integer value specifying the current "structural version" of the collection.</returns>
     ///  <remarks>This function returns a number that is modified by the implementing collection each time
@@ -3270,7 +3270,7 @@ implementation
 uses
   Collections.Dictionaries,
   Collections.Sets,
-  Collections.Lists;
+  Collections.Lists, System.SyncObjs;
 
 function TypeKindToStr(const AKind: TTypeKind): String;
 begin

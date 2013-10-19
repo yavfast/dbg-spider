@@ -241,6 +241,9 @@ type
     FFreeCount: NativeInt;
     FFreeList: NativeInt;
 
+    FLock: TMREWSync;
+    FThreadSafe: Boolean;
+
     { Internal }
     procedure InitializeInternals(const ACapacity: NativeInt);
     procedure Insert(const AKey: TKey; const AValue: TValue; const AShouldAdd: Boolean = true);
@@ -259,6 +262,8 @@ type
     ///  value of the specified key is modified.</remarks>
     procedure SetValue(const AKey: TKey; const Value: TValue); override;
 
+    procedure ReplaceValue(var ACurrent: TValue; const ANew: TValue); override;
+
     ///  <summary>Extracts the value associated to a key from the dictionary.</summary>
     ///  <param name="AKey">The key to search for.</param>
     ///  <param name="AValue">The looked up value.</param>
@@ -268,7 +273,7 @@ type
     ///  <summary>Creates a new <c>dictionary</c> collection.</summary>
     ///  <remarks>This constructor requests the default rule set. Call the overloaded constructor if
     ///  specific a set of rules need to be passed.</remarks>
-    constructor Create(const AInitialCapacity: NativeInt = TAbstractContainer.CDefaultSize); overload;
+    constructor Create(const AInitialCapacity: NativeInt = TAbstractContainer.CDefaultSize; const AThreadSafe: Boolean = False); overload;
 
     ///  <summary>Creates a new <c>dictionary</c> collection.</summary>
     ///  <param name="AKeyRules">A rule set describing the keys in the dictionary.</param>
@@ -280,7 +285,15 @@ type
     ///  <param name="AValueRules">A rule set describing the values in the dictionary.</param>
     ///  <param name="AInitialCapacity">The dictionary's initial capacity.</param>
     constructor Create(const AKeyRules: TRules<TKey>; const AValueRules: TRules<TValue>;
-      const AInitialCapacity: NativeInt = TAbstractContainer.CDefaultSize); overload;
+      const AInitialCapacity: NativeInt = TAbstractContainer.CDefaultSize; const AThreadSafe: Boolean = False); overload;
+
+    destructor Destroy; override;
+
+    procedure LockForRead; virtual;
+    procedure UnLockForRead; virtual;
+
+    procedure LockForWrite; virtual;
+    procedure UnLockForWrite; virtual;
 
     ///  <summary>Clears the contents of the dictionary.</summary>
     procedure Clear(); override;
@@ -320,6 +333,8 @@ type
     ///  <exception cref="SysUtils|EArgumentOutOfRangeException"><paramref name="AStartIndex"/> is out of bounds.</exception>
     ///  <exception cref="Collections.Base|EArgumentOutOfSpaceException">The array is not long enough.</exception>
     procedure CopyTo(var AArray: array of TPair<TKey,TValue>; const AStartIndex: NativeInt); overload; override;
+
+    property Lock: TMREWSync read FLock;
   end;
 
   ///  <summary>The generic <c>dictionary</c> collection designed to store objects.</summary>
@@ -696,6 +711,9 @@ type
 
 implementation
 
+uses
+  System.SyncObjs;
+
 { TAbstractDictionary<TKey, TValue> }
 
 procedure TAbstractDictionary<TKey, TValue>.Add(const AKey: TKey; const AValue: TValue);
@@ -928,7 +946,7 @@ end;
 
 procedure TDictionary<TKey, TValue>.AddOrSetValue(const Key: TKey; const Value: TValue);
 begin
-  Insert(Key, Value, False);
+  SetValue(Key, Value);
 end;
 
 procedure TDictionary<TKey, TValue>.Clear;
@@ -936,6 +954,8 @@ var
   I, K: NativeInt;
   Entry: PEntry;
 begin
+  LockForWrite;
+
   if FCount > 0 then
     for I := 0 to Length(FBucketArray) - 1 do
       FBucketArray[I] := -1;
@@ -960,6 +980,8 @@ begin
   FFreeCount := 0;
 
   NotifyCollectionChanged();
+
+  UnLockForWrite;
 end;
 
 function TDictionary<TKey, TValue>.ContainsValue(const AValue: TValue): Boolean;
@@ -969,12 +991,19 @@ var
 begin
   Result := False;
 
+  LockForRead;
+
   for I := 0 to FCount - 1 do
   begin
     Entry := @FEntryArray[I];
     if (Entry.FHashCode >= 0) and (ValuesAreEqual(Entry.FValue, AValue)) then
+    begin
+      UnLockForRead;
       Exit(True);
+    end;
   end;
+
+  UnLockForRead;
 end;
 
 procedure TDictionary<TKey, TValue>.CopyTo(var AArray: array of TPair<TKey, TValue>; const AStartIndex: NativeInt);
@@ -991,6 +1020,8 @@ begin
 
   X := AStartIndex;
 
+  LockForRead;
+
   for I := 0 to FCount - 1 do
   begin
     Entry := @FEntryArray[I];
@@ -1002,12 +1033,18 @@ begin
        Inc(X);
     end;
   end;
+
+  UnLockForRead;
 end;
 
 constructor TDictionary<TKey, TValue>.Create(const AKeyRules: TRules<TKey>;
-  const AValueRules: TRules<TValue>; const AInitialCapacity: NativeInt);
+  const AValueRules: TRules<TValue>; const AInitialCapacity: NativeInt = TAbstractContainer.CDefaultSize;
+  const AThreadSafe: Boolean = False);
 begin
   inherited Create(AKeyRules, AValueRules);
+
+  FLock := TMREWSync.Create;
+  FThreadSafe := AThreadSafe;
 
   if AInitialCapacity <= 0 then
     InitializeInternals(CDefaultSize)
@@ -1015,9 +1052,19 @@ begin
     InitializeInternals(AInitialCapacity)
 end;
 
-constructor TDictionary<TKey, TValue>.Create(const AInitialCapacity: NativeInt);
+destructor TDictionary<TKey, TValue>.Destroy;
 begin
-  Create(TRules<TKey>.Default, TRules<TValue>.Default, AInitialCapacity);
+  LockForWrite;
+  inherited Destroy;
+  UnLockForWrite;
+
+  FreeAndNil(FLock);
+end;
+
+constructor TDictionary<TKey, TValue>.Create(const AInitialCapacity: NativeInt = TAbstractContainer.CDefaultSize;
+  const AThreadSafe: Boolean = False);
+begin
+  Create(TRules<TKey>.Default, TRules<TValue>.Default, AInitialCapacity, AThreadSafe);
 end;
 
 //constructor TDictionary<TKey, TValue>.Create(const AKeyRules: TRules<TKey>; const AValueRules: TRules<TValue>);
@@ -1032,6 +1079,8 @@ var
 begin
   Result := -1;
 
+  LockForRead;
+
   if Length(FBucketArray) > 0 then
   begin
     { Generate the hash code }
@@ -1045,17 +1094,25 @@ begin
       if (Entry.FHashCode = LHashCode) and KeysAreEqual(Entry.FKey, AKey) then
       begin
         Result := I;
+
+        UnLockForRead;
         Exit;
       end;
 
       I := Entry.FNext;
     end;
   end;
+
+  UnLockForRead;
 end;
 
 function TDictionary<TKey, TValue>.GetCount: NativeInt;
 begin
+  LockForRead;
+
   Result := (FCount - FFreeCount);
+
+  UnLockForRead;
 end;
 
 function TDictionary<TKey, TValue>.GetEnumerator: IEnumerator<TPair<TKey, TValue>>;
@@ -1074,6 +1131,8 @@ procedure TDictionary<TKey, TValue>.InitializeInternals(const ACapacity: NativeI
 var
   I: NativeInt;
 begin
+  LockForWrite;
+
   SetLength(FBucketArray, ACapacity);
   SetLength(FEntryArray, ACapacity);
 
@@ -1084,6 +1143,8 @@ begin
   end;
 
   FFreeList := -1;
+
+  UnLockForWrite;
 end;
 
 procedure TDictionary<TKey, TValue>.Insert(const AKey: TKey; const AValue: TValue; const AShouldAdd: Boolean);
@@ -1092,6 +1153,8 @@ var
   LHashCode, I: NativeInt;
   Entry: PEntry;
 begin
+  LockForRead;
+
   LFreeList := 0;
 
   if Length(FBucketArray) = 0 then
@@ -1109,10 +1172,15 @@ begin
     if (Entry.FHashCode = LHashCode) and KeysAreEqual(Entry.FKey, AKey) then
     begin
       if AShouldAdd then
+      begin
+        UnLockForRead;
         ExceptionHelper.Throw_DuplicateKeyError('AKey');
+      end;
 
       ReplaceValue(Entry.FValue, AValue);
       NotifyCollectionChanged();
+
+      UnLockForRead;
       Exit;
     end;
 
@@ -1124,9 +1192,13 @@ begin
   if FFreeCount > 0 then
   begin
     LFreeList := FFreeList;
-    FFreeList := FEntryArray[LFreeList].FNext;
 
+    LockForWrite;
+
+    FFreeList := FEntryArray[LFreeList].FNext;
     Dec(FFreeCount);
+
+    UnLockForWrite;
   end else
   begin
     { Adjust LIndex if there is not enough free space }
@@ -1137,10 +1209,15 @@ begin
     end;
 
     LFreeList := FCount;
+
+    LockForWrite;
     Inc(FCount);
+    UnLockForWrite;
   end;
 
   { Insert the element at the right position and adjust arrays }
+  LockForWrite;
+
   Entry := @FEntryArray[LFreeList];
   Entry.FHashCode := LHashCode;
   Entry.FKey := AKey;
@@ -1148,7 +1225,31 @@ begin
   Entry.FNext := FBucketArray[LIndex];
 
   FBucketArray[LIndex] := LFreeList;
+
+  UnLockForWrite;
+
   NotifyCollectionChanged();
+
+  UnLockForRead;
+end;
+
+procedure TDictionary<TKey, TValue>.LockForRead;
+begin
+  if FThreadSafe then
+    FLock.BeginRead;
+end;
+
+procedure TDictionary<TKey, TValue>.LockForWrite;
+begin
+  if FThreadSafe then
+    FLock.BeginWrite;
+end;
+
+procedure TDictionary<TKey, TValue>.ReplaceValue(var ACurrent: TValue; const ANew: TValue);
+begin
+  LockForWrite;
+  inherited ReplaceValue(ACurrent, ANew);
+  UnLockForWrite;
 end;
 
 procedure TDictionary<TKey, TValue>.Resize;
@@ -1156,6 +1257,8 @@ var
   LNewLength, I, LIndex: NativeInt;
   Entry: PEntry;
 begin
+  LockForWrite;
+
   LNewLength := FCount * 2;
 
   SetLength(FBucketArray, LNewLength);
@@ -1171,6 +1274,8 @@ begin
     Entry.FNext := FBucketArray[LIndex];
     FBucketArray[LIndex] := I;
   end;
+
+  UnLockForWrite;
 end;
 
 procedure TDictionary<TKey, TValue>.SetValue(const AKey: TKey; const Value: TValue);
@@ -1187,6 +1292,8 @@ var
 begin
   Result := False;
 
+  LockForRead;
+
   if Length(FBucketArray) > 0 then
   begin
     { Generate the hash code }
@@ -1202,6 +1309,7 @@ begin
       Entry := @FEntryArray[I];
       if (Entry.FHashCode = LHashCode) and KeysAreEqual(Entry.FKey, AKey) then
       begin
+        LockForWrite;
 
         if LRemIndex < 0 then
           FBucketArray[LIndex] := Entry.FNext
@@ -1221,33 +1329,55 @@ begin
         Inc(FFreeCount);
         NotifyCollectionChanged();
 
+        UnLockForWrite;
+        UnLockForRead;
+
         Exit;
       end;
 
       LRemIndex := I;
       I := Entry.FNext;
     end;
-
   end;
+
+  UnLockForRead;
 end;
 
 function TDictionary<TKey, TValue>.TryGetValue(const AKey: TKey; out AFoundValue: TValue): Boolean;
 var
   LIndex: NativeInt;
 begin
+  LockForRead;
+
   LIndex := FindEntry(AKey);
 
   if LIndex >= 0 then
   begin
     AFoundValue := FEntryArray[LIndex].FValue;
+
+    UnLockForRead;
     Exit(True);
   end;
+
+  UnLockForRead;
 
   { Key not found, simply fail }
   AFoundValue := Default(TValue);
   Result := False;
 end;
 
+
+procedure TDictionary<TKey, TValue>.UnLockForRead;
+begin
+  if FThreadSafe then
+    FLock.EndRead;
+end;
+
+procedure TDictionary<TKey, TValue>.UnLockForWrite;
+begin
+  if FThreadSafe then
+    FLock.EndWrite;
+end;
 
 { TDictionary<TKey, TValue>.TEnumerator }
 
@@ -1257,6 +1387,8 @@ var
 begin
   with TDictionary<TKey, TValue>(Owner) do
   begin
+    LockForRead;
+
     while FCurrentIndex < FCount do
     begin
       Entry := @FEntryArray[FCurrentIndex];
@@ -1267,6 +1399,8 @@ begin
 
         Inc(FCurrentIndex);
         Result := True;
+
+        UnLockForRead;
         Exit;
       end;
 
@@ -1275,6 +1409,8 @@ begin
 
     FCurrentIndex := FCount + 1;
     Result := False;
+
+    UnLockForRead;
   end;
 end;
 

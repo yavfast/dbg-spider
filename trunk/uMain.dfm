@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsUpdateInfo
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -942,7 +942,7 @@ object MainForm: TMainForm
                 Top = 0
                 Width = 276
                 Height = 213
-                ActivePage = tsMemInfoFuncSrc
+                ActivePage = tsMemInfoFuncLinks
                 Align = alClient
                 TabOrder = 1
                 object tsMemInfoFuncLinks: TTabSheet
