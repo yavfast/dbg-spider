@@ -22,13 +22,62 @@ function DebugBreakProcess(Process: THandle): BOOL; stdcall;
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall;
 function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall;
 
+function GetFileVersion(const AFileName: string): string;
+
+function GetGUID: String;
+
 implementation
+
+//uses ActiveX;
 
 function QueryThreadCycleTime(ThreadHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryThreadCycleTime';
 function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryProcessCycleTime';
 function DebugBreakProcess(Process: THandle): BOOL; stdcall; external kernel32 name 'DebugBreakProcess';
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall; external kernel32;
 function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall; external kernel32;
+function CoCreateGuid(out guid: TGUID): HResult; stdcall; external 'ole32.dll' name 'CoCreateGuid';
+
+function GetGUID: String;
+var
+  G: TGUID;
+begin
+  CoCreateGuid(G);
+  Result := GUIDToString(G);
+  Result := Copy(Result, 2, Length(Result) - 2);
+end;
+
+function GetFileVersion(const AFileName: string): String;
+var
+  FileName: string;
+  InfoSize, Wnd: DWORD;
+  VerBuf: Pointer;
+  FI: PVSFixedFileInfo;
+  VerSize: DWORD;
+  Major1, Major2, Minor1, Minor2: Cardinal;
+begin
+  Result := '';
+  FileName := AFileName;
+  UniqueString(FileName);
+  InfoSize := GetFileVersionInfoSize(PChar(FileName), Wnd);
+  if InfoSize <> 0 then
+  begin
+    GetMem(VerBuf, InfoSize);
+    try
+      if GetFileVersionInfo(PChar(FileName), Wnd, InfoSize, VerBuf) then
+        if VerQueryValue(VerBuf, '\', Pointer(FI), VerSize) then
+        begin
+          Major1 := FI.dwFileVersionMS shr 16;
+          Major2 := FI.dwFileVersionMS and $FFFF;
+          Minor1 := FI.dwFileVersionLS shr 16;
+          Minor2 := FI.dwFileVersionLS and $FFFF;
+
+          Result:= Format('%d.%d.%d.%d', [Major1, Major2, Minor1, Minor2]);
+        end;
+    finally
+      FreeMem(VerBuf);
+    end;
+  end;
+end;
 
 type
   EWinAPIException = class(Exception);

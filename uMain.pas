@@ -399,6 +399,8 @@ type
 
     procedure HidePCTabs(PC: TPageControl);
 
+    procedure SendGAEvent(const Category, Action: String; const ELabel: String = '');
+
     procedure ClearProject;
     procedure ClearTrees;
     procedure ClearDbgTrees;
@@ -463,6 +465,7 @@ type
     procedure LoadGUIOptions;
     procedure LoadRecentProjects;
     function GetDebugOptions: TDbgOptions;
+    function GetAppID: String;
   public
     procedure OnException(Sender: TObject; E: Exception);
     procedure DoAction(Action: TacAction; const Args: array of Variant);
@@ -477,7 +480,8 @@ implementation
 {$R *.dfm}
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
-  uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types;
+  uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types,
+  uGA, System.Win.Registry;
 
 
 type
@@ -2060,6 +2064,8 @@ end;
 
 procedure TMainForm.FormShow(Sender: TObject);
 begin
+  SendGAEvent('Event', 'Start');
+
   acRunStop.Assign(acRun);
   UpdateMainActions;
   UpdateStatusInfo;
@@ -2657,6 +2663,59 @@ end;
 procedure TMainForm.pTrackFuncAdvResize(Sender: TObject);
 begin
   vstTrackFuncParent.Height := pTrackFuncAdv.ClientHeight div 2;
+end;
+
+function TMainForm.GetAppID: String;
+const
+  _RegKey = 'Software\Spider\';
+  _RegAppID = 'AppID';
+var
+  Reg: TRegistry;
+begin
+  Result := '';
+  Reg := TRegistry.Create;
+  try
+    Reg.RootKey := HKEY_CURRENT_USER;
+    if Reg.OpenKey(_RegKey, not Reg.KeyExists(_RegKey)) then
+    try
+      Result := Reg.GetDataAsString(_RegAppID);
+      if Result = '' then
+      begin
+        Result := GetGUID;
+        Reg.WriteString(_RegAppID, Result);
+      end;
+    finally
+      Reg.CloseKey;
+    end
+    else
+      Result := GetGUID;
+  finally
+    FreeAndNil(Reg);
+  end;
+end;
+
+procedure TMainForm.SendGAEvent(const Category, Action, ELabel: String);
+const
+  _TrackingID = 'UA-44820931-2';
+  _AppName = 'Spider';
+var
+  GA: TGA;
+begin
+  {$IFDEF DEBUG}
+  Exit;
+  {$ENDIF}
+
+  GA := TGA.Create;
+  try
+    GA.TrackingID := _TrackingID;
+    GA.AppName := _AppName;
+    GA.ClientID := GetAppID;
+    GA.AppVersion := GetFileVersion(Application.ExeName);
+
+    GA.SendEvent(Category, Action, ELabel);
+  finally
+    FreeAndNil(GA);
+  end;
 end;
 
 procedure TMainForm.SetProjectName(const ProjectName: String);
