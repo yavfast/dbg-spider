@@ -79,6 +79,8 @@ type
       const ExtParam1: String = '');
     procedure SendException(const Description: string; const IsFatal: Boolean = False);
 
+    procedure SendFeedback(const SocialNetwork, SocialAction, SocialActionTarget: String);
+
     procedure SessionStart;
     procedure SessionEnd;
 
@@ -306,6 +308,18 @@ begin
     Params.Add(gapIsExceptionFatal, '1')
   else
     Params.Add(gapIsExceptionFatal, '0');
+
+  DoSend;
+end;
+
+procedure TGA.SendFeedback(const SocialNetwork, SocialAction, SocialActionTarget: String);
+begin
+  Params.Clear;
+  Params.Add(gapHitType, GA_HIT_TYPES[gatSocial]);
+
+  Params.Add(gapSocialNetwork, SocialNetwork);
+  Params.Add(gapSocialAction, SocialAction);
+  Params.Add(gapSocialActionTarget, SocialActionTarget);
 
   DoSend;
 end;

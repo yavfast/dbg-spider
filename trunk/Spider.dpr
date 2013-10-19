@@ -38,7 +38,8 @@ uses
   Collections.Sets in 'Collections\Collections.Sets.pas',
   Collections.Stacks in 'Collections\Collections.Stacks.pas',
   uGA in 'uGA.pas',
-  uUpdateInfo in 'uUpdateInfo.pas';
+  uUpdateInfo in 'uUpdateInfo.pas',
+  uFeedback in 'uFeedback.pas' {frmFeedback};
 
 {$R *.res}
 
