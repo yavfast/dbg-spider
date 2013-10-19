@@ -36,7 +36,8 @@ uses
   Collections.Queues in 'Collections\Collections.Queues.pas',
   Collections.Serialization in 'Collections\Collections.Serialization.pas',
   Collections.Sets in 'Collections\Collections.Sets.pas',
-  Collections.Stacks in 'Collections\Collections.Stacks.pas';
+  Collections.Stacks in 'Collections\Collections.Stacks.pas',
+  uGA in 'uGA.pas';
 
 {$R *.res}
 
