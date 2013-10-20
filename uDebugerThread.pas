@@ -198,6 +198,11 @@ begin
     begin
       _AC.Log(dltInfo, 'Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, AppName]);
       _AC.ViewDebugInfo(gvDebugInfo);
+
+      _AC.Log(dltWarning, 'Hint: Set "Stack frames" to "True" in project options, for view full call stack');
+
+      if gvDebugInfo.Units.IndexOf('system.pas') = -1 then
+        _AC.Log(dltError, 'Debug info for unit "system.pas" not found. Please, set "Use debug .dcus" to "False" in project options.');
     end
     else
       _AC.Log(dltWarning, 'No debug info for "%s"', [AppName]);

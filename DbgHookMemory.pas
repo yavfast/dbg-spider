@@ -21,6 +21,8 @@ var
   MemCallStack: Boolean = False;
   MemInfoLock: TCriticalSection = nil;
 
+  MemLock: TCriticalSection = nil;
+
   _MemoryMgr: PMemoryManagerEx = nil;
 
 type
@@ -226,38 +228,76 @@ begin
   MemInfoLock.Leave;
 end;
 
+{.$DEFINE MEMLOCK}
+
 function _HookGetMem(Size: TMemSize): Pointer;
 begin
-  Result := _BaseGetMem(Size);
-  PCardinal(Result)^ := $00000000; // Очистка для TObject
+  {$IFDEF MEMLOCK}
+  MemLock.Enter;
+  try
+  {$ENDIF}
+    Result := _BaseGetMem(Size);
+    PCardinal(Result)^ := $00000000; // Очистка для TObject
 
-  _AddMemInfo(miGetMem, Result, Size);
+    _AddMemInfo(miGetMem, Result, Size);
+  {$IFDEF MEMLOCK}
+  finally
+    MemLock.Leave;
+  end;
+  {$ENDIF}
 end;
 
 function _HookFreeMem(P: Pointer): Integer;
 begin
-  _AddMemInfo(miFreeMem, P, 0);
+  {$IFDEF MEMLOCK}
+  MemLock.Enter;
+  try
+  {$ENDIF}
+    _AddMemInfo(miFreeMem, P, 0);
 
-  // !!! Указатель может быть уже невалидным
-  //PCardinal(P)^ := $00000000; // Очистка для TObject
+    // !!! Указатель может быть уже невалидным
+    //PCardinal(P)^ := $00000000; // Очистка для TObject
 
-  Result := _BaseFreeMem(P);
+    Result := _BaseFreeMem(P);
+  {$IFDEF MEMLOCK}
+  finally
+    MemLock.Leave;
+  end;
+  {$ENDIF}
 end;
 
 function _HookReallocMem(P: Pointer; Size: TMemSize): Pointer;
 begin
-  _AddMemInfo(miFreeMem, P, 0);
+  {$IFDEF MEMLOCK}
+  MemLock.Enter;
+  try
+  {$ENDIF}
+    _AddMemInfo(miFreeMem, P, 0);
 
-  Result := _BaseReallocMem(P, Size);
+    Result := _BaseReallocMem(P, Size);
 
-  _AddMemInfo(miGetMem, Result, Size);
+    _AddMemInfo(miGetMem, Result, Size);
+  {$IFDEF MEMLOCK}
+  finally
+    MemLock.Leave;
+  end;
+  {$ENDIF}
 end;
 
 function _HookAllocMem(Size: TMemSize): Pointer;
 begin
-   Result := _BaseAllocMem(Size);
+  {$IFDEF MEMLOCK}
+  MemLock.Enter;
+  try
+  {$ENDIF}
+    Result := _BaseAllocMem(Size);
 
-  _AddMemInfo(miGetMem, Result, Size);
+    _AddMemInfo(miGetMem, Result, Size);
+  {$IFDEF MEMLOCK}
+  finally
+    MemLock.Leave;
+  end;
+  {$ENDIF}
 end;
 
 procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
@@ -265,6 +305,8 @@ begin
   OutputDebugStringA('Init memory hooks...');
   MemInfoListCnt := 0;
   MemCallStack := MemoryCallStack;
+
+  MemLock := TCriticalSection.Create;
 
   MemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
   MemInfoLock := TCriticalSection.Create;
@@ -312,6 +354,8 @@ begin
 
   //Sleep(100);
   FreeAndNil(MemInfoLock);
+
+  FreeAndNil(MemLock);
 
   OutputDebugStringA('Reset memory hooks - ok');
 end;

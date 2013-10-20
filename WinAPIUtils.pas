@@ -14,9 +14,9 @@ function GetProcessCPUTime(const hProcess: THandle): UInt64;
 function GetThreadCPUTime(const hThread: THandle): UInt64;
 
 function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
-function FileTimeToInt64(const FileTime: TFileTime): UInt64;
-function Int64ToFileTime(const Value: UInt64): TFileTime;
-function Int64ToDateTime(const Value: UInt64): TDateTime;
+function FileTimeToInt64(const FileTime: TFileTime): UInt64; inline;
+function Int64ToFileTime(const Value: UInt64): TFileTime; inline;
+function Int64ToDateTime(const Value: UInt64): TDateTime; inline;
 
 function DebugBreakProcess(Process: THandle): BOOL; stdcall;
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall;

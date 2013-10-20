@@ -1406,7 +1406,7 @@ function TDebuger.GetThreadData(const ThreadID: TThreadId; const UseFinished: Bo
 var
   Index: Integer;
 begin
-  Index := GetThreadIndex(ThreadId);
+  Index := GetThreadIndex(ThreadId, UseFinished);
   if Index >= 0 then
     Result := FThreadList[Index]
   else
@@ -2227,67 +2227,73 @@ begin
       if (ThData = Nil) or (ThData^.ThreadID <> DbgMemInfo^.ThreadId) then
         ThData := GetThreadData(DbgMemInfo^.ThreadId, True);
 
-      if ThData <> Nil then
-        case DbgMemInfo^.MemInfoType of
-          miGetMem:
+      if ThData = Nil then
+        RaiseDebugCoreException();
+
+      case DbgMemInfo^.MemInfoType of
+        miGetMem:
+        begin
+          //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+
+          // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
+          // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
+          (*
+          FoundThData := ThData;
+          if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
           begin
-            //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+            //DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
 
-            // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
-            // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
-            FoundThData := ThData;
-            if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
-            begin
-              //DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
+            Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
-              Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
+            Dec(FProcessData.ProcessGetMemCount);
+            Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
 
-              Dec(FProcessData.ProcessGetMemCount);
-              Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
-
-              FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-            end;
-
-            // Добавляем инфу про новый объект
-            NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
-            NewMemInfo^.PerfIdx := CurPerfIdx;
-            NewMemInfo^.ObjAddr := DbgMemInfo^.Ptr;
-            NewMemInfo^.Size := DbgMemInfo^.Size;
-            NewMemInfo^.Stack := DbgMemInfo^.Stack;
-            NewMemInfo^.ObjectType := ''; // На этот момент тип ещё может быть неопределен
-
-            ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
-            Inc(ThData^.DbgGetMemInfoSize, NewMemInfo^.Size);
-
-            Inc(FProcessData.ProcessGetMemCount);
-            Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
-
-            //ThData^.DbgGetMemUnitList.LoadStack(NewMemInfo^.Stack, True);
+            FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
           end;
-          miFreeMem:
+          *)
+
+          // Добавляем инфу про новый объект
+          NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
+          NewMemInfo^.PerfIdx := CurPerfIdx;
+          NewMemInfo^.ObjAddr := DbgMemInfo^.Ptr;
+          NewMemInfo^.Size := DbgMemInfo^.Size;
+          NewMemInfo^.Stack := DbgMemInfo^.Stack;
+          NewMemInfo^.ObjectType := ''; // На этот момент тип ещё может быть неопределен
+
+          ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
+          Inc(ThData^.DbgGetMemInfoSize, NewMemInfo^.Size);
+
+          Inc(FProcessData.ProcessGetMemCount);
+          Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
+
+          //ThData^.DbgGetMemUnitList.LoadStack(NewMemInfo^.Stack, True);
+        end;
+        miFreeMem:
+        begin
+          //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+
+          FoundThData := ThData;
+          if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
           begin
-            //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+            //ThData^.DbgGetMemUnitList.LoadStack(MemInfo^.Stack, False);
 
-            FoundThData := ThData;
-            if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
-            begin
-              //ThData^.DbgGetMemUnitList.LoadStack(MemInfo^.Stack, False);
+            Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
-              Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
+            Dec(FProcessData.ProcessGetMemCount);
+            Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
 
-              Dec(FProcessData.ProcessGetMemCount);
-              Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
+            FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+          end
+          else
+          begin
+            // Сюда может зайти, если объект создался раньше установки хука на менеджер памяти
+            //RaiseDebugCoreException();
+            //DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
 
-              FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-            end
-            else
-            begin
-              //DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
-
-              // TODO: Double free ???
-            end;
+            // TODO: Double free ???
           end;
         end;
+      end;
     end;
   end
   else
