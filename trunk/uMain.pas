@@ -716,8 +716,8 @@ begin
   try
     if F.ShowModal = mrOk then
     begin
-      SendGAEvent('Feedback', F.FeedbackType, F.FeedbackText);
-      //SendGAFeedback(F.FeedbackType, F.FeedbackText);
+      //SendGAEvent('Feedback', F.FeedbackType, F.FeedbackText);
+      SendGAFeedback(F.FeedbackType, F.FeedbackText);
     end;
   finally
     FreeAndNil(F);
@@ -1067,10 +1067,6 @@ procedure TMainForm.FinishGASession;
 var
   GA: TGA;
 begin
-  {$IFDEF DEBUG}
-  //Exit;
-  {$ENDIF}
-
   GA := TGA.Create;
   try
     GA.TrackingID := _TrackingID_app;
@@ -2875,10 +2871,6 @@ procedure TMainForm.SendGAEvent(const Category, Action, ELabel: String);
 var
   GA: TGA;
 begin
-  {$IFDEF DEBUG}
-  //Exit;
-  {$ENDIF}
-
   GA := TGA.Create;
   try
     GA.TrackingID := _TrackingID_app;
@@ -2895,8 +2887,6 @@ end;
 procedure TMainForm.SendGAFeedback(const FeedbackType, FeedbackText: String);
 var
   GA: TGA;
-//  S: String;
-//  Idx: Integer;
 begin
   GA := TGA.Create;
   try
@@ -2905,20 +2895,7 @@ begin
     GA.ClientID := GetAppID;
     GA.AppVersion := GetFileVersion(Application.ExeName);
 
-    GA.SendEvent('Feedback', FeedbackType, FeedbackText);
-
-    //GA.SendFeedback('spider', FeedbackType, FeedbackText);
-
-    (*
-    S := StringReplace(FeedbackText, #13#10, ' # ', [rfReplaceAll]);
-    Idx := 1;
-    while S <> ''  do
-    begin
-      GA.SendEvent(FeedbackType, Format('%s #%d', [GetAppID, Idx]), Copy(S, 1, 250));
-      Delete(S, 1, 250);
-      Inc(Idx);
-    end;
-    *)
+    GA.SendEvent(FeedbackType, FeedbackText, GetAppID);
   finally
     FreeAndNil(GA);
   end;
@@ -2964,10 +2941,6 @@ procedure TMainForm.StartGASession;
 var
   GA: TGA;
 begin
-  {$IFDEF DEBUG}
-  //Exit;
-  {$ENDIF}
-
   GA := TGA.Create;
   try
     GA.TrackingID := _TrackingID_app;
