@@ -163,11 +163,7 @@ type
     SaveByte: Byte;
   end;
 
-  TTrackBreakpointList = class(TPointerDictionary<Pointer,PTrackBreakpoint>);
-//  TTrackBreakpointList = class(TDictionary<Pointer,PTrackBreakpoint>)
-//  protected
-//    procedure ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification); override;
-//  end;
+  TTrackBreakpointList = TPointerDictionary<Pointer,PTrackBreakpoint>;
 
   PTrackRETBreakpoint = ^TTrackRETBreakpoint;
   TTrackRETBreakpoint = record
@@ -175,12 +171,7 @@ type
     SaveByte: Byte;
   end;
 
-  TTrackRETBreakpointList = class(TPointerDictionary<Pointer,PTrackRETBreakpoint>);
-//  TTrackRETBreakpointList = class(TDictionary<Pointer,PTrackRETBreakpoint>)
-//  protected
-//    procedure ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification); override;
-//  end;
-
+  TTrackRETBreakpointList = TPointerDictionary<Pointer,PTrackRETBreakpoint>;
 
   THWBPIndex = 0..3;
   THWBPSize = (hsByte, hdWord, hsDWord);
@@ -230,7 +221,7 @@ type
     procedure CheckObjectType;
   end;
 
-  TGetMemInfo = class(TPointerDictionary<Pointer,PGetMemInfo>);
+  TGetMemInfo = TPointerDictionary<Pointer,PGetMemInfo>;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
   TStackPointList = Array of TStackPoint;
@@ -298,8 +289,6 @@ type
   TCallFuncCounter = class(TObjectDictionary<Pointer,PCallFuncInfo>)
   private
     function AddNewCallFunc(const Addr: Pointer): PCallFuncInfo;
-  protected
-    //procedure ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification); override;
   public
     function AddCallFunc(const Addr: Pointer): PCallFuncInfo;
   end;
@@ -348,8 +337,6 @@ type
   end;
 
   TTrackUnitInfoList = class(TTrackUnitInfoBaseList)
-  protected
-    //procedure ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification); override;
   public
     function GetTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo;
     procedure CheckTrackFuncInfo(TrackFuncInfo: TTrackFuncInfo);
@@ -408,8 +395,6 @@ type
   end;
 
   TTrackFuncInfoList = class(TTrackFuncInfoBaseList)
-  protected
-    //procedure ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification); override;
   public
     function GetTrackFuncInfo(const FuncInfo: TObject): TTrackFuncInfo;
   end;
@@ -1108,14 +1093,6 @@ begin
   end;
 end;
 
-//procedure TTrackFuncInfoList.ValueNotify(const Value: TTrackFuncInfo; Action: TCollectionNotification);
-//begin
-//  inherited;
-//
-//  if Action = cnRemoved then
-//    Value.Free;
-//end;
-
 { TCallCounter }
 
 function TCallFuncCounter.AddCallFunc(const Addr: Pointer): PCallFuncInfo;
@@ -1148,37 +1125,6 @@ begin
       Result^.LineNo := LineInfo.LineNo;
   end;
 end;
-
-//procedure TCallFuncCounter.ValueNotify(const Value: PCallFuncInfo; Action: TCollectionNotification);
-//begin
-//  inherited;
-//
-//  if Action = cnRemoved then
-//    FreeMemory(Value);
-//end;
-
-{ TTrackBreakpointList }
-
-//procedure TTrackBreakpointList.ValueNotify(const Value: PTrackBreakpoint; Action: TCollectionNotification);
-//begin
-//  inherited;
-//
-//  if Action = cnRemoved then
-//    FreeMem(Value);
-//end;
-
-{ TTrackRETBreakpointList }
-
-//procedure TTrackRETBreakpointList.ValueNotify(const Value: PTrackRETBreakpoint; Action: TCollectionNotification);
-//begin
-//  inherited;
-//
-//  if Action = cnRemoved then
-//    FreeMem(Value);
-//end;
-
-{ TTrackStackPoint }
-
 
 { TTrackUnitInfoList }
 
@@ -1258,14 +1204,6 @@ begin
     FreeAndNil(StackEntry);
   end;
 end;
-
-//procedure TTrackUnitInfoList.ValueNotify(const Value: TTrackUnitInfo; Action: TCollectionNotification);
-//begin
-//  inherited;
-//
-//  if Action = cnRemoved then
-//    Value.Free;
-//end;
 
 { TTrackUnitInfo }
 

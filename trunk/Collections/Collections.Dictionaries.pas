@@ -289,11 +289,11 @@ type
 
     destructor Destroy; override;
 
-    procedure LockForRead; virtual;
-    procedure UnLockForRead; virtual;
+    procedure LockForRead; inline;
+    procedure UnLockForRead; inline;
 
-    procedure LockForWrite; virtual;
-    procedure UnLockForWrite; virtual;
+    procedure LockForWrite; inline;
+    procedure UnLockForWrite; inline;
 
     ///  <summary>Clears the contents of the dictionary.</summary>
     procedure Clear(); override;
