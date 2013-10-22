@@ -764,21 +764,6 @@ Begin
         DstType.MinValue := 0;
         DstType.MaxValue := 1;
       End;
-    stkPString:
-      Begin
-        DstType.DataSize := SizeOf(ShortString);
-        LoadType(UnitInfo, SrcType.IndexType, DstType.BaseType);
-      End;
-    stkLString:
-      Begin
-        DstType.DataSize := SizeOf(AnsiString);
-        LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
-      End;
-    stkWString:
-      Begin
-        DstType.DataSize := SizeOf(WideString);
-        LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
-      End;
     stkShortInt:
       Begin
         DstType.MinValue := Low(ShortInt);
@@ -794,6 +779,7 @@ Begin
         DstType.MinValue := Low(Integer);
         DstType.MaxValue := High(Integer);
       End;
+    stkInt64: ;
     stkByte:
       Begin
         DstType.MinValue := Low(Byte);
@@ -809,47 +795,36 @@ Begin
         DstType.MinValue := Low(Cardinal);
         Cardinal(DstType.MaxValue) := High(Cardinal);
       End;
-    stkInt64: ;
     stkUInt64: ;
     stkSingle: ;
     stkReal48: ;
     stkReal: ;
     stkExtended: ;
     stkCurrency: ;
+    stkComplex: ;
+    stkPString:
+      Begin
+        DstType.DataSize := SizeOf(ShortString);
+        LoadType(UnitInfo, SrcType.IndexType, DstType.BaseType);
+      End;
+    stkLString:
+      Begin
+        DstType.DataSize := SizeOf(AnsiString);
+        LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
+      End;
+    stkWString:
+      Begin
+        DstType.DataSize := SizeOf(WideString);
+        LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
+      End;
     stkChar:
       Begin
         DstType.MinValue := 0;
         DstType.MaxValue := Ord(High(AnsiChar));
       End;
-    stkWideChar:
-      Begin
-        DstType.MinValue := Low(Word);
-        DstType.MaxValue := High(Word);
-      End;
     stkPointer:
       Begin
         _LoadPointerType;
-      End;
-    stkClosure:
-      Begin
-        DstType.Kind := tkPointer;
-      End;
-    stkClass:
-      Begin
-        _LoadClassType;
-      End;
-    stkStructure:
-      Begin
-        _LoadStructureType;
-      End;
-    stkEnum:
-      Begin
-        _LoadEnumType;
-      End;
-    stkSet:
-      Begin
-        LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
-        DstType.DataSize := SrcType.DataSize;
       End;
     stkSubRange:
       Begin
@@ -859,21 +834,49 @@ Begin
       Begin
         _LoadArrayType;
       End;
-    stkVoid:
+    stkEnum:
       Begin
+        _LoadEnumType;
       End;
-    stkProcedure:
+    stkStructure:
       Begin
-        // TODO: Params
+        _LoadStructureType;
+      End;
+    stkClass:
+      Begin
+        _LoadClassType;
+      End;
+    stkSet:
+      Begin
+        LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
+        DstType.DataSize := SrcType.DataSize;
+      End;
+    stkVariant: ; // ???
+    stkProperty:
+      Begin
+        // TODO:
+      End;
+    stkFieldList: ; // ???
+    stkClosure:
+      Begin
+        DstType.Kind := tkPointer;
       End;
     stkClassRef:
       Begin
         // TODO:
       End;
-    stkProperty:
+    stkWideChar:
       Begin
-        // TODO:
+        DstType.MinValue := Low(Word);
+        DstType.MaxValue := High(Word);
       End;
+    stkProcedure:
+      Begin
+        // TODO: Params
+      End;
+    stkArgList: ;
+    stkMFunction: ;
+    stkVoid: ;
     else
       Begin
         SrcType.Kind := SrcType.Kind;
