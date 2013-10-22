@@ -2500,7 +2500,7 @@ begin
   case Kind of
     0: // Special
       case Size Of
-        3: Result := CreateTypeInfo(stkVoid, 0);
+        3: Result := CreateTypeInfo(stkVoid, SizeOf(Pointer));
         4: Result := CreateTypeInfo(stkCurrency, SizeOf(TCurrencyTypeInfo));
       end;
     1: // Signed integral value

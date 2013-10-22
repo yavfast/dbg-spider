@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsCodeTracking
+    ActivePage = tsDebugInfo2
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -144,7 +144,7 @@ object MainForm: TMainForm
           Top = 0
           Width = 848
           Height = 517
-          ActivePage = tsDbgUnitFunctions
+          ActivePage = tsDbgUnitTypes
           Align = alClient
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
@@ -239,6 +239,22 @@ object MainForm: TMainForm
                   Position = 1
                   Width = 400
                   WideText = 'Base type'
+                end
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 2
+                  Width = 60
+                  WideText = 'Data size'
+                end
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 3
+                  Width = 80
+                  WideText = 'Offset'
                 end>
             end
           end
@@ -571,8 +587,6 @@ object MainForm: TMainForm
         OnHeaderDrawQueryElements = vdtTimeLineHeaderDrawQueryElements
         OnPaintBackground = vdtTimeLinePaintBackground
         OnScroll = vdtTimeLineScroll
-        ExplicitLeft = 447
-        ExplicitWidth = 763
         Columns = <
           item
             BiDiMode = bdLeftToRight
@@ -654,8 +668,6 @@ object MainForm: TMainForm
         Caption = 'pMemInfoClient'
         ShowCaption = False
         TabOrder = 1
-        ExplicitLeft = 470
-        ExplicitWidth = 740
         object cbMemInfo: TCoolBar
           Left = 0
           Top = 0
@@ -674,7 +686,6 @@ object MainForm: TMainForm
           EdgeInner = esNone
           EdgeOuter = esNone
           FixedOrder = True
-          ExplicitWidth = 740
           object actbMemInfo: TActionToolBar
             Left = 2
             Top = 0
@@ -704,10 +715,8 @@ object MainForm: TMainForm
           Align = alClient
           TabOrder = 1
           OnChange = pcMemInfoChange
-          ExplicitWidth = 740
           object tsMemInfoViewStack: TTabSheet
             Caption = 'Simple view'
-            ExplicitWidth = 732
             object pnl1: TPanel
               Left = 0
               Top = 0
@@ -716,7 +725,6 @@ object MainForm: TMainForm
               Align = alClient
               BevelOuter = bvNone
               TabOrder = 0
-              ExplicitWidth = 732
               object pMemoryInfoAdv: TPanel
                 Left = 305
                 Top = 0
@@ -727,7 +735,6 @@ object MainForm: TMainForm
                 Caption = 'pMemoryInfoAdv'
                 ShowCaption = False
                 TabOrder = 0
-                ExplicitWidth = 427
                 object splMemInfoAdv: TSplitter
                   Left = 0
                   Top = 225
@@ -759,7 +766,6 @@ object MainForm: TMainForm
                   OnFocusChanged = vstMemStackFocusChanged
                   OnGetText = vstMemStackGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                  ExplicitWidth = 427
                   Columns = <
                     item
                       Alignment = taRightJustify
@@ -813,7 +819,6 @@ object MainForm: TMainForm
                   RightEdge = 0
                   SearchEngine = dmShareData.synRegexSearch1
                   FontSmoothing = fsmNone
-                  ExplicitWidth = 427
                 end
               end
               object vstMemList: TVirtualStringTree
@@ -872,7 +877,6 @@ object MainForm: TMainForm
           object tsMemInfoTreeView: TTabSheet
             Caption = 'Tree view'
             ImageIndex = 1
-            ExplicitWidth = 732
             object spl2: TSplitter
               Left = 0
               Top = 213
@@ -893,7 +897,6 @@ object MainForm: TMainForm
               Caption = 'pMemInfoTreeLeft'
               ShowCaption = False
               TabOrder = 0
-              ExplicitWidth = 732
               object vstMemInfoFuncTree: TVirtualStringTree
                 Left = 0
                 Top = 0
@@ -960,10 +963,8 @@ object MainForm: TMainForm
                 ActivePage = tsMemInfoFuncLinks
                 Align = alClient
                 TabOrder = 1
-                ExplicitWidth = 276
                 object tsMemInfoFuncLinks: TTabSheet
                   Caption = 'Links'
-                  ExplicitWidth = 268
                   object pMemInfoFuncLinks: TPanel
                     Left = 0
                     Top = 0
@@ -974,7 +975,6 @@ object MainForm: TMainForm
                     ShowCaption = False
                     TabOrder = 0
                     OnResize = pMemInfoFuncLinksResize
-                    ExplicitWidth = 268
                     object spl1: TSplitter
                       Left = 0
                       Top = 100
@@ -1010,7 +1010,6 @@ object MainForm: TMainForm
                       OnDrawText = vstTrackFuncLinksDrawText
                       OnGetText = vstMemInfoFuncParentsGetText
                       OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                      ExplicitWidth = 268
                       Columns = <
                         item
                           CaptionAlignment = taCenter
@@ -1069,7 +1068,6 @@ object MainForm: TMainForm
                       OnDrawText = vstTrackFuncLinksDrawText
                       OnGetText = vstMemInfoFuncChildsGetText
                       OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                      ExplicitWidth = 268
                       Columns = <
                         item
                           CaptionAlignment = taCenter
@@ -1107,7 +1105,6 @@ object MainForm: TMainForm
                 object tsMemInfoFuncSrc: TTabSheet
                   Caption = 'Source'
                   ImageIndex = 1
-                  ExplicitWidth = 268
                   object synmMemInfoFuncSrc: TSynMemo
                     Left = 0
                     Top = 0
@@ -1131,7 +1128,6 @@ object MainForm: TMainForm
                     ReadOnly = True
                     RightEdge = 0
                     FontSmoothing = fsmNone
-                    ExplicitWidth = 268
                   end
                 end
               end
@@ -1147,7 +1143,6 @@ object MainForm: TMainForm
               Caption = 'pMemInfoButtom'
               ShowCaption = False
               TabOrder = 1
-              ExplicitWidth = 732
               object vstMemInfoObjects: TVirtualStringTree
                 Left = 0
                 Top = 0
@@ -1221,7 +1216,6 @@ object MainForm: TMainForm
                 OnDblClick = vstMemInfoObjStackDblClick
                 OnGetText = vstMemStackGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                ExplicitWidth = 376
                 Columns = <
                   item
                     Alignment = taRightJustify
@@ -1319,8 +1313,6 @@ object MainForm: TMainForm
         Caption = 'pExceptionInfo'
         ShowCaption = False
         TabOrder = 1
-        ExplicitLeft = 396
-        ExplicitWidth = 814
         object pnl2: TPanel
           Left = 0
           Top = 24
@@ -1329,7 +1321,6 @@ object MainForm: TMainForm
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 0
-          ExplicitWidth = 814
           object vstExceptionList: TVirtualStringTree
             Left = 0
             Top = 0
@@ -1391,7 +1382,6 @@ object MainForm: TMainForm
             Caption = 'pExceptInfoAdv'
             ShowCaption = False
             TabOrder = 1
-            ExplicitWidth = 303
             object splExceptInfoAdv: TSplitter
               Left = 0
               Top = 217
@@ -1423,7 +1413,6 @@ object MainForm: TMainForm
               OnFocusChanged = vstExceptionCallStackFocusChanged
               OnGetText = vstExceptionCallStackGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
-              ExplicitWidth = 303
               Columns = <
                 item
                   Alignment = taRightJustify
@@ -1476,7 +1465,6 @@ object MainForm: TMainForm
               ReadOnly = True
               RightEdge = 0
               FontSmoothing = fsmNone
-              ExplicitWidth = 303
             end
           end
         end
@@ -1498,7 +1486,6 @@ object MainForm: TMainForm
           EdgeInner = esNone
           EdgeOuter = esNone
           FixedOrder = True
-          ExplicitWidth = 814
           object actbExceptionInfo: TActionToolBar
             Left = 2
             Top = 0
@@ -1599,8 +1586,6 @@ object MainForm: TMainForm
         Caption = 'pCodeTrackingInfo'
         ShowCaption = False
         TabOrder = 1
-        ExplicitLeft = 527
-        ExplicitWidth = 683
         object pTrackAdv: TPanel
           Left = 0
           Top = 26
@@ -1611,7 +1596,6 @@ object MainForm: TMainForm
           Caption = 'pTrackAdv'
           ShowCaption = False
           TabOrder = 0
-          ExplicitWidth = 683
           object vstTrackFuncs: TVirtualStringTree
             Left = 0
             Top = 0
@@ -1680,10 +1664,8 @@ object MainForm: TMainForm
             ActivePage = tsTrackFuncAdvLinks
             Align = alClient
             TabOrder = 1
-            ExplicitWidth = 226
             object tsTrackFuncAdvLinks: TTabSheet
               Caption = 'Links'
-              ExplicitWidth = 218
               object pTrackFuncAdv: TPanel
                 Left = 0
                 Top = 0
@@ -1695,7 +1677,6 @@ object MainForm: TMainForm
                 ShowCaption = False
                 TabOrder = 0
                 OnResize = pTrackFuncAdvResize
-                ExplicitWidth = 218
                 object splTrackFuncAdv: TSplitter
                   Left = 0
                   Top = 329
@@ -1732,7 +1713,6 @@ object MainForm: TMainForm
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstTrackFuncParentGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                  ExplicitWidth = 218
                   Columns = <
                     item
                       CaptionAlignment = taCenter
@@ -1791,7 +1771,6 @@ object MainForm: TMainForm
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstTrackFuncChildsGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                  ExplicitWidth = 218
                   Columns = <
                     item
                       CaptionAlignment = taCenter
@@ -1829,7 +1808,6 @@ object MainForm: TMainForm
             object tsTrackFuncAdvSrc: TTabSheet
               Caption = 'Source'
               ImageIndex = 1
-              ExplicitWidth = 218
               object synmTrackFuncAdvSource: TSynMemo
                 Left = 0
                 Top = 0
@@ -1853,7 +1831,6 @@ object MainForm: TMainForm
                 ReadOnly = True
                 RightEdge = 0
                 FontSmoothing = fsmNone
-                ExplicitWidth = 218
               end
             end
           end
@@ -1875,7 +1852,6 @@ object MainForm: TMainForm
           EdgeBorders = []
           FixedSize = True
           FixedOrder = True
-          ExplicitWidth = 683
           object actbCodeTrackingInfo: TActionToolBar
             Left = 2
             Top = 0

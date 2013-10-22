@@ -635,7 +635,7 @@ Begin
                     Try
                         If Member.DataType <> Nil Then
                         Begin
-                            MemberAddr := Pointer(Cardinal(Address) + (TUInteger(Member.BitOffset) Div 8));
+                            MemberAddr := Pointer(Cardinal(Address) + TUInteger(Member.Offset));
                             Value := GetValue(gvDebuger, Member.DataType, MemberAddr, True, BriefMode);
                             MemberValue := VariantToString(Value, ToStringData);
                         End

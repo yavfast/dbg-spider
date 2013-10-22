@@ -279,7 +279,6 @@ end;
 procedure TGA.SendEvent(const Category, Action: string; const ELabel: string = ''; const Value: Integer = 0;
   const ExtParam1: String = '');
 begin
-  // SYNCWIN-1720
   if not CheckFilter(Category) or not CheckFilter(Action) or not CheckFilter(ELabel) then Exit;
 
   Params.Clear;
@@ -430,9 +429,11 @@ var
   S: TStringStream;
 
 begin
-  {.$IFDEF DEBUG}
-  //Result := True;
-  {.$ELSE}
+  {$IFDEF DEBUG}
+  Result := True;
+  Exit;
+  {$ENDIF}
+
   if (Self = Nil) or Terminated then
   begin
     Result := True;
@@ -454,7 +455,6 @@ begin
   finally
     FreeAndNil(S);
   end;
-  {.$ENDIF}
 end;
 
 procedure TGASender.Execute;

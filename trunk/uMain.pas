@@ -3353,6 +3353,8 @@ var
   TypeInfo: TTypeInfo;
   MemberInfo: TStructMember;
 begin
+  CellText := ' ';
+
   Data := vstDbgInfoTypes.GetNodeData(Node);
   case Data^.LinkType of
     ltDbgUnitInfo:
@@ -3360,8 +3362,6 @@ begin
         UnitInfo := Data^.DbgUnitInfo;
         case Column of
           0: CellText := UnitInfo.ShortName;
-        else
-          CellText := ' ';
         end;
       end;
     ltDbgTypeInfo:
@@ -3371,6 +3371,7 @@ begin
         case Column of
           0: CellText := TypeInfo.ShortName;
           1: CellText := TypeInfo.TypeOf;
+          2: CellText := IntToStr(TypeInfo.DataSize);
         end;
       end;
     ltDbgStructMemberInfo:
@@ -3380,6 +3381,8 @@ begin
         case Column of
           0: CellText := MemberInfo.ShortName;
           1: CellText := MemberInfo.DataType.ShortName;
+          2: CellText := IntToStr(MemberInfo.DataSize);
+          3: CellText := IntToStr(MemberInfo.Offset);
         end;
       end;
   end;

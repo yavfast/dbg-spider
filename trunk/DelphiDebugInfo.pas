@@ -471,17 +471,253 @@ Begin
   End;
 End;
 
+const
+  _DefJclSymbolTypeKindToTypeKind: array[Low(TJclSymbolTypeKind) .. High(TJclSymbolTypeKind)] of TTypeKind = (
+    tkBoolean, tkWordBool, tkLongBool, tkShortInt,
+    tkSmallInt, tkInteger, tkInt64, tkByte, tkWord, tkCardinal, tkUInt64,
+    tkSingle, tkReal48, tkReal, tkExtended, tkCurrency, tkComplex, tkPString,
+    tkLString, tkWString, tkChar, tkPointer, tkSubRange, tkArray, tkEnum,
+    tkStructure, tkClass, tkSet, tkVariant, tkProperty, tkFieldList, tkClosure,
+    tkClassRef, tkWideChar, tkProcedure, tkArgList, tkMFunction, tkVoid);
+
+
 Function TDelphiDebugInfo.LoadType(UnitInfo: TUnitInfo; const TypeIndex: Integer; out DstType: TTypeInfo): Integer;
 Var
   SrcType: TJclSymbolTypeInfo;
-  SrcList: TJclSymbolTypeInfo;
-  SrcMember: TJclTD32MemberSymbolInfo;
-  SrcMemberType: TJclSymbolTypeInfo;
-  DstMember: TStructMember;
-  DstTypeMember: TStructMember;
-  SrcEnum: TJclEnumerateSymbolInfo;
-  EnumMember: TEnumInfo;
-  I, J: Integer;
+
+  procedure _LoadPointerType;
+  begin
+    If SrcType.ElementType <> 0 Then
+    Begin
+      LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
+      If DstType.BaseType.Kind = tkClass Then
+        DstType.Kind := tkObject
+      Else If (DstType.BaseType.Kind = tkArray) And (DstType.BaseType.DataSize = -1) Then
+        DstType.Kind := tkDynamicArray;
+    End;
+  end;
+
+  procedure _LoadClassType;
+  var
+    I, J: Integer;
+    SrcList: TJclSymbolTypeInfo;
+    SrcMember: TJclTD32MemberSymbolInfo;
+    SrcMemberType: TJclSymbolTypeInfo;
+    DstMember: TStructMember;
+    DstTypeMember: TStructMember;
+  begin
+    SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
+    If SrcList.ElementType <> 0 Then
+      LoadType(UnitInfo, SrcList.ElementType, DstType.BaseType);
+
+    DstType.Members := TNameList.Create;
+    DstType.Members.Capacity := SrcList.Members.Count;
+    For I := 0 To SrcList.Members.Count - 1 Do
+    Begin
+      //DstMember := Nil;
+      SrcMember := TJclTD32MemberSymbolInfo(SrcList.Members[I]);
+
+      SrcMemberType := FImage.TD32Scanner.SymbolTypes[SrcMember.TypeIndex];
+
+      if SrcMemberType = Nil then
+      begin
+        // TODO: „то-то здесь непон€тное в XE4 по€вилось
+        Continue;
+      end;
+
+      DstMember := TStructMember.Create;
+      DstMember.NameId := SrcMember.NameIndex;
+      DstMember.SymbolInfo := SrcMember;
+
+      Case SrcMember.Flags And 3 Of
+        0, 3:
+          DstMember.Scope := msPublic;
+        1:
+          DstMember.Scope := msPrivate;
+        2:
+          DstMember.Scope := msProtected;
+      End;
+
+      If SrcMemberType.Kind = stkClassRef Then
+        LoadType(UnitInfo, SrcMemberType.ElementType, DstMember.DataType);
+
+      If SrcMemberType.Kind <> stkProperty Then
+      Begin
+        If SrcMemberType.Kind <> stkClassRef Then
+          LoadType(UnitInfo, SrcMember.TypeIndex, DstMember.DataType);
+        DstMember.Offset := SrcMember.Offset;
+        DstMember.DataSize := DstMember.DataType.DataSize;
+      End
+      Else
+      Begin
+        LoadType(UnitInfo, SrcMemberType.ElementType, DstMember.DataType);
+
+        DstMember.IsDefault := (SrcMemberType.Flags And 1) = 1;
+
+        If (SrcMemberType.Flags And 2) = 2 Then
+          DstMember.MethodNameId := SrcMemberType.MinValue
+        Else
+        Begin
+          DstMember.Offset := SrcMemberType.MinValue;
+          DstMember.DataSize := DstMember.DataType.DataSize;
+        End;
+
+        For J := 0 To DstType.Members.Count - 1 Do
+        Begin
+          DstTypeMember := TStructMember(DstType.Members[J]);
+          If DstTypeMember.Offset = SrcMemberType.MinValue Then
+          Begin
+            // TODO: ¬озможно, надо здесь надо указывать на всю структуру DstTypeMember
+            DstMember.AliasNameId := DstTypeMember.NameId;
+            Break;
+          End;
+        End;
+      End;
+
+      If DstMember <> Nil Then
+        DstType.Members.Add(DstMember);
+    End;
+  end;
+
+  procedure _LoadStructureType;
+  var
+    I: Integer;
+    SrcList: TJclSymbolTypeInfo;
+    DstMember: TStructMember;
+    SrcMember: TJclTD32MemberSymbolInfo;
+  begin
+    SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
+
+    DstType.Members := TNameList.Create;
+    DstType.Members.Capacity := SrcList.Members.Count;
+    For I := 0 To SrcList.Members.Count - 1 Do
+    Begin
+      SrcMember := TJclTD32MemberSymbolInfo(SrcList.Members[I]);
+
+      DstMember := TStructMember.Create;
+      DstMember.NameId := SrcMember.NameIndex;
+      DstMember.SymbolInfo := SrcMember;
+      DstMember.Scope := msPublic;
+
+      LoadType(UnitInfo, SrcMember.TypeIndex, DstMember.DataType);
+
+      DstMember.Offset := SrcMember.Offset;
+      DstMember.DataSize := DstMember.DataType.DataSize;
+
+      DstType.Members.Add(DstMember);
+    End;
+  end;
+
+  procedure _LoadEnumType;
+  var
+    I: Integer;
+    SrcList: TJclSymbolTypeInfo;
+    SrcEnum: TJclEnumerateSymbolInfo;
+    EnumMember: TEnumInfo;
+  begin
+    DstType.Elements := TNameList.Create;
+
+    DstType.DataSize := FImage.TD32Scanner.SymbolTypes[SrcType.ElementType].DataSize;
+    DstType.MinValue := High(DstType.MinValue);
+    DstType.MaxValue := Low(DstType.MaxValue);
+
+    SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
+    DstType.Elements.Capacity := SrcList.Members.Count;
+    For I := 0 To SrcList.Members.Count - 1 Do
+    Begin
+      SrcEnum := TJclEnumerateSymbolInfo(SrcList.Members[I]);
+
+      EnumMember := TEnumInfo.Create;
+      EnumMember.NameId := SrcEnum.NameIndex;
+      EnumMember.SymbolInfo := SrcEnum;
+
+      EnumMember.TypeInfo := DstType;
+      EnumMember.OrderValue := SrcEnum.Value;
+
+      DstType.Elements.Add(EnumMember);
+
+      If SrcEnum.Value < DstType.MinValue Then
+        DstType.MinValue := SrcEnum.Value;
+      If SrcEnum.Value > DstType.MaxValue Then
+        DstType.MaxValue := SrcEnum.Value;
+    End;
+  end;
+
+  procedure _LoadSubRangeType;
+  var
+    SrcList: TJclSymbolTypeInfo;
+  begin
+    DstType.MinValue := SrcType.MinValue;
+    DstType.MaxValue := SrcType.MaxValue;
+
+    SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.IndexType];
+    Case SrcList.Kind Of
+      stkBoolean, stkWordBool, stkLongBool:
+        Case DstType.DataSize Of
+          1:
+            DstType.Kind := tkBoolean;
+          2:
+            DstType.Kind := tkWordBool;
+          4:
+            DstType.Kind := tkLongBool;
+        End;
+      stkChar, stkWideChar:
+        Case DstType.DataSize Of
+          1:
+            DstType.Kind := tkChar;
+          2:
+            DstType.Kind := tkWideChar;
+        End;
+    Else
+      Case DstType.DataSize Of
+        1:
+          Case SrcList.Kind Of
+            stkShortInt, stkSmallInt, stkInteger:
+              DstType.Kind := tkShortInt;
+          Else
+            DstType.Kind := tkByte;
+          End;
+        2:
+          Case SrcList.Kind Of
+            stkShortInt, stkSmallInt, stkInteger:
+              DstType.Kind := tkSmallInt;
+          Else
+            DstType.Kind := tkWord;
+          End;
+        4:
+          Case SrcList.Kind Of
+            stkShortInt, stkSmallInt, stkInteger:
+              DstType.Kind := tkInteger;
+          Else
+            DstType.Kind := tkCardinal;
+          End;
+      End;
+    End;
+  end;
+
+  procedure _LoadArrayType;
+  var
+    SrcList: TJclSymbolTypeInfo;
+  begin
+    LoadType(UnitInfo, SrcType.IndexType, DstType.IndexType);
+    LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
+    DstType.DataSize := SrcType.DataSize;
+
+    SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.IndexType];
+    Case SrcList.Kind Of
+      stkSubRange:
+        Begin
+          DstType.MinValue := SrcList.MinValue;
+          DstType.MaxValue := SrcList.MaxValue;
+        End
+      Else
+      begin
+        DstType.MinValue := DstType.IndexType.MinValue;
+        DstType.MaxValue := DstType.IndexType.MaxValue;
+      end;
+    End;
+  end;
+
 Begin
   SrcType := FImage.TD32Scanner.SymbolTypes[TypeIndex];
 
@@ -494,6 +730,7 @@ Begin
 
   DstType := TTypeInfo.Create;
   DstType.Kind := tkVoid;
+  DstType.DataSize := SizeOf(Pointer);
   DstType.UnitInfo := UnitInfo;
   DstType.NameId := -1;
   DstType.SymbolInfo := SrcType;
@@ -508,360 +745,139 @@ Begin
   SrcType.UnitInfoIndex := DstType.TypeInfoIdx;
 
   DstType.NameId := SrcType.NameIndex;
+  DstType.Kind := _DefJclSymbolTypeKindToTypeKind[SrcType.Kind];
+  DstType.DataSize := SrcType.DataSize;
+
   Case SrcType.Kind Of
     stkBoolean:
       Begin
-        DstType.Kind := tkBoolean;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := 0;
         DstType.MaxValue := 1;
       End;
     stkWordBool:
       Begin
-        DstType.Kind := tkWordBool;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := 0;
         DstType.MaxValue := 1;
       End;
     stkLongBool:
       Begin
-        DstType.Kind := tkLongBool;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := 0;
         DstType.MaxValue := 1;
       End;
     stkPString:
       Begin
-        DstType.Kind := tkPString;
         DstType.DataSize := SizeOf(ShortString);
         LoadType(UnitInfo, SrcType.IndexType, DstType.BaseType);
       End;
     stkLString:
       Begin
-        DstType.Kind := tkLString;
         DstType.DataSize := SizeOf(AnsiString);
         LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
       End;
     stkWString:
       Begin
-        DstType.Kind := tkWString;
         DstType.DataSize := SizeOf(WideString);
         LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
       End;
     stkShortInt:
       Begin
-        DstType.Kind := tkShortInt;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := Low(ShortInt);
         DstType.MaxValue := High(ShortInt);
       End;
     stkSmallInt:
       Begin
-        DstType.Kind := tkSmallInt;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := Low(SmallInt);
         DstType.MaxValue := High(SmallInt);
       End;
     stkInteger:
       Begin
-        DstType.Kind := tkInteger;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := Low(Integer);
         DstType.MaxValue := High(Integer);
       End;
     stkByte:
       Begin
-        DstType.Kind := tkByte;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := Low(Byte);
         DstType.MaxValue := High(Byte);
       End;
     stkWord:
       Begin
-        DstType.Kind := tkWord;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := Low(Word);
         DstType.MaxValue := High(Word);
       End;
     stkCardinal:
       Begin
-        DstType.Kind := tkCardinal;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := Low(Cardinal);
         Cardinal(DstType.MaxValue) := High(Cardinal);
       End;
-    stkInt64:
-      Begin
-        DstType.Kind := tkInt64;
-        DstType.DataSize := SrcType.DataSize;
-      End;
-    stkUInt64:
-      Begin
-        DstType.Kind := tkUInt64;
-        DstType.DataSize := SrcType.DataSize;
-      End;
-    stkSingle:
-      Begin
-        DstType.Kind := tkSingle;
-        DstType.DataSize := SrcType.DataSize;
-      End;
-    stkReal48:
-      Begin
-        DstType.Kind := tkReal48;
-        DstType.DataSize := SrcType.DataSize;
-      End;
-    stkReal:
-      Begin
-        DstType.Kind := tkReal;
-        DstType.DataSize := SrcType.DataSize;
-      End;
-    stkExtended:
-      Begin
-        DstType.Kind := tkExtended;
-        DstType.DataSize := SrcType.DataSize;
-      End;
-    stkCurrency:
-      Begin
-        DstType.Kind := tkCurrency;
-        DstType.DataSize := SrcType.DataSize;
-      End;
+    stkInt64: ;
+    stkUInt64: ;
+    stkSingle: ;
+    stkReal48: ;
+    stkReal: ;
+    stkExtended: ;
+    stkCurrency: ;
     stkChar:
       Begin
-        DstType.Kind := tkChar;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := 0;
-        DstType.MaxValue := Ord( High(AnsiChar));
+        DstType.MaxValue := Ord(High(AnsiChar));
       End;
     stkWideChar:
       Begin
-        DstType.Kind := tkWideChar;
-        DstType.DataSize := SrcType.DataSize;
         DstType.MinValue := Low(Word);
         DstType.MaxValue := High(Word);
       End;
     stkPointer:
       Begin
-        DstType.Kind := tkPointer;
-        DstType.DataSize := SrcType.DataSize;
-        If SrcType.ElementType <> 0 Then
-        Begin
-          LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
-          If DstType.BaseType.Kind = tkClass Then
-            DstType.Kind := tkObject
-          Else If (DstType.BaseType.Kind = tkArray) And (DstType.BaseType.DataSize = -1) Then
-            DstType.Kind := tkDynamicArray;
-        End;
+        _LoadPointerType;
       End;
     stkClosure:
       Begin
         DstType.Kind := tkPointer;
-        DstType.DataSize := SrcType.DataSize;
       End;
     stkClass:
       Begin
-        DstType.Kind := tkClass;
-        SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
-        If SrcList.ElementType <> 0 Then
-          LoadType(UnitInfo, SrcList.ElementType, DstType.BaseType);
-
-        DstType.Members := TNameList.Create;
-        DstType.Members.Capacity := SrcList.Members.Count;
-        For I := 0 To SrcList.Members.Count - 1 Do
-        Begin
-          //DstMember := Nil;
-          SrcMember := TJclTD32MemberSymbolInfo(SrcList.Members[I]);
-
-          SrcMemberType := FImage.TD32Scanner.SymbolTypes[SrcMember.TypeIndex];
-
-          if SrcMemberType = Nil then
-          begin
-            // TODO: „то-то здесь непон€тное в XE4 по€вилось
-            Continue;
-          end;
-
-          DstMember := TStructMember.Create;
-          DstMember.NameId := SrcMember.NameIndex;
-          DstMember.SymbolInfo := SrcMember;
-
-          Case SrcMember.Flags And 3 Of
-            0, 3:
-              DstMember.Scope := msPublic;
-            1:
-              DstMember.Scope := msPrivate;
-            2:
-              DstMember.Scope := msProtected;
-          End;
-
-          If SrcMemberType.Kind = stkClassRef Then
-            LoadType(UnitInfo, SrcMemberType.ElementType, DstMember.DataType);
-
-          If SrcMemberType.Kind <> stkProperty Then
-          Begin
-            If SrcMemberType.Kind <> stkClassRef Then
-              LoadType(UnitInfo, SrcMember.TypeIndex, DstMember.DataType);
-            DstMember.BitOffset := SrcMember.Offset * 8;
-            DstMember.BitLength := DstMember.DataType.DataSize * 8;
-          End
-          Else
-          Begin
-            LoadType(UnitInfo, SrcMemberType.ElementType, DstMember.DataType);
-
-            DstMember.IsDefault := (SrcMemberType.Flags And 1) = 1;
-
-            If (SrcMemberType.Flags And 2) = 2 Then
-              DstMember.MethodNameId := SrcMemberType.MinValue
-            Else
-            Begin
-              DstMember.BitOffset := SrcMemberType.MinValue * 8;
-              DstMember.BitLength := DstMember.DataType.DataSize * 8;
-            End;
-
-            For J := 0 To DstType.Members.Count - 1 Do
-            Begin
-              DstTypeMember := TStructMember(DstType.Members[J]);
-              If (DstTypeMember.BitOffset Div 8) = SrcMemberType.MinValue Then
-              Begin
-                // TODO: ¬озможно, надо здесь надо указывать на всю структуру DstTypeMember
-                DstMember.AliasNameId := DstTypeMember.NameId;
-                Break;
-              End;
-            End;
-          End;
-
-          If DstMember <> Nil Then
-            DstType.Members.Add(DstMember);
-        End;
+        _LoadClassType;
       End;
     stkStructure:
       Begin
-        DstType.Kind := tkStructure;
-        DstType.DataSize := SrcType.DataSize;
-        SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
-
-        DstType.Members := TNameList.Create;
-        DstType.Members.Capacity := SrcList.Members.Count;
-        For I := 0 To SrcList.Members.Count - 1 Do
-        Begin
-          SrcMember := TJclTD32MemberSymbolInfo(SrcList.Members[I]);
-
-          DstMember := TStructMember.Create;
-          DstMember.NameId := SrcMember.NameIndex;
-          DstMember.SymbolInfo := SrcMember;
-          DstMember.Scope := msPublic;
-
-          LoadType(UnitInfo, SrcMember.TypeIndex, DstMember.DataType);
-
-          DstMember.BitOffset := SrcMember.Offset * 8;
-          DstMember.BitLength := DstMember.DataType.DataSize * 8;
-
-          DstType.Members.Add(DstMember);
-        End;
+        _LoadStructureType;
       End;
     stkEnum:
       Begin
-        DstType.Kind := tkEnum;
-
-        DstType.Elements := TNameList.Create;
-
-        DstType.DataSize := FImage.TD32Scanner.SymbolTypes[SrcType.ElementType].DataSize;
-        DstType.MinValue := High(DstType.MinValue);
-        DstType.MaxValue := Low(DstType.MaxValue);
-
-        SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.Elements];
-        DstType.Elements.Capacity := SrcList.Members.Count;
-        For I := 0 To SrcList.Members.Count - 1 Do
-        Begin
-          SrcEnum := TJclEnumerateSymbolInfo(SrcList.Members[I]);
-
-          EnumMember := TEnumInfo.Create;
-          EnumMember.NameId := SrcEnum.NameIndex;
-          EnumMember.SymbolInfo := SrcEnum;
-
-          EnumMember.TypeInfo := DstType;
-          EnumMember.OrderValue := SrcEnum.Value;
-
-          DstType.Elements.Add(EnumMember);
-
-          If SrcEnum.Value < DstType.MinValue Then
-            DstType.MinValue := SrcEnum.Value;
-          If SrcEnum.Value > DstType.MaxValue Then
-            DstType.MaxValue := SrcEnum.Value;
-        End;
+        _LoadEnumType;
       End;
     stkSet:
       Begin
-        DstType.Kind := tkSet;
         LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
         DstType.DataSize := SrcType.DataSize;
       End;
     stkSubRange:
       Begin
-        DstType.DataSize := SrcType.DataSize;
-        DstType.MinValue := SrcType.MinValue;
-        DstType.MaxValue := SrcType.MaxValue;
-        SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.IndexType];
-        Case SrcList.Kind Of
-          stkBoolean, stkWordBool, stkLongBool:
-            Case DstType.DataSize Of
-              1:
-                DstType.Kind := tkBoolean;
-              2:
-                DstType.Kind := tkWordBool;
-              4:
-                DstType.Kind := tkLongBool;
-            End;
-          stkChar, stkWideChar:
-            Case DstType.DataSize Of
-              1:
-                DstType.Kind := tkChar;
-              2:
-                DstType.Kind := tkWideChar;
-            End;
-        Else
-          Case DstType.DataSize Of
-            1:
-              Case SrcList.Kind Of
-                stkShortInt, stkSmallInt, stkInteger:
-                  DstType.Kind := tkShortInt;
-              Else
-                DstType.Kind := tkByte;
-              End;
-            2:
-              Case SrcList.Kind Of
-                stkShortInt, stkSmallInt, stkInteger:
-                  DstType.Kind := tkSmallInt;
-              Else
-                DstType.Kind := tkWord;
-              End;
-            4:
-              Case SrcList.Kind Of
-                stkShortInt, stkSmallInt, stkInteger:
-                  DstType.Kind := tkInteger;
-              Else
-                DstType.Kind := tkCardinal;
-              End;
-          End;
-        End;
+        _LoadSubRangeType;
       End;
     stkArray:
       Begin
-        DstType.Kind := tkArray;
-        LoadType(UnitInfo, SrcType.IndexType, DstType.IndexType);
-        LoadType(UnitInfo, SrcType.ElementType, DstType.BaseType);
-        DstType.DataSize := SrcType.DataSize;
-        SrcList := FImage.TD32Scanner.SymbolTypes[SrcType.IndexType];
-        Case SrcList.Kind Of
-          stkSubRange:
-            Begin
-              DstType.MinValue := SrcList.MinValue;
-              DstType.MaxValue := SrcList.MaxValue;
-            End
-          Else
-          begin
-            DstType.MinValue := DstType.IndexType.MinValue;
-            DstType.MaxValue := DstType.IndexType.MaxValue;
-          end;
-        End;
+        _LoadArrayType;
+      End;
+    stkVoid:
+      Begin
+      End;
+    stkProcedure:
+      Begin
+        // TODO: Params
+      End;
+    stkClassRef:
+      Begin
+        // TODO:
+      End;
+    stkProperty:
+      Begin
+        // TODO:
+      End;
+    else
+      Begin
+        SrcType.Kind := SrcType.Kind;
+        RaiseDebugCoreException();
       End;
   End;
 End;
@@ -1814,7 +1830,9 @@ var
         _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE4);
 
       If Assigned(_MemoryManager) Then
+      begin
         Result := Pointer(_MemoryManager.Offset);
+      end;
     end;
   end;
 

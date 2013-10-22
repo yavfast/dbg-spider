@@ -164,8 +164,8 @@ Type
   TStructMember = Class(TNameInfo)
   public
     DataType: TTypeInfo;
-    BitOffset: Integer;
-    BitLength: Integer;
+    Offset: Integer;
+    DataSize: Integer;
     Scope: TMemberScope;
     AliasNameId: TNameId;
     MethodNameId: TNameId;
