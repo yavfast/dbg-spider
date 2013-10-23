@@ -1330,15 +1330,20 @@ type
     function GetArgs: TList;
     function GetMembers: TObjectList;
   public
-    Kind: TJclSymbolTypeKind;
     NameIndex: Integer;
     DataSize: UInt64;
+    Kind: TJclSymbolTypeKind;
+
     ElementType: Integer;
     Elements: Integer;
+
     IndexType: Integer;
+
     MinValue: Integer;
     MaxValue: Integer;
+
     Flags: Word;
+
     ClassType: Integer;
     SelfType: Integer;
 
@@ -1945,7 +1950,7 @@ begin
     for I := 0 to Count - 1 do
     begin
       // Get the length of the name
-      Len := Ord(pszName^);
+      Len := Byte(pszName^);
       Inc(pszName);
       // Get the name
       FNames.Add(pszName);
@@ -1963,23 +1968,30 @@ end;
 
 procedure TJclTD32InfoParser.AnalyseGlobalTypes(const pTypes: Pointer; const Size: DWORD);
 
-  function GetBoundFromNumeric(var Data: Pointer): Int64;
+  function GetBoundFromNumeric(var Data: Pointer): Integer;
   var
-    Size, Offset: Byte;
+    Size, Offset: Integer;
   begin
     Result := 0;
-    Size := 2;
-    Offset := 0;
+
     if PWord(Data)^ >= $8000 then
     begin
       case PWord(Data)^ of
-        LF_LONG, LF_ULONG: Size := 4;
-        LF_QUADWORD, LF_UQUADWORD: Size := 8
-        else
-          raise Exception.Create('Invalid bound.');
+        LF_LONG, LF_ULONG:
+          Size := 4;
+        LF_QUADWORD, LF_UQUADWORD:
+          Size := 8;
+      else
+        Exit;
       end;
       Offset := 2;
+    end
+    else
+    begin
+      Size := 2;
+      Offset := 0;
     end;
+
     Inc(Cardinal(Data), Offset);
     Move(Data^, Result, Size);
     Inc(Cardinal(Data), Size);
@@ -1989,7 +2001,33 @@ var
   I: Integer;
   Info: PSymbolTypeInfo;
   TypeInfo: TJclSymbolTypeInfo;
-  Data: Pointer;
+
+  procedure _LoadSubRangeType;
+  var
+    Data: Pointer;
+  begin
+    TypeInfo := CreateTypeInfo(stkSubrange, 0, Info.LeafSubrange.Name);
+    TypeInfo.IndexType := Info.LeafSubrange.BaseType;
+    Data := @Info.LeafSubrange.Data;
+    TypeInfo.MinValue := GetBoundFromNumeric(Data);
+    TypeInfo.MaxValue := GetBoundFromNumeric(Data);
+    TypeInfo.DataSize := PWord(Data)^;
+  end;
+
+  procedure _LoadArrayType;
+  var
+    Data: Pointer;
+  begin
+    TypeInfo := CreateTypeInfo(stkArray, 0, Info.LeafArray.Name);
+    TypeInfo.ElementType := Info.LeafArray.BaseType;
+    TypeInfo.IndexType := Info.LeafArray.IndexType;
+
+    // TODO: Size for dynamic array
+    Data := @Info.LeafArray.S1;
+    TypeInfo.DataSize := GetBoundFromNumeric(Data);
+    TypeInfo.MaxValue := GetBoundFromNumeric(Data);
+  end;
+
 begin
   FSymbolTypes.Capacity := FSymbolTypes.Capacity + Integer(PGlobalTypeInfo(pTypes).Count);
   for I := 0 To PGlobalTypeInfo(pTypes).Count - 1 do
@@ -1999,8 +2037,8 @@ begin
     case Info.Leaf of
       LF_POINTER:
       begin
-          TypeInfo := CreateTypeInfo(stkPointer, SizeOf(Pointer));
-          TypeInfo.ElementType := Info.LeafPointer.ElementType;
+        TypeInfo := CreateTypeInfo(stkPointer, SizeOf(Pointer));
+        TypeInfo.ElementType := Info.LeafPointer.ElementType;
       end;
       LF_CLASS:
       begin
@@ -2045,38 +2083,17 @@ begin
         TypeInfo.DataSize := 32;
       end;
       LF_SUBRANGE:
-      begin
-        TypeInfo := CreateTypeInfo(stkSubrange, 0, Info.LeafSubrange.Name);
-        try
-          TypeInfo.IndexType := Info.LeafSubrange.BaseType;
-          Data := @Info.LeafSubrange.Data;
-          TypeInfo.MinValue := GetBoundFromNumeric(Data);
-          TypeInfo.MaxValue := GetBoundFromNumeric(Data);
-          TypeInfo.DataSize := PWord(Data)^;
-        except
-          FreeAndNil(TypeInfo);
-        end;
-      end;
+        _LoadSubRangeType;
       LF_PARRAY:
-      begin
-        TypeInfo := CreateTypeInfo(stkArray, 0, Info.LeafArray.Name);
-        try
-          TypeInfo.ElementType := Info.LeafArray.BaseType;
-          TypeInfo.IndexType := Info.LeafArray.IndexType;
-          Data := @Info.LeafArray.S1;
-          TypeInfo.DataSize := GetBoundFromNumeric(Data);
-          TypeInfo.MaxValue := GetBoundFromNumeric(Data);
-        except
-          FreeAndNil(TypeInfo);
-        end;
-      end;
+        _LoadArrayType;
       LF_PSTRING:
       begin
         TypeInfo := CreateTypeInfo(stkPString, 0, Info.LeafPString.Name);
         TypeInfo.ElementType := Info.LeafPString.BaseType;
         TypeInfo.IndexType := Info.LeafPString.IndexType;
       end;
-      LF_CLOSURE:    TypeInfo := CreateTypeInfo(stkClosure, SizeOf(Pointer));
+      LF_CLOSURE:
+        TypeInfo := CreateTypeInfo(stkClosure, SizeOf(Pointer));
       LF_PROPERTY:
       begin
         TypeInfo := CreateTypeInfo(stkProperty, 0, Info.LeafProperty.PropIndex);
@@ -2098,29 +2115,45 @@ begin
       end;
       LF_CLASSREF:
       begin
-          TypeInfo := CreateTypeInfo(stkClassRef, SizeOf(Pointer));
-          TypeInfo.ElementType := Info.LeafClassRef.ElementType;
-          TypeInfo.Elements := Info.LeafClassRef.VTable;
+        TypeInfo := CreateTypeInfo(stkClassRef, SizeOf(Pointer));
+        TypeInfo.ElementType := Info.LeafClassRef.ElementType;
+        TypeInfo.Elements := Info.LeafClassRef.VTable;
       end;
       LF_WSTRING:
       begin
         TypeInfo := CreateTypeInfo(stkWString, SizeOf(Pointer), Info.LeafLString.NameIndex);
         TypeInfo.ElementType := 113; // Predefined WideChar type
       end;
-      LF_ARGLIST:    TypeInfo := CreateArgListTypeInfo(Info);
-      LF_FIELDLIST:  TypeInfo := CreateFieldListTypeInfo(Info);
-      LF_CHAR:       TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafChar));
-      LF_SHORT:      TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafShort));
-      LF_USHORT:     TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafUShort));
-      LF_LONG:       TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafLong));
-      LF_ULONG:      TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafULong));
-      LF_QUADWORD:   TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafQuadWord));
-      LF_UQUADWORD:  TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafUQuadWord));
-      LF_REAL32:     TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal32));
-      LF_REAL48:     TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal48));
-      LF_REAL64:     TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal64));
-      LF_REAL80:     TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal80));
-      LF_COMPLEX64:  TypeInfo := CreateTypeInfo(stkComplex, SizeOf(Info.LeafComplex64));
+      LF_ARGLIST:
+        TypeInfo := CreateArgListTypeInfo(Info);
+      LF_FIELDLIST:
+        TypeInfo := CreateFieldListTypeInfo(Info);
+      LF_CHAR:
+        TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafChar));
+      LF_SHORT:
+        TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafShort));
+      LF_USHORT:
+        TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafUShort));
+      LF_LONG:
+        TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafLong));
+      LF_ULONG:
+        TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafULong));
+      LF_QUADWORD:
+        TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafQuadWord));
+      LF_UQUADWORD:
+        TypeInfo := CreateTypeInfo(stkInteger, SizeOf(Info.LeafUQuadWord));
+      LF_REAL32:
+        TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal32));
+      LF_REAL48:
+        TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal48));
+      LF_REAL64:
+        TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal64));
+      LF_REAL80:
+        TypeInfo := CreateTypeInfo(stkReal, SizeOf(Info.LeafReal80));
+      LF_COMPLEX64:
+        TypeInfo := CreateTypeInfo(stkComplex, SizeOf(Info.LeafComplex64));
+
+      LF_VTSHAPE, LF_METHODLIST: ;// TODO:
     end;
 
     FSymbolTypes.Add(TypeInfo);
