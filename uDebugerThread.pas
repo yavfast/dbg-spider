@@ -34,6 +34,8 @@ type
     function GetAppName: String;
     function GetProjectSourceDirs: String;
     function GetDelphiSourceDirs: String;
+    function GetRunParams: String;
+    function GetWorkingDirectory: String;
   protected
     procedure Execute; override;
     procedure DoTerminate; override;
@@ -41,6 +43,8 @@ type
     property AppName: String read GetAppName;
     property ProjectSourceDirs: String read GetProjectSourceDirs;
     property DelphiSourceDirs: String read GetDelphiSourceDirs;
+    property RunParams: String read GetRunParams;
+    property WorkingDirectory: String read GetWorkingDirectory;
   public
     constructor Create(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
     destructor Destroy; override;
@@ -87,6 +91,7 @@ end;
 procedure TDebugerThread.Execute;
 var
   FRun: Boolean;
+  FError: String;
 begin
   NameThreadForDebugging(AnsiString(ClassName), ThreadId);
 
@@ -99,10 +104,19 @@ begin
 
   if doRun in FDbgOptions then
   begin
+    FError := '';
+
     if FProcessID = 0 then
     begin
       _AC.Log(dltInfo, 'Run application "%s"', [AppName]);
-      FRun := gvDebuger.DebugNewProcess(AppName, False);
+
+      if RunParams <> '' then
+        _AC.Log(dltInfo, 'Run parameters: "%s"', [RunParams]);
+
+      if WorkingDirectory <> '' then
+        _AC.Log(dltInfo, 'Working directory: "%s"', [WorkingDirectory]);
+
+      FRun := gvDebuger.DebugNewProcess(AppName, FError, RunParams, WorkingDirectory);
     end
     else
     begin
@@ -131,7 +145,9 @@ begin
         on E: Exception do
           _AC.Log(dltError, 'Fail debug process: "%s"', [E.Message]);
       end;
-    end;
+    end
+    else
+      _AC.Log(dltError, 'Fail start application: %s', [FError]);
   end
   else
     _AC.DoAction(acRunEnabled, [True]);
@@ -150,6 +166,16 @@ end;
 function TDebugerThread.GetProjectSourceDirs: String;
 begin
   Result := gvProjectOptions.ProjectSource;
+end;
+
+function TDebugerThread.GetRunParams: String;
+begin
+  Result := gvProjectOptions.RunParams;
+end;
+
+function TDebugerThread.GetWorkingDirectory: String;
+begin
+  Result := gvProjectOptions.WorkingDirectory;
 end;
 
 procedure TDebugerThread.InitDebuger;

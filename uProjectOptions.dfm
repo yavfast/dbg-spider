@@ -28,15 +28,11 @@ object fmProjectOptions: TfmProjectOptions
     Top = 0
     Width = 454
     Height = 185
-    ActivePage = tsSources
+    ActivePage = tsRunParams
     Align = alClient
     TabOrder = 0
-    ExplicitWidth = 446
-    ExplicitHeight = 183
     object tsProject: TTabSheet
       Caption = 'Project settings'
-      ExplicitWidth = 438
-      ExplicitHeight = 155
       object lbeApplication: TLabeledEdit
         Left = 7
         Top = 24
@@ -96,8 +92,6 @@ object fmProjectOptions: TfmProjectOptions
     object tsSources: TTabSheet
       Caption = 'Source settings'
       ImageIndex = 1
-      ExplicitWidth = 438
-      ExplicitHeight = 155
       object lbeProjectSource: TLabeledEdit
         Left = 7
         Top = 24
@@ -133,6 +127,38 @@ object fmProjectOptions: TfmProjectOptions
         Height = 25
         Action = acDelphiSource
         TabOrder = 3
+      end
+    end
+    object tsRunParams: TTabSheet
+      Caption = 'Run parameters'
+      ImageIndex = 2
+      object lbeParameters: TLabeledEdit
+        Left = 7
+        Top = 24
+        Width = 378
+        Height = 21
+        EditLabel.Width = 55
+        EditLabel.Height = 13
+        EditLabel.Caption = 'Parameters'
+        TabOrder = 0
+      end
+      object lbeWorkDir: TLabeledEdit
+        Left = 7
+        Top = 72
+        Width = 378
+        Height = 21
+        EditLabel.Width = 85
+        EditLabel.Height = 13
+        EditLabel.Caption = 'Working directory'
+        TabOrder = 1
+      end
+      object btnSelWorkDir: TBitBtn
+        Left = 383
+        Top = 70
+        Width = 33
+        Height = 25
+        Action = acSelWorkDir
+        TabOrder = 2
       end
     end
   end
@@ -205,6 +231,10 @@ object fmProjectOptions: TfmProjectOptions
       ImageIndex = 0
       OnExecute = acProjectSourceExecute
     end
+    object acSelWorkDir: TAction
+      ImageIndex = 0
+      OnExecute = acSelWorkDirExecute
+    end
   end
   object odApplication: TFileOpenDialog
     FavoriteLinks = <>
@@ -227,6 +257,14 @@ object fmProjectOptions: TfmProjectOptions
       end>
     Options = [fdoFileMustExist, fdoCreatePrompt]
     Left = 48
+    Top = 176
+  end
+  object odSelectWorkDir: TFileOpenDialog
+    FavoriteLinks = <>
+    FileTypes = <>
+    Options = [fdoPickFolders, fdoPathMustExist]
+    Title = 'Select working directory'
+    Left = 208
     Top = 176
   end
 end

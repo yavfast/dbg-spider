@@ -40,15 +40,20 @@ type
     function GetXMLValue(const NodeName: String): String;
     procedure SetXMLValue(const NodeName, NodeValue: String);
 
-    procedure SetApplicationName(const Value: String);
-    procedure SetProjectStorage(const Value: String);
     function GetApplicationName: String;
     function GetProjectName: String;
     function GetProjectStorage: String;
     function GetDelphiSource: String;
     function GetProjectSource: String;
+    function GetRunParams: String;
+    function GetWorkingDirectory: String;
+
+    procedure SetApplicationName(const Value: String);
+    procedure SetProjectStorage(const Value: String);
     procedure SetDelphiSource(const Value: String);
     procedure SetProjectSource(const Value: String);
+    procedure SetRunParams(const Value: String);
+    procedure SetWorkingDirectory(const Value: String);
   public
     constructor Create;
     destructor Destroy; override;
@@ -67,6 +72,8 @@ type
     property ProjectStorage: String read GetProjectStorage write SetProjectStorage;
     property ProjectSource: String read GetProjectSource write SetProjectSource;
     property DelphiSource: String read GetDelphiSource write SetDelphiSource;
+    property RunParams: String read GetRunParams write SetRunParams;
+    property WorkingDirectory: String read GetWorkingDirectory write SetWorkingDirectory;
   end;
 
 const
@@ -256,9 +263,29 @@ begin
   Result := GetXMLValue('project_storage');
 end;
 
+function TProjectOptions.GetRunParams: String;
+begin
+  Result := GetXMLValue('run_parameters');
+end;
+
+function TProjectOptions.GetWorkingDirectory: String;
+begin
+  Result := GetXMLValue('working_directory');
+end;
+
 procedure TProjectOptions.SetProjectStorage(const Value: String);
 begin
   SetXMLValue('project_storage', Value);
+end;
+
+procedure TProjectOptions.SetRunParams(const Value: String);
+begin
+  SetXMLValue('run_parameters', Value);
+end;
+
+procedure TProjectOptions.SetWorkingDirectory(const Value: String);
+begin
+  SetXMLValue('working_directory', Value);
 end;
 
 function TProjectOptions.GetXMLValue(const NodeName: String): String;
