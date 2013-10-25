@@ -173,7 +173,7 @@ type
 
     // запуск/остановка отладки
     function AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: Boolean): Boolean;
-    function DebugNewProcess(const FilePath: string; SentEntryPointBreakPoint: Boolean): Boolean;
+    function DebugNewProcess(const AppPath: string; var ErrInfo: String; const RunParams: String = ''; const WorkingDirectory: String = ''): Boolean;
 
     function StopDebug: Boolean;
     function PauseDebug: Boolean;
@@ -856,10 +856,14 @@ begin
   Result := FCurThreadId;
 end;
 
-function TDebuger.DebugNewProcess(const FilePath: string; SentEntryPointBreakPoint: Boolean): Boolean;
+function TDebuger.DebugNewProcess(const AppPath: string; var ErrInfo: String; const RunParams: String = ''; const WorkingDirectory: String = ''): Boolean;
 var
   PI: PProcessInformation;
   SI: PStartupInfo;
+  CmdLine: String;
+  PCmdLine: PChar;
+  PAppName: PChar;
+  PWorkDir: PChar;
 begin
   LoadLibrary('DbgHook32.dll'); // Для быстрой загрузки в процессе
 
@@ -867,7 +871,8 @@ begin
   if FProcessData.State = psActive then
     Exit;
 
-  FSetEntryPointBreakPoint := SentEntryPointBreakPoint;
+  //FSetEntryPointBreakPoint := SentEntryPointBreakPoint;
+  FSetEntryPointBreakPoint := False;
 
   PI := AllocMem(SizeOf(TProcessInformation));
   SI := AllocMem(SizeOf(TStartupInfo));
@@ -876,15 +881,32 @@ begin
     SI.dwFlags := STARTF_USESHOWWINDOW;
     SI.wShowWindow := SW_SHOWNORMAL;
 
+    PAppName := nil;
+    PCmdLine := nil;
+    PWorkDir := nil;
 
-    Result := CreateProcess(PChar(FilePath), nil, nil, nil, False, DEBUG_PROCESS or DEBUG_ONLY_THIS_PROCESS, nil, nil, SI^, PI^);
+    if RunParams <> '' then
+    begin
+      CmdLine := Format('"%s" %s', [AppPath, RunParams]);
+      PCmdLine := PChar(CmdLine);
+    end
+    else
+      PAppName := PChar(AppPath);
+
+    if (WorkingDirectory <> '') and (DirectoryExists(WorkingDirectory)) then
+      PWorkDir := PChar(WorkingDirectory);
+
+    Result := CreateProcess(PAppName, PCmdLine, nil, nil, False, DEBUG_PROCESS or DEBUG_ONLY_THIS_PROCESS, nil,
+      PWorkDir, SI^, PI^);
 
     if Result then
     begin
       FProcessData.ProcessID := TProcessId(PI.dwProcessId);
       FProcessData.CreatedProcessHandle := PI.hProcess;
       FProcessData.CreatedThreadHandle := PI.hThread;
-    end;
+    end
+    else
+      ErrInfo := SysErrorMessage(GetLastError);
   finally
     FreeMemory(PI);
     FreeMemory(SI);

@@ -38,6 +38,12 @@ type
     pActions: TPanel;
     btnOk: TBitBtn;
     btnCancel: TBitBtn;
+    tsRunParams: TTabSheet;
+    lbeParameters: TLabeledEdit;
+    lbeWorkDir: TLabeledEdit;
+    btnSelWorkDir: TBitBtn;
+    acSelWorkDir: TAction;
+    odSelectWorkDir: TFileOpenDialog;
     procedure acSaveExecute(Sender: TObject);
     procedure acCancelExecute(Sender: TObject);
     procedure acOpenApplicationExecute(Sender: TObject);
@@ -47,6 +53,7 @@ type
     procedure FormShow(Sender: TObject);
     procedure acDelphiSourceExecute(Sender: TObject);
     procedure acProjectSourceExecute(Sender: TObject);
+    procedure acSelWorkDirExecute(Sender: TObject);
   private
     FOpenType: TOpenType;
     function GetApplicationName: String;
@@ -54,11 +61,16 @@ type
     function GetProjectStorage: String;
     function GetDelphiSource: String;
     function GetProjectSource: String;
+    function GetRunParams: String;
+    function GetWorkingDirectory: String;
+
     procedure SetApplicationName(const Value: String);
     procedure SetDelphiSource(const Value: String);
     procedure SetProjectName(const Value: String);
     procedure SetProjectSource(const Value: String);
     procedure SetProjectStorage(const Value: String);
+    procedure SetRunParams(const Value: String);
+    procedure SetWorkingDirectory(const Value: String);
   public
     property OpenType: TOpenType read FOpenType write FOpenType;
     property ApplicationName: String read GetApplicationName write SetApplicationName;
@@ -66,6 +78,8 @@ type
     property ProjectStorage: String read GetProjectStorage write SetProjectStorage;
     property ProjectSource: String read GetProjectSource write SetProjectSource;
     property DelphiSource: String read GetDelphiSource write SetDelphiSource;
+    property RunParams: String read GetRunParams write SetRunParams;
+    property WorkingDirectory: String read GetWorkingDirectory write SetWorkingDirectory;
   end;
 
   function OpenProjectOptions(const OpenType: TOpenType): Integer;
@@ -95,6 +109,8 @@ begin
       F.ProjectStorage := gvProjectOptions.ProjectStorage;
       F.ProjectSource := gvProjectOptions.ProjectSource;
       F.DelphiSource := gvProjectOptions.DelphiSource;
+      F.RunParams := gvProjectOptions.RunParams;
+      F.WorkingDirectory := gvProjectOptions.WorkingDirectory;
     end;
 
     if OpenType = otSaveAs then
@@ -114,6 +130,8 @@ begin
         gvProjectOptions.ProjectStorage := F.ProjectStorage;
         gvProjectOptions.ProjectSource := F.ProjectSource;
         gvProjectOptions.DelphiSource := F.DelphiSource;
+        gvProjectOptions.RunParams := F.RunParams;
+        gvProjectOptions.WorkingDirectory := F.WorkingDirectory;
       finally
         gvProjectOptions.EndUpdate;
       end;
@@ -153,6 +171,9 @@ begin
 
     if lbeProjectStorage.Text = '' then
       lbeProjectStorage.Text := ExtractFilePath(lbeProjectName.Text) + '_spider_storage';
+
+    if lbeWorkDir.Text = '' then
+      lbeWorkDir.Text := ExtractFilePath(lbeProjectName.Text);
   end;
 end;
 
@@ -176,6 +197,7 @@ begin
   except
     on E: Exception do
     begin
+      pcProjectOpt.ActivePage := tsProject;
       ActiveControl := lbeProjectName;
       ShowMessageFmt('%s', [E.Message]);
       Exit;
@@ -188,10 +210,19 @@ begin
   except
     on E: Exception do
     begin
+      pcProjectOpt.ActivePage := tsProject;
       ActiveControl := lbeProjectName;
       ShowMessageFmt('%s', [E.Message]);
       Exit;
     end;
+  end;
+
+  if (WorkingDirectory <> '') and not TDirectory.Exists(WorkingDirectory) then
+  begin
+    pcProjectOpt.ActivePage := tsRunParams;
+    ActiveControl := lbeWorkDir;
+    ShowMessageFmt('Working directory "%s" not exists', [WorkingDirectory]);
+    Exit;
   end;
 
   ModalResult := mrOk;
@@ -213,6 +244,14 @@ end;
 procedure TfmProjectOptions.acSaveProjectStorageExecute(Sender: TObject);
 begin
   //
+end;
+
+procedure TfmProjectOptions.acSelWorkDirExecute(Sender: TObject);
+begin
+  odSelectWorkDir.FileName := lbeWorkDir.Text;
+
+  if odSelectWorkDir.Execute then
+    lbeWorkDir.Text := ExcludeTrailingPathDelimiter(Trim(odSelectWorkDir.FileName));
 end;
 
 procedure TfmProjectOptions.FormCreate(Sender: TObject);
@@ -254,6 +293,16 @@ begin
   Result := lbeProjectStorage.Text;
 end;
 
+function TfmProjectOptions.GetRunParams: String;
+begin
+  Result := lbeParameters.Text;
+end;
+
+function TfmProjectOptions.GetWorkingDirectory: String;
+begin
+  Result := ExcludeTrailingPathDelimiter(Trim(lbeWorkDir.Text));
+end;
+
 procedure TfmProjectOptions.SetApplicationName(const Value: String);
 begin
   lbeApplication.Text := Value;
@@ -277,6 +326,16 @@ end;
 procedure TfmProjectOptions.SetProjectStorage(const Value: String);
 begin
   lbeProjectStorage.Text := Value;
+end;
+
+procedure TfmProjectOptions.SetRunParams(const Value: String);
+begin
+  lbeParameters.Text := Value;
+end;
+
+procedure TfmProjectOptions.SetWorkingDirectory(const Value: String);
+begin
+  lbeWorkDir.Text := Value;
 end;
 
 end.
