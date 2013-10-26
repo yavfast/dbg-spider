@@ -58,6 +58,7 @@ Type
 {..............................................................................}
     ICustomVariantData = Interface
     ['{A389B3EA-634B-4572-BE3C-0883D3D3C8FE}']
+        Function AsVariant: Variant;
         Function AsString(Var ToStringData : TToStringData) : String;
     End;
 {..............................................................................}
@@ -165,6 +166,7 @@ Type
 {..............................................................................}
     TCustomVariantValue = Class(TInterfacedObject, ICustomVariantData)
     Public
+        Function AsVariant: Variant; virtual; abstract;
         Function AsString(Var ToStringData : TToStringData) : String; virtual; abstract;
     End;
 {..............................................................................}
@@ -175,6 +177,7 @@ Type
         FValue : Extended;
     Public
         Constructor Create(const AValue : Extended);
+        Function AsVariant: Variant; Override;
         Function AsString(Var ToStringData : TToStringData) : String; Override;
     End;
 {..............................................................................}
@@ -185,6 +188,8 @@ Type
         FValue : Pointer;
     Public
         Constructor Create(AValue : Pointer); Virtual;
+
+        Function AsVariant: Variant; Override;
         Function AsString(Var ToStringData : TToStringData) : String; Override;
     End;
 {..............................................................................}
@@ -196,6 +201,7 @@ Type
     Public
         Constructor Create(TypeInfo : TTypeInfo);
 
+        Function AsVariant: Variant; Override;
         Function GetTypeInfo : TTypeInfo;
     End;
 {..............................................................................}
@@ -215,6 +221,7 @@ Type
 
         Function    GetReferenceAddress : TPointer;
 
+        Function AsVariant: Variant; override;
         Function    AsString(Var ToStringData : TToStringData) : String; override;
     End;
     TCustomReferenceVariantDataClass = Class Of TCustomReferenceVariantValue;
@@ -298,6 +305,7 @@ Type
 
         Function    GetOrdinalValue : TOrdinalValue;
 
+        Function AsVariant: Variant; override;
         Function    AsString(Var ToStringData : TToStringData) : String; override;
     End;
 {..............................................................................}
@@ -384,6 +392,7 @@ Type
 
         Function    Dereference(Const CalculateData : TCalculateData) : Variant;
 
+        Function AsVariant: Variant; override;
         Function    AsString(Var ToStringData : TToStringData) : String; override;
 
         Function    TryReference(Const CalculateData : TCalculateData; Const ItemName : AnsiString; Out Value : Variant) : Boolean;
@@ -699,6 +708,13 @@ Begin
     Inherited Create;
     FValue := AValue;
 End;
+
+function TPointerConstantValue.AsVariant: Variant;
+begin
+  TVarData(Result).VType := vtPointer;
+  TVarData(Result).VPointer := FValue;
+end;
+
 {..............................................................................}
 
 {..............................................................................}
@@ -712,6 +728,11 @@ End;
 {..............................................................................}
 
 {..............................................................................}
+function TCustomTypedVariantValue.AsVariant: Variant;
+begin
+  Result := Null;
+end;
+
 Constructor TCustomTypedVariantValue.Create(TypeInfo : TTypeInfo);
 Begin
     Inherited Create;
@@ -741,6 +762,20 @@ Function TCustomReferenceVariantValue.GetReferenceAddress : TPointer;
 Begin
     Result := FAddress;
 End;
+
+function TCustomReferenceVariantValue.AsVariant: Variant;
+var
+  CalcData: TCalculateData;
+  CalcValue: Variant;
+Begin
+  CalcData.BriefMode := True;
+  CalcData.DebugInfo := gvDebugInfo;
+
+  CalcValue := Calculate(CalcData);
+
+  Result := CalculateValue(CalcValue, CalcData);
+end;
+
 {..............................................................................}
 
 {..............................................................................}
@@ -949,6 +984,12 @@ Function TEnumVariantValue.GetOrdinalValue : TOrdinalValue;
 Begin
     Result := FValue;
 End;
+
+function TEnumVariantValue.AsVariant: Variant;
+begin
+  Result := FValue;
+end;
+
 {..............................................................................}
 
 {..............................................................................}
@@ -1215,6 +1256,35 @@ Begin
     Else
         Result := GetValueRef(gvDebuger, FTypeInfo.BaseType, FAddress);
 End;
+
+function TPointerVariantValue.AsVariant: Variant;
+//Var
+//    Address : TPointer;
+//    Value   : Variant;
+//    CalculateData : TCalculateData;
+Begin
+  Result := Integer(FAddress);
+
+//    Address := FAddress;
+//
+//    If Address = Nil Then
+//    Begin
+//        Result := cNil;
+//        Exit;
+//    End;
+//
+//    If (FTypeInfo <> Nil) And (FTypeInfo.BaseType <> Nil) Then
+//    Begin
+//        Value := EvaluateProcs.GetValue(gvDebuger, FTypeInfo.BaseType, Address, True, True);
+//
+//        CalculateData.BriefMode := True;
+//        CalculateData.DebugInfo := gvDebugInfo;
+//        Result := CalculateValue(Value, CalculateData);
+//    End
+//    Else
+//        Result := Format('$%.8x', [Address]);
+end;
+
 {..............................................................................}
 
 {..............................................................................}
@@ -1233,7 +1303,7 @@ Begin
 
     If (FTypeInfo <> Nil) And (FTypeInfo.BaseType <> Nil) Then
     Begin
-        Value := GetValue(gvDebuger, FTypeInfo.BaseType, Address, True, (ToStringData.Mode = tsmBrief));
+        Value := EvaluateProcs.GetValue(gvDebuger, FTypeInfo.BaseType, Address, True, (ToStringData.Mode = tsmBrief));
         Result := VariantToString(Value, ToStringData);
     End
     Else
@@ -1443,6 +1513,12 @@ begin
 
   FValue := AValue;
 end;
+
+function TExtendedConstantValue.AsVariant: Variant;
+begin
+  Result := FValue;
+end;
+
 {..............................................................................}
 
 {..............................................................................}

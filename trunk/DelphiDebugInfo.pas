@@ -43,7 +43,7 @@ Type
 
     function CustomVariantAsString(const Value: Variant): String;
     procedure SetDelphiVersion(const Value: TDelphiVersion);
-    procedure InitCodeTracking;
+    procedure InitCodeTracking(const SetBP: Boolean);
     procedure FillSystemUnits;
   Protected
     Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Override;
@@ -74,8 +74,14 @@ Type
     Function MakeFuncNativeName(Const MethodName: AnsiString): AnsiString; Override;
 
     Function Evaluate(BriefMode: Boolean; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String; Override;
+    Function EvaluateVariable(VarInfo: TVarInfo): Variant; override;
 
     Function VarValueAsString(const Value: Variant): String; override;
+
+    function GetSystemUnit: TUnitInfo;
+    function GetMemoryManager: TVarInfo;
+    function SetDebugHook(const Value: Byte): Boolean;
+    procedure SetMemoryManagerBreakpoints(MemoryManager: TVarInfo);
 
     Procedure InitDebugHook; Override;
 
@@ -110,9 +116,13 @@ Uses
   EvaluateProcs,
   EvaluateTypes,
   // ExpressionEvaluator,
-  Math, Variants,
+  Math,
+  Variants,
   // Morfik.dcSystem,
-  ClassUtils, DebugHook, StrUtils, System.Contnrs;
+  ClassUtils,
+  DebugHook,
+  StrUtils,
+  System.Contnrs;
 { .............................................................................. }
 
 { .............................................................................. }
@@ -350,6 +360,22 @@ End;
 function TDelphiDebugInfo.GetNameById(const Idx: TNameId): AnsiString;
 begin
   Result := ImageNames(Idx);
+end;
+
+function TDelphiDebugInfo.GetSystemUnit: TUnitInfo;
+const
+  _SystemUnit: String = 'system.pas';
+var
+  I: Integer;
+begin
+  for I := 0 to Units.Count - 1 do
+  begin
+    Result := TUnitInfo(Units.Objects[I]);
+    if SameText(_SystemUnit, Result.ShortName) then
+      Exit;
+  end;
+
+  Result := Nil;
 end;
 
 Procedure TDelphiDebugInfo.LoadSegments(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
@@ -1216,9 +1242,90 @@ Begin
   End;
 End;
 
+function TDelphiDebugInfo.SetDebugHook(const Value: Byte): Boolean;
+Const
+  _DebugHook: AnsiString = 'DebugHook';
+
+  // Value:
+  // 1 to notify debugger of non-Delphi exceptions
+  // >1 to notify debugger of exception unwinding
+Var
+  USystem: TUnitInfo;
+  DebugHook: TVarInfo;
+begin
+  Result := False;
+
+  USystem := GetSystemUnit;
+  if Assigned(USystem) then
+  begin
+    DebugHook := USystem.FindVarByName(_DebugHook, True);
+    If Assigned(DebugHook) Then
+      gvDebuger.WriteData(Pointer(DebugHook.Offset), @Value, SizeOf(Byte));
+  end;
+end;
+
 procedure TDelphiDebugInfo.SetDelphiVersion(const Value: TDelphiVersion);
 begin
   FDelphiVersion := Value;
+end;
+
+
+procedure TDelphiDebugInfo.SetMemoryManagerBreakpoints(MemoryManager: TVarInfo);
+var
+  Members: TNameList;
+  Member: TStructMember;
+  Addr: Pointer;
+
+  function _GetFuncPtr: Pointer;
+  var
+    Offset: Pointer;
+  begin
+    if Member = nil then
+      RaiseDebugCoreException();
+
+    Result := nil;
+    Offset := Pointer(MemoryManager.Offset + Member.Offset);
+    if not gvDebuger.ReadData(Offset, @Result, SizeOf(Pointer)) then
+      RaiseDebugCoreException();
+  end;
+
+  function _SetTrackBreakpoint(Addr: Pointer): TFuncInfo;
+  var
+    UnitInfo: TUnitInfo;
+    LineInfo: TLineInfo;
+  begin
+    Result := Nil;
+
+    if GetLineInfo(Addr, UnitInfo, Result, LineInfo, False) <> slNotFound then
+      gvDebuger.SetTrackBreakpoint(Addr, Result, tbMemInfo)
+    else
+      RaiseDebugCoreException();
+  end;
+
+begin
+  MemoryManagerInfo.VarInfo := MemoryManager;
+
+  Members := MemoryManager.DataType.Members;
+  if Assigned(Members) and (Members.Count > 0) then
+  begin
+    gvDebuger.MemoryBPCheckMode := True;
+
+    Member := TStructMember(Members.FindByName('GetMem'));
+    Addr := _GetFuncPtr;
+    MemoryManagerInfo.GetMem := _SetTrackBreakpoint(Addr);
+
+    Member := TStructMember(Members.FindByName('FreeMem'));
+    Addr := _GetFuncPtr;
+    MemoryManagerInfo.FreeMem := _SetTrackBreakpoint(Addr);
+
+    Member := TStructMember(Members.FindByName('ReallocMem'));
+    Addr := _GetFuncPtr;
+    MemoryManagerInfo.ReallocMem := _SetTrackBreakpoint(Addr);
+
+    Member := TStructMember(Members.FindByName('AllocMem'));
+    Addr := _GetFuncPtr;
+    MemoryManagerInfo.AllocMem := _SetTrackBreakpoint(Addr);
+  end;
 end;
 
 function TDelphiDebugInfo.VarValueAsString(const Value: Variant): String;
@@ -1663,9 +1770,34 @@ Begin
       Line := LineInfo.LineNo;
   End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
+function TDelphiDebugInfo.GetMemoryManager: TVarInfo;
+const
+  _TMemoryManager: AnsiString = 'TMemoryManager';
+Var
+  USystem: TUnitInfo;
+  MMType: TTypeInfo;
+  J: Integer;
+begin
+  Result := Nil;
+
+  USystem := GetSystemUnit;
+  if Assigned(USystem) then
+  begin
+    MMType := USystem.FindTypeByName(_TMemoryManager, True);
+    if Assigned(MMType) then
+    begin
+      for J := 0 to USystem.Vars.Count - 1 do
+      begin
+        Result := TVarInfo(USystem.Vars[J]);
+        if Result.DataType = MMType then
+          Exit;
+      end;
+      Result := nil;
+    end;
+  end;
+end;
+
 Function TDelphiDebugInfo.MakeFuncDbgFullName(Const ClassName, MethodName: AnsiString): AnsiString;
 Begin
   Result := '@' + ClassName + '@' + MethodName;
@@ -1729,9 +1861,21 @@ Begin
   // Raise EEvaluateException.Create(E.Message);
   // End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
+function TDelphiDebugInfo.EvaluateVariable(VarInfo: TVarInfo): Variant;
+var
+  EBP: Pointer;
+  Value: Variant;
+  CalculateData : TCalculateData;
+begin
+  EBP := Pointer(gvDebuger.GetRegisters(gvDebuger.CurThreadId).Ebp);
+  Value := EvaluateProcs.EvaluateVariable(gvDebuger, VarInfo, EBP, True);
+
+  CalculateData.DebugInfo := Self;
+  CalculateData.BriefMode := True;
+  Result := EvaluateProcs.CalculateValue(Value, CalculateData);
+end;
+
 function TDelphiDebugInfo.ImageBase: Cardinal;
 begin
   Result := FImage.OptionalHeader32.ImageBase;
@@ -1745,120 +1889,62 @@ begin
     Result := '';
 end;
 
-procedure TDelphiDebugInfo.InitCodeTracking;
+procedure TDelphiDebugInfo.InitCodeTracking(const SetBP: Boolean);
 var
   FuncCount: Integer;
   I, J: Integer;
   UnitInfo: TUnitInfo;
   FuncInfo: TFuncInfo;
 begin
-  FuncCount := 0;
-  for I := 0 to Units.Count - 1 do
-    Inc(FuncCount, TUnitInfo(Units.Objects[I]).Funcs.Count);
+  FuncCount := 128;
+
+  if SetBP then
+    for I := 0 to Units.Count - 1 do
+      Inc(FuncCount, TUnitInfo(Units.Objects[I]).Funcs.Count);
 
   gvDebuger.ClearDbgTracking;
   gvDebuger.InitDbgTracking(FuncCount);
 
-  for I := 0 to Units.Count - 1 do
-  begin
-    UnitInfo := TUnitInfo(Units.Objects[I]);
-
-    if not gvDebuger.TrackSystemUnits and (UnitInfo.GetUnitType = utSystem) then
-      Continue;
-
-    for J := 0 to UnitInfo.Funcs.Count - 1 do
+  if SetBP then
+    for I := 0 to Units.Count - 1 do
     begin
-      FuncInfo := TFuncInfo(UnitInfo.Funcs[J]);
-      gvDebuger.SetTrackBreakpoint(FuncInfo.Address, FuncInfo);
+      UnitInfo := TUnitInfo(Units.Objects[I]);
+
+      if not gvDebuger.TrackSystemUnits and (UnitInfo.GetUnitType = utSystem) then
+        Continue;
+
+      for J := 0 to UnitInfo.Funcs.Count - 1 do
+      begin
+        FuncInfo := TFuncInfo(UnitInfo.Funcs[J]);
+        gvDebuger.SetTrackBreakpoint(FuncInfo.Address, FuncInfo);
+      end;
     end;
-  end;
 end;
 
 Procedure TDelphiDebugInfo.InitDebugHook;
-var
-  USystem: TUnitInfo;
-
-  function FindSystemPas: Boolean;
-  const
-    _SystemUnit: String = 'system.pas';
-  var
-    I: Integer;
-    UInfo: TUnitInfo;
-  begin
-    USystem := Nil;
-    Result := False;
-    for I := 0 to Units.Count - 1 do
-    begin
-      UInfo := TUnitInfo(Units.Objects[I]);
-      if SameText(_SystemUnit, UInfo.ShortName) then
-      begin
-        USystem := UInfo;
-        Result := True;
-        Exit;
-      end;
-    end;
-  end;
-
-  procedure SetDebugHook;
-  Const
-    _DebugHook: AnsiString = '@@DebugHook';
-    // 1 to notify debugger of non-Delphi exceptions
-    // >1 to notify debugger of exception unwinding
-    Enable: Byte = 2;
-  Var
-    DebugHook: TVarInfo;
-  begin
-    DebugHook := USystem.FindVarByName(_DebugHook);
-    If Assigned(DebugHook) Then
-      gvDebuger.WriteData(Pointer(DebugHook.Offset), @Enable, 1);
-  end;
-
-  function GetMemoryManagerVar: Pointer;
-  const
-    _MemoryManagerStrD10: AnsiString = '@@MemoryManager';
-    _MemoryManagerStrXE: AnsiString = '@System@MemoryManager';
-    _MemoryManagerStrXE4: AnsiString = '_MemoryManager';
-  Var
-    _MemoryManager: TVarInfo;
-  begin
-    Result := Nil;
-
-    if gvDebuger.MemoryCheckMode and Assigned(USystem) then
-    begin
-      // TODO: add support delphi version
-      _MemoryManager := USystem.FindVarByName(_MemoryManagerStrD10);
-      if _MemoryManager = nil then
-        _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE);
-      if _MemoryManager = nil then
-        _MemoryManager := USystem.FindVarByName(_MemoryManagerStrXE4);
-
-      If Assigned(_MemoryManager) Then
-      begin
-        Result := Pointer(_MemoryManager.Offset);
-      end;
-    end;
-  end;
-
+Var
+  MemoryManager: TVarInfo;
 Begin
   gvDebuger.ProcessData.SetPEImage(FImage);
 
-  if gvDebuger.CodeTracking then
-    InitCodeTracking;
+  InitCodeTracking(gvDebuger.CodeTracking);
 
-  if FindSystemPas then
-  Begin
-    // SetDebugHook;
+  MemoryManager := GetMemoryManager;
+  if Assigned(MemoryManager) then
+  begin
+    // Установка перехвата вызовов GetMem и FreeMem
+    SetMemoryManagerBreakpoints(MemoryManager);
+  end;
 
-  End;
-
+  // Инициализация дебажного потока в процессе
+  // !!! Поток запустится не сразу, а через некоторое время
   LoadDbgHookDll(
     gvDebuger.ProcessData.AttachedProcessHandle,
     'DbgHook32.dll',
     Pointer(FImage.OptionalHeader32.ImageBase),
-    GetMemoryManagerVar,
+    MemoryManager,
     gvDebuger.MemoryCallStack
   );
-
 End;
 { ............................................................................... }
 

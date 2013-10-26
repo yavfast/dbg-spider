@@ -60,7 +60,7 @@ Type
 
     procedure Clear; override;
 
-    function FindByName(Const Name: AnsiString): TNameInfo;
+    function FindByName(Const Name: AnsiString; const SubStr: Boolean = False): TNameInfo;
     function FindByNameId(Const NameId: TNameId): TNameInfo;
 
     property NameInfoItems[const Index: Integer]: TNameInfo read GetNameInfoItem; default;
@@ -153,6 +153,8 @@ Type
     function ShortName: String; override;
 
     function AsString: String;
+
+    function Value: Variant;
   End;
   { .............................................................................. }
 
@@ -224,11 +226,11 @@ Type
 
     Procedure Clear; Virtual;
 
-    function FindTypeByName(const TypeName: AnsiString): TTypeInfo;
-    function FindFuncByName(const FuncName: AnsiString): TFuncInfo;
+    function FindTypeByName(const TypeName: AnsiString; const SubStr: Boolean = False): TTypeInfo;
+    function FindFuncByName(const FuncName: AnsiString; const SubStr: Boolean = False): TFuncInfo;
     function FindFuncByNameId(const FuncNameId: Integer): TFuncInfo;
-    function FindConstByName(const ConstName: AnsiString): TConstInfo;
-    function FindVarByName(const VarName: AnsiString): TVarInfo;
+    function FindConstByName(const ConstName: AnsiString; const SubStr: Boolean = False): TConstInfo;
+    function FindVarByName(const VarName: AnsiString; const SubStr: Boolean = False): TVarInfo;
 
     function CheckAddress(const Addr: Pointer): Integer;
   End;
@@ -340,6 +342,19 @@ Type
   TDbgSourceDirs = TDictionary<String, String>;
   TDbgSourceList = Array [Low(TUnitType) .. High(TUnitType)] of TDbgSourceDirs;
 
+  TMemoryManagerInfo = class
+  public
+    VarInfo: TVarInfo;
+    GetMem: TFuncInfo;
+    FreeMem: TFuncInfo;
+    ReallocMem: TFuncInfo;
+    AllocMem: TFuncInfo;
+
+    constructor Create;
+
+    procedure Clear;
+  end;
+
   TDebugInfoClass = Class Of TDebugInfo;
 
   TDebugInfo = Class
@@ -348,6 +363,7 @@ Type
     FUnits: TStringList; // Sorted by name
     FUnitsByAddr: TSegmentCodeInfoList; // Sorted by Address
     FDbgLog: TDbgLog;
+    FMemoryManagerInfo: TMemoryManagerInfo;
 
     FExeFileName: String;
     FDebugInfoLoaded: Boolean;
@@ -400,6 +416,7 @@ Type
 
     Function Evaluate(BriefMode: Boolean; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String; Virtual; abstract;
 
+    Function EvaluateVariable(VarInfo: TVarInfo): Variant; virtual; abstract;
     Function VarValueAsString(const Value: Variant): String; virtual; abstract;
 
     Procedure InitDebugHook; Virtual; abstract;
@@ -439,6 +456,7 @@ Type
     property DebugInfoType: String read FDebugInfoType;
     property DebugInfoProgressCallback: TDebugInfoProgressCallback read FDebugInfoProgressCallback write FDebugInfoProgressCallback;
     property UseShortNames: Boolean read FUseShortNames write FUseShortNames;
+    property MemoryManagerInfo: TMemoryManagerInfo read FMemoryManagerInfo;
   End;
   { ............................................................................... }
 
@@ -453,7 +471,7 @@ Uses
   // ApiConsts,
   // EvaluateProcs,
   // EvaluateTypes,
-  Variants, IOUtils, Types;
+  Variants, IOUtils, Types, System.AnsiStrings;
 { ............................................................................... }
 
 function IncPointer(Ptr: Pointer; Offset: Integer): Pointer; inline;
@@ -484,6 +502,8 @@ Begin
 
   FDebugInfoProgressCallback := Nil;
   FUseShortNames := True;
+
+  FMemoryManagerInfo := TMemoryManagerInfo.Create;
 End;
 { .............................................................................. }
 
@@ -501,6 +521,8 @@ Begin
     FreeAndNil(FDirs[ST]);
 
   FreeAndNil(FDbgLog);
+
+  FreeAndNil(FMemoryManagerInfo);
 
   Inherited;
 End;
@@ -579,6 +601,8 @@ Begin
     ClearStringList(FUnits);
 
     FDbgLog.ClearLog;
+
+    FMemoryManagerInfo.Clear;
 
     FExeFileName := '';
   End;
@@ -1364,6 +1388,11 @@ begin
     Result := TUnitInfo(Owner);
 end;
 
+function TVarInfo.Value: Variant;
+begin
+  Result := gvDebugInfo.EvaluateVariable(Self);
+end;
+
 function TVarInfo.Name: AnsiString;
 begin
   Result := gvDebugInfo.GetNameById(NameId)
@@ -1551,14 +1580,14 @@ begin
   inherited;
 end;
 
-function TSegmentCodeInfo.FindConstByName(const ConstName: AnsiString): TConstInfo;
+function TSegmentCodeInfo.FindConstByName(const ConstName: AnsiString; const SubStr: Boolean = False): TConstInfo;
 begin
-  Result := TConstInfo(Consts.FindByName(ConstName));
+  Result := TConstInfo(Consts.FindByName(ConstName, SubStr));
 end;
 
-function TSegmentCodeInfo.FindFuncByName(const FuncName: AnsiString): TFuncInfo;
+function TSegmentCodeInfo.FindFuncByName(const FuncName: AnsiString; const SubStr: Boolean = False): TFuncInfo;
 begin
-  Result := TFuncInfo(Funcs.FindByName(FuncName));
+  Result := TFuncInfo(Funcs.FindByName(FuncName, SubStr));
 end;
 
 function TSegmentCodeInfo.FindFuncByNameId(const FuncNameId: Integer): TFuncInfo;
@@ -1566,14 +1595,14 @@ begin
   Result := TFuncInfo(Funcs.FindByNameId(FuncNameId));
 end;
 
-function TSegmentCodeInfo.FindTypeByName(const TypeName: AnsiString): TTypeInfo;
+function TSegmentCodeInfo.FindTypeByName(const TypeName: AnsiString; const SubStr: Boolean = False): TTypeInfo;
 begin
-  Result := TTypeInfo(Types.FindByName(TypeName));
+  Result := TTypeInfo(Types.FindByName(TypeName, SubStr));
 end;
 
-function TSegmentCodeInfo.FindVarByName(const VarName: AnsiString): TVarInfo;
+function TSegmentCodeInfo.FindVarByName(const VarName: AnsiString; const SubStr: Boolean = False): TVarInfo;
 begin
-  Result := TVarInfo(Vars.FindByName(VarName));
+  Result := TVarInfo(Vars.FindByName(VarName, SubStr));
 end;
 
 { TNameList }
@@ -1636,15 +1665,26 @@ begin
   inherited;
 end;
 
-function TNameList.FindByName(const Name: AnsiString): TNameInfo;
+function TNameList.FindByName(const Name: AnsiString; const SubStr: Boolean = False): TNameInfo;
 var
   I: Integer;
 begin
   for I := 0 to Count - 1 do
   begin
     Result := TNameInfo(List[I]);
-    if (Result.NameId > 0) And SameText(String(Name), String(Result.Name)) then
-      Exit;
+    if (Result.NameId > 0) then
+    begin
+      if SubStr then
+      begin
+        if Pos(Name, Result.Name) > 0 then
+          Exit;
+      end
+      else
+      begin
+        if SameText(Name, Result.Name) then
+          Exit;
+      end;
+    end;
   end;
 
   Result := Nil;
@@ -1858,6 +1898,24 @@ end;
 function TUnitSourceModuleInfo.ShortName: String;
 begin
   Result := String(Name);
+end;
+
+{ TMemoryManagerInfo }
+
+procedure TMemoryManagerInfo.Clear;
+begin
+  VarInfo := Nil;
+  GetMem := Nil;
+  FreeMem := Nil;
+  ReallocMem := Nil;
+  AllocMem := Nil;
+end;
+
+constructor TMemoryManagerInfo.Create;
+begin
+  inherited;
+
+  Clear;
 end;
 
 End.

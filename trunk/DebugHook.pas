@@ -2,9 +2,9 @@ unit DebugHook;
 
 interface
 
-uses Windows;
+uses Windows, DebugInfo;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: Pointer; MemoryCallStack: Boolean): Boolean;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo; MemoryCallStack: Boolean): Boolean;
 function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
 
 implementation
@@ -63,14 +63,14 @@ begin
 end;
 procedure _DbgLoaderEnd; begin end;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: Pointer; MemoryCallStack: Boolean): Boolean;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo; MemoryCallStack: Boolean): Boolean;
 var
   DbgLoaderInfo: TDbgLoaderInfo;
 begin
   ZeroMemory(@DbgLoaderInfo, SizeOf(TDbgLoaderInfo));
 
   DbgLoaderInfo.ImageBase := ImageBase;
-  DbgLoaderInfo.MemoryMgr := MemoryMgr;
+  DbgLoaderInfo.MemoryMgr := Pointer(MemoryMgr.Offset);
   DbgLoaderInfo.MemoryCallStack := MemoryCallStack;
   DbgLoaderInfo.PerfDelta := 10;
 
