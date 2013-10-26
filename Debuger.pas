@@ -173,6 +173,8 @@ type
 
     procedure ClearDbgInfo;
 
+    procedure Log(const Msg: String);
+
     // запуск/остановка отладки
     function AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: Boolean): Boolean;
     function DebugNewProcess(const AppPath: string; var ErrInfo: String; const RunParams: String = ''; const WorkingDirectory: String = ''): Boolean;
@@ -1626,6 +1628,9 @@ begin
 
     if ProcessTrackBreakPoint(DebugEvent) then
       Exit;
+
+    if FMemoryBPCheckMode and not FCodeTracking then
+      FMemoryBPCheckMode := (DbgTrackRETBreakpoints.Count > 0) or (DbgTrackBreakpoints.Count > 0);
   end;
 
   if ProcessUserBreakPoint(DebugEvent) then
@@ -1897,7 +1902,7 @@ var
     TrackStackPoint^.ProcParentTrackFuncInfo := ParentTrackFuncInfo;
   end;
 
-  procedure _RegisterMemInfoPoint;
+  procedure _RegisterFreeMemInfoPoint;
   var
     FuncInfo: TFuncInfo;
     MemInfo: PGetMemInfo;
@@ -1937,6 +1942,8 @@ begin
 
       // Устанавливаем точку останова на выход
       TrackRETBreakpoint := SetTrackRETBreakpoint(ParentFuncAddr);
+      TrackRETBreakpoint^.FuncInfo := TrackBp^.FuncInfo;
+      TrackRETBreakpoint^.BPType := TrackBp^.BPType;
 
       // Восстанавливаем Code byte для продолжения выполнения
       DbgCurTrackAddress := Address;
@@ -1949,7 +1956,7 @@ begin
         _RegisterTrackPoint;
 
       if tbMemInfo in TrackBp^.BPType then
-        _RegisterMemInfoPoint;
+        _RegisterFreeMemInfoPoint;
 
       // Выходим с признаком успешной регистрации
       Exit(True);
@@ -1965,68 +1972,150 @@ var
   ThData: PThreadData;
   Address: Pointer;
   TrackRETBp: PTrackRETBreakpoint;
-  TrackStackPoint: PTrackStackPoint;
-  CurTime: UInt64;
-  FuncAddress: Pointer;
-  CallFuncInfo: PCallFuncInfo;
+
+  procedure _RegisterRETTrackPoint;
+  var
+    TrackStackPoint: PTrackStackPoint;
+    CurTime: UInt64;
+    FuncAddress: Pointer;
+    CallFuncInfo: PCallFuncInfo;
+  begin
+    CurTime := _QueryThreadCycleTime(ThData^.ThreadHandle);
+
+    // Обработка Track-стека текущего потока
+    while ThData^.DbgTrackStack.Count > 0 do
+    begin
+      TrackStackPoint := ThData^.DbgTrackStack.Pop;
+
+      // Увеличиваем счетчик самой функции
+      TrackStackPoint^.Leave := CurTime;
+      // Thread
+      TrackStackPoint^.TrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
+      // Proc
+      TrackStackPoint^.ProcTrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
+
+      // Увеличиваем счетчик родителя
+      // Thread
+      if TrackStackPoint^.TrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
+        Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+
+      // Proc
+      if TrackStackPoint^.ProcTrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
+        Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+
+      // Увеличиваем свой счетчик у родителя
+      // Thread
+      if Assigned(TrackStackPoint^.ParentTrackFuncInfo) then
+      begin
+        FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
+        if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
+          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+      end;
+
+      // Proc
+      if Assigned(TrackStackPoint^.ProcParentTrackFuncInfo) then
+      begin
+        FuncAddress := TFuncInfo(TrackStackPoint^.ProcTrackFuncInfo.FuncInfo).Address;
+        if TrackStackPoint^.ProcParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
+          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+      end;
+
+      // Если это вершина стека - выходим
+      if TrackStackPoint^.TrackRETBreakpoint = TrackRETBp then
+      begin
+        // Dec(TrackRETBp.Count);
+
+        FreeMemory(TrackStackPoint);
+        Break;
+      end;
+
+      FreeMemory(TrackStackPoint);
+    end;
+  end;
+
+  procedure _RegisterGetMemInfoPoint;
+  var
+    FuncInfo: TFuncInfo;
+    ParamSize: TVarInfo;
+    ParamAddr: TVarInfo;
+    Addr: Pointer;
+    Size: Cardinal;
+    NewMemInfo: PGetMemInfo;
+  begin
+    FuncInfo := TFuncInfo(TrackRETBp^.FuncInfo);
+
+    // Dec(TrackRETBp^.Count);
+
+    ParamAddr := nil;
+    ParamSize := nil;
+
+    if (gvDebugInfo.MemoryManagerInfo.GetMem = FuncInfo) or
+      (gvDebugInfo.MemoryManagerInfo.AllocMem = FuncInfo)
+    then
+      begin
+        // GetMem: function(Size: NativeInt): Pointer;
+        // AllocMem: function(Size: NativeInt): Pointer;
+
+        ParamSize := TVarInfo(FuncInfo.Params[0]);
+
+        ParamAddr := TVarInfo.Create;
+        ParamAddr.DataType := FuncInfo.ResultType;
+        ParamAddr.VarKind := vkRegister;
+      end
+    else
+    if (gvDebugInfo.MemoryManagerInfo.ReallocMem = FuncInfo)
+    then
+      begin
+        // ReallocMem: function(P: Pointer; Size: NativeInt): Pointer;
+
+        ParamSize := TVarInfo(FuncInfo.Params[1]);
+
+        ParamAddr := TVarInfo.Create;
+        ParamAddr.DataType := FuncInfo.ResultType;
+        ParamAddr.VarKind := vkRegister;
+      end;
+
+    if Assigned(ParamSize) and Assigned(ParamAddr) then
+    begin
+      Size := 888; //ParamSize.Value;
+      Addr := Pointer(Integer(ParamAddr.Value));
+
+      FreeAndNil(ParamAddr);
+
+      // Добавляем инфу про новый объект
+      NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
+      NewMemInfo^.PerfIdx := ProcessData.CurDbgPointIdx;
+      NewMemInfo^.ObjAddr := Addr;
+      NewMemInfo^.Size := Size;
+
+      //NewMemInfo^.Stack := DbgMemInfo^.Stack;
+      NewMemInfo^.Stack[0] := nil;
+
+      NewMemInfo^.ObjectType := ''; // На этот момент тип ещё может быть неопределен
+
+      ThData^.DbgGetMemInfo.AddOrSetValue(Addr, NewMemInfo);
+      Inc(ThData^.DbgGetMemInfoSize, NewMemInfo^.Size);
+
+      Inc(FProcessData.ProcessGetMemCount);
+      Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
+    end;
+  end;
+
 begin
   ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
   if Assigned(ThData) then
   begin
     Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
-    if DbgTrackRETBreakpoints.TryGetValue(Address, TrackRETBp) and (TrackRETBp.Count > 0) then
+    if DbgTrackRETBreakpoints.TryGetValue(Address, TrackRETBp) and (TrackRETBp.Count > 0){???} then
     begin
-      CurTime := _QueryThreadCycleTime(ThData^.ThreadHandle);
+      if tbTrackFunc in TrackRETBp^.BPType then
+        _RegisterRETTrackPoint;
 
-      // Обработка Track-стека текущего потока
-      while ThData^.DbgTrackStack.Count > 0 do
-      begin
-        TrackStackPoint := ThData^.DbgTrackStack.Pop;
+      if tbMemInfo in TrackRETBp^.BPType then
+        _RegisterGetMemInfoPoint;
 
-        // Увеличиваем счетчик самой функции
-        TrackStackPoint^.Leave := CurTime;
-        // Thread
-        TrackStackPoint^.TrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
-        // Proc
-        TrackStackPoint^.ProcTrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
-
-        // Увеличиваем счетчик родителя
-        // Thread
-        if TrackStackPoint^.TrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
-
-        // Proc
-        if TrackStackPoint^.ProcTrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
-
-        // Увеличиваем свой счетчик у родителя
-        // Thread
-        if Assigned(TrackStackPoint^.ParentTrackFuncInfo) then
-        begin
-          FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
-          if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-            Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
-        end;
-
-        // Proc
-        if Assigned(TrackStackPoint^.ProcParentTrackFuncInfo) then
-        begin
-          FuncAddress := TFuncInfo(TrackStackPoint^.ProcTrackFuncInfo.FuncInfo).Address;
-          if TrackStackPoint^.ProcParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-            Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
-        end;
-
-        // Если это вершина стека - выходим
-        if TrackStackPoint^.TrackRETBreakpoint = TrackRETBp then
-        begin
-          Dec(TrackRETBp.Count);
-
-          FreeMemory(TrackStackPoint);
-          Break;
-        end;
-
-        FreeMemory(TrackStackPoint);
-      end;
+      // Уменьшаем счетчик
+      Dec(TrackRETBp.Count);
 
       // Восстанавливаем breakpoint в случае рекурсивного вызова функции
       if TrackRETBp.Count > 0 then
@@ -2034,6 +2123,9 @@ begin
 
       // Восстанавливаем byte-code для продолжения выполнения
       DoRemoveBreakpointF(Address, TrackRETBp^.SaveByte);
+
+      if TrackRETBp^.Count = 0 then
+        DbgTrackRETBreakpoints.Remove(Address);
 
       SetSingleStepMode(ThData, True);
 
@@ -2223,10 +2315,20 @@ end;
 
 procedure TDebuger.RemoveTrackBreakpoint(const Address: Pointer; const BPType: TTrackBreakpointType);
 var
-  TrackBk: PTrackBreakpoint;
+  TrackBp: PTrackBreakpoint;
 begin
-  if DbgTrackBreakpoints.TryGetValue(Address, TrackBk) then
-    Exclude(TrackBk^.BPType, BPType);
+  if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
+  begin
+    Exclude(TrackBp^.BPType, BPType);
+
+    if TrackBp^.BPType = [] then
+    begin
+      DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
+      DbgTrackBreakpoints.Remove(Address);
+    end;
+  end
+  else
+    RaiseDebugCoreException();
 end;
 
 procedure TDebuger.ProcessDbgException(DebugEvent: PDebugEvent);
@@ -2246,6 +2348,8 @@ begin
         ProcessDbgPerfomance(DebugEvent);
         ProcessDbgMemoryInfo(DebugEvent);
       end;
+    dstMemHookStatus:
+      ProcessDbgMemoryInfo(DebugEvent);
   end;
 end;
 
@@ -2371,6 +2475,11 @@ begin
     RaiseDebugCoreException();
 end;
 
+procedure TDebuger.Log(const Msg: String);
+begin
+  DoDbgLog(CurThreadId, Msg);
+end;
+
 procedure TDebuger.ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
 var
   ER: PExceptionRecord;
@@ -2380,12 +2489,22 @@ var
 begin
   ER := @DebugEvent^.Exception.ExceptionRecord;
   DbgInfoType := TDbgInfoType(ER^.ExceptionInformation[0]);
-  Ptr := Pointer(ER^.ExceptionInformation[1]);
-  Size := ER^.ExceptionInformation[2];
 
   case DbgInfoType of
     dstMemInfo, dstPerfomanceAndMemInfo:
-      LoadMemoryInfoPack(Ptr, Size);
+      begin
+        Ptr := Pointer(ER^.ExceptionInformation[1]);
+        Size := ER^.ExceptionInformation[2];
+
+        LoadMemoryInfoPack(Ptr, Size);
+      end;
+    dstMemHookStatus:
+      begin
+        case ER^.ExceptionInformation[1] of
+          0: gvDebugInfo.ResetMemoryManagerBreakpoints;
+          1: gvDebugInfo.SetMemoryManagerBreakpoints;
+        end;
+      end;
   end;
 end;
 
@@ -2746,6 +2865,8 @@ begin
 
     TrackBk^.FuncInfo := FuncInfo;
     TrackBk^.SaveByte := 0;
+
+    TrackBk^.BPType := [];
     Include(TrackBk^.BPType, BPType);
 
     DoSetBreakpoint(Address, TrackBk^.SaveByte);
@@ -2761,6 +2882,7 @@ begin
   if DbgTrackRETBreakpoints.TryGetValue(Address, Result) then
   begin
     Inc(Result^.Count);
+
     DoRestoreBreakpointF(Address);
   end
   else
@@ -2768,7 +2890,11 @@ begin
     GetMem(Result, SizeOf(TTrackRETBreakpoint));
 
     Result^.Count := 1;
+
+    Result^.SaveByte := 0;
     DoSetBreakpoint(Address, Result^.SaveByte);
+
+    Result^.BPType := [];
 
     DbgTrackRETBreakpoints.Add(Address, Result);
   end;

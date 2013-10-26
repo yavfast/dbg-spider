@@ -171,8 +171,10 @@ type
 
   PTrackRETBreakpoint = ^TTrackRETBreakpoint;
   TTrackRETBreakpoint = record
+    FuncInfo: TObject;
     Count: Cardinal;
     SaveByte: Byte;
+    BPType: TTrackBreakpointTypes;
   end;
 
   TTrackRETBreakpointList = TPointerDictionary<Pointer,PTrackRETBreakpoint>;

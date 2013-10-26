@@ -81,7 +81,9 @@ Type
     function GetSystemUnit: TUnitInfo;
     function GetMemoryManager: TVarInfo;
     function SetDebugHook(const Value: Byte): Boolean;
-    procedure SetMemoryManagerBreakpoints(MemoryManager: TVarInfo);
+
+    procedure SetMemoryManagerBreakpoints; Override;
+    procedure ResetMemoryManagerBreakpoints; Override;
 
     Procedure InitDebugHook; Override;
 
@@ -1189,6 +1191,24 @@ Begin
   UnitInfo.FuncsByAddr.Add(FuncInfo);
 End;
 
+procedure TDelphiDebugInfo.ResetMemoryManagerBreakpoints;
+begin
+  // gvDebuger.MemoryBPCheckMode := False;
+
+  if MemoryManagerInfo.VarInfo = nil then Exit;
+
+  if MemoryManagerInfo.GetMem <> nil then
+    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.GetMem.Address, tbMemInfo);
+  if MemoryManagerInfo.FreeMem <> nil then
+    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.FreeMem.Address, tbMemInfo);
+  if MemoryManagerInfo.ReallocMem <> nil then
+    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.ReallocMem.Address, tbMemInfo);
+  if MemoryManagerInfo.AllocMem <> nil then
+    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.AllocMem.Address, tbMemInfo);
+
+  gvDebuger.Log('Reset slow memory manager hook - ok');
+end;
+
 Procedure TDelphiDebugInfo.ResolveUnits;
 Var
   I, J, U: Integer;
@@ -1270,7 +1290,7 @@ begin
 end;
 
 
-procedure TDelphiDebugInfo.SetMemoryManagerBreakpoints(MemoryManager: TVarInfo);
+procedure TDelphiDebugInfo.SetMemoryManagerBreakpoints;
 var
   Members: TNameList;
   Member: TStructMember;
@@ -1284,7 +1304,7 @@ var
       RaiseDebugCoreException();
 
     Result := nil;
-    Offset := Pointer(MemoryManager.Offset + Member.Offset);
+    Offset := Pointer(MemoryManagerInfo.VarInfo.Offset + Member.Offset);
     if not gvDebuger.ReadData(Offset, @Result, SizeOf(Pointer)) then
       RaiseDebugCoreException();
   end;
@@ -1303,9 +1323,9 @@ var
   end;
 
 begin
-  MemoryManagerInfo.VarInfo := MemoryManager;
+  if MemoryManagerInfo.VarInfo = nil then Exit;
 
-  Members := MemoryManager.DataType.Members;
+  Members := MemoryManagerInfo.VarInfo.DataType.Members;
   if Assigned(Members) and (Members.Count > 0) then
   begin
     gvDebuger.MemoryBPCheckMode := True;
@@ -1325,6 +1345,8 @@ begin
     Member := TStructMember(Members.FindByName('AllocMem'));
     Addr := _GetFuncPtr;
     MemoryManagerInfo.AllocMem := _SetTrackBreakpoint(Addr);
+
+    gvDebuger.Log('Set slow memory manager hook - ok');
   end;
 end;
 
@@ -1922,19 +1944,14 @@ begin
 end;
 
 Procedure TDelphiDebugInfo.InitDebugHook;
-Var
-  MemoryManager: TVarInfo;
 Begin
   gvDebuger.ProcessData.SetPEImage(FImage);
 
   InitCodeTracking(gvDebuger.CodeTracking);
 
-  MemoryManager := GetMemoryManager;
-  if Assigned(MemoryManager) then
-  begin
-    // Установка перехвата вызовов GetMem и FreeMem
-    SetMemoryManagerBreakpoints(MemoryManager);
-  end;
+  MemoryManagerInfo.VarInfo := GetMemoryManager;
+  // Установка перехвата вызовов GetMem и FreeMem
+  SetMemoryManagerBreakpoints;
 
   // Инициализация дебажного потока в процессе
   // !!! Поток запустится не сразу, а через некоторое время
@@ -1942,7 +1959,7 @@ Begin
     gvDebuger.ProcessData.AttachedProcessHandle,
     'DbgHook32.dll',
     Pointer(FImage.OptionalHeader32.ImageBase),
-    MemoryManager,
+    MemoryManagerInfo.VarInfo,
     gvDebuger.MemoryCallStack
   );
 End;

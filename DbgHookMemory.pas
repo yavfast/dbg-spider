@@ -42,7 +42,7 @@ function _HookAllocMem(Size: TMemSize): Pointer; forward;
 
 type
   PMemOutDbgInfo = ^TMemOutDbgInfo;
-  TMemOutDbgInfo = array[0..2] of Cardinal;
+  TMemOutDbgInfo = array[0..2] of NativeUInt;
 
 threadvar
   _MemOutDbgInfo: TMemOutDbgInfo;
@@ -74,16 +74,28 @@ type
   end;
 { --- From JCL --- }
 
-procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: Cardinal);
+procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: NativeUInt);
 var
   MemOutDbgInfo: PMemOutDbgInfo;
 begin
   MemOutDbgInfo := @_MemOutDbgInfo;
-  MemOutDbgInfo[0] := Cardinal(DbgInfoType);
-  MemOutDbgInfo[1] := Cardinal(Ptr);
-  MemOutDbgInfo[2] := Count;
+  MemOutDbgInfo[0] := NativeUInt(DbgInfoType);
+  MemOutDbgInfo[1] := NativeUInt(Ptr);
+  MemOutDbgInfo[2] := NativeUInt(Count);
 
   RaiseException(DBG_EXCEPTION, 0, 3, @MemOutDbgInfo[0]);
+end;
+
+procedure _SetMemHookStatus(const Status: NativeUInt);
+var
+  MemOutDbgInfo: PMemOutDbgInfo;
+begin
+  MemOutDbgInfo := @_MemOutDbgInfo;
+  MemOutDbgInfo[0] := NativeUInt(dstMemHookStatus);
+  MemOutDbgInfo[1] := Status;
+  MemOutDbgInfo[2] := 0;
+
+  RaiseException(DBG_EXCEPTION, 0, 2, @MemOutDbgInfo[0]);
 end;
 
 threadvar
@@ -331,6 +343,9 @@ begin
   finally
     MemInfoLock.Leave;
   end;
+
+  _SetMemHookStatus(0);
+
   OutputDebugStringA('Init memory hooks - ok');
 end;
 
@@ -338,13 +353,26 @@ procedure ResetMemoryHook; stdcall;
 begin
   if _MemoryMgr = nil then Exit;
   
-  //TODO: Сброс буфера памяти и освобождение хуков
-
   OutputDebugStringA('Reset memory hooks...');
+
+  // Восстанавливаем оригинальный менеджер памяти
   MemInfoLock.Enter;
   try
     _MemoryMgr^ := _BaseMemoryMgr;
     _MemoryMgr := Nil;
+
+    _SetMemHookStatus(1);
+  finally
+    MemInfoLock.Leave;
+  end;
+
+  // Освобождаем локи
+  SwitchToThread;
+
+  // Сбрасываем буффер
+  MemInfoLock.Enter;
+  try
+    _OutMemInfoBuf(dstMemInfo);
 
     FreeMemory(MemInfoList);
     MemInfoList := Nil;
@@ -352,7 +380,6 @@ begin
     MemInfoLock.Leave;
   end;
 
-  //Sleep(100);
   FreeAndNil(MemInfoLock);
 
   FreeAndNil(MemLock);
