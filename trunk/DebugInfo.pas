@@ -419,6 +419,9 @@ Type
     Function EvaluateVariable(VarInfo: TVarInfo): Variant; virtual; abstract;
     Function VarValueAsString(const Value: Variant): String; virtual; abstract;
 
+    procedure SetMemoryManagerBreakpoints; Virtual; abstract;
+    procedure ResetMemoryManagerBreakpoints; Virtual; abstract;
+
     Procedure InitDebugHook; Virtual; abstract;
 
     Function GetNameById(const Idx: TNameId): AnsiString; virtual; abstract;
