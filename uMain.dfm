@@ -144,7 +144,7 @@ object MainForm: TMainForm
           Top = 0
           Width = 848
           Height = 517
-          ActivePage = tsDbgUnitTypes
+          ActivePage = tsDbgUnitConsts
           Align = alClient
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet

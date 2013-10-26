@@ -35,7 +35,7 @@ Function GetValue           (Debuger: TDebuger; TypeInfo : TTypeInfo; IntPtr : T
 Function GetVoidValue       : Variant;
 Function StructToString     (TypeInfo : TTypeInfo; Address : TPointer; Var ToStringData : TToStringData) : String;
 Function VariantToString    (Const Value : Variant; ToStringData : TToStringData) : String;
-Function CalculateValue     (Const Value : Variant; CalculateData : TCalculateData) : Variant;
+Function CalculateValue     (Const Value : Variant; const CalculateData : TCalculateData) : Variant;
 Function ModifyValue        (Const ToValue, FromValue : Variant; CalculateData : TCalculateData) : Boolean;
 {..............................................................................}
 
@@ -733,14 +733,21 @@ End;
 {..............................................................................}
 
 {..............................................................................}
-Function CalculateValue(Const Value : Variant; CalculateData : TCalculateData) : Variant;
+Function CalculateValue(Const Value : Variant; const CalculateData : TCalculateData) : Variant;
 Var
     CalculateValue : ICalculateValue;
+    CustomVariantData : ICustomVariantData;
 Begin
     If VarType(Value) = varUnknown Then
         If Supports(IUnknown(TVarData(Value).VUnknown), ICalculateValue, CalculateValue) Then
         Begin
             Result := CalculateValue.Calculate(CalculateData);
+            Exit;
+        End
+        else
+        If Supports(IUnknown(TVarData(Value).VUnknown), ICustomVariantData, CustomVariantData) Then
+        Begin
+            Result := CustomVariantData.AsVariant;
             Exit;
         End;
 

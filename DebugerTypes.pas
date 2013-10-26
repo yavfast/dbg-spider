@@ -157,10 +157,14 @@ type
 
   TBreakpointList = array of TBreakpoint;
 
+  TTrackBreakpointType = (tbTrackFunc, tbMemInfo);
+  TTrackBreakpointTypes = set of TTrackBreakpointType;
+
   PTrackBreakpoint = ^TTrackBreakpoint;
   TTrackBreakpoint = record
     FuncInfo: TObject;
     SaveByte: Byte;
+    BPType: TTrackBreakpointTypes;
   end;
 
   TTrackBreakpointList = TPointerDictionary<Pointer,PTrackBreakpoint>;

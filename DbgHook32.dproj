@@ -3,7 +3,7 @@
         <ProjectGuid>{5769B713-B63C-48E8-8145-EF5BBB15C728}</ProjectGuid>
         <ProjectVersion>14.6</ProjectVersion>
         <MainSource>DbgHook32.dpr</MainSource>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
