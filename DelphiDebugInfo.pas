@@ -1917,6 +1917,8 @@ var
   I, J: Integer;
   UnitInfo: TUnitInfo;
   FuncInfo: TFuncInfo;
+  Segment: TUnitSegmentInfo;
+  OldProtect: Cardinal;
 begin
   FuncCount := 128;
 
@@ -1931,6 +1933,17 @@ begin
     for I := 0 to Units.Count - 1 do
     begin
       UnitInfo := TUnitInfo(Units.Objects[I]);
+
+      for J := 0 to UnitInfo.Segments.Count - 1 do
+      begin
+        Segment := UnitInfo.Segments[J];
+        if Segment.SegType = ustCode then
+            Assert(
+              VirtualProtectEx(
+                gvDebuger.ProcessData.AttachedProcessHandle, Pointer(Segment.Offset), Segment.Size, PAGE_EXECUTE_READWRITE, OldProtect
+              )
+            );
+      end;
 
       if not gvDebuger.TrackSystemUnits and (UnitInfo.GetUnitType = utSystem) then
         Continue;
