@@ -369,8 +369,8 @@ type
     constructor Create(AFuncInfo: TObject);
     destructor Destroy; override;
 
-    function AddParentCall(const Addr: Pointer): PCallFuncInfo;
-    function AddChildCall(const Addr: Pointer): PCallFuncInfo;
+    function AddParentCall(const Addr: Pointer): PCallFuncInfo; inline;
+    function AddChildCall(const Addr: Pointer): PCallFuncInfo; inline;
 
     procedure GrowEllapsed(const Value: UInt64); inline;
     procedure GrowSize(const Value: Int64); inline;
@@ -1013,7 +1013,7 @@ end;
 
 function TTrackFuncInfo.AddChildCall(const Addr: Pointer): PCallFuncInfo;
 begin
-  Result := FChildFuncs.AddCallFunc(Addr)
+  Result := FChildFuncs.AddCallFunc(Addr);
 end;
 
 procedure TTrackFuncInfo.AddGetMemInfo(const GetMemInfo: PGetMemInfo);
@@ -1145,8 +1145,12 @@ begin
     if TrackFuncInfo.TrackUnitInfo = nil then
       TrackFuncInfo.TrackUnitInfo := GetTrackUnitInfo(FuncInfo.UnitInfo);
 
+    (*
     if not TrackFuncInfo.TrackUnitInfo.FuncInfoList.ContainsKey(FuncInfo) then
       TrackFuncInfo.TrackUnitInfo.FuncInfoList.Add(FuncInfo, TrackFuncInfo);
+    *)
+
+    TrackFuncInfo.TrackUnitInfo.FuncInfoList.AddOrSetValue(FuncInfo, TrackFuncInfo);
   end;
 end;
 

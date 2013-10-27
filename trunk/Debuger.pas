@@ -182,6 +182,7 @@ type
     function StopDebug: Boolean;
     function PauseDebug: Boolean;
 
+    // Основной цикл обработки дебажных событий
     procedure ProcessDebugEvents;
 
     // чтение запись данных
@@ -208,6 +209,8 @@ type
 
     function UpdateThreadContext(const ThreadID: TThreadId; const ContextFlags: Cardinal = CONTEXT_FULL): PThreadData; overload;
     function UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): Boolean; overload;
+
+    function UpdateCurThreadContext(const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;
 
     function GetRegisters(const ThreadID: TThreadId): TContext;
     procedure SetRegisters(const ThreadID: TThreadId; var Context: TContext);
@@ -854,7 +857,7 @@ end;
 function TDebuger.CurThreadData: PThreadData;
 begin
   if FCurThreadData = Nil then
-    FCurThreadData := UpdateThreadContext(FCurThreadId);
+    UpdateCurThreadContext;
 
   Result := FCurThreadData;
 end;
@@ -1359,8 +1362,8 @@ function TDebuger.GetRegisters(const ThreadID: TThreadId): TContext;
 var
   ThData: PThreadData;
 begin
-  if (FCurThreadData <> Nil) and (ThreadID = FCurThreadData^.ThreadID) then
-    Result := FCurThreadData^.Context^
+  if (ThreadID = FCurThreadId) then
+    Result := CurThreadData^.Context^
   else
   begin
     ThData := UpdateThreadContext(ThreadId);
@@ -1692,14 +1695,14 @@ begin
 end;
 
 procedure TDebuger.ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
-var
+//var
   //Handled: Boolean;
-  ThData: PThreadData;
+  //ThData: PThreadData;
 begin
-  ThData := GetThreadData(DebugEvent^.dwThreadId);
+  //ThData := CurThreadData;
 
-  if Assigned(ThData) then
-  begin
+  //if Assigned(ThData) then
+  //begin
     if Assigned(DbgCurTrackAddress) then
     begin
       DoRestoreBreakpointF(DbgCurTrackAddress);
@@ -1707,7 +1710,7 @@ begin
     end;
 
     Exit;
-  end;
+  //end;
 
 
 
@@ -1930,9 +1933,10 @@ var
   end;
 
 begin
-  ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
-  if Assigned(ThData) then
+  if UpdateCurThreadContext then
   begin
+    ThData := FCurThreadData;
+
     Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
     if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
     begin
@@ -2102,9 +2106,10 @@ var
   end;
 
 begin
-  ThData := UpdateThreadContext(DebugEvent^.dwThreadId);
-  if Assigned(ThData) then
+  if UpdateCurThreadContext then
   begin
+    ThData := FCurThreadData;
+
     Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
     if DbgTrackRETBreakpoints.TryGetValue(Address, TrackRETBp) and (TrackRETBp.Count > 0){???} then
     begin
@@ -2627,12 +2632,11 @@ var
   OldProtect: DWORD;
 begin
   Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, PAGE_EXECUTE_READWRITE, OldProtect));
-  //try
-    Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
-    Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
-//  finally
-//    Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
-//  end;
+
+  Check(ReadProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
+  Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
+
+  Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
 end;
 
 procedure TDebuger.DoSetBreakpointF(const Address: Pointer; var SaveByte: Byte);
@@ -2861,7 +2865,7 @@ var
 begin
   if not DbgTrackBreakpoints.TryGetValue(Address, TrackBk) then
   begin
-    GetMem(TrackBk, SizeOf(TTrackBreakpoint));
+    TrackBk := AllocMem(SizeOf(TTrackBreakpoint));
 
     TrackBk^.FuncInfo := FuncInfo;
     TrackBk^.SaveByte := 0;
@@ -2869,7 +2873,7 @@ begin
     TrackBk^.BPType := [];
     Include(TrackBk^.BPType, BPType);
 
-    DoSetBreakpoint(Address, TrackBk^.SaveByte);
+    DoSetBreakpointF(Address, TrackBk^.SaveByte);
 
     DbgTrackBreakpoints.Add(Address, TrackBk);
   end
@@ -2892,7 +2896,7 @@ begin
     Result^.Count := 1;
 
     Result^.SaveByte := 0;
-    DoSetBreakpoint(Address, Result^.SaveByte);
+    DoSetBreakpointF(Address, Result^.SaveByte);
 
     Result^.BPType := [];
 
@@ -3113,6 +3117,17 @@ const
     (DR7_SIZE_DR3_B, DR7_SIZE_DR3_W, DR7_SIZE_DR3_D)
   );
 
+function TDebuger.UpdateCurThreadContext(const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;
+begin
+  Result := True;
+
+  if (FCurThreadData = nil) or (FCurThreadData^.Context^.ContextFlags <> ContextFlags) then
+  begin
+    FCurThreadData := UpdateThreadContext(FCurThreadId, ContextFlags);
+    Result := Assigned(FCurThreadData);
+  end;
+end;
+
 procedure TDebuger.UpdateHardwareBreakpoints(const ThreadID: TThreadId);
 var
   Context: PContext;
@@ -3195,6 +3210,7 @@ end;
 function TDebuger.UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;
 begin
   Result := False;
+
   if ThreadData <> Nil then
   begin
     //ZeroMemory(ThreadData^.Context, SizeOf(TContext));

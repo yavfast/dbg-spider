@@ -1177,8 +1177,12 @@ begin
         ExceptionHelper.Throw_DuplicateKeyError('AKey');
       end;
 
+      LockForWrite;
+
       ReplaceValue(Entry.FValue, AValue);
       NotifyCollectionChanged();
+
+      UnLockForWrite;
 
       UnLockForRead;
       Exit;
@@ -1226,9 +1230,9 @@ begin
 
   FBucketArray[LIndex] := LFreeList;
 
-  UnLockForWrite;
-
   NotifyCollectionChanged();
+
+  UnLockForWrite;
 
   UnLockForRead;
 end;
