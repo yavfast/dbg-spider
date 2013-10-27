@@ -1758,6 +1758,9 @@ type
     ///  <exception cref="Collections.Base|ECollectionChangedException">The enumerated collection has changed.</exception>
     function MoveNext(): Boolean;
 
+    ///  <summary>Checking change of collection.</summary>
+    function VersionChanged: Boolean;
+
     ///  <summary>Returns the current element of the enumerated collection.</summary>
     ///  <remarks>This property can only return a valid element if <c>MoveNext</c> was priorly called and returned <c>True</c>;
     ///  otherwise the behavior of this property is undefined. </remarks>
@@ -3295,16 +3298,16 @@ end;
 
 function TAbstractEnumerator<T>.GetCurrent: T;
 begin
-  if FCreatedAtVersion <> FOwner.FVersion then
-     ExceptionHelper.Throw_CollectionChangedError();
+  //if FCreatedAtVersion <> FOwner.FVersion then
+  //   ExceptionHelper.Throw_CollectionChangedError();
 
   Result := FCurrent;
 end;
 
 function TAbstractEnumerator<T>.MoveNext: Boolean;
 begin
-  if FCreatedAtVersion <> FOwner.FVersion then
-     ExceptionHelper.Throw_CollectionChangedError();
+  //if FCreatedAtVersion <> FOwner.FVersion then
+  //   ExceptionHelper.Throw_CollectionChangedError();
 
   if FEnded then
     Result := False
@@ -3314,6 +3317,11 @@ begin
     if not Result then
       FEnded := True;
   end;
+end;
+
+function TAbstractEnumerator<T>.VersionChanged: Boolean;
+begin
+  Result := (FCreatedAtVersion <> FOwner.FVersion);
 end;
 
 { TForwardingEnumerator<T> }

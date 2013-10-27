@@ -2081,7 +2081,7 @@ var
 
     if Assigned(ParamSize) and Assigned(ParamAddr) then
     begin
-      Size := 888; //ParamSize.Value;
+      Size := 1; //ParamSize.Value;
       Addr := Pointer(Integer(ParamAddr.Value));
 
       FreeAndNil(ParamAddr);

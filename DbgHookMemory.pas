@@ -15,6 +15,7 @@ uses Windows, SyncObjs, SysUtils{, JclWin32, JclBase, JclDebug};
 
 var
   _BaseMemoryMgr: TMemoryManagerEx;
+  _HookMemoryMgr: TMemoryManagerEx;
 
   MemInfoList: PDbgMemInfoList = nil;
   MemInfoListCnt: Integer = 0;
@@ -248,7 +249,7 @@ begin
   MemLock.Enter;
   try
   {$ENDIF}
-    Result := _BaseGetMem(Size);
+    Result := _BaseMemoryMgr.GetMem(Size);
     PCardinal(Result)^ := $00000000; // Очистка для TObject
 
     _AddMemInfo(miGetMem, Result, Size);
@@ -270,7 +271,7 @@ begin
     // !!! Указатель может быть уже невалидным
     //PCardinal(P)^ := $00000000; // Очистка для TObject
 
-    Result := _BaseFreeMem(P);
+    Result := _BaseMemoryMgr.FreeMem(P);
   {$IFDEF MEMLOCK}
   finally
     MemLock.Leave;
@@ -286,7 +287,7 @@ begin
   {$ENDIF}
     _AddMemInfo(miFreeMem, P, 0);
 
-    Result := _BaseReallocMem(P, Size);
+    Result := _BaseMemoryMgr.ReallocMem(P, Size);
 
     _AddMemInfo(miGetMem, Result, Size);
   {$IFDEF MEMLOCK}
@@ -302,7 +303,7 @@ begin
   MemLock.Enter;
   try
   {$ENDIF}
-    Result := _BaseAllocMem(Size);
+    Result := _BaseMemoryMgr.AllocMem(Size);
 
     _AddMemInfo(miGetMem, Result, Size);
   {$IFDEF MEMLOCK}
@@ -320,29 +321,22 @@ begin
 
   MemLock := TCriticalSection.Create;
 
-  MemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
+  MemInfoList := AllocMem(SizeOf(TDbgMemInfoList));
   MemInfoLock := TCriticalSection.Create;
-  MemInfoLock.Enter;
-  try
-    _MemoryMgr := MemoryMgr;
-    _BaseMemoryMgr := _MemoryMgr^;
-    with _MemoryMgr^ do
-    begin
-      _BaseGetMem := GetMem;
-      GetMem := _HookGetMem;
 
-      _BaseFreeMem := FreeMem;
-      FreeMem := _HookFreeMem;
+  _HookMemoryMgr.GetMem := _HookGetMem;
+  _HookMemoryMgr.FreeMem := _HookFreeMem;
+  _HookMemoryMgr.ReallocMem := _HookReallocMem;
+  _HookMemoryMgr.AllocMem := _HookAllocMem;
 
-      _BaseReallocMem := ReallocMem;
-      ReallocMem := _HookReallocMem;
+  _MemoryMgr := MemoryMgr;
+  _BaseMemoryMgr := _MemoryMgr^;
 
-      _BaseAllocMem := AllocMem;
-      AllocMem := _HookAllocMem;
-    end;
-  finally
-    MemInfoLock.Leave;
-  end;
+  MemLock.Enter;
+  _MemoryMgr^ := _HookMemoryMgr;
+  MemLock.Leave;
+
+  SwitchToThread;
 
   _SetMemHookStatus(0);
 

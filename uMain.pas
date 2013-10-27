@@ -402,6 +402,12 @@ type
     procedure vstMemInfoObjStackDblClick(Sender: TObject);
     procedure acOpenSiteExecute(Sender: TObject);
     procedure acFeedbackExecute(Sender: TObject);
+    procedure vstMemInfoFuncTreeCompareNodes(Sender: TBaseVirtualTree;
+      Node1, Node2: PVirtualNode; Column: TColumnIndex;
+      var Result: Integer);
+    procedure vstMemInfoObjectsCompareNodes(Sender: TBaseVirtualTree;
+      Node1, Node2: PVirtualNode; Column: TColumnIndex;
+      var Result: Integer);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -2562,6 +2568,7 @@ begin
     Data^.SyncNode := ThreadNode;
     Data^.LinkType := ltThread;
 
+    ThData^.DbgTrackUnitList.LockForRead;
     for TrackUnitInfoPair in ThData^.DbgTrackUnitList do
     begin
       UnitInfo := TUnitInfo(TrackUnitInfoPair.Value.UnitInfo);
@@ -2574,6 +2581,7 @@ begin
       Data^.TrackUnitInfo := TrackUnitInfoPair.Value;
       Data^.LinkType := ltTrackUnitInfo;
 
+      TrackUnitInfoPair.Value.FuncInfoList.LockForRead;
       for TrackFuncInfoPair in TrackUnitInfoPair.Value.FuncInfoList do
       begin
         Node := vstTrackFuncs.AddChild(UnitNode);
@@ -2583,9 +2591,11 @@ begin
         Data^.TrackFuncInfo := TrackFuncInfoPair.Value;
         Data^.LinkType := ltTrackFuncInfo;
       end;
+      TrackUnitInfoPair.Value.FuncInfoList.UnLockForRead;
 
       vstTrackFuncs.Expanded[UnitNode] := True;
     end;
+    ThData^.DbgTrackUnitList.UnLockForRead;
 
     vstTrackFuncs.Expanded[BaseNode] := True;
   finally
@@ -3846,6 +3856,71 @@ begin
   end;
 end;
 
+procedure TMainForm.vstMemInfoFuncTreeCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  ValueU1, ValueU2: UInt64;
+  ValueS1, ValueS2: Int64;
+begin
+  Data1 := vstMemInfoFuncTree.GetNodeData(Node1);
+  Data2 := vstMemInfoFuncTree.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Name1 := TFuncInfo(Data1^.TrackFuncInfo.FuncInfo).ShortName;
+          Name2 := TFuncInfo(Data2^.TrackFuncInfo.FuncInfo).ShortName;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          Name1 := TUnitInfo(Data1^.TrackUnitInfo.UnitInfo).ShortName;
+          Name2 := TUnitInfo(Data2^.TrackUnitInfo.UnitInfo).ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        ValueU1 := 0;
+        ValueU2 := 0;
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          ValueU1 := Data1^.TrackFuncInfo.CallCount;
+          ValueU2 := Data2^.TrackFuncInfo.CallCount;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          ValueU1 := Data1^.TrackUnitInfo.CallCount;
+          ValueU2 := Data2^.TrackUnitInfo.CallCount;
+        end;
+
+        Result := Compare(ValueU1, ValueU2);
+      end;
+    2:
+      begin
+        ValueS1 := 0;
+        ValueS2 := 0;
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          ValueS1 := Data1^.TrackFuncInfo.Size;
+          ValueS2 := Data2^.TrackFuncInfo.Size;
+        end;
+
+        Result := Compare(ValueS1, ValueS2);
+      end;
+  end;
+end;
+
 procedure TMainForm.vstMemInfoFuncTreeFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 var
   Data: PLinkData;
@@ -3918,6 +3993,79 @@ begin
           0: CellText := TUnitInfo(TrackUnitInfo.UnitInfo).ShortName;
           //1: CellText := IntToStr(TrackUnitInfo.CurCount);
         end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstMemInfoObjectsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  Ptr1, Ptr2: NativeUInt;
+begin
+  Data1 := Sender.GetNodeData(Node1);
+  Data2 := Sender.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltMemInfo) and (Data1^.LinkType = ltMemInfo) then
+        begin
+          if Sender = vstMemInfoObjects then
+          begin
+            vstMemInfoObjectsGetText(Sender, Node1, Column, ttNormal, Name1);
+            vstMemInfoObjectsGetText(Sender, Node2, Column, ttNormal, Name2);
+          end
+          else
+          if Sender = vstMemList then
+          begin
+            vstMemListGetText(Sender, Node1, Column, ttNormal, Name1);
+            vstMemListGetText(Sender, Node2, Column, ttNormal, Name2);
+          end;
+        end;
+
+        if TVirtualStringTree(Sender).Header.SortDirection = sdAscending then
+          Result := Compare(Name1, Name2, 1)
+        else
+          Result := Compare(Name1, Name2, -1);
+      end;
+    1:
+      begin
+        Ptr1 := 0;
+        Ptr2 := 0;
+
+        if (Data1^.LinkType = ltMemInfo) and (Data1^.LinkType = ltMemInfo) then
+        begin
+          Ptr1 := NativeUInt(Data1^.MemPtr);
+          Ptr2 := NativeUInt(Data2^.MemPtr);
+        end;
+
+        Result := Compare(Ptr1, Ptr2);
+      end;
+    2:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltMemInfo) and (Data1^.LinkType = ltMemInfo) then
+        begin
+          if Sender = vstMemInfoObjects then
+          begin
+            vstMemInfoObjectsGetText(Sender, Node1, Column, ttNormal, Name1);
+            vstMemInfoObjectsGetText(Sender, Node2, Column, ttNormal, Name2);
+          end
+          else
+          if Sender = vstMemList then
+          begin
+            vstMemListGetText(Sender, Node1, Column, ttNormal, Name1);
+            vstMemListGetText(Sender, Node2, Column, ttNormal, Name2);
+          end;
+        end;
+
+        Result := CompareNumberStr(Name1, Name2);
       end;
   end;
 end;
@@ -4619,37 +4767,72 @@ end;
 procedure TMainForm.vstTrackFuncsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
 var
   Data1, Data2: PLinkData;
-  Ellapsed1, Ellapsed2: UInt64;
+  Value1, Value2: UInt64;
+  Name1, Name2: String;
 begin
   Data1 := vstTrackFuncs.GetNodeData(Node1);
   Data2 := vstTrackFuncs.GetNodeData(Node2);
 
-  if Column = 2 then
-  begin
-    Ellapsed1 := 0;
-    Ellapsed2 := 0;
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
 
-    if (Data1.LinkType = ltTrackFuncInfo) and (Data2.LinkType = ltTrackFuncInfo) then
-    begin
-      Ellapsed1 := Data1.TrackFuncInfo.CPUEllapsed;
-      Ellapsed2 := Data2.TrackFuncInfo.CPUEllapsed;
-    end
-    else
-    if (Data1.LinkType = ltTrackUnitInfo) and (Data2.LinkType = ltTrackUnitInfo) then
-    begin
-      // Для юнитов считаем по кол-ву вызовов функций
-      Ellapsed1 := Data1.TrackUnitInfo.CallCount;
-      Ellapsed2 := Data2.TrackUnitInfo.CallCount;
-    end;
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Name1 := TFuncInfo(Data1^.TrackFuncInfo.FuncInfo).ShortName;
+          Name2 := TFuncInfo(Data2^.TrackFuncInfo.FuncInfo).ShortName;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          Name1 := TUnitInfo(Data1^.TrackUnitInfo.UnitInfo).ShortName;
+          Name2 := TUnitInfo(Data2^.TrackUnitInfo.UnitInfo).ShortName;
+        end;
 
-    if Ellapsed1 = Ellapsed2 then
-      Result := 0
-    else
-    if Ellapsed1 > Ellapsed2 then
-      Result := 1
-    else
-    if Ellapsed1 < Ellapsed2 then
-      Result := -1;
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        Value1 := 0;
+        Value2 := 0;
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Value1 := Data1^.TrackFuncInfo.CallCount;
+          Value2 := Data2^.TrackFuncInfo.CallCount;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          // Для юнитов считаем по кол-ву вызовов функций
+          Value1 := Data1^.TrackUnitInfo.CallCount;
+          Value2 := Data2^.TrackUnitInfo.CallCount;
+        end;
+
+        Result := Compare(Value1, Value2);
+      end;
+    2:
+      begin
+        Value1 := 0;
+        Value2 := 0;
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Value1 := Data1^.TrackFuncInfo.CPUEllapsed;
+          Value2 := Data2^.TrackFuncInfo.CPUEllapsed;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          // Для юнитов считаем по кол-ву вызовов функций
+          Value1 := Data1^.TrackUnitInfo.CallCount;
+          Value2 := Data2^.TrackUnitInfo.CallCount;
+        end;
+
+        Result := Compare(Value1, Value2);
+      end;
   end;
 end;
 

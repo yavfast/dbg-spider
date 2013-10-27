@@ -28,9 +28,60 @@ function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; con
 procedure RGBToHSV(const Color: TColor; var h, s, v: Integer);
 function HSV2RGB(const h, s, v: Integer): TColor;
 
+function Compare(var Value1, Value2: UInt64): Integer; overload;
+function Compare(var Value1, Value2: Int64): Integer; overload;
+function Compare(var Value1, Value2: NativeInt): Integer; overload;
+function Compare(var Value1, Value2: NativeUInt): Integer; overload;
+
+function Compare(var Value1, Value2: String; const EmptyRes: Integer): Integer; overload;
+function CompareNumberStr(const Value1, Value2: String): Integer;
+
 implementation
 
 uses Math;
+
+function CompareNumberStr(const Value1, Value2: String): Integer;
+begin
+  Result := Length(Value1) - Length(Value2);
+  if Result = 0 then
+    Result := CompareStr(Value1, Value2);
+end;
+
+function Compare(var Value1, Value2: String; const EmptyRes: Integer): Integer;
+begin
+  if (Value1 <> '') and (Value2 <> '') then
+    Result := CompareText(Value1, Value2)
+  else
+  begin
+    if (Value1 = '') and (Value2 <> '') then
+      Result := EmptyRes
+    else
+    if (Value1 <> '') and (Value2 = '') then
+      Result := -EmptyRes
+    else
+      Result := 0;
+  end;
+end;
+
+function Compare(var Value1, Value2: Int64): Integer;
+begin
+  Result := Value1 - Value2;
+end;
+
+function Compare(var Value1, Value2: UInt64): Integer;
+begin
+  Result := Int64(Value1) - Int64(Value2);
+end;
+
+function Compare(var Value1, Value2: NativeInt): Integer;
+begin
+  Result := Value1 - Value2;
+end;
+
+function Compare(var Value1, Value2: NativeUInt): Integer;
+begin
+  Result := NativeInt(Value1) - NativeInt(Value2);
+end;
 
 // h=[0..360] s,v=[0..255]
 procedure RGBToHSV(const Color: TColor; var h, s, v: Integer);
