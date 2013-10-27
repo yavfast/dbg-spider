@@ -838,6 +838,7 @@ begin
   FCloseDebugProcess := True;
   FSetEntryPointBreakPoint := False;
   FDbgLogMode := False;
+  FMemoryBPCheckMode := False;
 
   FThreadList := TCollectList<TThreadData>.Create;
   FThreadAdvInfoList := TCollectList<TThreadAdvInfo>.Create;
