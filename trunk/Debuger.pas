@@ -719,7 +719,7 @@ end;
 
 procedure TDebuger.CallUnhandledBreakPointEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 begin
-  ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
+  //ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
 
   if Assigned(FExceptioEvents[Code]) then
     FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
@@ -1632,8 +1632,8 @@ begin
     if ProcessTrackBreakPoint(DebugEvent) then
       Exit;
 
-    if FMemoryBPCheckMode and not FCodeTracking then
-      FMemoryBPCheckMode := (DbgTrackRETBreakpoints.Count > 0) or (DbgTrackBreakpoints.Count > 0);
+    //if FMemoryBPCheckMode and not FCodeTracking then
+    //  FMemoryBPCheckMode := (DbgTrackRETBreakpoints.Count > 0) or (DbgTrackBreakpoints.Count > 0);
   end;
 
   if ProcessUserBreakPoint(DebugEvent) then
@@ -2120,7 +2120,8 @@ begin
         _RegisterGetMemInfoPoint;
 
       // Уменьшаем счетчик
-      Dec(TrackRETBp.Count);
+      if TrackRETBp.Count > 0 then
+        Dec(TrackRETBp.Count);
 
       // Восстанавливаем breakpoint в случае рекурсивного вызова функции
       if TrackRETBp.Count > 0 then
@@ -2129,8 +2130,8 @@ begin
       // Восстанавливаем byte-code для продолжения выполнения
       DoRemoveBreakpointF(Address, TrackRETBp^.SaveByte);
 
-      if TrackRETBp^.Count = 0 then
-        DbgTrackRETBreakpoints.Remove(Address);
+      //if TrackRETBp^.Count = 0 then
+      //  DbgTrackRETBreakpoints.Remove(Address);
 
       SetSingleStepMode(ThData, True);
 
@@ -2329,7 +2330,7 @@ begin
     if TrackBp^.BPType = [] then
     begin
       DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
-      DbgTrackBreakpoints.Remove(Address);
+      //DbgTrackBreakpoints.Remove(Address);
     end;
   end
   else

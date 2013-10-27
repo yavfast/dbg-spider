@@ -75,6 +75,11 @@ type
   end;
 { --- From JCL --- }
 
+procedure _LogException(E: Exception; const Code: Integer = 0);
+begin
+  OutputDebugString(PChar(Format('Hook memory error (%d): %s', [Code, E.Message])));
+end;
+
 procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: NativeUInt);
 var
   MemOutDbgInfo: PMemOutDbgInfo;
@@ -132,7 +137,8 @@ begin
     ObjClassName := PShortString(ClassNamePtr)^;
     Result := True;
   except
-    Result := False;
+    on E: Exception do
+      _LogException(E, _EHOOK_GetObjClassType);
   end;
 end;
 
@@ -179,7 +185,8 @@ begin
       Inc(Level);
     end;
   except
-    //
+    on E: Exception do
+      _LogException(E, _EHOOK_GetCallStack);
   end;
 end;
 
@@ -250,7 +257,9 @@ begin
   try
   {$ENDIF}
     Result := _BaseMemoryMgr.GetMem(Size);
-    PCardinal(Result)^ := $00000000; // Очистка для TObject
+
+    if Size >= SizeOf(Cardinal) then
+      PCardinal(Result)^ := $00000000; // Очистка для TObject
 
     _AddMemInfo(miGetMem, Result, Size);
   {$IFDEF MEMLOCK}
@@ -332,11 +341,9 @@ begin
   _MemoryMgr := MemoryMgr;
   _BaseMemoryMgr := _MemoryMgr^;
 
-  MemLock.Enter;
+  MemInfoLock.Enter;
   _MemoryMgr^ := _HookMemoryMgr;
-  MemLock.Leave;
-
-  SwitchToThread;
+  MemInfoLock.Leave;
 
   _SetMemHookStatus(0);
 
