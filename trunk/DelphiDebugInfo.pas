@@ -1963,8 +1963,9 @@ Begin
   InitCodeTracking(gvDebuger.CodeTracking);
 
   MemoryManagerInfo.VarInfo := GetMemoryManager;
+
   // Установка перехвата вызовов GetMem и FreeMem
-  SetMemoryManagerBreakpoints;
+  // SetMemoryManagerBreakpoints;
 
   // Инициализация дебажного потока в процессе
   // !!! Поток запустится не сразу, а через некоторое время

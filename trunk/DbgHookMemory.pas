@@ -30,11 +30,11 @@ type
   TMemSize = NativeInt;
   //TMemUSize = NativeUInt;
 
-var
-  _BaseGetMem: function(Size: TMemSize): Pointer;
-  _BaseFreeMem: function(P: Pointer): Integer;
-  _BaseReallocMem: function(P: Pointer; Size: TMemSize): Pointer;
-  _BaseAllocMem: function(Size: TMemSize): Pointer;
+//var
+//  _BaseGetMem: function(Size: TMemSize): Pointer;
+//  _BaseFreeMem: function(P: Pointer): Integer;
+//  _BaseReallocMem: function(P: Pointer; Size: TMemSize): Pointer;
+//  _BaseAllocMem: function(Size: TMemSize): Pointer;
 
 function _HookGetMem(Size: TMemSize): Pointer; forward;
 function _HookFreeMem(P: Pointer): Integer; forward;
@@ -330,7 +330,7 @@ begin
 
   MemLock := TCriticalSection.Create;
 
-  MemInfoList := AllocMem(SizeOf(TDbgMemInfoList));
+  MemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
   MemInfoLock := TCriticalSection.Create;
 
   _HookMemoryMgr.GetMem := _HookGetMem;
@@ -339,13 +339,24 @@ begin
   _HookMemoryMgr.AllocMem := _HookAllocMem;
 
   _MemoryMgr := MemoryMgr;
-  _BaseMemoryMgr := _MemoryMgr^;
 
+  _BaseMemoryMgr.GetMem := _MemoryMgr^.GetMem;
+  _BaseMemoryMgr.FreeMem := _MemoryMgr^.FreeMem;
+  _BaseMemoryMgr.ReallocMem := _MemoryMgr^.ReallocMem;
+  _BaseMemoryMgr.AllocMem := _MemoryMgr^.AllocMem;
+
+  MemLock.Enter;
   MemInfoLock.Enter;
-  _MemoryMgr^ := _HookMemoryMgr;
-  MemInfoLock.Leave;
 
-  _SetMemHookStatus(0);
+  _MemoryMgr^.GetMem := _HookMemoryMgr.GetMem;
+  _MemoryMgr^.FreeMem := _HookMemoryMgr.FreeMem;
+  _MemoryMgr^.ReallocMem := _HookMemoryMgr.ReallocMem;
+  _MemoryMgr^.AllocMem := _HookMemoryMgr.AllocMem;
+
+  MemInfoLock.Leave;
+  MemLock.Leave;
+
+  // _SetMemHookStatus(0);
 
   OutputDebugStringA('Init memory hooks - ok');
 end;
