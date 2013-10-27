@@ -834,6 +834,12 @@ begin
   ClearDbgTrees;
   ClearTrackTrees;
 
+  if Assigned(gvDebuger) then
+    gvDebuger.ClearDbgInfo;
+
+  UpdateStatusInfo;
+  UpdateMainActions;
+
   _AC.RunDebug([doRun] + GetDebugOptions, FPID);
 end;
 

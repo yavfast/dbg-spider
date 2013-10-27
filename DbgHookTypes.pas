@@ -5,6 +5,9 @@ interface
 const
   DBG_EXCEPTION = $0EEDFFF0;
 
+  _EHOOK_GetCallStack = 1;
+  _EHOOK_GetObjClassType = 2;
+
 type
   TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstMemInfo, dstPerfomance, dstPerfomanceAndMemInfo, dstMemHookStatus);
 
@@ -29,6 +32,7 @@ type
 
 const
   _DbgMemListLength = ($FFFFF div SizeOf(TDbgMemInfo));
+
 type
   PDbgMemInfoList = ^TDbgMemInfoList;
   TDbgMemInfoList = array[0.._DbgMemListLength - 1] of TDbgMemInfo;
