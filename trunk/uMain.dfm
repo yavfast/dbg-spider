@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsDebugInfo2
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -833,7 +833,8 @@ object MainForm: TMainForm
                 Header.Font.Height = -11
                 Header.Font.Name = 'Tahoma'
                 Header.Font.Style = []
-                Header.Options = [hoColumnResize, hoVisible]
+                Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
+                Header.SortColumn = 2
                 Header.SortDirection = sdDescending
                 Header.Style = hsFlatButtons
                 ScrollBarOptions.AlwaysVisible = True
@@ -843,6 +844,7 @@ object MainForm: TMainForm
                 TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toFullRowSelect]
                 OnColumnResize = vstThreadsColumnResize
+                OnCompareNodes = vstMemInfoObjectsCompareNodes
                 OnFocusChanged = vstMemListFocusChanged
                 OnGetText = vstMemListGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -913,7 +915,7 @@ object MainForm: TMainForm
                 Header.Font.Height = -11
                 Header.Font.Name = 'Tahoma'
                 Header.Font.Style = []
-                Header.Options = [hoColumnResize, hoVisible]
+                Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
                 Header.SortColumn = 2
                 Header.SortDirection = sdDescending
                 ScrollBarOptions.AlwaysVisible = True
@@ -923,6 +925,7 @@ object MainForm: TMainForm
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
                 OnColumnResize = vstThreadsColumnResize
+                OnCompareNodes = vstMemInfoFuncTreeCompareNodes
                 OnDrawText = vstTrackFuncsDrawText
                 OnFocusChanged = vstMemInfoFuncTreeFocusChanged
                 OnGetText = vstMemInfoFuncTreeGetText
@@ -930,7 +933,6 @@ object MainForm: TMainForm
                 Columns = <
                   item
                     CaptionAlignment = taCenter
-                    DefaultSortDirection = sdDescending
                     Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                     Position = 0
                     Width = 300
@@ -1155,7 +1157,8 @@ object MainForm: TMainForm
                 Header.Font.Height = -11
                 Header.Font.Name = 'Tahoma'
                 Header.Font.Style = []
-                Header.Options = [hoColumnResize, hoVisible]
+                Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
+                Header.SortColumn = 2
                 Header.SortDirection = sdDescending
                 Header.Style = hsFlatButtons
                 ScrollBarOptions.AlwaysVisible = True
@@ -1165,6 +1168,7 @@ object MainForm: TMainForm
                 TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toFullRowSelect]
                 OnColumnResize = vstThreadsColumnResize
+                OnCompareNodes = vstMemInfoObjectsCompareNodes
                 OnFocusChanged = vstMemInfoObjectsFocusChanged
                 OnGetText = vstMemInfoObjectsGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -1612,7 +1616,7 @@ object MainForm: TMainForm
             Header.Font.Height = -11
             Header.Font.Name = 'Tahoma'
             Header.Font.Style = []
-            Header.Options = [hoColumnResize, hoVisible]
+            Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
             Header.SortColumn = 2
             Header.SortDirection = sdDescending
             ScrollBarOptions.AlwaysVisible = True
@@ -1631,7 +1635,6 @@ object MainForm: TMainForm
             Columns = <
               item
                 CaptionAlignment = taCenter
-                DefaultSortDirection = sdDescending
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                 Position = 0
                 Width = 300
