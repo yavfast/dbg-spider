@@ -99,7 +99,8 @@ const
     clRed, // ptException
     clGreen, // ptPerfomance
     clGreen, // ptThreadInfo
-    clGreen // ptMemoryInfo
+    clGreen, // ptMemoryInfo
+    clYellow // ptSyncObjsInfo
   );
 
   _EventColorNames: array[Low(TDbgPointType) .. High(TDbgPointType)] of String = (
@@ -110,7 +111,8 @@ const
     'exception', // ptException
     'active', // ptPerfomance
     'thread', // ptThreadInfo
-    'memory' // ptMemoryInfo
+    'memory', // ptMemoryInfo
+    'syncobjs' // ptSyncObjsInfo
   );
 
 { TSpiderOptions }
