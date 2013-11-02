@@ -230,6 +230,8 @@ type
   TGetMemInfo = TPointerDictionary<Pointer,PGetMemInfo>;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
+  PThreadData = ^TThreadData;
+
   TStackPointList = Array of TStackPoint;
 
   TExceptInfo = class
@@ -245,7 +247,22 @@ type
     destructor Destroy; override;
   end;
 
-  TDbgPointType = (ptNone, ptWait, ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo);
+  TSyncObjsInfo = class
+    SyncObjsType: TDbgSyncObjsType;
+    SyncObjsStateType: TDbgSyncObjsStateType;
+    PerfIdx: Cardinal;
+    Id: NativeUInt;
+    Data: NativeUInt;
+    Link: TSyncObjsInfo;
+
+    constructor Create(const DebugEvent: PDebugEvent; const ThreadData: PThreadData; const APerfIdx: Cardinal);
+    destructor Destroy; override;
+
+    function FindLink(const ThreadData: PThreadData): TSyncObjsInfo;
+  end;
+
+  TDbgPointType = (ptNone = 0, ptWait, ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo,
+    ptSyncObjsInfo);
 
   PThreadPoint = ^TThreadPoint;
   TThreadPoint = packed record
@@ -266,9 +283,10 @@ type
       );
       ptMemoryInfo: (
       );
+      ptSyncObjsInfo: (
+        SyncObjsInfo: TSyncObjsInfo;
+      );
   end;
-
-  PThreadData = ^TThreadData;
 
   PThreadAdvInfo = ^TThreadAdvInfo;
   TThreadAdvInfo = record
@@ -753,8 +771,12 @@ end;
 
 procedure TThreadPoint.Clear;
 begin
-  if PointType = ptException then
-    FreeAndNil(ExceptInfo);
+  case PointType of
+    ptException:
+      FreeAndNil(ExceptInfo);
+    ptSyncObjsInfo:
+      FreeAndNil(SyncObjsInfo);
+  end;
 end;
 
 { TThreadAdvInfo }
@@ -1271,6 +1293,62 @@ end;
 procedure TTrackStackPoint.SetLeave(const Value: UInt64);
 begin
   Ellapsed := (Value - Enter) + 1;
+end;
+
+{ TSyncObjsInfo }
+
+constructor TSyncObjsInfo.Create(const DebugEvent: PDebugEvent; const ThreadData: PThreadData; const APerfIdx: Cardinal);
+var
+  ER: PExceptionRecord;
+begin
+  inherited Create;
+
+  PerfIdx := APerfIdx;
+
+  ER := @DebugEvent^.Exception.ExceptionRecord;
+  SyncObjsType := TDbgSyncObjsType(ER^.ExceptionInformation[1]);
+  SyncObjsStateType := TDbgSyncObjsStateType(ER^.ExceptionInformation[2]);
+  Id := ER^.ExceptionInformation[3];
+  Data := ER^.ExceptionInformation[4];
+  Link := FindLink(ThreadData);
+  if Assigned(Link) then
+    Link.Link := Self;
+end;
+
+destructor TSyncObjsInfo.Destroy;
+begin
+
+  inherited;
+end;
+
+function TSyncObjsInfo.FindLink(const ThreadData: PThreadData): TSyncObjsInfo;
+var
+  I: Integer;
+  ThPoint: PThreadPoint;
+begin
+  Result := nil;
+
+  if SyncObjsStateType = sosLeave then
+  begin
+    ThreadData^.DbgPoints.BeginRead;
+    try
+      I := ThreadData^.DbgPoints.Count - 2;
+      while I >= 0 do
+      begin
+        ThPoint := ThreadData^.DbgPoints[I];
+
+        if (ThPoint^.PointType = ptSyncObjsInfo) and (ThPoint^.SyncObjsInfo.Id = Id) then
+        begin
+          Result := ThPoint^.SyncObjsInfo;
+          Exit;
+        end;
+
+        Dec(I);
+      end;
+    finally
+      ThreadData^.DbgPoints.EndRead;
+    end;
+  end;
 end;
 
 end.

@@ -514,7 +514,8 @@ implementation
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
   uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types,
-  uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI, uFeedback;
+  uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI, uFeedback,
+  DbgHookTypes;
 
 const
   _TrackingID_web = 'UA-44820931-1';
@@ -584,6 +585,17 @@ begin
   C2 := HSV2RGB(H, S, V - Delta);
 
   DrawVGradientRect(Canvas, Rect, C1, C2);
+end;
+
+procedure DrawHInterval(Canvas: TCanvas; const Rect: TRect; const Color: TColor);
+begin
+  if Abs(Rect.Right - Rect.Left) > 1 then
+  begin
+    Canvas.Brush.Color := Color;
+    Canvas.Brush.Style := bsSolid;
+
+    Canvas.FillRect(Rect);
+  end;
 end;
 
 procedure TMainForm.acAddressInfoExecute(Sender: TObject);
@@ -1582,12 +1594,60 @@ end;
 
 procedure TMainForm.DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
 var
-  X1, X2, Y1, Y2: Integer;
-  T1, T2: Int64;
+  X1, X2, X3, Y1, Y2: Integer;
+  T1, T2, T3: Int64;
   I: Cardinal;
 
   IdxL, IdxR, Idx: Cardinal;
   ThPoint: PThreadPoint;
+
+  procedure _DrawSyncObjs;
+  var
+    XL, XR: Integer;
+    TL, TR: Int64;
+
+    SyncObjsInfo: TSyncObjsInfo;
+    SyncObjsInfoL: TSyncObjsInfo;
+    SyncObjsInfoR: TSyncObjsInfo;
+  begin
+    SyncObjsInfoL := nil;
+    SyncObjsInfoR := nil;
+
+    SyncObjsInfo := ThPoint^.SyncObjsInfo;
+    case SyncObjsInfo.SyncObjsStateType of
+      sosEnter:
+        begin
+          SyncObjsInfoL := SyncObjsInfo;
+          SyncObjsInfoR := SyncObjsInfo.Link;
+        end;
+      sosLeave:
+        begin
+          SyncObjsInfoL := SyncObjsInfo.Link;
+          SyncObjsInfoR := SyncObjsInfo;
+        end;
+    end;
+
+    if Assigned(SyncObjsInfoL) then
+    begin
+      TL := SyncObjsInfoL.PerfIdx;
+      XL := R.Left + Integer(TL - CurOffset) - 1;
+    end
+    else
+      XL := X1;
+
+    if Assigned(SyncObjsInfoR) then
+    begin
+      TR := SyncObjsInfoR.PerfIdx;
+      XR := R.Left + Integer(TR - CurOffset) - 1;
+    end
+    else
+      XR := X2;
+
+    DrawHInterval(C, Rect(XL, Y1 - 2, XR, Y1), clRed {FSpiderOptions.TimelineColors[ThPoint^.PointType]});
+
+    //DrawSyncObjsInterval(C, ThPoint^.SyncObjsInfo);
+  end;
+
 begin
   DrawBackground(C, R, C.Brush.Color);
 
@@ -1643,15 +1703,18 @@ begin
       if ThPoint = nil then
         Continue;
 
-      T1 := ThPoint^.PerfIdx;
-      X1 := R.Left + Integer(T1 - CurOffset) - 1;
+      T3 := ThPoint^.PerfIdx;
+      X3 := R.Left + Integer(T3 - CurOffset) - 1;
 
-      if (X1 < R.Left) then
+      if (X3 < R.Left) then
         Continue;
-      if (X1 > R.Right) then
+      if (X3 > R.Right) then
         Break;
 
-      DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
+      DrawVGradientRect2(C, Rect(X3, Y1, X3, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
+
+      if ThPoint^.PointType = ptSyncObjsInfo then
+       _DrawSyncObjs;
     end;
   end;
 end;

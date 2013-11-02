@@ -5,14 +5,17 @@ uses
   DbgHookTypes in 'DbgHookTypes.pas',
   DbgHookThread in 'DbgHookThread.pas',
   DbgHookPerf in 'DbgHookPerf.pas',
-  DbgHookMemory in 'DbgHookMemory.pas';
+  DbgHookMemory in 'DbgHookMemory.pas',
+  DbgHookSyncObjs in 'DbgHookSyncObjs.pas';
 
 exports
   InitThreadHook,
+  InitSyncObjsHook,
   InitMemoryHook,
   InitPerfomance,
 
   ResetThreadHook,
+  ResetSyncObjsHook,
   ResetMemoryHook,
   ResetPerfomance;
 
@@ -22,6 +25,7 @@ begin
   begin
     ResetPerfomance;
     ResetMemoryHook;
+    ResetSyncObjsHook;
     ResetThreadHook;
   end;
 end;

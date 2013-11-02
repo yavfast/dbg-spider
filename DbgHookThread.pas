@@ -22,8 +22,20 @@ type
 
 var
   ThreadsLock: TCriticalSection = nil;
-  ThreadsHooked: Boolean;
+  ThreadsHooked: Boolean = False;
   Kernel32_CreateThread: TKernel32_CreateThread = nil;
+
+procedure _OutCreateThreadInfo(const ParentThreadId, ThreadId: Cardinal; ThName: PShortString);
+var
+  Args: array[0..3] of NativeUInt;
+begin
+  Args[0] := NativeUInt(dstThreadInfo);
+  Args[1] := ThreadId;
+  Args[2] := NativeUInt(@ThName^[1]);
+  Args[3] := ParentThreadId;
+
+  RaiseException(DBG_EXCEPTION, 0, 4, @Args[0]);
+end;
 
 function _HookedCreateThread(SecurityAttributes: Pointer; StackSize: LongWord;
   ThreadFunc: TThreadFunc; Parameter: Pointer;
@@ -32,9 +44,6 @@ var
   ThRec: PThreadRec;
   Th: TObject;
   ParentId: Cardinal;
-  //ClassNamePtr: Pointer;
-  Args: array[0..3] of Cardinal;
-  //ThName: array[0..255] of AnsiChar;
   ThName: ShortString;
 begin
   Th := Nil;
@@ -50,9 +59,6 @@ begin
       try
         Th := TObject(ThRec^.Parameter);
         ThName := PShortString(PPointer(Integer(Th.ClassType) + vmtClassName)^)^;
-        //ThName := PShortString(PPointer(Integer(Th.ClassType) + vmtClassName)^);
-        //ClassNamePtr := PPointer(Integer(Th.ClassType) + vmtClassName)^;
-        //Move(ClassNamePtr^, ThName, PByte(Cardinal(ClassNamePtr) - 1)^);
       except
         Th := Nil;
       end;
@@ -60,19 +66,8 @@ begin
 
     Result := Kernel32_CreateThread(SecurityAttributes, StackSize, ThreadFunc, Parameter, CreationFlags, ThreadId);
 
-    if (Result <> 0) then
-    begin
-      Args[0] := Cardinal(dstThreadInfo);
-      Args[1] := ThreadId;
-      if (Th <> Nil) and (ThName <> '') then
-        Args[2] := Cardinal(@ThName[1])
-        //Args[2] := Cardinal(ThName)
-      else
-        Args[2] := 0;
-      Args[3] := ParentId;
-
-      RaiseException(DBG_EXCEPTION, 0, 4, @Args[0]);
-    end;
+    if (Result <> 0) and (Th <> nil) and (ThName <> '') then
+      _OutCreateThreadInfo(ParentId, ThreadId, @ThName);
   finally
     ThName := '';
     ThreadsLock.Leave;
@@ -81,22 +76,21 @@ end;
 
 function _HookThreads(ImageBase: Pointer): Boolean;
 var
-  ProcAddrCache: Pointer;
+  ProcAddr: Pointer;
 begin
   if not ThreadsHooked then
   begin
     ThreadsLock := TCriticalSection.Create;
 
-    ProcAddrCache := GetProcAddress(GetModuleHandle(kernel32), 'CreateThread');
-    OutputDebugStringA(PAnsiChar(AnsiString(Format('ProcAddrCache: %p', [ProcAddrCache]))));
-    OutputDebugStringA(PAnsiChar(AnsiString(Format('ImageBase: %p', [ImageBase]))));
+    ProcAddr := GetProcAddress(GetModuleHandle(kernel32), 'CreateThread');
+    OutputDebugStringA(PAnsiChar(AnsiString(Format('CreateThread: %p', [ProcAddr]))));
 
     ThreadsLock.Enter;
     try
-      Result := TJclPeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddrCache, @_HookedCreateThread);
+      Result := TJclPeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookedCreateThread);
 
       if Result then
-        @Kernel32_CreateThread := ProcAddrCache;
+        @Kernel32_CreateThread := ProcAddr;
 
       ThreadsHooked := Result;
     finally

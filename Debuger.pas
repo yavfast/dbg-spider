@@ -145,6 +145,7 @@ type
     procedure ProcessDbgThreadInfo(DebugEvent: PDebugEvent);
     procedure ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
     procedure ProcessDbgPerfomance(DebugEvent: PDebugEvent);
+    procedure ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
 
     function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 
@@ -503,11 +504,13 @@ begin
         // Добавляем инфу, когда поток активен
         Result := (Delta > 0);
       end;
+    ptSyncObjsInfo:
+      Result := True;
   end;
 
   if Result then
   begin
-    ThreadData^.DbgPoints.BeginRead;
+    ThreadData^.DbgPoints.BeginWrite;
     try
       ThPoint := PThreadPoint(ThreadData^.DbgPoints.Add);
 
@@ -541,9 +544,13 @@ begin
             ThPoint^.DeltaTickCPU := Cur - Prev;
             ThPoint^.DeltaTime := Delta;
           end;
+        ptSyncObjsInfo:
+          begin
+            ThPoint^.SyncObjsInfo := TSyncObjsInfo.Create(DebugEvent, ThreadData, ThPoint^.PerfIdx);
+          end;
       end;
     finally
-      ThreadData^.DbgPoints.EndRead;
+      ThreadData^.DbgPoints.EndWrite;
     end;
   end;
 end;
@@ -2199,6 +2206,11 @@ begin
   end;
 end;
 
+procedure TDebuger.ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
+begin
+  AddThreadPointInfo(CurThreadData, ptSyncObjsInfo, DebugEvent);
+end;
+
 function TDebuger.ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): Boolean;
 var
   Dummy: TSysUInt;
@@ -2357,6 +2369,8 @@ begin
       end;
     dstMemHookStatus:
       ProcessDbgMemoryInfo(DebugEvent);
+    dstSyncObjsInfo:
+      ProcessDbgSyncObjsInfo(DebugEvent);
   end;
 end;
 
