@@ -162,6 +162,8 @@ function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
 var
   DbgUnLoaderInfo: TDbgLoaderInfo;
 begin
+  Result := False;
+
   ZeroMemory(@DbgUnLoaderInfo, SizeOf(TDbgUnLoaderInfo));
 
   @DbgUnLoaderInfo.LoadLibrary    := GetProcAddress(GetModuleHandle('kernel32.dll'), 'LoadLibraryA');
@@ -183,7 +185,7 @@ begin
 
     Result := True;
   except
-    Raise;
+    // Raise;
   end;
 end;
 

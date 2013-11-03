@@ -30,14 +30,19 @@ end;
 
 procedure ResetPerfomance; stdcall;
 begin
-  if _PerfThread = nil then Exit;
-  
-  _PerfThread.FreeOnTerminate := False;
-  _PerfThread.Terminate;
-  _PerfThread.WaitFor;
-  FreeAndNil(_PerfThread);
+  try
+    if _PerfThread = nil then Exit;
 
-  OutputDebugStringA('Reset perfomance thread - ok');
+    _PerfThread.FreeOnTerminate := False;
+    _PerfThread.Terminate;
+    _PerfThread.WaitFor;
+    FreeAndNil(_PerfThread);
+
+    OutputDebugStringA('Reset perfomance thread - ok');
+  except
+    on E: Exception do
+      OutputDebugStringA(PAnsiChar('Reset perfomance thread fail: ' + E.Message));
+  end;
 end;
 
 { TPerfThread }

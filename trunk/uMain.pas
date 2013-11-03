@@ -1597,20 +1597,23 @@ var
   IdxL, IdxR, Idx: Cardinal;
   ThPoint: PThreadPoint;
 
-  procedure _DrawSyncObjs;
+  IdxL1, IdxR1: Cardinal;
+  SyncObjsInfo: PSyncObjsInfo;
+
+  procedure _DrawSyncObjs(SyncObjsInfo: PSyncObjsInfo);
   var
     XL, XR: Integer;
     TL, TR: Int64;
 
-    SyncObjsInfo: TSyncObjsInfo;
-    SyncObjsInfoL: TSyncObjsInfo;
-    SyncObjsInfoR: TSyncObjsInfo;
+    DR: TRect;
+
+    SyncObjsInfoL: PSyncObjsInfo;
+    SyncObjsInfoR: PSyncObjsInfo;
   begin
     SyncObjsInfoL := nil;
     SyncObjsInfoR := nil;
 
-    SyncObjsInfo := ThPoint^.SyncObjsInfo;
-    case SyncObjsInfo.SyncObjsStateType of
+    case SyncObjsInfo.SyncObjsInfo.SyncObjsStateType of
       sosEnter:
         begin
           SyncObjsInfoL := SyncObjsInfo;
@@ -1639,7 +1642,11 @@ var
     else
       XR := X2;
 
-    DrawHInterval(C, Rect(XL, Y1 - 2, XR, Y1), clRed {FSpiderOptions.TimelineColors[ThPoint^.PointType]});
+    if XL <> XR then
+    begin
+      DR := Rect(XL, Y1 - 2, XR, Y1);
+      DrawHInterval(C, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+    end;
 
     //DrawSyncObjsInterval(C, ThPoint^.SyncObjsInfo);
   end;
@@ -1692,6 +1699,7 @@ begin
       until IdxR - IdxL <= 1;
     end;
 
+    // Отрисовка событий
     for I := IdxL to ThData^.DbgPointsCount - 1 do
     begin
       ThPoint := ThData^.DbgPointByIdx(I);
@@ -1708,9 +1716,58 @@ begin
         Break;
 
       DrawVGradientRect2(C, Rect(X3, Y1, X3, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
+    end;
 
-      if ThPoint^.PointType = ptSyncObjsInfo then
-       _DrawSyncObjs;
+    // Отрисовка SyncObjs
+    if ThData^.DbgSyncObjsInfo.Count > 0 then
+    begin
+      IdxL1 := 0;
+
+      // Поиск первого левого элемента
+      if IdxL > 0 then
+      begin
+        IdxR1 := ThData^.DbgSyncObjsInfo.Count - 1;
+
+        repeat
+          Idx := (IdxL1 + IdxR1) div 2;
+          SyncObjsInfo := ThData^.DbgSyncObjsByIdx(Idx);
+
+          if SyncObjsInfo^.PerfIdx > IdxL then
+            IdxR1 := Idx
+          else
+          begin
+            IdxL1 := Idx;
+
+            if IdxL1 = IdxL then
+            begin
+              while (IdxL1 > 0) do
+              begin
+                SyncObjsInfo := ThData^.DbgSyncObjsByIdx(IdxL1);
+
+                if SyncObjsInfo^.PerfIdx <> IdxL then
+                  Break;
+
+                Dec(IdxL1);
+              end;
+
+              Break;
+            end;
+          end;
+        until (IdxR1 - IdxL1 <= 1);
+      end;
+
+      for I := IdxL1 to ThData^.DbgSyncObjsInfo.Count - 1 do
+      begin
+        SyncObjsInfo := ThData^.DbgSyncObjsByIdx(I);
+
+        T3 := SyncObjsInfo^.PerfIdx;
+        X3 := R.Left + Integer(T3 - CurOffset) - 1;
+
+        if (X3 > R.Right) then
+          Break;
+
+        _DrawSyncObjs(SyncObjsInfo);
+      end;
     end;
   end;
 end;
@@ -3256,22 +3313,26 @@ end;
 procedure TMainForm.vdtTimeLineDrawNode(Sender: TBaseVirtualTree; const PaintInfo: TVTPaintInfo);
 var
   LinkData: PLinkData;
+  R: TRect;
 begin
+  R := PaintInfo.CellRect;
+  R.Width := vdtTimeLine.ClientWidth;
+
   LinkData := Sender.GetNodeData(PaintInfo.Node);
   case LinkData^.LinkType of
     ltProcess:
     begin
       if acCPUTimeLine.Checked then
-        DrawProcessCPUTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ProcessData, GetLineTimeOffset)
+        DrawProcessCPUTimeLine(PaintInfo.Canvas, R, LinkData^.ProcessData, GetLineTimeOffset)
       else
-        DrawProcessTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ProcessData, GetLineTimeOffset);
+        DrawProcessTimeLine(PaintInfo.Canvas, R, LinkData^.ProcessData, GetLineTimeOffset);
     end;
     ltThread:
     begin
       if acCPUTimeLine.Checked then
-        DrawThreadCPUTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ThreadData, GetLineTimeOffset)
+        DrawThreadCPUTimeLine(PaintInfo.Canvas, R, LinkData^.ThreadData, GetLineTimeOffset)
       else
-        DrawThreadTimeLine(PaintInfo.Canvas, PaintInfo.CellRect, LinkData^.ThreadData, GetLineTimeOffset);
+        DrawThreadTimeLine(PaintInfo.Canvas, R, LinkData^.ThreadData, GetLineTimeOffset);
     end;
   end;
 end;

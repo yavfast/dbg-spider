@@ -356,38 +356,42 @@ end;
 
 procedure ResetMemoryHook; stdcall;
 begin
-  if _MemoryMgr = nil then Exit;
-  if MemInfoLock = nil then Exit;
-  
-  // Восстанавливаем оригинальный менеджер памяти
-  while not MemInfoLock.TryEnter do
-    SwitchToThread;
   try
-    _MemoryMgr^ := _BaseMemoryMgr;
-    _MemoryMgr := Nil;
+    if _MemoryMgr = nil then Exit;
+    if MemInfoLock = nil then Exit;
 
-    _SetMemHookStatus(1);
-  finally
-    MemInfoLock.Leave;
+    // Восстанавливаем оригинальный менеджер памяти
+    MemInfoLock.Enter;
+    try
+      _MemoryMgr^ := _BaseMemoryMgr;
+      _MemoryMgr := Nil;
+
+      _SetMemHookStatus(1);
+    finally
+      MemInfoLock.Leave;
+    end;
+
+    while not MemInfoLock.TryEnter do
+      SwitchToThread;
+    try
+    // Сбрасываем буффер
+      _OutMemInfoBuf(dstMemInfo);
+
+      FreeMemory(MemInfoList);
+      MemInfoList := Nil;
+    finally
+      MemInfoLock.Leave;
+    end;
+
+    FreeAndNil(MemInfoLock);
+
+    FreeAndNil(MemLock);
+
+    OutputDebugStringA('Reset memory hooks - ok');
+  except
+    on E: Exception do
+      OutputDebugStringA(PAnsiChar('Reset memory hooks fail: ' + E.Message));
   end;
-
-  while not MemInfoLock.TryEnter do
-    SwitchToThread;
-  try
-  // Сбрасываем буффер
-    _OutMemInfoBuf(dstMemInfo);
-
-    FreeMemory(MemInfoList);
-    MemInfoList := Nil;
-  finally
-    MemInfoLock.Leave;
-  end;
-
-  FreeAndNil(MemInfoLock);
-
-  FreeAndNil(MemLock);
-
-  OutputDebugStringA('Reset memory hooks - ok');
 end;
 
 end.

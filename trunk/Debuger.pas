@@ -666,6 +666,8 @@ begin
 
     Result^.DbgExceptions := TThreadList.Create;
 
+    Result^.DbgSyncObjsInfo := TCollectList<RSyncObjsInfo>.Create;
+
     Result^.DbgTrackEventCount := 0;
     Result^.DbgTrackUnitList := TTrackUnitInfoList.Create(512);
     Result^.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
@@ -2514,9 +2516,81 @@ begin
     RaiseDebugCoreException();
 end;
 
-procedure TDebuger.LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
-begin
+var
+  _DbgSyncObjsInfoList: PDbgSyncObjsInfoList = Nil;
 
+procedure TDebuger.LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
+var
+  CurPerfIdx: Cardinal;
+  ThData: PThreadData;
+  Idx: Integer;
+  SyncObjsInfo: PDbgSyncObjsInfo;
+  ThSyncObjsInfo: PSyncObjsInfo;
+  SyncObjsLink: PSyncObjsInfo;
+
+  function FindLink(const Id: Cardinal): PSyncObjsInfo;
+  var
+    Idx: Integer;
+  begin
+    Idx := ThData^.DbgSyncObjsInfo.Count - 1;
+    while Idx >= 0 do
+    begin
+      Result := ThData^.DbgSyncObjsInfo[Idx];
+      if (Result^.SyncObjsInfo.Id = Id) and (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter) then
+        Exit;
+    end;
+
+    Result := nil;
+  end;
+
+begin
+  if ReadData(SyncObjsInfoPack, _DbgSyncObjsInfoList, Count * SizeOf(TDbgSyncObjsInfo)) then
+  begin
+    CurPerfIdx := ProcessData.CurDbgPointIdx;
+
+    // TODO: Можно вынести обработку в отдельный поток
+    ThData := Nil;
+    for Idx := 0 to Count - 1 do
+    begin
+      SyncObjsInfo := @_DbgSyncObjsInfoList^[Idx];
+      if (ThData = Nil) or (ThData^.ThreadID <> SyncObjsInfo^.ThreadId) then
+        ThData := GetThreadData(SyncObjsInfo^.ThreadId, True);
+
+      if ThData = Nil then
+        RaiseDebugCoreException();
+
+      case SyncObjsInfo^.SyncObjsType of
+        soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection:
+          begin
+            ThData^.DbgSyncObjsInfo.BeginRead;
+            try
+              if SyncObjsInfo^.SyncObjsStateType = sosLeave then
+                SyncObjsLink := FindLink(SyncObjsInfo^.Id)
+              else
+                SyncObjsLink := nil;
+
+              ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
+
+              ThSyncObjsInfo^.PerfIdx := CurPerfIdx;
+
+              ThSyncObjsInfo^.Link := SyncObjsLink;
+              if SyncObjsLink <> nil then
+                SyncObjsLink^.Link := ThSyncObjsInfo;
+
+              ThSyncObjsInfo^.SyncObjsInfo := SyncObjsInfo^;
+            finally
+              ThData^.DbgSyncObjsInfo.EndRead;
+            end;
+          end;
+        soLeaveCriticalSection:
+          begin
+            // TODO:
+          end;
+      end;
+    end;
+  end
+  else
+    RaiseDebugCoreException();
 end;
 
 procedure TDebuger.Log(const Msg: String);
@@ -3281,10 +3355,14 @@ end;
 
 initialization
   _DbgMemInfoList := AllocMem(SizeOf(TDbgMemInfoList));
+  _DbgSyncObjsInfoList := AllocMem(SizeOf(TDbgSyncObjsInfoList));
 
 finalization
   FreeMemory(_DbgMemInfoList);
   _DbgMemInfoList := nil;
+
+  FreeMemory(_DbgSyncObjsInfoList);
+  _DbgSyncObjsInfoList := nil;
 
   if gvDebuger <> Nil then
     FreeAndNil(gvDebuger);

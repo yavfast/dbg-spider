@@ -77,28 +77,25 @@ begin
   end;
 end;
 
-threadvar
-  _SyncObjsInfo: TDbgSyncObjsInfo;
-
 procedure _AddSyncObjsInfo(const DbgSyncObjsType: TDbgSyncObjsType; const DbgSyncObjsStateType: TDbgSyncObjsStateType;
   const Id: NativeUInt; const Data: NativeUInt);
 var
   SyncObjsInfo: PDbgSyncObjsInfo;
 begin
-  SyncObjsInfo := @_SyncObjsInfo;
-  SyncObjsInfo^.ThreadId := GetCurrentThreadId;
-  SyncObjsInfo^.SyncObjsType := DbgSyncObjsType;
-  SyncObjsInfo^.SyncObjsStateType := DbgSyncObjsStateType;
-  SyncObjsInfo^.Id := Id;
-  SyncObjsInfo^.Data := Data;
-
   SyncObjsLock.Enter;
   if _SyncObjsInfoList <> Nil then
   begin
-    _SyncObjsInfoList^[_SyncObjsInfoListCnt] := SyncObjsInfo^;
+    SyncObjsInfo := @_SyncObjsInfoList^[_SyncObjsInfoListCnt];
+
+    SyncObjsInfo^.ThreadId := GetCurrentThreadId;
+    SyncObjsInfo^.SyncObjsType := DbgSyncObjsType;
+    SyncObjsInfo^.SyncObjsStateType := DbgSyncObjsStateType;
+    SyncObjsInfo^.Id := Id;
+    SyncObjsInfo^.Data := Data;
+
     Inc(_SyncObjsInfoListCnt);
 
-    if _SyncObjsInfoListCnt = _DbgMemListLength then
+    if _SyncObjsInfoListCnt = _DbgSyncObjsListLength then
       _OutSyncObjsInfo;
   end;
   SyncObjsLock.Leave;
@@ -260,31 +257,36 @@ end;
 
 procedure ResetSyncObjsHook; stdcall;
 begin
-  if SyncObjsHooked then
-  begin
-    while not SyncObjsLock.TryEnter do
-      SwitchToThread;
-    try
-      _UnHookSyncObjs;
-    finally
-      SyncObjsLock.Leave;
+  try
+    if SyncObjsHooked then
+    begin
+      while not SyncObjsLock.TryEnter do
+        SwitchToThread;
+      try
+        _UnHookSyncObjs;
+      finally
+        SyncObjsLock.Leave;
+      end;
+
+      while not SyncObjsLock.TryEnter do
+        SwitchToThread;
+      try
+        _OutSyncObjsInfo;
+
+        FreeMemory(_SyncObjsInfoList);
+        _SyncObjsInfoList := nil;
+      finally
+        SyncObjsLock.Leave;
+      end;
     end;
 
-    while not SyncObjsLock.TryEnter do
-      SwitchToThread;
-    try
-      _OutSyncObjsInfo;
+    FreeAndNil(SyncObjsLock);
 
-      FreeMemory(_SyncObjsInfoList);
-      _SyncObjsInfoList := nil;
-    finally
-      SyncObjsLock.Leave;
-    end;
+    OutputDebugStringA('Reset SyncObjs hook - ok');
+  except
+    on E: Exception do
+      OutputDebugStringA(pAnsiChar('Reset SyncObjs hook fail: ' + E.Message));
   end;
-
-  FreeAndNil(SyncObjsLock);
-
-  OutputDebugStringA('Reset SyncObjs hook - ok')
 end;
 
 end.
