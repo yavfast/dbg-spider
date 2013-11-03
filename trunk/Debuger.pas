@@ -85,9 +85,11 @@ type
     procedure SetMemoryCheckDoubleFree(const Value: Boolean);
     procedure SetMemoryCheckMode(const Value: Boolean);
 
-    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
     procedure LoadMemoryInfoPack(const MemInfoPack: Pointer; const Count: Cardinal);
     procedure UpdateMemoryInfoObjectTypes;
+    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
+
+    procedure LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
 
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
     procedure DoSetBreakpointF(const Address: Pointer; var SaveByte: Byte);
@@ -510,7 +512,7 @@ begin
 
   if Result then
   begin
-    ThreadData^.DbgPoints.BeginWrite;
+    ThreadData^.DbgPoints.BeginRead;
     try
       ThPoint := PThreadPoint(ThreadData^.DbgPoints.Add);
 
@@ -550,7 +552,7 @@ begin
           end;
       end;
     finally
-      ThreadData^.DbgPoints.EndWrite;
+      ThreadData^.DbgPoints.EndRead;
     end;
   end;
 end;
@@ -2207,8 +2209,24 @@ begin
 end;
 
 procedure TDebuger.ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
+var
+  ER: PExceptionRecord;
+  DbgInfoType: TDbgInfoType;
+  Ptr: Pointer;
+  Size: Cardinal;
 begin
-  AddThreadPointInfo(CurThreadData, ptSyncObjsInfo, DebugEvent);
+  ER := @DebugEvent^.Exception.ExceptionRecord;
+  DbgInfoType := TDbgInfoType(ER^.ExceptionInformation[0]);
+
+  case DbgInfoType of
+    dstSyncObjsInfo:
+      begin
+        Ptr := Pointer(ER^.ExceptionInformation[1]);
+        Size := ER^.ExceptionInformation[2];
+
+        LoadSyncObjsInfoPack(Ptr, Size);
+      end;
+  end;
 end;
 
 function TDebuger.ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): Boolean;
@@ -2362,7 +2380,7 @@ begin
       ProcessDbgMemoryInfo(DebugEvent);
     dstPerfomance:
       ProcessDbgPerfomance(DebugEvent);
-    dstPerfomanceAndMemInfo:
+    dstPerfomanceAndInfo:
       begin
         ProcessDbgPerfomance(DebugEvent);
         ProcessDbgMemoryInfo(DebugEvent);
@@ -2496,6 +2514,11 @@ begin
     RaiseDebugCoreException();
 end;
 
+procedure TDebuger.LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
+begin
+
+end;
+
 procedure TDebuger.Log(const Msg: String);
 begin
   DoDbgLog(CurThreadId, Msg);
@@ -2512,7 +2535,7 @@ begin
   DbgInfoType := TDbgInfoType(ER^.ExceptionInformation[0]);
 
   case DbgInfoType of
-    dstMemInfo, dstPerfomanceAndMemInfo:
+    dstMemInfo, dstPerfomanceAndInfo:
       begin
         Ptr := Pointer(ER^.ExceptionInformation[1]);
         Size := ER^.ExceptionInformation[2];

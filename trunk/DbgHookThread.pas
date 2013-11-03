@@ -7,7 +7,7 @@ procedure ResetThreadHook; stdcall;
 
 implementation
 
-uses Windows, SysUtils, Classes, SyncObjs, DbgHookTypes, JclPEImage{TODO: Remove JCL};
+uses Windows, SysUtils, Classes, DbgHookTypes, DbgHookCS, JclPEImage{TODO: Remove JCL};
 
 type
   TKernel32_CreateThread = function(SecurityAttributes: Pointer; StackSize: LongWord;
@@ -21,7 +21,7 @@ type
   end;
 
 var
-  ThreadsLock: TCriticalSection = nil;
+  ThreadsLock: TDbgCriticalSection = nil;
   ThreadsHooked: Boolean = False;
   Kernel32_CreateThread: TKernel32_CreateThread = nil;
 
@@ -74,20 +74,25 @@ begin
   end;
 end;
 
+var
+  _PeMapImgHooks: TJclPeMapImgHooks = Nil;
+
 function _HookThreads(ImageBase: Pointer): Boolean;
 var
   ProcAddr: Pointer;
 begin
   if not ThreadsHooked then
   begin
-    ThreadsLock := TCriticalSection.Create;
+    ThreadsLock := TDbgCriticalSection.Create;
+
+    _PeMapImgHooks := TJclPeMapImgHooks.Create;
 
     ProcAddr := GetProcAddress(GetModuleHandle(kernel32), 'CreateThread');
     OutputDebugStringA(PAnsiChar(AnsiString(Format('CreateThread: %p', [ProcAddr]))));
 
     ThreadsLock.Enter;
     try
-      Result := TJclPeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookedCreateThread);
+      Result := _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookedCreateThread);
 
       if Result then
         @Kernel32_CreateThread := ProcAddr;
@@ -99,6 +104,28 @@ begin
   end
   else
     Result := True;
+end;
+
+procedure _UnHookThreads;
+begin
+  if ThreadsHooked then
+  begin
+    while not ThreadsLock.TryEnter do
+      SwitchToThread;
+    try
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_CreateThread);
+      FreeAndNil(_PeMapImgHooks);
+
+      ThreadsHooked := False;
+    finally
+      ThreadsLock.Leave;
+    end;
+
+    while not ThreadsLock.TryEnter do
+      SwitchToThread;
+  end;
+
+  FreeAndNil(ThreadsLock);
 end;
 
 function InitThreadHook(ImageBase: Pointer): Boolean; stdcall;
@@ -114,8 +141,9 @@ end;
 
 procedure ResetThreadHook; stdcall;
 begin
-  OutputDebugStringA('Reset thread hook - skip')
-  // TODO:
+  _UnHookThreads;
+
+  OutputDebugStringA('Reset thread hook - ok')
 end;
 
 end.
