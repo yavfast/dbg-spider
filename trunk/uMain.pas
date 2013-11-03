@@ -1647,8 +1647,6 @@ var
       DR := Rect(XL, Y1 - 2, XR, Y1);
       DrawHInterval(C, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
     end;
-
-    //DrawSyncObjsInterval(C, ThPoint^.SyncObjsInfo);
   end;
 
 begin
@@ -1774,13 +1772,70 @@ end;
 
 procedure TMainForm.DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
 var
-  X1, X2, Y1, Y2: Integer;
-  T1, T2, F: Int64;
+  X1, X2, X3, Y1, Y2: Integer;
+  T1, T2, T3, F: Int64;
   OffsetT1, OffsetT2, Offset: Cardinal;
   IdxL, IdxR, Idx: Cardinal;
   I: Cardinal;
   ThPoint: PThreadPoint;
   ProcPoint: PProcessPoint;
+
+  procedure _DrawSyncObjs(SyncObjsInfo: PSyncObjsInfo);
+  var
+    XL, XR: Integer;
+    TL, TR: Int64;
+
+    DR: TRect;
+
+    SyncObjsInfoL: PSyncObjsInfo;
+    SyncObjsInfoR: PSyncObjsInfo;
+  begin
+    SyncObjsInfoL := nil;
+    SyncObjsInfoR := nil;
+
+    case SyncObjsInfo.SyncObjsInfo.SyncObjsStateType of
+      sosEnter:
+        begin
+          SyncObjsInfoL := SyncObjsInfo;
+          SyncObjsInfoR := SyncObjsInfo.Link;
+        end;
+      sosLeave:
+        begin
+          SyncObjsInfoL := SyncObjsInfo.Link;
+          SyncObjsInfoR := SyncObjsInfo;
+        end;
+    end;
+
+    if Assigned(SyncObjsInfoL) then
+    begin
+      ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfoL^.PerfIdx);
+
+      TL := ProcPoint^.FromStart div F;
+      XL := R.Left + Integer(TL - Offset) - 1;
+    end
+    else
+      XL := X1;
+
+    if Assigned(SyncObjsInfoR) then
+    begin
+      ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfoR^.PerfIdx);
+
+      TR := ProcPoint^.FromStart div F;
+      XR := R.Left + Integer(TR - Offset) - 1;
+    end
+    else
+      XR := X2;
+
+    if XL <> XR then
+    begin
+      DR := Rect(XL, Y1 - 2, XR, Y1);
+      DrawHInterval(C, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+    end;
+  end;
+
+var
+  IdxL1, IdxR1: Cardinal;
+  SyncObjsInfo: PSyncObjsInfo;
 begin
   DrawBackground(C, R, C.Brush.Color);
 
@@ -1851,15 +1906,74 @@ begin
 
       ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
 
-      OffsetT1 := ProcPoint^.FromStart div F;
-      X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
+      T3 := ProcPoint^.FromStart div F;
+      X3 := R.Left + Integer(T3 - Offset) - 1;
 
-      if (X1 < R.Left) then
+      if (X3 < R.Left) then
         Continue;
-      if (X1 > R.Right) then
+      if (X3 > R.Right) then
         Break;
 
-      DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
+      DrawVGradientRect2(C, Rect(X3, Y1, X3, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
+    end;
+
+    // Отрисовка SyncObjs
+    if ThData^.DbgSyncObjsInfo.Count > 0 then
+    begin
+      IdxL1 := 0;
+
+      // Поиск первого левого элемента
+      if IdxL > 0 then
+      begin
+        IdxR1 := ThData^.DbgSyncObjsInfo.Count - 1;
+
+        repeat
+          Idx := (IdxL1 + IdxR1) div 2;
+          SyncObjsInfo := ThData^.DbgSyncObjsByIdx(Idx);
+          ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
+
+          if (ProcPoint^.FromStart div F) > IdxL then
+            IdxR1 := Idx
+          else
+          begin
+            IdxL1 := Idx;
+
+            if IdxL1 = IdxL then
+            begin
+              while (IdxL1 > 0) do
+              begin
+                SyncObjsInfo := ThData^.DbgSyncObjsByIdx(IdxL1);
+                ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
+
+                // TODO: optimize
+                if (ProcPoint^.FromStart div F) <> IdxL then
+                  Break;
+
+                Dec(IdxL1);
+              end;
+
+              Break;
+            end;
+          end;
+        until (IdxR1 - IdxL1 <= 1);
+      end;
+
+      for I := IdxL1 to ThData^.DbgSyncObjsInfo.Count - 1 do
+      begin
+        SyncObjsInfo := ThData^.DbgSyncObjsByIdx(I);
+        ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
+
+        T3 := ProcPoint^.FromStart div F;
+        X3 := R.Left + Integer(T3 - Offset) - 1;
+
+        if (X3 > R.Right) then
+          Break;
+
+        //if SyncObjsInfo.SyncObjsInfo.SyncObjsType = soSleep then
+        //  _DrawSyncObjs(SyncObjsInfo);
+
+        _DrawSyncObjs(SyncObjsInfo);
+      end;
     end;
   end;
 end;
