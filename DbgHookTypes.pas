@@ -51,7 +51,7 @@ type
 
 const
   _DbgMemListLength = ($FFFFF div SizeOf(TDbgMemInfo));
-  _DbgSyncObjsListLength = ($FFFFF div SizeOf(TDbgSyncObjsInfo));
+  _DbgSyncObjsListLength = ($FFFF div SizeOf(TDbgSyncObjsInfo));
 
 type
   PDbgMemInfoList = ^TDbgMemInfoList;

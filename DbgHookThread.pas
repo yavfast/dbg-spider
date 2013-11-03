@@ -141,9 +141,14 @@ end;
 
 procedure ResetThreadHook; stdcall;
 begin
-  _UnHookThreads;
+  try
+    _UnHookThreads;
 
-  OutputDebugStringA('Reset thread hook - ok')
+    OutputDebugStringA('Reset thread hook - ok');
+  except
+    on E: Exception do
+      OutputDebugStringA(PAnsiChar('Reset thread hook fail: ' + E.Message));
+  end;
 end;
 
 end.

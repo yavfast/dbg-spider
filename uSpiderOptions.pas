@@ -2,7 +2,7 @@ unit uSpiderOptions;
 
 interface
 
-uses Classes, XMLDoc, XMLIntf, DebugerTypes, Graphics;
+uses Classes, XMLDoc, XMLIntf, DebugerTypes, DbgHookTypes, Graphics;
 
 type
   TColorOptions = class
@@ -24,12 +24,20 @@ type
     property LogColors[const LogType: TDbgLogType]: TColor read GetLogColor write SetLogColor; default;
   end;
 
-  TTimelineOptions = class(TColorOptions)
+  TTimelineColorOptions = class(TColorOptions)
   private
     function GetEventColor(const EventType: TDbgPointType): TColor;
     procedure SetEventColor(const EventType: TDbgPointType; const Value: TColor);
   public
     property EventColors[const EventType: TDbgPointType]: TColor read GetEventColor write SetEventColor; default;
+  end;
+
+  TSyncObjsColorOptions = class(TColorOptions)
+  private
+    function GetSyncObjsColor(const SyncObjsType: TDbgSyncObjsType): TColor;
+    procedure SetSyncObjsColor(const SyncObjsType: TDbgSyncObjsType; const Value: TColor);
+  public
+    property SyncObjsColors[const SyncObjsType: TDbgSyncObjsType]: TColor read GetSyncObjsColor write SetSyncObjsColor; default;
   end;
 
   TSpiderOptions = class
@@ -39,7 +47,8 @@ type
     FUpdateCount: Integer;
 
     FLogColors: TLogColorOptions;
-    FTimelineColors: TTimelineOptions;
+    FTimelineColors: TTimelineColorOptions;
+    FSyncObjsColors: TSyncObjsColorOptions;
   protected
     procedure Open;
     procedure CreateNew;
@@ -55,7 +64,8 @@ type
     procedure GetRecentProjects(var Projects: TStringList);
 
     property LogColors: TLogColorOptions read FLogColors;
-    property TimelineColors: TTimelineOptions read FTimelineColors;
+    property TimelineColors: TTimelineColorOptions read FTimelineColors;
+    property SyncObjsColors: TSyncObjsColorOptions read FSyncObjsColors;
   end;
 
 implementation
@@ -113,6 +123,22 @@ const
     'thread', // ptThreadInfo
     'memory', // ptMemoryInfo
     'syncobjs' // ptSyncObjsInfo
+  );
+
+  _DefSyncObjsColors: array[Low(TDbgSyncObjsType) .. High(TDbgSyncObjsType)] of TColor = (
+    clSilver, // soSleep
+    clGray, // soWaitForSingleObject
+    clGray, // soWaitForMultipleObjects
+    clPurple, // soEnterCriticalSection
+    clLime // soLeaveCriticalSection
+  );
+
+  _SyncObjsColorNames: array[Low(TDbgSyncObjsType) .. High(TDbgSyncObjsType)] of String = (
+    'sleep', // soSleep
+    'waitforsingleobject', // soWaitForSingleObject
+    'waitformultipleobjects', // soWaitForMultipleObjects
+    'entercriticalsection', // soEnterCriticalSection
+    'leavecriticalsection' // soLeaveCriticalSection
   );
 
 { TSpiderOptions }
@@ -206,7 +232,7 @@ var
 begin
   FXML := TXMLDocument.Create(nil);
   FXML.NodeIndentStr := '  ';
-  FXML.Options := FXML.Options + [doNodeAutoIndent, doNodeAutoCreate];
+  FXML.Options := FXML.Options + [{doNodeAutoIndent, }doNodeAutoCreate];
   FXML.Active := True;
   FXML.Encoding := 'utf-8';
 
@@ -255,7 +281,10 @@ begin
     FLogColors := TLogColorOptions.Create(Node2);
 
     Node2 := GetXMLChildNode(Node1, 'timeline');
-    FTimelineColors := TTimelineOptions.Create(Node2);
+    FTimelineColors := TTimelineColorOptions.Create(Node2);
+
+    Node2 := GetXMLChildNode(Node1, 'syncobjs');
+    FSyncObjsColors := TSyncObjsColorOptions.Create(Node2);
   finally
     EndUpdate;
   end;
@@ -315,7 +344,7 @@ end;
 
 { TTimelineOptions }
 
-function TTimelineOptions.GetEventColor(const EventType: TDbgPointType): TColor;
+function TTimelineColorOptions.GetEventColor(const EventType: TDbgPointType): TColor;
 var
   N: String;
 begin
@@ -326,11 +355,32 @@ begin
     Result := _DefEventColors[EventType];
 end;
 
-procedure TTimelineOptions.SetEventColor(const EventType: TDbgPointType; const Value: TColor);
+procedure TTimelineColorOptions.SetEventColor(const EventType: TDbgPointType; const Value: TColor);
 var
   N: String;
 begin
   N := _EventColorNames[EventType];
+  Colors[N] := Value;
+end;
+
+{ TSyncObjsColorOptions }
+
+function TSyncObjsColorOptions.GetSyncObjsColor(const SyncObjsType: TDbgSyncObjsType): TColor;
+var
+  N: String;
+begin
+  N := _SyncObjsColorNames[SyncObjsType];
+  Result := Colors[N];
+
+  if Result = clDefault then
+    Result := _DefSyncObjsColors[SyncObjsType];
+end;
+
+procedure TSyncObjsColorOptions.SetSyncObjsColor(const SyncObjsType: TDbgSyncObjsType; const Value: TColor);
+var
+  N: String;
+begin
+  N := _SyncObjsColorNames[SyncObjsType];
   Colors[N] := Value;
 end;
 

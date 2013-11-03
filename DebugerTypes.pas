@@ -230,6 +230,15 @@ type
   TGetMemInfo = TPointerDictionary<Pointer,PGetMemInfo>;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
+  PSyncObjsInfo = ^RSyncObjsInfo;
+  RSyncObjsInfo = record
+    PerfIdx: Cardinal;
+    Link: PSyncObjsInfo;
+    SyncObjsInfo: TDbgSyncObjsInfo;
+  end;
+
+  TSyncObjsInfoList = TBaseCollectList; // TCollectList<RSyncObjsInfo>;
+
   PThreadData = ^TThreadData;
 
   TStackPointList = Array of TStackPoint;
@@ -472,6 +481,8 @@ type
     DbgGetMemInfo: TGetMemInfo;
     DbgGetMemInfoSize: Cardinal;
 
+    DbgSyncObjsInfo: TSyncObjsInfoList;
+
     DbgGetMemUnitList: TTrackUnitInfoList;
     //DbgGetMemFuncList: TTrackFuncInfoList;
 
@@ -487,6 +498,9 @@ type
 
     function DbgExceptionsCount: Cardinal;
     function DbgExceptionsByIdx(const Idx: Cardinal): TExceptInfo;
+
+    function DbgSyncObjsCount: Cardinal;
+    function DbgSyncObjsByIdx(const Idx: Cardinal): PSyncObjsInfo;
 
     procedure UpdateGetMemUnitList;
 
@@ -702,6 +716,7 @@ begin
   FreeAndNil(DbgGetMemInfo);
   FreeAndNil(DbgGetMemUnitList);
   //FreeAndNil(DbgGetMemFuncList);
+  FreeAndNil(DbgSyncObjsInfo);
   FreeAndNil(DbgExceptions);
   FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackFuncList);
@@ -750,6 +765,19 @@ end;
 function TThreadData.DbgPointsCount: Cardinal;
 begin
   Result := DbgPoints.Count;
+end;
+
+function TThreadData.DbgSyncObjsByIdx(const Idx: Cardinal): PSyncObjsInfo;
+begin
+  if Idx < DbgSyncObjsInfo.Count then
+    Result := DbgSyncObjsInfo[Idx]
+  else
+    Result := Nil;
+end;
+
+function TThreadData.DbgSyncObjsCount: Cardinal;
+begin
+  Result := DbgSyncObjsInfo.Count;
 end;
 
 procedure TThreadData.UpdateGetMemUnitList;
