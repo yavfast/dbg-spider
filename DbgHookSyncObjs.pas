@@ -282,10 +282,10 @@ begin
 
     FreeAndNil(SyncObjsLock);
 
-    OutputDebugStringA('Reset SyncObjs hook - ok');
+    OutputDebugStringA('Reset SyncObjs hooks - ok');
   except
     on E: Exception do
-      OutputDebugStringA(pAnsiChar('Reset SyncObjs hook fail: ' + E.Message));
+      OutputDebugStringA(pAnsiChar('Reset SyncObjs hooks fail: ' + E.Message));
   end;
 end;
 

@@ -632,10 +632,6 @@ object MainForm: TMainForm
     object tsMemInfo: TTabSheet
       Caption = 'Memory Info'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vstMemInfoThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -919,10 +915,6 @@ object MainForm: TMainForm
           object tsMemInfoTreeView: TTabSheet
             Caption = 'Tree view'
             ImageIndex = 1
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object spl2: TSplitter
               Left = 0
               Top = 213
@@ -1011,10 +1003,6 @@ object MainForm: TMainForm
                 TabOrder = 1
                 object tsMemInfoFuncLinks: TTabSheet
                   Caption = 'Links'
-                  ExplicitLeft = 0
-                  ExplicitTop = 0
-                  ExplicitWidth = 0
-                  ExplicitHeight = 0
                   object pMemInfoFuncLinks: TPanel
                     Left = 0
                     Top = 0
@@ -2179,25 +2167,25 @@ object MainForm: TMainForm
       object rbgProject: TRibbonGroup
         Left = 4
         Top = 3
-        Width = 177
+        Width = 197
         Height = 86
         ActionManager = amMain
         Caption = 'Project'
         GroupIndex = 0
       end
       object rbgApplication: TRibbonGroup
-        Left = 183
+        Left = 203
         Top = 3
-        Width = 102
+        Width = 122
         Height = 86
         ActionManager = amMain
         Caption = 'Application'
         GroupIndex = 1
       end
       object rbngrpDebug: TRibbonGroup
-        Left = 287
+        Left = 327
         Top = 3
-        Width = 101
+        Width = 121
         Height = 86
         ActionManager = amMain
         Caption = 'Debug'
@@ -2205,7 +2193,7 @@ object MainForm: TMainForm
         Rows = 2
       end
       object rbngrpDbgInfoOptions: TRibbonGroup
-        Left = 390
+        Left = 450
         Top = 3
         Width = 118
         Height = 86
@@ -2214,7 +2202,7 @@ object MainForm: TMainForm
         GroupIndex = 3
       end
       object rbngrpTimeLineSettings: TRibbonGroup
-        Left = 510
+        Left = 570
         Top = 3
         Width = 114
         Height = 86
@@ -2223,7 +2211,7 @@ object MainForm: TMainForm
         GroupIndex = 4
       end
       object rbngrpMemInfoOptions: TRibbonGroup
-        Left = 626
+        Left = 686
         Top = 3
         Width = 154
         Height = 86
@@ -2232,7 +2220,7 @@ object MainForm: TMainForm
         GroupIndex = 5
       end
       object rbngrpExceptionOptions: TRibbonGroup
-        Left = 782
+        Left = 842
         Top = 3
         Width = 131
         Height = 86
@@ -2241,7 +2229,7 @@ object MainForm: TMainForm
         GroupIndex = 6
       end
       object rbngrpCodeTracking: TRibbonGroup
-        Left = 915
+        Left = 975
         Top = 3
         Width = 127
         Height = 86
@@ -2250,7 +2238,7 @@ object MainForm: TMainForm
         GroupIndex = 7
       end
       object rbngrpFeedback: TRibbonGroup
-        Left = 1044
+        Left = 1104
         Top = 3
         Width = 61
         Height = 86
@@ -2438,7 +2426,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 44
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2446,6 +2434,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg info:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
       end
       object pStatusDbgState: TPanel
@@ -2462,7 +2451,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 51
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2470,6 +2459,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg state:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
         object lbStatusDbgStateValue: TLabel
           AlignWithMargins = True
@@ -2501,7 +2491,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 59
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2509,6 +2499,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg events:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
         object lbStatusEventsCntValue: TLabel
           AlignWithMargins = True
@@ -2541,7 +2532,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 66
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2549,6 +2540,7 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Track events:'
           Layout = tlCenter
+          ExplicitHeight = 13
         end
         object lbStatusTrackEventCntValue: TLabel
           AlignWithMargins = True
