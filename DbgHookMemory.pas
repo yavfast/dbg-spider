@@ -11,7 +11,7 @@ function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
 
 implementation
 
-uses Windows, SyncObjs, SysUtils{, JclWin32, JclBase, JclDebug};
+uses Windows, DbgHookCS, SysUtils;
 
 var
   _BaseMemoryMgr: TMemoryManagerEx;
@@ -20,21 +20,14 @@ var
   MemInfoList: PDbgMemInfoList = nil;
   MemInfoListCnt: Integer = 0;
   MemCallStack: Boolean = False;
-  MemInfoLock: TCriticalSection = nil;
+  MemInfoLock: TDbgCriticalSection = nil;
 
-  MemLock: TCriticalSection = nil;
+  MemLock: TDbgCriticalSection = nil;
 
   _MemoryMgr: PMemoryManagerEx = nil;
 
 type
   TMemSize = NativeInt;
-  //TMemUSize = NativeUInt;
-
-//var
-//  _BaseGetMem: function(Size: TMemSize): Pointer;
-//  _BaseFreeMem: function(P: Pointer): Integer;
-//  _BaseReallocMem: function(P: Pointer; Size: TMemSize): Pointer;
-//  _BaseAllocMem: function(Size: TMemSize): Pointer;
 
 function _HookGetMem(Size: TMemSize): Pointer; forward;
 function _HookFreeMem(P: Pointer): Integer; forward;
@@ -328,10 +321,10 @@ begin
   MemInfoListCnt := 0;
   MemCallStack := MemoryCallStack;
 
-  MemLock := TCriticalSection.Create;
+  MemLock := TDbgCriticalSection.Create;
 
-  MemInfoList := GetMemory(SizeOf(TDbgMemInfoList));
-  MemInfoLock := TCriticalSection.Create;
+  MemInfoList := AllocMem(SizeOf(TDbgMemInfoList));
+  MemInfoLock := TDbgCriticalSection.Create;
 
   _HookMemoryMgr.GetMem := _HookGetMem;
   _HookMemoryMgr.FreeMem := _HookFreeMem;
@@ -364,11 +357,11 @@ end;
 procedure ResetMemoryHook; stdcall;
 begin
   if _MemoryMgr = nil then Exit;
+  if MemInfoLock = nil then Exit;
   
-  OutputDebugStringA('Reset memory hooks...');
-
   // Восстанавливаем оригинальный менеджер памяти
-  MemInfoLock.Enter;
+  while not MemInfoLock.TryEnter do
+    SwitchToThread;
   try
     _MemoryMgr^ := _BaseMemoryMgr;
     _MemoryMgr := Nil;
@@ -378,12 +371,10 @@ begin
     MemInfoLock.Leave;
   end;
 
-  // Освобождаем локи
-  SwitchToThread;
-
-  // Сбрасываем буффер
-  MemInfoLock.Enter;
+  while not MemInfoLock.TryEnter do
+    SwitchToThread;
   try
+  // Сбрасываем буффер
     _OutMemInfoBuf(dstMemInfo);
 
     FreeMemory(MemInfoList);

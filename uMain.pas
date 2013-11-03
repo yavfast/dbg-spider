@@ -291,6 +291,7 @@ type
 
     procedure vstMemInfoFuncTreeGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstMemInfoFuncTreeFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstMemInfoFuncTreeCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
 
     procedure vstMemInfoFuncParentsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstMemInfoFuncParentsDblClick(Sender: TObject);
@@ -299,6 +300,7 @@ type
 
     procedure vstMemInfoObjectsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstMemInfoObjectsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstMemInfoObjectsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
 
     procedure vstMemStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstMemStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
@@ -402,12 +404,6 @@ type
     procedure vstMemInfoObjStackDblClick(Sender: TObject);
     procedure acOpenSiteExecute(Sender: TObject);
     procedure acFeedbackExecute(Sender: TObject);
-    procedure vstMemInfoFuncTreeCompareNodes(Sender: TBaseVirtualTree;
-      Node1, Node2: PVirtualNode; Column: TColumnIndex;
-      var Result: Integer);
-    procedure vstMemInfoObjectsCompareNodes(Sender: TBaseVirtualTree;
-      Node1, Node2: PVirtualNode; Column: TColumnIndex;
-      var Result: Integer);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;

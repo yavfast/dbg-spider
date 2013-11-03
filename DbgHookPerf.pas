@@ -7,7 +7,7 @@ procedure ResetPerfomance; stdcall;
 
 implementation
 
-uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory;
+uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory, DbgHookSyncObjs;
 
 type
   TPerfThread = class(TThread)
@@ -32,10 +32,10 @@ procedure ResetPerfomance; stdcall;
 begin
   if _PerfThread = nil then Exit;
   
-  OutputDebugStringA('Reset perfomance thread...');
-
+  _PerfThread.FreeOnTerminate := False;
   _PerfThread.Terminate;
-  _PerfThread := Nil;
+  _PerfThread.WaitFor;
+  FreeAndNil(_PerfThread);
 
   OutputDebugStringA('Reset perfomance thread - ok');
 end;
@@ -58,7 +58,7 @@ var
 begin
   NameThreadForDebugging('### Dbg control thread', GetCurrentThreadId);
 
-  DbgInfo := GetMemory(SizeOf(Pointer)); // для выравнивания по памяти
+  DbgInfo := AllocMem(SizeOf(Pointer)); // для выравнивания по памяти
   DWORD(DbgInfo^) := DWORD(dstPerfomance);
   try
     while not Terminated do
@@ -68,8 +68,11 @@ begin
 
       // Сброс буфера по памяти
       //_OutMemInfoBuf;
-      if not _OutMemInfoBuf(dstPerfomanceAndMemInfo) then
+      if not _OutMemInfoBuf(dstPerfomanceAndInfo) then
         RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
+
+      // Сброс буфера по локам
+      _OutSyncObjsInfo;
     end;
   except
     on E: Exception do
