@@ -123,7 +123,7 @@ type
     acStatusDebuger: TAction;
     acStatusDbgInfo: TAction;
     acStausEventCount: TAction;
-    tsDebugInfo2: TTabSheet;
+    tsDebugInfo: TTabSheet;
     vstDbgInfoUnits: TVirtualStringTree;
     pDbgInfoDetail: TPanel;
     pcDbgInfoDetail: TPageControl;
@@ -404,6 +404,8 @@ type
     procedure vstMemInfoObjStackDblClick(Sender: TObject);
     procedure acOpenSiteExecute(Sender: TObject);
     procedure acFeedbackExecute(Sender: TObject);
+    procedure vstDbgInfoUnitsCompareNodes(Sender: TBaseVirtualTree; Node1,
+      Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -3637,6 +3639,59 @@ begin
       end;
   end;
 
+end;
+
+procedure TMainForm.vstDbgInfoUnitsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  ValueU1, ValueU2: NativeUInt;
+  ValueS1, ValueS2: Int64;
+begin
+  Data1 := vstDbgInfoUnits.GetNodeData(Node1);
+  Data2 := vstDbgInfoUnits.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltDbgUnitInfo) and (Data1^.LinkType = ltDbgUnitInfo) then
+        begin
+          Name1 := Data1^.DbgUnitInfo.ShortName;
+          Name2 := Data2^.DbgUnitInfo.ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        ValueU1 := 0;
+        ValueU2 := 0;
+
+        if (Data1^.LinkType = ltDbgUnitInfo) and (Data1^.LinkType = ltDbgUnitInfo) then
+        begin
+          ValueU1 := NativeUInt(Data1^.DbgUnitInfo.Address);
+          ValueU2 := NativeUInt(Data2^.DbgUnitInfo.Address);
+        end;
+
+        Result := Compare(ValueU1, ValueU2);
+      end;
+    2:
+      begin
+        ValueS1 := 0;
+        ValueS2 := 0;
+
+        if (Data1^.LinkType = ltDbgUnitInfo) and (Data2^.LinkType = ltDbgUnitInfo) then
+        begin
+          ValueS1 := Data1^.DbgUnitInfo.Size;
+          ValueS2 := Data2^.DbgUnitInfo.Size;
+        end;
+
+        Result := Compare(ValueS1, ValueS2);
+      end;
+  end;
 end;
 
 procedure TMainForm.vstDbgInfoUnitsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);

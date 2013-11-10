@@ -24,16 +24,12 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsMemInfo
+    ActivePage = tsDebugInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
     object tsLog: TTabSheet
       Caption = 'Log'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vstLog: TVirtualStringTree
         Left = 0
         Top = 0
@@ -79,14 +75,10 @@ object MainForm: TMainForm
           end>
       end
     end
-    object tsDebugInfo2: TTabSheet
-      Caption = 'DebugInfo2'
+    object tsDebugInfo: TTabSheet
+      Caption = 'Debug info'
       Highlighted = True
       ImageIndex = 5
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vstDbgInfoUnits: TVirtualStringTree
         Left = 0
         Top = 0
@@ -103,13 +95,15 @@ object MainForm: TMainForm
         Header.Font.Height = -11
         Header.Font.Name = 'Tahoma'
         Header.Font.Style = []
-        Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+        Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
+        Header.SortColumn = 0
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
         OnColumnResize = vstThreadsColumnResize
+        OnCompareNodes = vstDbgInfoUnitsCompareNodes
         OnFocusChanged = vstDbgInfoUnitsFocusChanged
         OnGetText = vstDbgInfoUnitsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -132,6 +126,7 @@ object MainForm: TMainForm
           item
             Alignment = taRightJustify
             CaptionAlignment = taCenter
+            DefaultSortDirection = sdDescending
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
             Position = 2
             Width = 60
@@ -157,10 +152,6 @@ object MainForm: TMainForm
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
             Caption = 'Consts'
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object vstDbgInfoConsts: TVirtualStringTree
               Left = 0
               Top = 0
@@ -213,10 +204,6 @@ object MainForm: TMainForm
           object tsDbgUnitTypes: TTabSheet
             Caption = 'Types'
             ImageIndex = 1
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object vstDbgInfoTypes: TVirtualStringTree
               Left = 0
               Top = 0
@@ -277,10 +264,6 @@ object MainForm: TMainForm
           object tsDbgUnitVars: TTabSheet
             Caption = 'Vars'
             ImageIndex = 2
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object vstDbgInfoVars: TVirtualStringTree
               Left = 0
               Top = 0
@@ -333,10 +316,6 @@ object MainForm: TMainForm
           object tsDbgUnitFunctions: TTabSheet
             Caption = 'Functions'
             ImageIndex = 3
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object vstDbgInfoFunctions: TVirtualStringTree
               Left = 0
               Top = 0
@@ -483,10 +462,6 @@ object MainForm: TMainForm
           object tsDbgUnitSource: TTabSheet
             Caption = 'Source'
             ImageIndex = 4
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object synmDbgInfoUnitSource: TSynMemo
               Left = 0
               Top = 0
@@ -519,10 +494,6 @@ object MainForm: TMainForm
     object tsThreads1: TTabSheet
       Caption = 'Threads timeline'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -749,10 +720,6 @@ object MainForm: TMainForm
           OnChange = pcMemInfoChange
           object tsMemInfoViewStack: TTabSheet
             Caption = 'Simple view'
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object pnl1: TPanel
               Left = 0
               Top = 0
@@ -1143,10 +1110,6 @@ object MainForm: TMainForm
                 object tsMemInfoFuncSrc: TTabSheet
                   Caption = 'Source'
                   ImageIndex = 1
-                  ExplicitLeft = 0
-                  ExplicitTop = 0
-                  ExplicitWidth = 0
-                  ExplicitHeight = 0
                   object synmMemInfoFuncSrc: TSynMemo
                     Left = 0
                     Top = 0
@@ -1297,10 +1260,6 @@ object MainForm: TMainForm
     object tsExceptions: TTabSheet
       Caption = 'Exceptions'
       ImageIndex = 4
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vstExceptionThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -1558,10 +1517,6 @@ object MainForm: TMainForm
     object tsCodeTracking: TTabSheet
       Caption = 'Code tracking'
       ImageIndex = 5
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object vstTrackThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -1717,10 +1672,6 @@ object MainForm: TMainForm
             TabOrder = 1
             object tsTrackFuncAdvLinks: TTabSheet
               Caption = 'Links'
-              ExplicitLeft = 0
-              ExplicitTop = 0
-              ExplicitWidth = 0
-              ExplicitHeight = 0
               object pTrackFuncAdv: TPanel
                 Left = 0
                 Top = 0
@@ -1863,10 +1814,6 @@ object MainForm: TMainForm
             object tsTrackFuncAdvSrc: TTabSheet
               Caption = 'Source'
               ImageIndex = 1
-              ExplicitLeft = 0
-              ExplicitTop = 0
-              ExplicitWidth = 0
-              ExplicitHeight = 0
               object synmTrackFuncAdvSource: TSynMemo
                 Left = 0
                 Top = 0
@@ -1957,7 +1904,7 @@ object MainForm: TMainForm
         Columns = <
           item
             Position = 0
-            Width = 1210
+            Width = 1206
             WideText = 'Info'
           end>
       end
