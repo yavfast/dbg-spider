@@ -110,7 +110,8 @@ const
     clGreen, // ptPerfomance
     clGreen, // ptThreadInfo
     clGreen, // ptMemoryInfo
-    clYellow // ptSyncObjsInfo
+    clYellow, // ptSyncObjsInfo
+    clWhite // ptTraceInfo
   );
 
   _EventColorNames: array[Low(TDbgPointType) .. High(TDbgPointType)] of String = (
@@ -122,7 +123,8 @@ const
     'active', // ptPerfomance
     'thread', // ptThreadInfo
     'memory', // ptMemoryInfo
-    'syncobjs' // ptSyncObjsInfo
+    'syncobjs', // ptSyncObjsInfo
+    'trace' // ptTraceInfo
   );
 
   _DefSyncObjsColors: array[Low(TDbgSyncObjsType) .. High(TDbgSyncObjsType)] of TColor = (

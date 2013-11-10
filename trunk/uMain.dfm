@@ -2128,19 +2128,19 @@ object MainForm: TMainForm
         ActionManager = amMain
         Caption = 'Application'
         GroupIndex = 1
+        Rows = 2
       end
       object rbngrpDebug: TRibbonGroup
         Left = 327
         Top = 3
-        Width = 121
+        Width = 210
         Height = 86
         ActionManager = amMain
         Caption = 'Debug'
         GroupIndex = 2
-        Rows = 2
       end
       object rbngrpDbgInfoOptions: TRibbonGroup
-        Left = 450
+        Left = 539
         Top = 3
         Width = 118
         Height = 86
@@ -2149,7 +2149,7 @@ object MainForm: TMainForm
         GroupIndex = 3
       end
       object rbngrpTimeLineSettings: TRibbonGroup
-        Left = 570
+        Left = 659
         Top = 3
         Width = 114
         Height = 86
@@ -2158,7 +2158,7 @@ object MainForm: TMainForm
         GroupIndex = 4
       end
       object rbngrpMemInfoOptions: TRibbonGroup
-        Left = 686
+        Left = 775
         Top = 3
         Width = 154
         Height = 86
@@ -2167,7 +2167,7 @@ object MainForm: TMainForm
         GroupIndex = 5
       end
       object rbngrpExceptionOptions: TRibbonGroup
-        Left = 842
+        Left = 931
         Top = 3
         Width = 131
         Height = 86
@@ -2176,7 +2176,7 @@ object MainForm: TMainForm
         GroupIndex = 6
       end
       object rbngrpCodeTracking: TRibbonGroup
-        Left = 975
+        Left = 1064
         Top = 3
         Width = 127
         Height = 86
@@ -2185,7 +2185,7 @@ object MainForm: TMainForm
         GroupIndex = 7
       end
       object rbngrpFeedback: TRibbonGroup
-        Left = 1104
+        Left = 1193
         Top = 3
         Width = 61
         Height = 86
@@ -2571,6 +2571,7 @@ object MainForm: TMainForm
       Category = 'Debug'
       Caption = 'Pause'
       ImageIndex = 6
+      OnExecute = acPauseExecute
     end
     object acOptions: TAction
       Category = 'Spider'
@@ -2787,6 +2788,40 @@ object MainForm: TMainForm
       Caption = 'Add comment'
       ImageIndex = 19
       OnExecute = acFeedbackExecute
+    end
+    object acContinue: TAction
+      Category = 'Debug'
+      Caption = 'Continue'
+      ImageIndex = 4
+      OnExecute = acContinueExecute
+    end
+    object acPauseContinue: TAction
+      Category = 'Debug'
+      Caption = 'Pause'
+      Enabled = False
+      ImageIndex = 6
+      OnExecute = acPauseExecute
+    end
+    object acStepInto: TAction
+      Category = 'Debug'
+      Caption = 'Step into'
+      Enabled = False
+      ImageIndex = 21
+      OnExecute = acStepIntoExecute
+    end
+    object acStepOver: TAction
+      Category = 'Debug'
+      Caption = 'Step over'
+      Enabled = False
+      ImageIndex = 22
+      OnExecute = acStepOverExecute
+    end
+    object acStepOut: TAction
+      Category = 'Debug'
+      Caption = 'Step out'
+      Enabled = False
+      ImageIndex = 20
+      OnExecute = acStepOutExecute
     end
   end
   object OD: TFileOpenDialog
@@ -3030,9 +3065,28 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
-            Action = acPause
+            Action = acPauseContinue
             Caption = '&Pause'
             ImageIndex = 6
+          end
+          item
+            Caption = '-'
+          end
+          item
+            Action = acStepInto
+            Caption = '&Step into'
+            ImageIndex = 21
+            NewCol = True
+          end
+          item
+            Action = acStepOver
+            Caption = 'S&tep over'
+            ImageIndex = 22
+          end
+          item
+            Action = acStepOut
+            Caption = 'St&ep out'
+            ImageIndex = 20
           end>
         ActionBar = rbngrpDebug
       end

@@ -25,7 +25,12 @@ type
     FRemoveCurrentBreakpoint: Boolean;   // Флаг удаления текущего ВР
     FCurThreadId: TThreadId;
     FCurThreadData: PThreadData;
+
     FDbgState: TDbgState;
+
+    FDbgTraceState: TDbgTraceState;
+    FTraceEvent: TEvent;
+    FTraceCounter: Cardinal;
 
     // Debug options
     FPerfomanceMode: Boolean;
@@ -64,6 +69,7 @@ type
     FDebugString: TDebugStringEvent;
     FRip: TRipEvent;
     FEndDebug: TNotifyEvent;
+    FChangeDebugState: TNotifyEvent;
 
     FDbgLog: TDbgLogEvent;
     FDbgLogMode: Boolean; // Дебажный режим
@@ -97,6 +103,10 @@ type
     procedure DoRemoveBreakpointF(const Address: Pointer; const SaveByte: Byte);
     procedure DoRestoreBreakpoint(const Address: Pointer);
     procedure DoRestoreBreakpointF(const Address: Pointer);
+
+    procedure SetDbgTraceState(const Value: TDbgTraceState);
+    procedure SetDbgState(const Value: TDbgState);
+    function GetActive: Boolean;
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -138,6 +148,8 @@ type
 
     function ProcessUserBreakPoint(DebugEvent: PDebugEvent): Boolean;
 
+    function ProcessTraceBreakPoint(DebugEvent: PDebugEvent): Boolean;
+
     procedure ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
     procedure ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
 
@@ -148,6 +160,7 @@ type
     procedure ProcessDbgMemoryInfo(DebugEvent: PDebugEvent);
     procedure ProcessDbgPerfomance(DebugEvent: PDebugEvent);
     procedure ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
+    procedure ProcessDbgTraceInfo(DebugEvent: PDebugEvent);
 
     function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 
@@ -184,6 +197,8 @@ type
 
     function StopDebug: Boolean;
     function PauseDebug: Boolean;
+    function ContinueDebug: Boolean;
+    function TraceDebug(const TraceType: TDbgTraceState): Boolean;
 
     // Основной цикл обработки дебажных событий
     procedure ProcessDebugEvents;
@@ -265,6 +280,7 @@ type
     // внутренние события отладчика
     property OnMainLoopFailed: TNotifyEvent read FMainLoopFailed write FMainLoopFailed;
     property OnEndDebug: TNotifyEvent read FEndDebug write FEndDebug;
+    property OnChangeDebugState: TNotifyEvent read FChangeDebugState write FChangeDebugState;
 
     // обработчики отладочных событий
     property OnCreateThread: TCreateThreadEvent read FCreateThread write FCreateThread;
@@ -294,7 +310,10 @@ type
     property CloseDebugProcessOnFree: Boolean read FCloseDebugProcess write SetCloseDebugProcess;
     property ProcessData: PProcessData read FProcessData;
     property ResumeAction: TResumeAction read FResumeAction write FResumeAction;
-    property DbgState: TDbgState read FDbgState;
+    property DbgState: TDbgState read FDbgState write SetDbgState;
+    property DbgTraceState: TDbgTraceState read FDbgTraceState write SetDbgTraceState;
+
+    property Active: Boolean read GetActive;
 
     // Опции профайлера
     property PerfomanceMode: Boolean read FPerfomanceMode write SetPerfomanceMode;
@@ -508,6 +527,8 @@ begin
       end;
     ptSyncObjsInfo:
       Result := True;
+    ptTraceInfo:
+      Result := True;
   end;
 
   if Result then
@@ -550,6 +571,18 @@ begin
           begin
             ThPoint^.SyncObjsInfo := TSyncObjsInfo.Create(DebugEvent, ThreadData, ThPoint^.PerfIdx);
           end;
+        ptTraceInfo:
+          begin
+            if FDbgTraceState = dtsPause then
+            begin
+              ThPoint^.ExceptInfo := TExceptInfo.Create(ThreadData);
+              ThPoint^.ExceptInfo.ExceptionName := Format('### DBG_TRACE #%d', [FTraceCounter]);
+
+              ThreadData^.DbgExceptions.Add(ThPoint^.ExceptInfo);
+
+              FProcessData.DbgExceptions.Add(ThPoint^.ExceptInfo);
+            end;
+          end;
       end;
     finally
       ThreadData^.DbgPoints.EndRead;
@@ -580,7 +613,7 @@ begin
   Cur := 0;
 
   case PointType of
-    ptStart, ptException, ptThreadInfo{, ptMemoryInfo}:
+    ptStart, ptException, ptThreadInfo, ptTraceInfo {, ptMemoryInfo}:
       begin
         Result := True;
       end;
@@ -798,7 +831,8 @@ begin
 
   ClearDbgTracking;
 
-  FDbgState := dsNone;
+  DbgState := dsNone;
+  FTraceCounter := 0;
 end;
 
 procedure TDebuger.ClearDbgTracking;
@@ -813,6 +847,19 @@ begin
   begin
     DbgTrackRETBreakpoints.Clear;
     FreeAndNil(DbgTrackRETBreakpoints);
+  end;
+end;
+
+function TDebuger.ContinueDebug: Boolean;
+begin
+  Result := False;
+
+  if DbgTraceState = dtsPause then
+  begin
+    DbgTraceState := dtsContinue;
+
+    FTraceEvent.SetEvent;
+    Result := True;
   end;
 end;
 
@@ -842,6 +889,8 @@ begin
     RaiseLastOSError;
 
   FDbgState := dsNone;
+  FDbgTraceState := dtsContinue;
+  FTraceEvent := TEvent.Create();
   FRestoreBPIndex := -1;
   FRestoreMBPIndex := -1;
   FRestoredHWBPIndex := -1;
@@ -958,7 +1007,7 @@ procedure TDebuger.DoCreateProcess(DebugEvent: PDebugEvent);
 var
   CreateThreadInfo: PCreateThreadDebugInfo;
 begin
-  FDbgState := dsStarted;
+  DbgState := dsStarted;
 
   FProcessData.State := psActive;
 
@@ -1051,7 +1100,7 @@ end;
 
 procedure TDebuger.DoExitProcess(DebugEvent: PDebugEvent);
 begin
-  FDbgState := dsStoping;
+  DbgState := dsStoping;
   FProcessData.State := psFinished;
 
   // Метка завершения процесса
@@ -1094,7 +1143,7 @@ type
 
 procedure TDebuger.DoEndDebug;
 begin
-  FDbgState := dsStoped;
+  DbgState := dsStoped;
 
   if Assigned(FEndDebug) then
     FEndDebug(Self);
@@ -1118,7 +1167,7 @@ end;
 
 procedure TDebuger.DoDebugerFailed;
 begin
-  FDbgState := dsDbgFail;
+  DbgState := dsDbgFail;
 
   if Assigned(FMainLoopFailed) then
     FMainLoopFailed(Self);
@@ -1174,7 +1223,7 @@ end;
 
 procedure TDebuger.DoRip(DebugEvent: PDebugEvent);
 begin
-  FDbgState := dsDbgFail;
+  DbgState := dsDbgFail;
 
   if Assigned(FRip) then
     FRip(Self, DebugEvent^.dwThreadId, @DebugEvent^.RipInfo);
@@ -1233,6 +1282,11 @@ procedure TDebuger.ProcFreeMem(Data: Pointer; const Size: Cardinal = 0);
 begin
   if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) = nil then
     RaiseLastOSError;
+end;
+
+function TDebuger.GetActive: Boolean;
+begin
+  Result := not(FDbgState in [dsNone, dsStoped, dsDbgFail]);
 end;
 
 function TDebuger.GetBPIndex(BreakPointAddr: Pointer; const ThreadID: TThreadId = 0): Integer;
@@ -1533,7 +1587,11 @@ end;
 
 function TDebuger.PauseDebug: Boolean;
 begin
-  Result := DebugBreakProcess(FProcessData.AttachedProcessHandle);
+  if Active then
+  begin
+    DbgTraceState := dtsPause;
+    Result := DebugBreakProcess(FProcessData.AttachedProcessHandle);
+  end;
 end;
 
 procedure TDebuger.InitDbgTracking(const Capacity: Integer);
@@ -1649,6 +1707,9 @@ begin
   end;
 
   if ProcessUserBreakPoint(DebugEvent) then
+    Exit;
+
+  if ProcessTraceBreakPoint(DebugEvent) then
     Exit;
 
   CallUnhandledBreakPointEvents(ecBreakpoint, DebugEvent);
@@ -1830,6 +1891,27 @@ begin
 
     FRestoredHWBPIndex := Index;
     FRestoredThread := DebugEvent^.dwThreadId;
+  end;
+end;
+
+function TDebuger.ProcessTraceBreakPoint(DebugEvent: PDebugEvent): Boolean;
+begin
+  Result := False;
+
+  if DbgTraceState in [dtsPause..dtsStepOut] then
+  begin
+    DbgState := dsPause;
+
+    Inc(FTraceCounter);
+    ProcessDbgTraceInfo(DebugEvent);
+
+    // Ждем событие на продолжение дебага
+    FTraceEvent.ResetEvent;
+    FTraceEvent.WaitFor;
+
+    ProcessDbgTraceInfo(DebugEvent);
+
+    Result := True;
   end;
 end;
 
@@ -2190,7 +2272,7 @@ var
   ThData: PThreadData;
   I: Integer;
 begin
-  FDbgState := dsPerfomance;
+  DbgState := dsPerfomance;
 
   // Добавляем инфу про состояние процесса
   if AddProcessPointInfo(ptPerfomance) then
@@ -2653,6 +2735,27 @@ begin
   end;
 end;
 
+procedure TDebuger.ProcessDbgTraceInfo(DebugEvent: PDebugEvent);
+var
+  ThData: PThreadData;
+  I: Integer;
+begin
+  if AddProcessPointInfo(ptTraceInfo) then
+  begin
+    FThreadList.BeginRead;
+    try
+      for I := 0 to FThreadList.Count - 1 do
+      begin
+        ThData := FThreadList[I];
+        if ThData^.State = tsActive then
+          AddThreadPointInfo(ThData, ptTraceInfo);
+      end;
+    finally
+      FThreadList.EndRead;
+    end;
+  end;
+end;
+
 procedure TDebuger.ProcessDebugEvents;
 var
   DebugEvent: PDebugEvent;
@@ -2664,7 +2767,7 @@ begin
     repeat
       ContinueStatus := DBG_CONTINUE;
 
-      FDbgState := dsWait;
+      DbgState := dsWait;
       FCurThreadData := nil;
       FCurThreadId := 0;
 
@@ -2674,7 +2777,7 @@ begin
         Exit;
       end;
 
-      FDbgState := dsEvent;
+      DbgState := dsEvent;
 
       FCurThreadData := nil;
       FCurThreadId := TThreadId(DebugEvent^.dwThreadId);
@@ -2798,6 +2901,34 @@ end;
 procedure TDebuger.SetCodeTracking(const Value: Boolean);
 begin
   FCodeTracking := Value;
+end;
+
+procedure TDebuger.SetDbgState(const Value: TDbgState);
+const
+  _UpdateState: set of TDbgState = [dsNone, dsStarted, dsTrace, dsPause, dsStoping, dsStoped, dsDbgFail];
+var
+  Update: Boolean;
+begin
+  if Value <> FDbgState then
+  begin
+    Update := (FDbgState in _UpdateState) or (Value in _UpdateState);
+
+    FDbgState := Value;
+
+    if Assigned(FChangeDebugState) and Update then
+      FChangeDebugState(Self);
+  end;
+end;
+
+procedure TDebuger.SetDbgTraceState(const Value: TDbgTraceState);
+begin
+  if Value <> FDbgTraceState then
+  begin
+    FDbgTraceState := Value;
+
+    if Assigned(FChangeDebugState) then
+      FChangeDebugState(Self);
+  end;
 end;
 
 procedure TDebuger.SetExceptionCallStack(const Value: Boolean);
@@ -3026,7 +3157,10 @@ function TDebuger.StopDebug: Boolean;
 begin
   Result := False;
 
-  if not(FDbgState in [dsNone, dsStoped, dsDbgFail]) then
+  if FDbgState = dsPause then
+    ContinueDebug;
+
+  if Active then
   begin
     UnLoadDbgHookDll(ProcessData.AttachedProcessHandle, 'DbgHook32.dll');
 
@@ -3148,6 +3282,23 @@ begin
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, FBreakpointList[Index].Memory.Address, TmpSize,
         FBreakpointList[Index].Memory.PreviosRegionProtect, Dummy));
   FBreakpointList[Index].Active := Active;
+end;
+
+function TDebuger.TraceDebug(const TraceType: TDbgTraceState): Boolean;
+begin
+  Result := False;
+
+  case TraceType of
+    dtsContinue:
+      Result := ContinueDebug;
+    dtsPause:
+      Result := PauseDebug;
+    dtsStepIn:;
+    dtsStepOver:;
+    dtsStepOut:;
+  end;
+
+  SwitchToThread;
 end;
 
 const

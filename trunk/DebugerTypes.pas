@@ -252,7 +252,10 @@ type
     Message: String;
     Stack: TList;
 
-    constructor Create(DebugEvent: PDebugEvent);
+    constructor Create(DebugEvent: PDebugEvent); overload;
+    constructor Create(ThreadData: PThreadData); overload;
+    constructor Create(); overload;
+
     destructor Destroy; override;
   end;
 
@@ -271,7 +274,7 @@ type
   end;
 
   TDbgPointType = (ptNone = 0, ptWait, ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo,
-    ptSyncObjsInfo);
+    ptSyncObjsInfo, ptTraceInfo);
 
   PThreadPoint = ^TThreadPoint;
   TThreadPoint = packed record
@@ -586,7 +589,9 @@ type
   THardwareBreakpointEvent = procedure(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord;
     BreakPointIndex: THWBPIndex; var ReleaseBreakpoint: Boolean) of object;
 
-  TDbgState = (dsNone, dsStarted, dsWait, dsPerfomance, dsTrace, dsEvent, dsStoping, dsStoped, dsDbgFail);
+  TDbgState = (dsNone, dsStarted, dsWait, dsPerfomance, dsTrace, dsEvent, dsPause, dsStoping, dsStoped, dsDbgFail);
+
+  TDbgTraceState = (dtsContinue, dtsPause, dtsStepIn, dtsStepOver, dtsStepOut);
 
   TDbgLogType = (dltInfo, dltWarning, dltError, dltDebugOutput, dltProcessEvent, dltThreadEvent, dltExceptionEvent,
     dltBreakPointEvent, dltDLLEvent);
@@ -946,7 +951,7 @@ procedure RGetMemInfo.CheckObjectType;
 begin
   if ObjectType = '' then
   begin
-    if not (gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) then
+    if gvDebuger.Active then
       ObjectType := ShortString(gvDebugInfo.GetClassName(ObjAddr));
   end;
 end;
@@ -964,9 +969,7 @@ constructor TExceptInfo.Create(DebugEvent: PDebugEvent);
 var
   ER: PExceptionRecord;
 begin
-  inherited Create;
-
-  Stack := TObjectList.Create;
+  Create;
 
   if Assigned(DebugEvent) then
   begin
@@ -980,6 +983,28 @@ begin
 
     gvDebugInfo.GetCallStackItems(ThreadID, Address, Frame, Stack);
   end;
+end;
+
+constructor TExceptInfo.Create(ThreadData: PThreadData);
+begin
+  Create;
+
+  if Assigned(ThreadData) then
+  begin
+    gvDebuger.UpdateThreadContext(ThreadData);
+    ThreadID := ThreadData^.ThreadID;
+    Address := Pointer(ThreadData^.Context^.Eip);
+    Frame := Pointer(ThreadData^.Context^.Ebp);
+
+    gvDebugInfo.GetCallStackItems(ThreadID, Address, Frame, Stack);
+  end;
+end;
+
+constructor TExceptInfo.Create;
+begin
+  inherited Create;
+
+  Stack := TObjectList.Create;
 end;
 
 destructor TExceptInfo.Destroy;

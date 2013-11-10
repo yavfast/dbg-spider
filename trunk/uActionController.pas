@@ -4,8 +4,7 @@ interface
   uses Classes, DebugInfo, DebugerTypes, XMLDoc, XMLIntf;
 
 type
-  TacAction = (acRunEnabled, acStopEnabled, acCreateProcess, acAddThread, acUpdateInfo, acProgress,
-    acSetProjectName);
+  TacAction = (acCreateProcess, acAddThread, acUpdateInfo, acProgress, acSetProjectName, acChangeDbgState);
 
   TDbgOption = (
     doDebugInfo,
@@ -23,6 +22,7 @@ type
     class procedure RunDebug(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0); static;
     class procedure StopDebug; static;
     class procedure PauseDebug; static;
+    class procedure TraceDebug(const TraceType: TDbgTraceState); static;
 
     class procedure Log(const LogType: TDbgLogType; const Msg: String); overload; static;
     class procedure Log(const LogType: TDbgLogType; const Msg: String; const Args: array of const); overload; static;
@@ -127,7 +127,7 @@ end;
 
 class procedure TActionController.PauseDebug;
 begin
-  //
+  TActionController.TraceDebug(dtsPause);
 end;
 
 class procedure TActionController.RunDebug(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
@@ -140,6 +140,15 @@ class procedure TActionController.StopDebug;
 begin
   if Assigned(gvDebuger) then
     gvDebuger.StopDebug;
+end;
+
+class procedure TActionController.TraceDebug(const TraceType: TDbgTraceState);
+begin
+  if Assigned(gvDebuger) then
+  begin
+    gvDebuger.TraceDebug(TraceType);
+    TActionController.DoAction(acChangeDbgState, []);
+  end;
 end;
 
 class procedure TActionController.ViewDebugInfo(DebugInfo: TDebugInfo);

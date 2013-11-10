@@ -13,6 +13,7 @@ type
     FDbgInfoLoaded: Boolean;
     FDbgStarted: Boolean;
 
+    procedure OnChangeDebugState(Sender: TObject);
     procedure OnEndDebug(Sender: TObject);
     procedure OnRip(Sender: TObject; ThreadId: TThreadId; Data: PRIPInfo);
     procedure OnCreateThread(Sender: TObject; ThreadId: TThreadId; Data: PCreateThreadDebugInfo);
@@ -150,7 +151,7 @@ begin
       _AC.Log(dltError, 'Fail start application: %s', [FError]);
   end
   else
-    _AC.DoAction(acRunEnabled, [True]);
+    _AC.DoAction(acChangeDbgState, []);
 end;
 
 function TDebugerThread.GetAppName: String;
@@ -183,6 +184,7 @@ begin
   if gvDebuger = nil then
     gvDebuger := TDebuger.Create();
 
+  gvDebuger.OnChangeDebugState := OnChangeDebugState;
   gvDebuger.OnEndDebug := OnEndDebug;
   gvDebuger.OnRip := OnRip;
   gvDebuger.OnCreateProcess := OnCreateProcess;
@@ -246,11 +248,16 @@ begin
     _AC.Log(dltThreadEvent, 'Perfomance ThreadID: %d', [ThreadId]);
 end;
 
+procedure TDebugerThread.OnChangeDebugState(Sender: TObject);
+begin
+  _AC.DoAction(acChangeDbgState, []);
+end;
+
 procedure TDebugerThread.OnCreateProcess(Sender: TObject; ProcessId: TProcessId; Data: PCreateProcessDebugInfo);
 begin
   _AC.Log(dltProcessEvent, 'Process Start ID: %d', [ProcessId]);
 
-  _AC.DoAction(acStopEnabled, [True]);
+  _AC.DoAction(acChangeDbgState, []);
   _AC.DoAction(acCreateProcess, [ProcessId]);
 end;
 
@@ -300,8 +307,7 @@ procedure TDebugerThread.OnEndDebug(Sender: TObject);
 begin
   _AC.Log(dltInfo, 'Finish debug');
 
-  _AC.DoAction(acStopEnabled, [False]);
-  _AC.DoAction(acRunEnabled, [True]);
+  _AC.DoAction(acChangeDbgState, []);
 end;
 
 procedure TDebugerThread.OnLoadDll(Sender: TObject; ThreadId: TThreadId; Data: PLoadDLLDebugInfo);
