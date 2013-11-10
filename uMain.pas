@@ -78,6 +78,7 @@ type
     acAppOpen: TAction;
     acRun: TAction;
     acStop: TAction;
+    acPause: TAction;
     OD: TFileOpenDialog;
     acDebugInfo: TAction;
     pcMain: TPageControl;
@@ -100,7 +101,6 @@ type
     acNewProject: TAction;
     acOpenProject: TAction;
     acCloseProject: TAction;
-    acPause: TAction;
     acOptions: TAction;
     acExit: TAction;
     acAbout: TAction;
@@ -261,6 +261,11 @@ type
     actbUpdateInfo: TActionToolBar;
     acFeedback: TAction;
     rbngrpFeedback: TRibbonGroup;
+    acContinue: TAction;
+    acPauseContinue: TAction;
+    acStepInto: TAction;
+    acStepOver: TAction;
+    acStepOut: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -316,6 +321,7 @@ type
 
     procedure vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstDbgInfoUnitsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+    procedure vstDbgInfoUnitsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
 
     procedure vstDbgInfoConstsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 
@@ -367,8 +373,15 @@ type
 
     procedure acAppOpenExecute(Sender: TObject);
     procedure acAttachProcessExecute(Sender: TObject);
+
     procedure acRunExecute(Sender: TObject);
     procedure acStopExecute(Sender: TObject);
+    procedure acPauseExecute(Sender: TObject);
+    procedure acContinueExecute(Sender: TObject);
+    procedure acStepIntoExecute(Sender: TObject);
+    procedure acStepOverExecute(Sender: TObject);
+    procedure acStepOutExecute(Sender: TObject);
+
     procedure acOptionsExecute(Sender: TObject);
     procedure acExitExecute(Sender: TObject);
     procedure acCPUTimeLineExecute(Sender: TObject);
@@ -404,8 +417,6 @@ type
     procedure vstMemInfoObjStackDblClick(Sender: TObject);
     procedure acOpenSiteExecute(Sender: TObject);
     procedure acFeedbackExecute(Sender: TObject);
-    procedure vstDbgInfoUnitsCompareNodes(Sender: TBaseVirtualTree; Node1,
-      Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -440,6 +451,7 @@ type
 
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
+    procedure UpdateDebugActions;
     procedure UpdateLog;
     procedure InitLog(const RootMsg: String);
 
@@ -614,7 +626,7 @@ begin
       AddressList.DelimitedText := AddressListStr;
       if AddressList.Count > 0 then
       begin
-        ExceptInfo := TExceptInfo.Create(nil);
+        ExceptInfo := TExceptInfo.Create();
         ExceptInfo.ExceptionName := '### DBG_ADDRESS_INFO';
         ExceptInfo.Message := AddressListStr;
 
@@ -696,6 +708,11 @@ end;
 procedure TMainForm.acCodeTrackRefreshExecute(Sender: TObject);
 begin
   vstTrackThreadsFocusChanged(vstTrackThreads, vstTrackThreads.FocusedNode, 0);
+end;
+
+procedure TMainForm.acContinueExecute(Sender: TObject);
+begin
+  _AC.TraceDebug(dtsContinue);
 end;
 
 procedure TMainForm.acCPUTimeLineExecute(Sender: TObject);
@@ -841,6 +858,8 @@ procedure TMainForm.acRunExecute(Sender: TObject);
 begin
   acRun.Enabled := False;
 
+  tmrThreadsUpdate.Enabled := True;
+
   ClearDbgTrees;
   ClearTrackTrees;
 
@@ -856,6 +875,21 @@ end;
 procedure TMainForm.acSaveCopyExecute(Sender: TObject);
 begin
   OpenProjectOptions(otSaveAs);
+end;
+
+procedure TMainForm.acStepIntoExecute(Sender: TObject);
+begin
+  _AC.TraceDebug(dtsStepIn);
+end;
+
+procedure TMainForm.acStepOutExecute(Sender: TObject);
+begin
+  _AC.TraceDebug(dtsStepOut);
+end;
+
+procedure TMainForm.acStepOverExecute(Sender: TObject);
+begin
+  _AC.TraceDebug(dtsStepOver);
 end;
 
 procedure TMainForm.acStopExecute(Sender: TObject);
@@ -900,6 +934,11 @@ begin
       if LoadFunctionSource(synmTrackFuncAdvSource, TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo), Data^.TrackCallFuncInfo^.LineNo) then
         pcTrackFuncAdv.ActivePage := tsTrackFuncAdvSrc;
   end;
+end;
+
+procedure TMainForm.acPauseExecute(Sender: TObject);
+begin
+  _AC.PauseDebug;
 end;
 
 procedure TMainForm.HidePCTabs(PC: TPageControl);
@@ -1308,11 +1347,11 @@ end;
 
 procedure TMainForm.ClearProject;
 begin
-  if Assigned(gvDebuger) and not(gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) then
+  if Assigned(gvDebuger) and gvDebuger.Active then
   begin
     acStop.Execute;
 
-    while not(gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) do
+    while gvDebuger.Active do
     begin
       Application.ProcessMessages;
     end;
@@ -1368,16 +1407,6 @@ begin
   if not Visible then Exit;
 
   case Action of
-    acRunEnabled:
-    begin
-      acRun.Enabled := Args[0];
-    end;
-    acStopEnabled:
-    begin
-      acStop.Enabled := Args[0];
-
-      tmrThreadsUpdate.Enabled := acStop.Enabled;
-    end;
     acAddThread:
       AddThread(Args[0]);
     acCreateProcess:
@@ -1386,14 +1415,8 @@ begin
       ProgressAction(Args[0], Args[1]);
     acSetProjectName:
       SetProjectName(Args[0]);
-  end;
-
-  case Action of
-    acRunEnabled, acStopEnabled:
-      if acStop.Enabled then
-        acRunStop.Assign(acStop)
-      else
-        acRunStop.Assign(acRun);
+    acChangeDbgState:
+      UpdateDebugActions;
   end;
 
   UpdateStatusInfo;
@@ -1491,8 +1514,8 @@ begin
     begin
       ProcPoint := ProcData^.DbgPointByIdx(I);
       if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
-        (ProcPoint^.PointType = ptException) then
-      begin
+        (ProcPoint^.PointType in [ptException, ptThreadInfo, ptTraceInfo])
+      then begin
         X1 := R.Left + Integer(I - CurOffset) - 1;
         if (X1 < R.Left) then Continue;
         if (X1 > R.Right) then Break;
@@ -1574,8 +1597,8 @@ begin
     begin
       ProcPoint := ProcData^.DbgPointByIdx(I);
       if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
-        (ProcPoint^.PointType = ptException) then
-      begin
+        (ProcPoint^.PointType in [ptException, ptThreadInfo, ptTraceInfo])
+      then begin
         OffsetT1 := ProcPoint^.FromStart div F;
         X1 := R.Left + Integer(OffsetT1 - Offset) - 1;
 
@@ -2042,7 +2065,7 @@ begin
     if acStop.Enabled then
     begin
       acStop.Execute;
-      while Assigned(gvDebuger) and not(gvDebuger.DbgState in [dsNone, dsStoped, dsDbgFail]) do
+      while Assigned(gvDebuger) and gvDebuger.Active do
       begin
         Sleep(10);
         Application.ProcessMessages;
@@ -3223,17 +3246,13 @@ end;
 
 procedure TMainForm.tmrThreadsUpdateTimer(Sender: TObject);
 begin
-  tmrThreadsUpdate.Enabled := False;
-
+  UpdateDebugActions;
   UpdateStatusInfo;
 
-  if not Assigned(gvDebugInfo) or not Assigned(gvDebuger) or
-    (gvDebuger.DbgState in [dsNone, dsStoped])
-  then Exit;
+  tmrThreadsUpdate.Enabled := (gvDebugInfo <> nil) and (gvDebuger <> nil) and gvDebuger.Active;
 
-  UpdateTrees;
-
-  tmrThreadsUpdate.Enabled := True;
+  if tmrThreadsUpdate.Enabled then
+    UpdateTrees;
 end;
 
 procedure TMainForm.UpdateMainActions;
@@ -3257,6 +3276,49 @@ begin
     acSaveCopy.Enabled := True;
     acEditProject.Enabled := True;
   end;
+end;
+
+procedure TMainForm.UpdateDebugActions;
+var
+  DebugInfoLoaded: Boolean;
+  DebugerStoped: Boolean;
+  DebugePaused: Boolean;
+begin
+  DebugInfoLoaded := Assigned(gvDebugInfo) and gvDebugInfo.DebugInfoLoaded;
+  DebugerStoped := (gvDebuger = Nil) or not gvDebuger.Active;
+
+  acRun.Enabled := DebugInfoLoaded and DebugerStoped;
+  acStop.Enabled := not DebugerStoped;
+
+  if acRun.Enabled then
+    acRunStop.Assign(acRun)
+  else
+  if acStop.Enabled then
+    acRunStop.Assign(acStop)
+  else
+  begin
+    acRunStop.Assign(acPause);
+    acRunStop.Enabled := False;
+  end;
+
+  DebugePaused := Assigned(gvDebuger) and (gvDebuger.DbgTraceState = dtsPause);
+  acPause.Enabled := acStop.Enabled and not(DebugePaused);
+  acContinue.Enabled := DebugePaused;
+
+  if acPause.Enabled then
+    acPauseContinue.Assign(acPause)
+  else
+  if acContinue.Enabled then
+    acPauseContinue.Assign(acContinue)
+  else
+  begin
+    acPauseContinue.Assign(acPause);
+    acPauseContinue.Enabled := False;
+  end;
+
+  acStepInto.Enabled := acContinue.Enabled;
+  acStepOver.Enabled := acContinue.Enabled;
+  acStepOut.Enabled := acContinue.Enabled;
 end;
 
 procedure TMainForm.UpdateLog;
@@ -3312,6 +3374,7 @@ begin
       dsPerfomance: Msg := 'Active';
       dsTrace: Msg := 'Trace';
       dsEvent: Msg := 'Active';
+      dsPause: Msg := 'Pause';
       dsStoping: Msg := 'Stoping';
       dsStoped: Msg := 'Stoped';
       dsDbgFail: Msg := 'Debug Fail';
@@ -3320,8 +3383,8 @@ begin
     end;
     lbStatusDbgStateValue.Caption := Msg;
 
-    if gvDebuger.PerfomanceMode and not(gvDebuger.DbgState in [dsNone]) then
-      lbStatusEventsCntValue.Caption := IntToStr(gvDebuger.ProcessData.CurDbgPointIdx)
+    if gvDebuger.PerfomanceMode and not(gvDebuger.DbgState in [dsNone]) and Assigned(gvDebuger.ProcessData.DbgPoints) then
+      lbStatusEventsCntValue.Caption := IntToStr(gvDebuger.ProcessData.DbgPoints.Count)
     else
       lbStatusEventsCntValue.Caption := '0';
 
