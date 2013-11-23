@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsDebugInfo
+    ActivePage = tsThreads1
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -578,8 +578,8 @@ object MainForm: TMainForm
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 1
         TreeOptions.AutoOptions = [toAutoTristateTracking, toAutoDeleteMovedNodes]
-        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning]
-        TreeOptions.PaintOptions = [toShowBackground, toThemeAware]
+        TreeOptions.MiscOptions = [toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toShowBackground, toThemeAware, toStaticBackground]
         TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
         OnAdvancedHeaderDraw = vdtTimeLineAdvancedHeaderDraw
         OnChange = vdtTimeLineChange

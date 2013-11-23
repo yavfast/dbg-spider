@@ -125,12 +125,16 @@ begin
   Kernel32_EnterCriticalSection(lpCriticalSection);
 
   _AddSyncObjsInfo(soEnterCriticalSection, sosLeave, Id, NativeUInt(@lpCriticalSection));
+
+  _AddSyncObjsInfo(soInCriticalSection, sosEnter, 0, NativeUInt(@lpCriticalSection));
 end;
 
 procedure _HookLeaveCriticalSection(var lpCriticalSection: TRTLCriticalSection); stdcall;
 var
   Id: NativeUInt;
 begin
+  _AddSyncObjsInfo(soInCriticalSection, sosLeave, 0, NativeUInt(@lpCriticalSection));
+
   Id := NativeUInt(InterlockedIncrement(SyncObjsId));
 
   _AddSyncObjsInfo(soLeaveCriticalSection, sosEnter, Id, NativeUInt(@lpCriticalSection));
@@ -150,7 +154,7 @@ begin
 
   Result := Kernel32_WaitForSingleObject(hHandle, dwMilliseconds);
 
-  _AddSyncObjsInfo(soLeaveCriticalSection, sosLeave, Id, NativeUInt(hHandle));
+  _AddSyncObjsInfo(soWaitForSingleObject, sosLeave, Id, NativeUInt(hHandle));
 end;
 
 function _HookWaitForMultipleObjects(nCount: DWORD; lpHandles: PWOHandleArray; bWaitAll: BOOL; dwMilliseconds: DWORD): DWORD; stdcall;
@@ -159,11 +163,11 @@ var
 begin
   Id := NativeUInt(InterlockedIncrement(SyncObjsId));
 
-  _AddSyncObjsInfo(soWaitForSingleObject, sosEnter, Id, NativeUInt(Pointer(lpHandles)));
+  _AddSyncObjsInfo(soWaitForMultipleObjects, sosEnter, Id, NativeUInt(Pointer(lpHandles)));
 
   Result := Kernel32_WaitForMultipleObjects(nCount, lpHandles, bWaitAll, dwMilliseconds);
 
-  _AddSyncObjsInfo(soLeaveCriticalSection, sosLeave, Id, NativeUInt(Pointer(lpHandles)));
+  _AddSyncObjsInfo(soWaitForMultipleObjects, sosLeave, Id, NativeUInt(Pointer(lpHandles)));
 end;
 
 var
