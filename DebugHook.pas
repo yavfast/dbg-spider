@@ -77,7 +77,8 @@ begin
   ZeroMemory(@DbgLoaderInfo, SizeOf(TDbgLoaderInfo));
 
   DbgLoaderInfo.ImageBase := ImageBase;
-  DbgLoaderInfo.MemoryMgr := Pointer(MemoryMgr.Offset);
+  if Assigned(MemoryMgr) then
+    DbgLoaderInfo.MemoryMgr := Pointer(MemoryMgr.Offset);
   DbgLoaderInfo.MemoryCallStack := MemoryCallStack;
   DbgLoaderInfo.PerfDelta := 10;
 

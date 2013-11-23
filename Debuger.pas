@@ -2610,7 +2610,7 @@ var
   ThSyncObjsInfo: PSyncObjsInfo;
   SyncObjsLink: PSyncObjsInfo;
 
-  function FindLink(const Id: Cardinal): PSyncObjsInfo;
+  function FindLink(const Id: NativeUInt): PSyncObjsInfo;
   var
     Idx: Integer;
   begin
@@ -2620,6 +2620,28 @@ var
       Result := ThData^.DbgSyncObjsInfo[Idx];
       if (Result^.SyncObjsInfo.Id = Id) and (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter) then
         Exit;
+
+      Dec(Idx);
+    end;
+
+    Result := nil;
+  end;
+
+  function FindCSLink(const CSData: NativeUInt): PSyncObjsInfo;
+  var
+    Idx: Integer;
+  begin
+    Idx := ThData^.DbgSyncObjsInfo.Count - 1;
+    while Idx >= 0 do
+    begin
+      Result := ThData^.DbgSyncObjsInfo[Idx];
+      if (Result^.SyncObjsInfo.SyncObjsType = soInCriticalSection) and
+        (Result^.SyncObjsInfo.Data = CSData) and
+        (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter)
+      then
+        Exit;
+
+      Dec(Idx);
     end;
 
     Result := nil;
@@ -2642,14 +2664,19 @@ begin
         RaiseDebugCoreException();
 
       case SyncObjsInfo^.SyncObjsType of
-        soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection:
+        soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection:
           begin
             ThData^.DbgSyncObjsInfo.BeginRead;
             try
+              SyncObjsLink := nil;
+
               if SyncObjsInfo^.SyncObjsStateType = sosLeave then
-                SyncObjsLink := FindLink(SyncObjsInfo^.Id)
-              else
-                SyncObjsLink := nil;
+              begin
+                if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
+                  SyncObjsLink := FindCSLink(SyncObjsInfo^.Data)
+                else
+                  SyncObjsLink := FindLink(SyncObjsInfo^.Id);
+              end;
 
               ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
 

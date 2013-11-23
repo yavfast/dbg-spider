@@ -2,7 +2,8 @@ unit uSpiderOptions;
 
 interface
 
-uses Classes, XMLDoc, XMLIntf, DebugerTypes, DbgHookTypes, Graphics;
+uses Classes, XMLDoc, XMLIntf, DebugerTypes, DbgHookTypes, Graphics,
+  System.UITypes;
 
 type
   TColorOptions = class
@@ -131,8 +132,9 @@ const
     clSilver, // soSleep
     clGray, // soWaitForSingleObject
     clGray, // soWaitForMultipleObjects
-    clPurple, // soEnterCriticalSection
-    clLime // soLeaveCriticalSection
+    clYellow, // soEnterCriticalSection
+    clLime, // soLeaveCriticalSection
+    clMaroon // soInCriticalSection
   );
 
   _SyncObjsColorNames: array[Low(TDbgSyncObjsType) .. High(TDbgSyncObjsType)] of String = (
@@ -140,7 +142,8 @@ const
     'waitforsingleobject', // soWaitForSingleObject
     'waitformultipleobjects', // soWaitForMultipleObjects
     'entercriticalsection', // soEnterCriticalSection
-    'leavecriticalsection' // soLeaveCriticalSection
+    'leavecriticalsection', // soLeaveCriticalSection
+    'incriticalsection' // soInCriticalSection
   );
 
 { TSpiderOptions }

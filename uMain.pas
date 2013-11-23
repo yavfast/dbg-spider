@@ -5,7 +5,7 @@ interface
 uses
   Windows, uShareData, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Buttons, Mask, ExtCtrls, ComCtrls, ActnList, DebugInfo,
-  Grids, VirtualTrees,
+  Grids, VirtualTrees, GdiPlus, GdiPlusHelpers,
   Debuger, DebugerTypes, DelphiDebugInfo,
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
@@ -481,12 +481,15 @@ type
     procedure UpdateTrackHistoryList;
     procedure ClearTrackHistoryList;
 
-    procedure DrawTimeLineHeader(C: TCanvas; const R: TRect; const Offset: Integer);
-    procedure DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
-    procedure DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
-    procedure DrawProcessTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
-    procedure DrawProcessCPUTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
-    procedure DrawBackground(TargetCanvas: TCanvas; const R: TRect; BkColor: TColor);
+    procedure DrawTimeLineHeaderEx(GP: IGPGraphics; const R: TRect; const Offset: Integer);
+
+    procedure DrawThreadTimeLine(GP: IGPGraphics; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
+    procedure DrawThreadCPUTimeLine(GP: IGPGraphics; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
+
+    procedure DrawProcessTimeLine(GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+    procedure DrawProcessCPUTimeLine(GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+
+    procedure DrawBackgroundEx(GP: IGPGraphics; const R: TRect; const BkColor: TColor);
 
     procedure AddProcess(const ProcessID: Cardinal);
     procedure AddThread(const ThreadID: Cardinal);
@@ -525,7 +528,7 @@ implementation
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
   uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types,
   uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI, uFeedback,
-  DbgHookTypes;
+  DbgHookTypes, Collections.Dictionaries;
 
 const
   _TrackingID_web = 'UA-44820931-1';
@@ -534,79 +537,6 @@ const
 
 type
   THookBaseVirtualTree = class(TBaseVirtualTree);
-
-procedure DrawVGradientRect(Canvas: TCanvas; const Rect: TRect; const StartColor, EndColor: TColor);
-var
-  I: Integer;
-  R: TRect;
-  LStartRGB, LEndRGB: TColor;
-  LSteps: Integer;
-  DeltaR: Double;
-  DeltaG: Double;
-  DeltaB: Double;
-  DeltaColor: TColor;
-begin
-  LSteps := Rect.Bottom - Rect.Top;
-  if LSteps = 0 then Exit;
-
-  LStartRGB := ColorToRGB(StartColor);
-  LEndRGB := ColorToRGB(EndColor);
-
-  DeltaR := (GetRValue(LEndRGB) - GetRValue(LStartRGB)) / LSteps;
-  DeltaG := (GetGValue(LEndRGB) - GetGValue(LStartRGB)) / LSteps;
-  DeltaB := (GetBValue(LEndRGB) - GetBValue(LStartRGB)) / LSteps;
-
-  R.Left := Rect.Left;
-  R.Right := Rect.Right;
-
-  Canvas.Pen.Style := psSolid;
-
-  for I := 0 to LSteps - 1 do
-  begin
-    R.Top := Rect.Top + I;
-
-    DeltaColor := RGB(
-      GetRValue(LStartRGB) + Round(I * DeltaR),
-      GetGValue(LStartRGB) + Round(I * DeltaG),
-      GetBValue(LStartRGB) + Round(I * DeltaB)
-    );
-
-    if R.Left = R.Right then
-    begin
-      Canvas.Pixels[R.Left, R.Top] := DeltaColor;
-    end
-    else
-    begin
-      Canvas.Pen.Color := DeltaColor;
-      Canvas.MoveTo(R.Left, R.Top);
-      Canvas.LineTo(R.Right, R.Top);
-    end;
-  end;
-end;
-
-procedure DrawVGradientRect2(Canvas: TCanvas; const Rect: TRect; const Color: TColor; const Delta: Byte = 50);
-var
-  H, S, V: Integer;
-  C1, C2: TColor;
-begin
-  RGBToHSV(Color, H, S, V);
-
-  C1 := HSV2RGB(H, S, V + Delta);
-  C2 := HSV2RGB(H, S, V - Delta);
-
-  DrawVGradientRect(Canvas, Rect, C1, C2);
-end;
-
-procedure DrawHInterval(Canvas: TCanvas; const Rect: TRect; const Color: TColor);
-begin
-  if Abs(Rect.Right - Rect.Left) > 1 then
-  begin
-    Canvas.Brush.Color := Color;
-    Canvas.Brush.Style := bsSolid;
-
-    Canvas.FillRect(Rect);
-  end;
-end;
 
 procedure TMainForm.acAddressInfoExecute(Sender: TObject);
 var
@@ -1452,6 +1382,7 @@ end;
 const
   _TicksPerSec = 100;
 
+(*
 procedure TMainForm.DrawBackground(TargetCanvas: TCanvas; const R: TRect; BkColor: TColor);
 var
   Cnt: Integer;
@@ -1476,16 +1407,39 @@ begin
 
   TargetCanvas.Pen.Mode := pmCopy;
 end;
+*)
 
-procedure TMainForm.DrawProcessCPUTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+procedure TMainForm.DrawBackgroundEx(GP: IGPGraphics; const R: TRect; const BkColor: TColor);
+const
+  DashValues: array [0..1] of Single = (4, 2);
+var
+  Brush: IGPBrush;
+  Pen: IGPPen;
+
+  Cnt: Integer;
+  X: Integer;
+begin
+  Brush := TGPSolidBrush.Create(TGPColor.Create(ColorToRGB(BkColor)));
+  Pen := TGPPen.Create(TGPColor.Silver);
+  Pen.SetDashPattern(DashValues);
+
+  GP.FillRectangle(Brush, TGPRect.Create(R));
+
+  For Cnt := 0 to ((R.Right - R.Left + 1) div 100) + 1 do
+  begin
+    X := R.Left + Cnt * 100 + 1;
+
+    GP.DrawLine(Pen, X, R.Top, X, R.Bottom);
+  end;
+end;
+
+procedure TMainForm.DrawProcessCPUTimeLine(GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
 var
   X1, X2, Y1, Y2: Integer;
   T1, T2: Int64;
   I: Cardinal;
   ProcPoint: PProcessPoint;
 begin
-  DrawBackground(C, R, C.Brush.Color);
-
   if (ProcData = nil) or (ProcData^.DbgPointsCount = 0) then Exit;
 
   T1 := 0;
@@ -1506,7 +1460,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
+  DrawVGradientRect(GP, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ProcData^.DbgPointsCount > 0 then
   begin
@@ -1520,13 +1474,13 @@ begin
         if (X1 < R.Left) then Continue;
         if (X1 > R.Right) then Break;
 
-        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
+        DrawVGradientRect(GP, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
       end;
     end;
   end;
 end;
 
-procedure TMainForm.DrawProcessTimeLine(C: TCanvas; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+procedure TMainForm.DrawProcessTimeLine(GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
 var
   X1, X2, Y1, Y2: Integer;
   T1, T2, F: Int64;
@@ -1535,8 +1489,6 @@ var
   I: Cardinal;
   ProcPoint: PProcessPoint;
 begin
-  DrawBackground(C, R, C.Brush.Color);
-
   if ProcData = nil then Exit;
 
   T1 := 0;
@@ -1571,7 +1523,7 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
+  DrawVGradientRect(GP, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ProcData^.DbgPointsCount > 0 then
   begin
@@ -1607,13 +1559,13 @@ begin
         if (X1 > R.Right) then
           Break;
 
-        DrawVGradientRect2(C, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
+        DrawVGradientRect(GP, Rect(X1, Y1, X1, Y2), FSpiderOptions.TimelineColors[ProcPoint^.PointType]);
       end;
     end;
   end;
 end;
 
-procedure TMainForm.DrawThreadCPUTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
+procedure TMainForm.DrawThreadCPUTimeLine(GP: IGPGraphics; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
 var
   X1, X2, X3, Y1, Y2: Integer;
   T1, T2, T3: Int64;
@@ -1669,14 +1621,22 @@ var
 
     if XL <> XR then
     begin
-      DR := Rect(XL, Y1 - 2, XR, Y1);
-      DrawHInterval(C, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+      case SyncObjsInfo^.SyncObjsInfo.SyncObjsType of
+        soInCriticalSection:
+          begin
+            DR := Rect(XL, Y1 - 2, XR, Y1);
+            DrawHInterval(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+          end;
+      else
+        begin
+          DR := Rect(XL, Y1, XR, Y2);
+          DrawVGradientRect(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+        end;
+      end;
     end;
   end;
 
 begin
-  DrawBackground(C, R, C.Brush.Color);
-
   if (ThData = nil) or (ThData^.DbgPointsCount = 0) then Exit;
 
   T1 := ThData^.DbgPointByIdx(0)^.PerfIdx;
@@ -1700,46 +1660,11 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
+  DrawVGradientRect(GP, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ThData^.DbgPointsCount > 0 then
   begin
     IdxL := 0;
-
-    // Ищем начальный индекс для первого видимого события
-    if CurOffset > 0 then
-    begin
-      IdxR := ThData^.DbgPointsCount - 1;
-
-      repeat
-        Idx := (IdxL + IdxR) div 2;
-        ThPoint := ThData^.DbgPointByIdx(Idx);
-
-        if ThPoint^.PerfIdx > CurOffset then
-          IdxR := Idx
-        else
-          IdxL := Idx;
-      until IdxR - IdxL <= 1;
-    end;
-
-    // Отрисовка событий
-    for I := IdxL to ThData^.DbgPointsCount - 1 do
-    begin
-      ThPoint := ThData^.DbgPointByIdx(I);
-
-      if ThPoint = nil then
-        Continue;
-
-      T3 := ThPoint^.PerfIdx;
-      X3 := R.Left + Integer(T3 - CurOffset) - 1;
-
-      if (X3 < R.Left) then
-        Continue;
-      if (X3 > R.Right) then
-        Break;
-
-      DrawVGradientRect2(C, Rect(X3, Y1, X3, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
-    end;
 
     // Отрисовка SyncObjs
     if ThData^.DbgSyncObjsInfo.Count > 0 then
@@ -1792,10 +1717,45 @@ begin
         _DrawSyncObjs(SyncObjsInfo);
       end;
     end;
+
+    // Ищем начальный индекс для первого видимого события
+    if CurOffset > 0 then
+    begin
+      IdxR := ThData^.DbgPointsCount - 1;
+
+      repeat
+        Idx := (IdxL + IdxR) div 2;
+        ThPoint := ThData^.DbgPointByIdx(Idx);
+
+        if ThPoint^.PerfIdx > CurOffset then
+          IdxR := Idx
+        else
+          IdxL := Idx;
+      until IdxR - IdxL <= 1;
+    end;
+
+    // Отрисовка событий
+    for I := IdxL to ThData^.DbgPointsCount - 1 do
+    begin
+      ThPoint := ThData^.DbgPointByIdx(I);
+
+      if ThPoint = nil then
+        Continue;
+
+      T3 := ThPoint^.PerfIdx;
+      X3 := R.Left + Integer(T3 - CurOffset) - 1;
+
+      if (X3 < R.Left) then
+        Continue;
+      if (X3 > R.Right) then
+        Break;
+
+      DrawVGradientRect(GP, Rect(X3, Y1, X3, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
+    end;
   end;
 end;
 
-procedure TMainForm.DrawThreadTimeLine(C: TCanvas; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
+procedure TMainForm.DrawThreadTimeLine(GP: IGPGraphics; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
 var
   X1, X2, X3, Y1, Y2: Integer;
   T1, T2, T3, F: Int64;
@@ -1853,8 +1813,18 @@ var
 
     if XL <> XR then
     begin
-      DR := Rect(XL, Y1 - 2, XR, Y1);
-      DrawHInterval(C, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+      case SyncObjsInfo^.SyncObjsInfo.SyncObjsType of
+        soInCriticalSection:
+          begin
+            DR := Rect(XL, Y1 - 2, XR, Y1);
+            DrawHInterval(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+          end;
+      else
+        begin
+          DR := Rect(XL, Y1, XR, Y2);
+          DrawVGradientRect(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+        end;
+      end;
     end;
   end;
 
@@ -1862,8 +1832,6 @@ var
   IdxL1, IdxR1: Cardinal;
   SyncObjsInfo: PSyncObjsInfo;
 begin
-  DrawBackground(C, R, C.Brush.Color);
-
   if ThData = nil then Exit;
 
   T1 := ThData^.Started;
@@ -1899,48 +1867,11 @@ begin
   Y1 := R.Top + 3;
   Y2 := R.Bottom - 3;
 
-  DrawVGradientRect2(C, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
+  DrawVGradientRect(GP, Rect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
   if ThData^.DbgPointsCount > 0 then
   begin
     IdxL := 0;
-
-    // Ищем начальный индекс для первого видимого события
-    if Offset > 0 then
-    begin
-      IdxR := ThData^.DbgPointsCount - 1;
-
-      repeat
-        Idx := (IdxL + IdxR) div 2;
-        ThPoint := ThData^.DbgPointByIdx(Idx);
-        ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
-
-        if (ProcPoint^.FromStart div F) > Offset then
-          IdxR := Idx
-        else
-          IdxL := Idx;
-      until IdxR - IdxL <= 1;
-    end;
-
-    for I := IdxL to ThData^.DbgPointsCount - 1 do
-    begin
-      ThPoint := ThData^.DbgPointByIdx(I);
-
-      if ThPoint = nil then
-        Continue;
-
-      ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
-
-      T3 := ProcPoint^.FromStart div F;
-      X3 := R.Left + Integer(T3 - Offset) - 1;
-
-      if (X3 < R.Left) then
-        Continue;
-      if (X3 > R.Right) then
-        Break;
-
-      DrawVGradientRect2(C, Rect(X3, Y1, X3, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
-    end;
 
     // Отрисовка SyncObjs
     if ThData^.DbgSyncObjsInfo.Count > 0 then
@@ -2000,9 +1931,47 @@ begin
         _DrawSyncObjs(SyncObjsInfo);
       end;
     end;
+
+    // Ищем начальный индекс для первого видимого события
+    if Offset > 0 then
+    begin
+      IdxR := ThData^.DbgPointsCount - 1;
+
+      repeat
+        Idx := (IdxL + IdxR) div 2;
+        ThPoint := ThData^.DbgPointByIdx(Idx);
+        ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
+
+        if (ProcPoint^.FromStart div F) > Offset then
+          IdxR := Idx
+        else
+          IdxL := Idx;
+      until IdxR - IdxL <= 1;
+    end;
+
+    for I := IdxL to ThData^.DbgPointsCount - 1 do
+    begin
+      ThPoint := ThData^.DbgPointByIdx(I);
+
+      if ThPoint = nil then
+        Continue;
+
+      ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(ThPoint^.PerfIdx);
+
+      T3 := ProcPoint^.FromStart div F;
+      X3 := R.Left + Integer(T3 - Offset) - 1;
+
+      if (X3 < R.Left) then
+        Continue;
+      if (X3 > R.Right) then
+        Break;
+
+      DrawVGradientRect(GP, Rect(X3, Y1, X3, Y2), FSpiderOptions.TimelineColors[ThPoint^.PointType]);
+    end;
   end;
 end;
 
+(*
 procedure TMainForm.DrawTimeLineHeader(C: TCanvas; const R: TRect; const Offset: Integer);
 var
   Cnt: Cardinal;
@@ -2051,6 +2020,54 @@ begin
 
     C.MoveTo(X + 50, Y - 1);
     C.LineTo(X + 50, Y - 4);
+  end;
+end;
+*)
+
+procedure TMainForm.DrawTimeLineHeaderEx(GP: IGPGraphics; const R: TRect; const Offset: Integer);
+var
+  Font: IGPFont;
+  Pen: IGPPen;
+  Brush: IGPBrush;
+
+  Cnt: Cardinal;
+  X, Y: Integer;
+  T: String;
+  Idx: Cardinal;
+  ProcPoint: PProcessPoint;
+begin
+  Font := TGPFont.Create('Tahoma', 10, FontStyleRegular, UnitPixel);
+  Pen := TGPPen.Create(TGPColor.Black);
+  Brush := TGPSolidBrush.Create(TGPColor.Black);
+
+  For Cnt := 0 to ((R.Right - R.Left + 1) div 100) + 1 do
+  begin
+    X := R.Left + Integer(Cnt) * 100;
+    Y := R.Bottom;
+
+    T := '';
+
+    if acCPUTimeLine.Checked then
+    begin
+      if Assigned(gvDebuger) then
+      begin
+        Idx := Offset + Integer(Cnt) * 100;
+
+        if Idx < gvDebuger.ProcessData.DbgPointsCount then
+        begin
+          ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(Idx);
+          T := EllapsedToTime(ProcPoint^.CPUTime);
+        end;
+      end;
+    end
+    else
+      T := OffsetToTime(Cardinal(Offset + Integer(Cnt)));
+
+    if T <> '' then
+      GP.DrawString(T, Font, TGPPointF.Create(X + 2, R.Top - 3), Brush);
+
+    GP.DrawLine(Pen, X - 1, Y - 1, X - 1, Y - 8);
+    GP.DrawLine(Pen, X + 50, Y - 1, X + 50, Y - 4);
   end;
 end;
 
@@ -3481,7 +3498,7 @@ procedure TMainForm.vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
 begin
   if (PaintInfo.Column <> Nil) and (PaintInfo.Column.Index = 0)then
-    DrawTimeLineHeader(PaintInfo.TargetCanvas, PaintInfo.PaintRectangle, GetLineTimeOffset);
+    DrawTimeLineHeaderEx(PaintInfo.TargetCanvas.ToGPGraphics, PaintInfo.PaintRectangle, GetLineTimeOffset);
 end;
 
 procedure TMainForm.vdtTimeLineChange(Sender: TBaseVirtualTree; Node: PVirtualNode);
@@ -3491,27 +3508,32 @@ end;
 
 procedure TMainForm.vdtTimeLineDrawNode(Sender: TBaseVirtualTree; const PaintInfo: TVTPaintInfo);
 var
+  GP: IGPGraphics;
   LinkData: PLinkData;
   R: TRect;
 begin
+  GP := PaintInfo.Canvas.ToGPGraphics;
+
   R := PaintInfo.CellRect;
   R.Width := vdtTimeLine.ClientWidth;
+
+  DrawBackgroundEx(GP, R, PaintInfo.Canvas.Brush.Color);
 
   LinkData := Sender.GetNodeData(PaintInfo.Node);
   case LinkData^.LinkType of
     ltProcess:
     begin
       if acCPUTimeLine.Checked then
-        DrawProcessCPUTimeLine(PaintInfo.Canvas, R, LinkData^.ProcessData, GetLineTimeOffset)
+        DrawProcessCPUTimeLine(GP, R, LinkData^.ProcessData, GetLineTimeOffset)
       else
-        DrawProcessTimeLine(PaintInfo.Canvas, R, LinkData^.ProcessData, GetLineTimeOffset);
+        DrawProcessTimeLine(GP, R, LinkData^.ProcessData, GetLineTimeOffset);
     end;
     ltThread:
     begin
       if acCPUTimeLine.Checked then
-        DrawThreadCPUTimeLine(PaintInfo.Canvas, R, LinkData^.ThreadData, GetLineTimeOffset)
+        DrawThreadCPUTimeLine(GP, R, LinkData^.ThreadData, GetLineTimeOffset)
       else
-        DrawThreadTimeLine(PaintInfo.Canvas, R, LinkData^.ThreadData, GetLineTimeOffset);
+        DrawThreadTimeLine(GP, R, LinkData^.ThreadData, GetLineTimeOffset);
     end;
   end;
 end;
@@ -3524,7 +3546,9 @@ end;
 
 procedure TMainForm.vdtTimeLinePaintBackground(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; R: TRect; var Handled: Boolean);
 begin
-  DrawBackground(TargetCanvas, R, TargetCanvas.Brush.Color);
+  R.Width := vdtTimeLine.ClientWidth;
+
+  DrawBackgroundEx(TargetCanvas.ToGPGraphics, R, vdtTimeLine.Canvas.Brush.Color);
 
   Handled := True;
 end;

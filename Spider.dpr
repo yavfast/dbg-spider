@@ -39,7 +39,9 @@ uses
   Collections.Stacks in 'Collections\Collections.Stacks.pas',
   uGA in 'uGA.pas',
   uUpdateInfo in 'uUpdateInfo.pas',
-  uFeedback in 'uFeedback.pas' {frmFeedback};
+  uFeedback in 'uFeedback.pas' {frmFeedback},
+  GdiPlus in 'GdiPlus\GdiPlus.pas',
+  GdiPlusHelpers in 'GdiPlus\GdiPlusHelpers.pas';
 
 {$R *.res}
 

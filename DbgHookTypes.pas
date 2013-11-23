@@ -37,7 +37,12 @@ type
 
   // SyncObjs
 
-  TDbgSyncObjsType = (soSleep = 0, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soLeaveCriticalSection);
+  TDbgSyncObjsType = (
+    soSleep = 0,
+    soWaitForSingleObject, soWaitForMultipleObjects,
+    soEnterCriticalSection, soLeaveCriticalSection, soInCriticalSection
+  );
+
   TDbgSyncObjsStateType = (sosEnter = 0, sosLeave = 1);
 
   PDbgSyncObjsInfo = ^TDbgSyncObjsInfo;
