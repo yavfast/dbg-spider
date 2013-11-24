@@ -124,7 +124,7 @@ Uses
   ClassUtils,
   DebugHook,
   StrUtils,
-  System.Contnrs;
+  System.Contnrs, Vcl.Forms;
 { .............................................................................. }
 
 { .............................................................................. }
@@ -1971,7 +1971,7 @@ Begin
   // !!! ѕоток запуститс€ не сразу, а через некоторое врем€
   LoadDbgHookDll(
     gvDebuger.ProcessData.AttachedProcessHandle,
-    'DbgHook32.dll',
+    Format('%s\DbgHook32.dll', [ExtractFileDir(Application.ExeName)]),
     Pointer(FImage.OptionalHeader32.ImageBase),
     MemoryManagerInfo.VarInfo,
     gvDebuger.MemoryCallStack

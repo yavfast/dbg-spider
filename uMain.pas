@@ -1586,6 +1586,8 @@ var
 
     SyncObjsInfoL: PSyncObjsInfo;
     SyncObjsInfoR: PSyncObjsInfo;
+
+    SyncObjsColor: TColor;
   begin
     SyncObjsInfoL := nil;
     SyncObjsInfoR := nil;
@@ -1621,16 +1623,26 @@ var
 
     if XL <> XR then
     begin
+      SyncObjsColor := FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType];
+
       case SyncObjsInfo^.SyncObjsInfo.SyncObjsType of
         soInCriticalSection:
           begin
             DR := Rect(XL, Y1 - 2, XR, Y1);
-            DrawHInterval(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+            DrawHInterval(GP, DR, SyncObjsColor);
+
+            (*
+            DR := Rect(XL, Y1, XL, Y2);
+            DrawVGradientRect(GP, DR, SyncObjsColor);
+
+            DR := Rect(XR, Y1, XR, Y2);
+            DrawVGradientRect(GP, DR, SyncObjsColor);
+            *)
           end;
       else
         begin
           DR := Rect(XL, Y1, XR, Y2);
-          DrawVGradientRect(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+          DrawVGradientRect(GP, DR, SyncObjsColor);
         end;
       end;
     end;
@@ -1774,6 +1786,8 @@ var
 
     SyncObjsInfoL: PSyncObjsInfo;
     SyncObjsInfoR: PSyncObjsInfo;
+
+    SyncObjsColor: TColor;
   begin
     SyncObjsInfoL := nil;
     SyncObjsInfoR := nil;
@@ -1793,36 +1807,40 @@ var
 
     if Assigned(SyncObjsInfoL) then
     begin
-      ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfoL^.PerfIdx);
-
-      TL := ProcPoint^.FromStart div F;
-      XL := R.Left + Integer(TL - Offset) - 1;
+      TL := (SyncObjsInfoL^.SyncObjsInfo.CurTime - ThData^.Started) div F;
+      XL := R.Left + Integer(OffsetT1 + TL - Offset);
     end
     else
       XL := X1;
 
     if Assigned(SyncObjsInfoR) then
     begin
-      ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfoR^.PerfIdx);
-
-      TR := ProcPoint^.FromStart div F;
-      XR := R.Left + Integer(TR - Offset) - 1;
+      TR := (SyncObjsInfoR^.SyncObjsInfo.CurTime - ThData^.Started) div F;
+      XR := R.Left + Integer(OffsetT1 + TR - Offset);
     end
     else
       XR := X2;
 
     if XL <> XR then
     begin
+      SyncObjsColor := FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType];
+
       case SyncObjsInfo^.SyncObjsInfo.SyncObjsType of
         soInCriticalSection:
           begin
             DR := Rect(XL, Y1 - 2, XR, Y1);
-            DrawHInterval(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+            DrawHInterval(GP, DR, SyncObjsColor);
+
+            DR := Rect(XL, Y1, XL, Y2);
+            DrawVGradientRect(GP, DR, FSpiderOptions.SyncObjsColors[soEnterCriticalSection]);
+
+            DR := Rect(XR, Y1, XR, Y2);
+            DrawVGradientRect(GP, DR, FSpiderOptions.SyncObjsColors[soLeaveCriticalSection]);
           end;
       else
         begin
           DR := Rect(XL, Y1, XR, Y2);
-          DrawVGradientRect(GP, DR, FSpiderOptions.SyncObjsColors[SyncObjsInfo^.SyncObjsInfo.SyncObjsType]);
+          DrawVGradientRect(GP, DR, SyncObjsColor);
         end;
       end;
     end;

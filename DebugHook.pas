@@ -51,21 +51,29 @@ begin
     @ExitThread := GetProcAddress(HLib, sExitThread);
 
     HLib := LoadLibrary(sDllPath);
-    @InitThreadHook := GetProcAddress(HLib, sDllProcThreadHook);
-    @InitSyncObjsHook := GetProcAddress(HLib, sDllProcSyncObjsHook);
-    @InitMemoryHook := GetProcAddress(HLib, sDllProcMemoryHook);
-    @InitPerfomance := GetProcAddress(HLib, sDllProcPerfomance);
-
-    if InitThreadHook(ImageBase) then
+    if HLib <> 0 then
     begin
-      InitSyncObjsHook(ImageBase);
-      InitPerfomance(PerfDelta);
+      @InitThreadHook := GetProcAddress(HLib, sDllProcThreadHook);
+      @InitSyncObjsHook := GetProcAddress(HLib, sDllProcSyncObjsHook);
+      @InitMemoryHook := GetProcAddress(HLib, sDllProcMemoryHook);
+      @InitPerfomance := GetProcAddress(HLib, sDllProcPerfomance);
 
-      if MemoryMgr <> Nil then
-        InitMemoryHook(MemoryMgr, MemoryCallStack);
-    end;
+      if (@InitThreadHook <> nil) and InitThreadHook(ImageBase) then
+      begin
+        if (@InitSyncObjsHook <> nil) then
+          InitSyncObjsHook(ImageBase);
 
-    ExitThread(0);
+        if (@InitPerfomance <> nil) then
+          InitPerfomance(PerfDelta);
+
+        if (@InitMemoryHook <> nil) and (MemoryMgr <> Nil) then
+          InitMemoryHook(MemoryMgr, MemoryCallStack);
+      end;
+
+      ExitThread(0);
+    end
+    else
+      ExitThread(1);
   end;
 end;
 procedure _DbgLoaderEnd; begin end;
@@ -77,8 +85,12 @@ begin
   ZeroMemory(@DbgLoaderInfo, SizeOf(TDbgLoaderInfo));
 
   DbgLoaderInfo.ImageBase := ImageBase;
+
   if Assigned(MemoryMgr) then
-    DbgLoaderInfo.MemoryMgr := Pointer(MemoryMgr.Offset);
+    DbgLoaderInfo.MemoryMgr := Pointer(MemoryMgr.Offset)
+  else
+    DbgLoaderInfo.MemoryMgr := nil;
+
   DbgLoaderInfo.MemoryCallStack := MemoryCallStack;
   DbgLoaderInfo.PerfDelta := 10;
 
