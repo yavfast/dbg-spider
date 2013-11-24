@@ -32,7 +32,7 @@ procedure _OutSyncObjsInfo;
 
 implementation
 
-uses DbgHookCS, SysUtils, Classes, DbgHookTypes, JclPEImage{TODO: Remove JCL};
+uses DbgHookCS, SysUtils, Classes, DbgHookTypes, WinAPIUtils, JclPEImage{TODO: Remove JCL};
 
 var
   _SyncObjsInfoList: PDbgSyncObjsInfoList = nil;
@@ -81,7 +81,10 @@ procedure _AddSyncObjsInfo(const DbgSyncObjsType: TDbgSyncObjsType; const DbgSyn
   const Id: NativeUInt; const Data: NativeUInt);
 var
   SyncObjsInfo: PDbgSyncObjsInfo;
+  CurTime: Int64;
 begin
+  CurTime := _QueryPerformanceCounter;
+
   SyncObjsLock.Enter;
   if _SyncObjsInfoList <> Nil then
   begin
@@ -92,6 +95,7 @@ begin
     SyncObjsInfo^.SyncObjsStateType := DbgSyncObjsStateType;
     SyncObjsInfo^.Id := Id;
     SyncObjsInfo^.Data := Data;
+    SyncObjsInfo^.CurTime := CurTime;
 
     Inc(_SyncObjsInfoListCnt);
 
@@ -180,44 +184,49 @@ var
 begin
   if not SyncObjsHooked then
   begin
-    SyncObjsLock := TDbgCriticalSection.Create;
-
     H := GetModuleHandle(kernel32);
+    if H = 0 then
+    begin
+      OutputDebugStringA('GetModuleHandle(kernel32) - fail');
+      Exit;
+    end;
+
+    SyncObjsLock := TDbgCriticalSection.Create;
 
     _PeMapImgHooks := TJclPeMapImgHooks.Create;
 
     SyncObjsLock.Enter;
     try
       ProcAddr := GetProcAddress(H, 'Sleep');
-      if _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookSleep) then
+      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookSleep) then
       begin
         @Kernel32_Sleep := ProcAddr;
         OutputDebugStringA('Hook Sleep - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'WaitForSingleObject');
-      if _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForSingleObject) then
+      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForSingleObject) then
       begin
         @Kernel32_WaitForSingleObject := ProcAddr;
         OutputDebugStringA('Hook WaitForSingleObject - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'WaitForMultipleObjects');
-      if _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForMultipleObjects) then
+      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForMultipleObjects) then
       begin
         @Kernel32_WaitForMultipleObjects := ProcAddr;
         OutputDebugStringA('Hook WaitForMultipleObjects - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'EnterCriticalSection');
-      if _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookEnterCriticalSection) then
+      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookEnterCriticalSection) then
       begin
         @Kernel32_EnterCriticalSection := ProcAddr;
         OutputDebugStringA('Hook EnterCriticalSection - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'LeaveCriticalSection');
-      if _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookLeaveCriticalSection) then
+      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookLeaveCriticalSection) then
       begin
         @Kernel32_LeaveCriticalSection := ProcAddr;
         OutputDebugStringA('Hook LeaveCriticalSection - ok');
@@ -235,16 +244,21 @@ end;
 
 procedure _UnHookSyncObjs;
 begin
-  if SyncObjsHooked then
+  if SyncObjsHooked and Assigned(_PeMapImgHooks) then
   begin
-    _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_Sleep);
-    _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_EnterCriticalSection);
-    _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_LeaveCriticalSection);
-    _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForSingleObject);
-    _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForMultipleObjects);
-  end;
+    if Assigned(@Kernel32_Sleep) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_Sleep);
+    if Assigned(@Kernel32_EnterCriticalSection) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_EnterCriticalSection);
+    if Assigned(@Kernel32_LeaveCriticalSection) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_LeaveCriticalSection);
+    if Assigned(@Kernel32_WaitForSingleObject) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForSingleObject);
+    if Assigned(@Kernel32_WaitForMultipleObjects) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForMultipleObjects);
 
-  FreeAndNil(_PeMapImgHooks);
+    FreeAndNil(_PeMapImgHooks);
+  end;
 end;
 
 function InitSyncObjsHook(ImageBase: Pointer): Boolean; stdcall;
@@ -289,7 +303,7 @@ begin
     OutputDebugStringA('Reset SyncObjs hooks - ok');
   except
     on E: Exception do
-      OutputDebugStringA(pAnsiChar('Reset SyncObjs hooks fail: ' + E.Message));
+      OutputDebugStringA(PAnsiChar('Reset SyncObjs hooks fail: ' + E.Message));
   end;
 end;
 

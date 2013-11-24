@@ -2614,6 +2614,7 @@ var
   var
     Idx: Integer;
   begin
+    // TODO: По идее, последний элемент должен быть искомым
     Idx := ThData^.DbgSyncObjsInfo.Count - 1;
     while Idx >= 0 do
     begin
@@ -2636,6 +2637,7 @@ var
     begin
       Result := ThData^.DbgSyncObjsInfo[Idx];
       if (Result^.SyncObjsInfo.SyncObjsType = soInCriticalSection) and
+        (Result^.Link = nil) and
         (Result^.SyncObjsInfo.Data = CSData) and
         (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter)
       then
@@ -2680,7 +2682,10 @@ begin
 
               ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
 
-              ThSyncObjsInfo^.PerfIdx := CurPerfIdx;
+              if ThData^.State = tsFinished then
+                ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
+              else
+                ThSyncObjsInfo^.PerfIdx := CurPerfIdx;
 
               ThSyncObjsInfo^.Link := SyncObjsLink;
               if SyncObjsLink <> nil then
