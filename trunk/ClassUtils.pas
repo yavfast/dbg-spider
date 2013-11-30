@@ -189,13 +189,16 @@ procedure DrawHInterval(const GP: IGPGraphics; const Rect: TRect; const Color: T
 var
   Brush: IGPBrush;
   C: TGPColor;
+  Pen: IGPPen;
+  R: TGPRect;
 begin
   if Abs(Rect.Right - Rect.Left) > 1 then
   begin
     C := TGPColor.Create(Color);
     C.Alpha := $20;
     Brush := TGPSolidBrush.Create(C);
-    GP.FillRectangle(Brush, TGPRect.Create(Rect));
+    R := TGPRect.Create(Rect);
+    GP.FillRectangle(Brush, R);
   end;
 end;
 
