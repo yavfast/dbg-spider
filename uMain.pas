@@ -1943,9 +1943,6 @@ begin
         if (X3 > R.Right) then
           Break;
 
-        //if SyncObjsInfo.SyncObjsInfo.SyncObjsType = soSleep then
-        //  _DrawSyncObjs(SyncObjsInfo);
-
         _DrawSyncObjs(SyncObjsInfo);
       end;
     end;
@@ -3275,8 +3272,10 @@ begin
     OtherTree := vstThreads;
 
   OtherTree.Expanded[Data.SyncNode] := Tree.Expanded[Node];
-  OtherTree.Selected[Data.SyncNode] := True;
-  OtherTree.FocusedNode := Data.SyncNode;
+  OtherTree.Selected[Data.SyncNode] := Tree.Selected[Node];
+
+  if Tree.FocusedNode = Node then
+    OtherTree.FocusedNode := Data.SyncNode;
 end;
 
 procedure TMainForm.tmrThreadsUpdateTimer(Sender: TObject);
