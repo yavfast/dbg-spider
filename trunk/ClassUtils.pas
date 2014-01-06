@@ -57,10 +57,10 @@ procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: Str
 
 function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: Boolean = True): IXMLNode;
 
-function Compare(var Value1, Value2: UInt64): Integer; overload;
-function Compare(var Value1, Value2: Int64): Integer; overload;
-function Compare(var Value1, Value2: NativeInt): Integer; overload;
-function Compare(var Value1, Value2: NativeUInt): Integer; overload;
+function Compare(var Value1, Value2: UInt64): Integer; overload; inline;
+function Compare(var Value1, Value2: Int64): Integer; overload; inline;
+function Compare(var Value1, Value2: NativeInt): Integer; overload; inline;
+function Compare(var Value1, Value2: NativeUInt): Integer; overload; inline;
 
 function Compare(var Value1, Value2: String; const EmptyRes: Integer): Integer; overload;
 function CompareNumberStr(const Value1, Value2: String): Integer;
@@ -189,7 +189,6 @@ procedure DrawHInterval(const GP: IGPGraphics; const Rect: TRect; const Color: T
 var
   Brush: IGPBrush;
   C: TGPColor;
-  Pen: IGPPen;
   R: TGPRect;
 begin
   if Abs(Rect.Right - Rect.Left) > 1 then

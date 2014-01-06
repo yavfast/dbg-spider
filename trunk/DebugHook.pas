@@ -14,11 +14,16 @@ uses Debuger;
 type
   TInfoName = array[0..31] of AnsiChar;
   TInfoPathName = array[0..(MAX_PATH - 1)] of AnsiChar;
+  TStrTemp = array[0..255] of AnsiChar;
 
   PDbgLoaderInfo = ^TDbgLoaderInfo;
   TDbgLoaderInfo = record
     LoadLibrary    : function(lpLibFileName: PAnsiChar): HMODULE; stdcall;
     GetProcAddress : function(hModule: HMODULE; lpProcName: LPCSTR): FARPROC; stdcall;
+    OutputDebugStringA : procedure (lpOutputString: LPCSTR); stdcall;
+    lstrcpyA: function (lpString1, lpString2: LPCSTR): LPSTR; stdcall;
+    lstrlenA: function (lpString: LPCSTR): Integer; stdcall;
+
     sKernel32      : TInfoName;
     sUser32        : TInfoName;
     sExitThread    : TInfoName;
@@ -28,6 +33,11 @@ type
     sDllProcMemoryHook: TInfoName;
     sDllProcPerfomance: TInfoName;
     sDllProcSyncObjsHook: TInfoName;
+
+    slstrcpyA: TInfoName;
+    slstrlenA: TInfoName;
+
+    sTemp: TStrTemp;
 
     ImageBase        : Pointer;
     MemoryMgr        : Pointer;
@@ -45,10 +55,17 @@ var
   InitMemoryHook: procedure(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
   InitPerfomance: procedure(Delta: Cardinal); stdcall;
 begin
+  if DbgLoaderInfo = nil then Exit;
+
   with DbgLoaderInfo^ do
   begin
     HLib := LoadLibrary(sKernel32);
+
+    if HLib = 0 then Exit;
+
     @ExitThread := GetProcAddress(HLib, sExitThread);
+
+    if @ExitThread = nil then Exit;
 
     HLib := LoadLibrary(sDllPath);
     if HLib <> 0 then
@@ -81,6 +98,7 @@ procedure _DbgLoaderEnd; begin end;
 function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo; MemoryCallStack: Boolean): Boolean;
 var
   DbgLoaderInfo: TDbgLoaderInfo;
+  hKernel32: THandle;
 begin
   ZeroMemory(@DbgLoaderInfo, SizeOf(TDbgLoaderInfo));
 
@@ -94,8 +112,12 @@ begin
   DbgLoaderInfo.MemoryCallStack := MemoryCallStack;
   DbgLoaderInfo.PerfDelta := 10;
 
-  @DbgLoaderInfo.LoadLibrary    := GetProcAddress(GetModuleHandle('kernel32.dll'), 'LoadLibraryA');
-  @DbgLoaderInfo.GetProcAddress := GetProcAddress(GetModuleHandle('kernel32.dll'), 'GetProcAddress');
+  hKernel32 := GetModuleHandle('kernel32.dll');
+  @DbgLoaderInfo.LoadLibrary    := GetProcAddress(hKernel32, 'LoadLibraryA');
+  @DbgLoaderInfo.GetProcAddress := GetProcAddress(hKernel32, 'GetProcAddress');
+  @DbgLoaderInfo.OutputDebugStringA := GetProcAddress(hKernel32, 'OutputDebugStringA');;
+  @DbgLoaderInfo.lstrcpyA := GetProcAddress(hKernel32, 'lstrcpyA');
+  @DbgLoaderInfo.lstrlenA := GetProcAddress(hKernel32, 'lstrlenA');
 
   lstrcpyA(DbgLoaderInfo.sKernel32, 'kernel32.dll');
   lstrcpyA(DbgLoaderInfo.sUser32, 'user32.dll');

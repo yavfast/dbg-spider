@@ -38,26 +38,33 @@ var
   _SyncObjsInfoList: PDbgSyncObjsInfoList = nil;
   _SyncObjsInfoListCnt: Integer = 0;
 
+  _SyncObjsAdvInfoList: PDbgSyncObjsAdvInfoList = nil;
+  _SyncObjsAdvInfoListCnt: Integer = 0;
+
   SyncObjsLock: TDbgCriticalSection = nil;
   SyncObjsId: Integer = 0;
 
 type
   PSyncObjsOutDbgInfo = ^TSyncObjsOutDbgInfo;
-  TSyncObjsOutDbgInfo = array[0..2] of NativeUInt;
+  TSyncObjsOutDbgInfo = array[0..4] of NativeUInt;
 
 threadvar
   _SyncObjsOutDbgInfo: TSyncObjsOutDbgInfo;
 
-procedure _SyncObjsOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: NativeUInt);
+procedure _SyncObjsOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: NativeUInt;
+  AdvPtr: Pointer; const AdvCount: NativeUInt);
 var
   SyncObjsOutDbgInfo: PSyncObjsOutDbgInfo;
 begin
   SyncObjsOutDbgInfo := @_SyncObjsOutDbgInfo;
+
   SyncObjsOutDbgInfo[0] := NativeUInt(DbgInfoType);
   SyncObjsOutDbgInfo[1] := NativeUInt(Ptr);
   SyncObjsOutDbgInfo[2] := NativeUInt(Count);
+  SyncObjsOutDbgInfo[3] := NativeUInt(AdvPtr);
+  SyncObjsOutDbgInfo[4] := NativeUInt(AdvCount);
 
-  RaiseException(DBG_EXCEPTION, 0, 3, @SyncObjsOutDbgInfo[0]);
+  RaiseException(DBG_EXCEPTION, 0, 5, @SyncObjsOutDbgInfo[0]);
 end;
 
 procedure _OutSyncObjsInfo;
@@ -69,11 +76,65 @@ begin
   try
     if _SyncObjsInfoListCnt > 0 then
     begin
-      _SyncObjsOutInfo(dstSyncObjsInfo, @_SyncObjsInfoList^[0], _SyncObjsInfoListCnt);
-      _SyncObjsInfoListCnt := 0; // сброс указателя на нулевой элемент
+      _SyncObjsOutInfo(dstSyncObjsInfo,
+        @_SyncObjsInfoList^[0], _SyncObjsInfoListCnt,
+        @_SyncObjsAdvInfoList^[0], _SyncObjsAdvInfoListCnt);
+
+      // сброс указателей на нулевой элемент
+      _SyncObjsInfoListCnt := 0;
+      _SyncObjsAdvInfoListCnt := 0;
     end;
   finally
     SyncObjsLock.Leave;
+  end;
+end;
+
+procedure _AddToSyncObjsAdvInfo(const Data: NativeUInt);
+begin
+  _SyncObjsAdvInfoList^[_SyncObjsAdvInfoListCnt] := Data;
+
+  Inc(_SyncObjsAdvInfoListCnt);
+end;
+
+procedure _AddCSAdvInfo(const Id: NativeUInt; const Data: PRTLCriticalSection);
+var
+  SizeIdx: NativeUInt;
+
+  procedure _AddCSDebugInfo(const CSDebugInfo: PRTLCriticalSectionDebug);
+  var
+    NextCS: PRTLCriticalSection;
+  begin
+    if Assigned(CSDebugInfo) then
+    begin
+      _AddToSyncObjsAdvInfo(NativeUInt(CSDebugInfo^.CriticalSection));
+
+      Inc(_SyncObjsAdvInfoList^[SizeIdx]);
+
+      if Assigned(CSDebugInfo^.ProcessLocksList.Flink) then
+      begin
+        NextCS := PRTLCriticalSection(NativeUInt(CSDebugInfo^.ProcessLocksList.Flink) - SizeOf(PRTLCriticalSection));
+        _AddCSDebugInfo(NextCS^.DebugInfo);
+      end;
+    end;
+  end;
+
+begin
+  if Assigned(Data) and (Data^.LockCount - Data^.RecursionCount >= 0) then
+  begin
+    _AddToSyncObjsAdvInfo(Id);
+
+    SizeIdx := _SyncObjsAdvInfoListCnt;
+    _AddToSyncObjsAdvInfo(0); // Size buf
+
+    _AddCSDebugInfo(Data^.DebugInfo);
+  end;
+end;
+
+procedure _AddSyncObjsAdvInfo(const DbgSyncObjsType: TDbgSyncObjsType; const Id: NativeUInt; const Data: NativeUInt);
+begin
+  case DbgSyncObjsType of
+    soEnterCriticalSection:
+      _AddCSAdvInfo(Id, Pointer(Data));
   end;
 end;
 
@@ -97,9 +158,12 @@ begin
     SyncObjsInfo^.Data := Data;
     SyncObjsInfo^.CurTime := CurTime;
 
+    if DbgSyncObjsStateType = sosEnter then
+      _AddSyncObjsAdvInfo(DbgSyncObjsType, Id, Data);
+
     Inc(_SyncObjsInfoListCnt);
 
-    if _SyncObjsInfoListCnt = _DbgSyncObjsListLength then
+    if (_SyncObjsInfoListCnt = _DbgSyncObjsListLength) or (_SyncObjsAdvInfoListCnt >= _DbgSyncObjsAdvListOutLength) then
       _OutSyncObjsInfo;
   end;
   SyncObjsLock.Leave;
@@ -122,6 +186,9 @@ procedure _HookEnterCriticalSection(var lpCriticalSection: TRTLCriticalSection);
 var
   Id: NativeUInt;
 begin
+  //TODO:
+  // Debug CriticalSections: http://msdn.microsoft.com/en-us/magazine/cc164040.aspx
+
   Id := NativeUInt(InterlockedIncrement(SyncObjsId));
 
   _AddSyncObjsInfo(soEnterCriticalSection, sosEnter, Id, NativeUInt(@lpCriticalSection));
@@ -264,6 +331,8 @@ end;
 function InitSyncObjsHook(ImageBase: Pointer): Boolean; stdcall;
 begin
   _SyncObjsInfoList := AllocMem(SizeOf(TDbgSyncObjsInfoList));
+  _SyncObjsAdvInfoList := AllocMem(SizeOf(TDbgSyncObjsAdvInfoList));
+
   SyncObjsLock := TDbgCriticalSection.Create;
 
   Result := _HookSyncObjs(ImageBase);
@@ -293,6 +362,9 @@ begin
 
         FreeMemory(_SyncObjsInfoList);
         _SyncObjsInfoList := nil;
+
+        FreeMemory(_SyncObjsAdvInfoList);
+        _SyncObjsAdvInfoList := nil;
       finally
         SyncObjsLock.Leave;
       end;

@@ -96,7 +96,7 @@ type
 
 implementation
 
-uses IdGlobal, IdUriUtils, System.SyncObjs;
+uses IdGlobal, IdUriUtils, System.SyncObjs, Winapi.Windows;
 
 const
   GA_URL = 'http://www.google-analytics.com/collect';
@@ -123,7 +123,7 @@ type
     FQueueEvent: TEvent;
     FQueueCS: TCriticalSection;
     FHTTP: TIdHTTP;
-    procedure ThSleep(MSec: Integer);
+    procedure ThSleep(const MSec: Integer);
   protected
     function DoSend(const Data: string): Boolean;
     procedure Execute; override;
@@ -465,6 +465,8 @@ begin
   try
     FHTTP := TIdHTTP.Create(nil);
     try
+      FHTTP.HandleRedirects := True;
+
       while (Self <> nil) and not Terminated do
       begin
         if FQueueEvent.WaitFor(100) = wrSignaled then
@@ -506,13 +508,13 @@ begin
   end;
 end;
 
-procedure TGASender.ThSleep(MSec: Integer);
+procedure TGASender.ThSleep(const MSec: Integer);
+var
+  StartTime: Cardinal;
 begin
-  while (Self <> Nil) and not Terminated and (MSec > 0) do
-  begin
-    Sleep(50);
-    Dec(MSec, 50);
-  end;
+  StartTime := GetTickCount;
+  while (Self <> Nil) and not Terminated and (Abs(GetTickCount - StartTime) < MSec) do
+    SwitchToThread;
 end;
 
 initialization

@@ -266,6 +266,8 @@ type
     acStepInto: TAction;
     acStepOver: TAction;
     acStepOut: TAction;
+    acExcepInfoRefresh: TAction;
+    tsLockTracking: TTabSheet;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -417,6 +419,7 @@ type
     procedure vstMemInfoObjStackDblClick(Sender: TObject);
     procedure acOpenSiteExecute(Sender: TObject);
     procedure acFeedbackExecute(Sender: TObject);
+    procedure acExcepInfoRefreshExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -653,6 +656,11 @@ end;
 procedure TMainForm.acEditProjectExecute(Sender: TObject);
 begin
   OpenProjectOptions(otEdit);
+end;
+
+procedure TMainForm.acExcepInfoRefreshExecute(Sender: TObject);
+begin
+  vstExceptionThreadsFocusChanged(vstExceptionThreads, vstExceptionThreads.FocusedNode, 0);
 end;
 
 procedure TMainForm.acExceptionCallStackExecute(Sender: TObject);

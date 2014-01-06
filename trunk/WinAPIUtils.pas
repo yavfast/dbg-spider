@@ -98,6 +98,8 @@ function _QueryThreadCycleTime(const ThreadHandle: THandle): UInt64;
 var
   Res: PUInt64;
 begin
+  Result := 0;
+
   GetMem(Res, SizeOf(UInt64));
 
   if QueryThreadCycleTime(ThreadHandle, Res) then
@@ -112,6 +114,8 @@ function _QueryProcessCycleTime(const ProcessHandle: THandle): UInt64;
 var
   Res: PUInt64;
 begin
+  Result := 0;
+
   GetMem(Res, SizeOf(UInt64));
 
   if QueryProcessCycleTime(ProcessHandle, Res) then
@@ -195,6 +199,8 @@ function _QueryPerformanceCounter: Int64;
 var
   Res: PInt64;
 begin
+  Result := 0;
+
   GetMem(Res, SizeOf(Int64));
 
   if QueryPerformanceCounter(Res^) then
@@ -209,6 +215,8 @@ function _QueryPerformanceFrequency: Int64;
 var
   Res: PInt64;
 begin
+  Result := 0;
+
   GetMem(Res, SizeOf(Int64));
 
   if QueryPerformanceFrequency(Res^) then
