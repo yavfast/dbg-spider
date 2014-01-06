@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsThreads1
+    ActivePage = tsLockTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -1945,6 +1945,10 @@ object MainForm: TMainForm
         end
       end
     end
+    object tsLockTracking: TTabSheet
+      Caption = 'Lock tracking'
+      ImageIndex = 7
+    end
   end
   object rbnMain: TRibbon
     Left = 0
@@ -2807,6 +2811,7 @@ object MainForm: TMainForm
       Caption = 'Step into'
       Enabled = False
       ImageIndex = 21
+      Visible = False
       OnExecute = acStepIntoExecute
     end
     object acStepOver: TAction
@@ -2814,6 +2819,7 @@ object MainForm: TMainForm
       Caption = 'Step over'
       Enabled = False
       ImageIndex = 22
+      Visible = False
       OnExecute = acStepOverExecute
     end
     object acStepOut: TAction
@@ -2821,7 +2827,14 @@ object MainForm: TMainForm
       Caption = 'Step out'
       Enabled = False
       ImageIndex = 20
+      Visible = False
       OnExecute = acStepOutExecute
+    end
+    object acExcepInfoRefresh: TAction
+      Category = 'ExceptInfo'
+      Caption = 'Refresh'
+      ImageIndex = 17
+      OnExecute = acExcepInfoRefreshExecute
     end
   end
   object OD: TFileOpenDialog
@@ -3073,17 +3086,20 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
+            Visible = False
             Action = acStepInto
             Caption = '&Step into'
             ImageIndex = 21
             NewCol = True
           end
           item
+            Visible = False
             Action = acStepOver
             Caption = 'S&tep over'
             ImageIndex = 22
           end
           item
+            Visible = False
             Action = acStepOut
             Caption = 'St&ep out'
             ImageIndex = 20
@@ -3390,11 +3406,6 @@ object MainForm: TMainForm
             Caption = '&History'
             ImageIndex = 15
             CommandProperties.ButtonType = btSplit
-          end
-          item
-            Action = acMemInfoRefresh
-            Caption = '&Refresh'
-            ImageIndex = 17
           end>
         ActionBar = actbMemInfo
       end
@@ -3404,6 +3415,11 @@ object MainForm: TMainForm
             Action = acAddressInfo
             Caption = '&Address info'
             ImageIndex = 5
+          end
+          item
+            Action = acExcepInfoRefresh
+            Caption = '&Refresh'
+            ImageIndex = 17
           end>
         ActionBar = actbExceptionInfo
       end

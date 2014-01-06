@@ -230,11 +230,21 @@ type
   TGetMemInfo = TPointerDictionary<Pointer,PGetMemInfo>;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
+  TDbgSyncObjsAdvInfo = class
+  public
+    InfoList: array of NativeUInt;
+
+    constructor Create;
+
+    function Load(AdvInfoList: PDbgSyncObjsAdvInfoList; const ReadIdx: Integer): Integer;
+  end;
+
   PSyncObjsInfo = ^RSyncObjsInfo;
   RSyncObjsInfo = record
     PerfIdx: Cardinal;
     Link: PSyncObjsInfo;
     SyncObjsInfo: TDbgSyncObjsInfo;
+    SyncObjsAdvInfo: TDbgSyncObjsAdvInfo;
   end;
 
   TSyncObjsInfoList = TBaseCollectList; // TCollectList<RSyncObjsInfo>;
@@ -1401,6 +1411,35 @@ begin
     finally
       ThreadData^.DbgPoints.EndRead;
     end;
+  end;
+end;
+
+{ TDbgSyncObjsAdvInfo }
+
+constructor TDbgSyncObjsAdvInfo.Create;
+begin
+  inherited Create;
+
+  SetLength(InfoList, 0);
+end;
+
+function TDbgSyncObjsAdvInfo.Load(AdvInfoList: PDbgSyncObjsAdvInfoList; const ReadIdx: Integer): Integer;
+var
+  Idx: Integer;
+  Size: NativeUInt;
+begin
+  Result := -1;
+
+  // [ID][Size][Data 1]..[Data N]
+  Size := AdvInfoList^[ReadIdx + 1];
+  if (Size > 0) and (Size <= (_DbgSyncObjsAdvListLength - ReadIdx)) then
+  begin
+    SetLength(InfoList, Size);
+
+    for Idx := 0 to (Size - 1) do
+      InfoList[Idx] := AdvInfoList^[(ReadIdx + 2) + Idx];
+
+    Result := (ReadIdx + 2) + Size;
   end;
 end;
 

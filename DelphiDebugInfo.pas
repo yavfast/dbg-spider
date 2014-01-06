@@ -17,6 +17,7 @@ Type
     FDelphiVersion: TDelphiVersion;
     FSystemUnits: TStringList;
     FAddressInfoList: TAddressInfoList;
+    FIsHookSet: Boolean;
 
     Function ImageBase: Cardinal;
     Function ImageNames(const Index: TNameId): AnsiString;
@@ -171,6 +172,7 @@ Begin
   FDelphiVersion := dvAuto;
   FSystemUnits := TStringList.Create;
   FAddressInfoList := TAddressInfoList.Create(16 * 1024);
+  FIsHookSet := False;
 
   FillSystemUnits;
 End;
@@ -1581,6 +1583,8 @@ End;
 { ............................................................................... }
 Procedure TDelphiDebugInfo.ClearDebugInfo;
 Begin
+  FIsHookSet := False;
+
   if Assigned(FImage) then
     FreeAndNil(FImage);
 
@@ -1958,24 +1962,29 @@ end;
 
 Procedure TDelphiDebugInfo.InitDebugHook;
 Begin
-  gvDebuger.ProcessData.SetPEImage(FImage);
+  if not FIsHookSet then
+  begin
+    FIsHookSet := True;
 
-  InitCodeTracking(gvDebuger.CodeTracking);
+    gvDebuger.ProcessData.SetPEImage(FImage);
 
-  MemoryManagerInfo.VarInfo := GetMemoryManager;
+    InitCodeTracking(gvDebuger.CodeTracking);
 
-  // Установка перехвата вызовов GetMem и FreeMem
-  // SetMemoryManagerBreakpoints;
+    MemoryManagerInfo.VarInfo := GetMemoryManager;
 
-  // Инициализация дебажного потока в процессе
-  // !!! Поток запустится не сразу, а через некоторое время
-  LoadDbgHookDll(
-    gvDebuger.ProcessData.AttachedProcessHandle,
-    Format('%s\DbgHook32.dll', [ExtractFileDir(Application.ExeName)]),
-    Pointer(FImage.OptionalHeader32.ImageBase),
-    MemoryManagerInfo.VarInfo,
-    gvDebuger.MemoryCallStack
-  );
+    // Установка перехвата вызовов GetMem и FreeMem
+    // SetMemoryManagerBreakpoints;
+
+    // Инициализация дебажного потока в процессе
+    // !!! Поток запустится не сразу, а через некоторое время
+    LoadDbgHookDll(
+      gvDebuger.ProcessData.AttachedProcessHandle,
+      Format('%s\DbgHook32.dll', [ExtractFileDir(Application.ExeName)]),
+      Pointer(FImage.OptionalHeader32.ImageBase),
+      MemoryManagerInfo.VarInfo,
+      gvDebuger.MemoryCallStack
+    );
+  end;
 End;
 { ............................................................................... }
 

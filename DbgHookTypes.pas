@@ -58,6 +58,8 @@ type
 const
   _DbgMemListLength = ($FFFFF div SizeOf(TDbgMemInfo));
   _DbgSyncObjsListLength = ($FFFF div SizeOf(TDbgSyncObjsInfo));
+  _DbgSyncObjsAdvListLength = $FFFF;
+  _DbgSyncObjsAdvListOutLength = _DbgSyncObjsAdvListLength - 32;
 
 type
   PDbgMemInfoList = ^TDbgMemInfoList;
@@ -65,6 +67,10 @@ type
 
   PDbgSyncObjsInfoList = ^TDbgSyncObjsInfoList;
   TDbgSyncObjsInfoList = array[0.._DbgSyncObjsListLength - 1] of TDbgSyncObjsInfo;
+
+  { [ID][Size N][Data 0]..[Data N-1] }
+  PDbgSyncObjsAdvInfoList = ^TDbgSyncObjsAdvInfoList;
+  TDbgSyncObjsAdvInfoList = array[0..(_DbgSyncObjsAdvListLength - 1)] of NativeUInt;
 
 implementation
 
