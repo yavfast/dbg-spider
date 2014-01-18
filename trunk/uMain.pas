@@ -796,10 +796,9 @@ procedure TMainForm.acRunExecute(Sender: TObject);
 begin
   acRun.Enabled := False;
 
-  tmrThreadsUpdate.Enabled := True;
+  ClearTrees;
 
-  ClearDbgTrees;
-  ClearTrackTrees;
+  tmrThreadsUpdate.Enabled := True;
 
   if Assigned(gvDebuger) then
     gvDebuger.ClearDbgInfo;
@@ -807,7 +806,7 @@ begin
   UpdateStatusInfo;
   UpdateMainActions;
 
-  _AC.RunDebug([doRun] + GetDebugOptions, FPID);
+  _AC.RunDebug([doRun, doDebugInfo] + GetDebugOptions, FPID);
 end;
 
 procedure TMainForm.acSaveCopyExecute(Sender: TObject);
