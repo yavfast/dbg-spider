@@ -975,14 +975,21 @@ var
   TimeLineNode: PVirtualNode;
 begin
   // Threads timeline
-  NameNode := AddProcessToTree(vstThreads);
-  TimeLineNode := AddProcessToTree(vdtTimeLine);
+  vstThreads.BeginUpdate;
+  vdtTimeLine.BeginUpdate;
+  try
+    NameNode := AddProcessToTree(vstThreads);
+    TimeLineNode := AddProcessToTree(vdtTimeLine);
 
-  LinkData := vstThreads.GetNodeData(NameNode);
-  LinkData^.SyncNode := TimeLineNode;
+    LinkData := vstThreads.GetNodeData(NameNode);
+    LinkData^.SyncNode := TimeLineNode;
 
-  LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
-  LinkData^.SyncNode := NameNode;
+    LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
+    LinkData^.SyncNode := NameNode;
+  finally
+    vstThreads.EndUpdate;
+    vdtTimeLine.EndUpdate;
+  end;
 
   // Memory Info
   AddProcessToTree(vstMemInfoThreads);
