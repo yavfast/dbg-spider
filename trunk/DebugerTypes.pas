@@ -244,7 +244,7 @@ type
     PerfIdx: Cardinal;
     Link: PSyncObjsInfo;
     SyncObjsInfo: TDbgSyncObjsInfo;
-    SyncObjsAdvInfo: TDbgSyncObjsAdvInfo;
+    //SyncObjsAdvInfo: TDbgSyncObjsAdvInfo;
   end;
 
   TSyncObjsInfoList = TBaseCollectList; // TCollectList<RSyncObjsInfo>;

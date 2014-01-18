@@ -1420,6 +1420,8 @@ object MainForm: TMainForm
               OnFocusChanged = vstExceptionCallStackFocusChanged
               OnGetText = vstExceptionCallStackGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              ExplicitLeft = 6
+              ExplicitTop = -3
               Columns = <
                 item
                   Alignment = taRightJustify
@@ -1879,6 +1881,280 @@ object MainForm: TMainForm
         end
       end
     end
+    object tsLockTracking: TTabSheet
+      Caption = 'Lock tracking'
+      ImageIndex = 7
+      object vstLockThreads: TVirtualStringTree
+        Left = 0
+        Top = 0
+        Width = 467
+        Height = 517
+        Align = alLeft
+        BorderStyle = bsNone
+        Colors.FocusedSelectionColor = clBtnFace
+        Colors.FocusedSelectionBorderColor = clBtnFace
+        Colors.SelectionRectangleBlendColor = clBtnFace
+        Colors.SelectionRectangleBorderColor = clBtnFace
+        Colors.SelectionTextColor = clWindowText
+        DrawSelectionMode = smBlendedRectangle
+        Header.AutoSizeIndex = -1
+        Header.Font.Charset = DEFAULT_CHARSET
+        Header.Font.Color = clWindowText
+        Header.Font.Height = -11
+        Header.Font.Name = 'Tahoma'
+        Header.Font.Style = []
+        Header.Options = [hoColumnResize, hoVisible]
+        Header.Style = hsPlates
+        ScrollBarOptions.AlwaysVisible = True
+        TabOrder = 0
+        TreeOptions.AutoOptions = [toAutoTristateTracking, toAutoDeleteMovedNodes]
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toInitOnSave, toToggleOnDblClick, toWheelPanning]
+        TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+        TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
+        OnColumnResize = vstThreadsColumnResize
+        OnDrawText = vstThreadsDrawText
+        OnGetText = vstLockThreadsGetText
+        OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        Columns = <
+          item
+            CaptionAlignment = taCenter
+            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coUseCaptionAlignment]
+            Position = 0
+            Width = 300
+            WideText = 'Thread name'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
+            Position = 1
+            Width = 80
+            WideText = 'ID'
+          end
+          item
+            Alignment = taRightJustify
+            CaptionAlignment = taCenter
+            Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
+            Position = 2
+            Width = 70
+            WideText = 'Wait time'
+          end>
+      end
+      object pLockTrackingInfo: TPanel
+        Left = 467
+        Top = 0
+        Width = 743
+        Height = 517
+        Align = alClient
+        BevelEdges = []
+        BevelOuter = bvNone
+        Caption = 'pLockTrackingInfo'
+        ShowCaption = False
+        TabOrder = 1
+        ExplicitLeft = 592
+        ExplicitTop = 96
+        ExplicitWidth = 185
+        ExplicitHeight = 41
+        object cbLockTracking: TCoolBar
+          Left = 0
+          Top = 0
+          Width = 743
+          Height = 25
+          AutoSize = True
+          BandBorderStyle = bsNone
+          Bands = <
+            item
+              Control = actbLockTracking
+              ImageIndex = -1
+              Width = 741
+            end>
+          EdgeInner = esNone
+          EdgeOuter = esNone
+          object actbLockTracking: TActionToolBar
+            Left = 11
+            Top = 0
+            Width = 732
+            Height = 25
+            Caption = 'actbLockTracking'
+            Color = clMenuBar
+            ColorMap.DisabledFontColor = 7171437
+            ColorMap.HighlightColor = 13684944
+            ColorMap.BtnSelectedFont = clBlack
+            ColorMap.UnusedColor = 13684944
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clBlack
+            Font.Height = -11
+            Font.Name = 'Tahoma'
+            Font.Style = []
+            ParentFont = False
+            Spacing = 0
+          end
+        end
+        object pLockTrackingAdv: TPanel
+          Left = 0
+          Top = 25
+          Width = 743
+          Height = 492
+          Align = alClient
+          BevelOuter = bvNone
+          Caption = 'pLockTrackingAdv'
+          ShowCaption = False
+          TabOrder = 1
+          ExplicitLeft = 160
+          ExplicitTop = 104
+          ExplicitWidth = 185
+          ExplicitHeight = 41
+          object vstLockTrackingList: TVirtualStringTree
+            Left = 0
+            Top = 0
+            Width = 507
+            Height = 492
+            Align = alLeft
+            BevelEdges = []
+            BevelInner = bvNone
+            BevelOuter = bvNone
+            BorderStyle = bsNone
+            Header.AutoSizeIndex = 0
+            Header.Font.Charset = DEFAULT_CHARSET
+            Header.Font.Color = clWindowText
+            Header.Font.Height = -11
+            Header.Font.Name = 'Tahoma'
+            Header.Font.Style = []
+            Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
+            Header.SortColumn = 2
+            Header.SortDirection = sdDescending
+            ScrollBarOptions.AlwaysVisible = True
+            TabOrder = 0
+            TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
+            TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+            TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            OnColumnResize = vstThreadsColumnResize
+            OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            Columns = <
+              item
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
+                Position = 0
+                Width = 300
+                WideText = 'Function name'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                DefaultSortDirection = sdDescending
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 1
+                WideText = 'Line'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                DefaultSortDirection = sdDescending
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 2
+                Width = 70
+                WideText = 'Call count'
+              end
+              item
+                Alignment = taRightJustify
+                CaptionAlignment = taCenter
+                Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                Position = 3
+                Width = 70
+                WideText = 'Wait time'
+              end>
+          end
+          object pLockTrackingThInfo: TPanel
+            Left = 507
+            Top = 0
+            Width = 236
+            Height = 492
+            Align = alClient
+            BevelOuter = bvNone
+            Caption = 'pLockTrackingThInfo'
+            ShowCaption = False
+            TabOrder = 1
+            ExplicitLeft = 568
+            ExplicitTop = 104
+            ExplicitWidth = 185
+            ExplicitHeight = 41
+            object splLockTrackingAdv: TSplitter
+              Left = 0
+              Top = 217
+              Width = 236
+              Height = 3
+              Cursor = crVSplit
+              Align = alTop
+            end
+            object vstLockTrackingThreadsInfo: TVirtualStringTree
+              Left = 0
+              Top = 0
+              Width = 236
+              Height = 217
+              Align = alTop
+              Header.AutoSizeIndex = 0
+              Header.Font.Charset = DEFAULT_CHARSET
+              Header.Font.Color = clWindowText
+              Header.Font.Height = -11
+              Header.Font.Name = 'Tahoma'
+              Header.Font.Style = []
+              Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+              Header.Style = hsFlatButtons
+              ScrollBarOptions.AlwaysVisible = True
+              TabOrder = 0
+              TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+              TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              Columns = <
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coSmartResize, coAllowFocus, coUseCaptionAlignment]
+                  Position = 0
+                  Width = 300
+                  WideText = 'Function name'
+                end
+                item
+                  Alignment = taRightJustify
+                  CaptionAlignment = taCenter
+                  Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
+                  Position = 1
+                  Width = 65
+                  WideText = 'Line'
+                end>
+            end
+            object synmLockTracking: TSynMemo
+              Left = 0
+              Top = 220
+              Width = 236
+              Height = 272
+              Align = alClient
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -13
+              Font.Name = 'Courier New'
+              Font.Style = []
+              TabOrder = 1
+              Gutter.AutoSize = True
+              Gutter.Font.Charset = DEFAULT_CHARSET
+              Gutter.Font.Color = clWindowText
+              Gutter.Font.Height = -11
+              Gutter.Font.Name = 'Courier New'
+              Gutter.Font.Style = []
+              Gutter.ShowLineNumbers = True
+              Highlighter = dmShareData.synPas1
+              ReadOnly = True
+              RightEdge = 0
+              FontSmoothing = fsmNone
+              ExplicitWidth = 298
+              ExplicitHeight = 273
+            end
+          end
+        end
+      end
+    end
     object tsUpdateInfo: TTabSheet
       Caption = 'Update info'
       ImageIndex = 6
@@ -1944,10 +2220,6 @@ object MainForm: TMainForm
           Spacing = 0
         end
       end
-    end
-    object tsLockTracking: TTabSheet
-      Caption = 'Lock tracking'
-      ImageIndex = 7
     end
   end
   object rbnMain: TRibbon
@@ -2774,13 +3046,6 @@ object MainForm: TMainForm
       ImageIndex = 5
       OnExecute = acAddressInfoExecute
     end
-    object acTabUpdateInfo: TAction
-      Tag = 6
-      Category = 'MainTabs'
-      Caption = 'Update Info'
-      Visible = False
-      OnExecute = acMainTabExecute
-    end
     object acOpenSite: TAction
       Category = 'Spider'
       Caption = 'http://dbg-spider.net'
@@ -2835,6 +3100,19 @@ object MainForm: TMainForm
       Caption = 'Refresh'
       ImageIndex = 17
       OnExecute = acExcepInfoRefreshExecute
+    end
+    object acTabLockTracking: TAction
+      Tag = 6
+      Category = 'MainTabs'
+      Caption = 'Lock tracking'
+      OnExecute = acMainTabExecute
+    end
+    object acTabUpdateInfo: TAction
+      Tag = 6
+      Category = 'MainTabs'
+      Caption = 'Update Info'
+      Visible = False
+      OnExecute = acMainTabExecute
     end
   end
   object OD: TFileOpenDialog
@@ -3168,6 +3446,13 @@ object MainForm: TMainForm
           item
             Action = acTabCodeTracking
             Caption = '&Code tracking'
+          end
+          item
+            Caption = '-'
+          end
+          item
+            Action = acTabLockTracking
+            Caption = 'L&ock tracking'
           end
           item
             Caption = '-'

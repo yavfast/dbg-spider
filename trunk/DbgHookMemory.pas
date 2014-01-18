@@ -11,7 +11,7 @@ function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
 
 implementation
 
-uses Windows, DbgHookCS, SysUtils;
+uses Windows, DbgHookCS, SysUtils, DbgHookUtils;
 
 var
   _BaseMemoryMgr: TMemoryManagerEx;
@@ -41,38 +41,6 @@ type
 threadvar
   _MemOutDbgInfo: TMemOutDbgInfo;
 
-{ --- From JCL --- }
-type
-  NT_TIB32 = packed record
-    ExceptionList: DWORD;
-    StackBase: DWORD;
-    StackLimit: DWORD;
-    SubSystemTib: DWORD;
-    case Integer of
-      0 : (
-        FiberData: DWORD;
-        ArbitraryUserPointer: DWORD;
-        Self: DWORD;
-      );
-      1 : (
-        Version: DWORD;
-      );
-  end;
-
-  TJclAddr = NativeInt;
-
-  PStackFrame = ^TStackFrame;
-  TStackFrame = record
-    CallerFrame: TJclAddr;
-    CallerAddr: TJclAddr;
-  end;
-{ --- From JCL --- }
-
-procedure _LogException(E: Exception; const Code: Integer = 0);
-begin
-  OutputDebugString(PChar(Format('Hook memory error (%d): %s', [Code, E.Message])));
-end;
-
 procedure _MemOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: NativeUInt);
 var
   MemOutDbgInfo: PMemOutDbgInfo;
@@ -95,54 +63,6 @@ begin
   MemOutDbgInfo[2] := 0;
 
   RaiseException(DBG_EXCEPTION, 0, 2, @MemOutDbgInfo[0]);
-end;
-
-threadvar
-  _Buf: TMemoryBasicInformation;
-
-function IsValidCodeAddr(const Addr: Pointer): Boolean;
-const
-  _PAGE_CODE: Cardinal = (PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
-Begin
-  Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0) And ((_Buf.Protect And _PAGE_CODE) <> 0);
-end;
-
-function IsValidAddr(const Addr: Pointer): Boolean;
-Begin
-  Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0);
-end;
-
-function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): Boolean;
-var
-  ClassTypePtr: Pointer;
-  ClassNamePtr: Pointer;
-begin
-  Result := False;
-  try
-    if not IsValidAddr(Obj) then Exit;
-
-    ClassTypePtr := PPointer(Obj)^;
-    if not IsValidCodeAddr(ClassTypePtr) then Exit;
-    ClassNamePtr := Pointer(Integer(ClassTypePtr) + vmtClassName);
-    if not IsValidCodeAddr(ClassNamePtr) then Exit;
-    ClassNamePtr := PPointer(ClassNamePtr)^;
-    if not IsValidCodeAddr(ClassNamePtr) then Exit;
-    ObjClassName := PShortString(ClassNamePtr)^;
-    Result := True;
-  except
-    on E: Exception do
-      _LogException(E, _EHOOK_GetObjClassType);
-  end;
-end;
-
-function GetFramePointer: Pointer; assembler;
-asm
-  MOV     EAX, EBP
-end;
-
-function GetStackTop: TJclAddr; assembler;
-asm
-  MOV     EAX, FS:[0].NT_TIB32.StackBase
 end;
 
 procedure GetCallStack(var Stack: TDbgMemInfoStack); stdcall;

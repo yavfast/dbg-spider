@@ -2616,7 +2616,7 @@ var
   SyncObjsInfo: PDbgSyncObjsInfo;
   ThSyncObjsInfo: PSyncObjsInfo;
   SyncObjsLink: PSyncObjsInfo;
-  AdvIdx: Integer;
+  //AdvIdx: Integer;
 
   function FindLink(const Id: NativeUInt): PSyncObjsInfo;
   var
@@ -2660,6 +2660,7 @@ var
 begin
   if ReadData(SyncObjsInfoPack, _DbgSyncObjsInfoList, Count * SizeOf(TDbgSyncObjsInfo)) then
   begin
+    (*
     AdvIdx := -1;
 
     if AdvCount > 0 then
@@ -2669,6 +2670,7 @@ begin
 
       AdvIdx := 0;
     end;
+    *)
 
     CurPerfIdx := ProcessData.CurDbgPointIdx;
 
@@ -2711,6 +2713,7 @@ begin
 
               ThSyncObjsInfo^.SyncObjsInfo := SyncObjsInfo^;
 
+              (*
               if AdvIdx >= 0 then
               begin
                 if _DbgSyncObjsAdvInfoList[AdvIdx] = SyncObjsInfo^.Id then
@@ -2722,6 +2725,7 @@ begin
                     AdvIdx := -1;
                 end;
               end;
+              *)
             finally
               ThData^.DbgSyncObjsInfo.EndRead;
             end;

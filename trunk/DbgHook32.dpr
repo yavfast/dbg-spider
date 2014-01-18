@@ -7,7 +7,8 @@ uses
   DbgHookPerf in 'DbgHookPerf.pas',
   DbgHookMemory in 'DbgHookMemory.pas',
   DbgHookSyncObjs in 'DbgHookSyncObjs.pas',
-  DbgHookCS in 'DbgHookCS.pas';
+  DbgHookCS in 'DbgHookCS.pas',
+  DbgHookUtils in 'DbgHookUtils.pas';
 
 exports
   InitThreadHook,
