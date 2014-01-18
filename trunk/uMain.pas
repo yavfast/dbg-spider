@@ -439,6 +439,7 @@ type
     procedure HidePCTabs(PC: TPageControl);
 
     procedure SendGAEvent(const Category, Action: String; const ELabel: String = '');
+    procedure SendGAException(E: Exception);
     procedure SendGAFeedback(const FeedbackType, FeedbackText: String);
     procedure StartGASession;
     procedure FinishGASession;
@@ -2117,7 +2118,7 @@ end;
 
 procedure TMainForm.OnException(Sender: TObject; E: Exception);
 begin
-  OutputDebugString(PWideChar(E.Message));
+  SendGAException(E);
 end;
 
 procedure TMainForm.pcMainChange(Sender: TObject);
@@ -2418,7 +2419,7 @@ end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  //Application.OnException := OnException;
+  Application.OnException := OnException;
 
   FSpiderOptions := TSpiderOptions.Create(ChangeFileExt(Application.ExeName, '.xcfg'));
   LoadGUIOptions;
@@ -3191,6 +3192,25 @@ begin
     GA.SendEvent(Category, Action, ELabel);
   finally
     FreeAndNil(GA);
+  end;
+end;
+
+procedure TMainForm.SendGAException(E: Exception);
+var
+  StackTrace: String;
+  Msg: String;
+begin
+  if Assigned(E) then
+  begin
+    Msg := E.Message;
+
+    StackTrace := E.StackTrace;
+    if StackTrace <> '' then
+      Msg := Msg + Format(' [%s]', [StackTrace]);
+
+    _AC.Log(dltError, '%s: %s', [E.ClassName, Msg]);
+
+    SendGAEvent('Exception', E.ClassName, Msg);
   end;
 end;
 

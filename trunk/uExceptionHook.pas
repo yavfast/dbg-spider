@@ -6,9 +6,6 @@ uses Classes, SysUtils, Windows;
 
 implementation
 
-uses
-  uObjects, uExceptions{$IFDEF TEST}, uLog{$ENDIF};
-
 const
   MAX_STACK_LENGTH = 16;
 
@@ -97,48 +94,16 @@ begin
 end;
 
 function GetCallStack(Context: PContext): TList; overload;
-//var
-//  TopOfStack: Pointer;
-//  BaseOfStack: Pointer;
-//  StackFrame: PStackFrame;
-//  Level: Integer;
 begin
   Result := GetCallStack(Pointer(Context^.Eip), Pointer(Context^.Ebp));
-//  try
-//    Level := 0; // пропуск по стеку
-//
-//    Result.Add(Pointer(Context^.Eip));
-//
-//    StackFrame := Pointer(Context^.Ebp);
-//    BaseOfStack := Pointer(Cardinal(StackFrame) - 1);
-//
-//    TopOfStack := GetStackTop;
-//    while (Level < MAX_STACK_LENGTH) and (
-//        (Cardinal(BaseOfStack) < Cardinal(StackFrame)) and
-//        (Cardinal(StackFrame) < Cardinal(TopOfStack)) and
-//        (StackFrame <> StackFrame^.CallerFrame) and
-//        IsValidAddr(StackFrame) and
-//        IsValidCodeAddr(StackFrame^.CallerAddr)
-//      )
-//    do begin
-//      if Level >= 0 then
-//        Result.Add(Pointer(Cardinal(StackFrame^.CallerAddr) - 1));
-//
-//      StackFrame := PStackFrame(StackFrame^.CallerFrame);
-//
-//      Inc(Level);
-//    end;
-//  except
-//    // Skip
-//  end;
 end;
 
-procedure _AVCleanUpStackInfoProc(Info: Pointer);
+procedure _CleanUpStackInfoProc(Info: Pointer);
 begin
   FreeAndNil(Info);
 end;
 
-function _AVGetStackInfoStringProc(Info: Pointer): String;
+function _GetStackInfoStringProc(Info: Pointer): String;
 var
   StackList: TList;
   I: Integer;
@@ -175,25 +140,15 @@ var
   ContextRecord: PContext;
   ExceptionObj: HookException;
 begin
-  if InDebugMode then
-  begin
-    // Дебагер сам отработает все коды эксепшинов
-    //if ExceptionFlags <> cContinuable then
-      _BaseRaiseExceptionProc(ExceptionCode, ExceptionFlags, NumberOfArguments, Args);
-  end
-  else
-  if CheckStopProcess(False) then
-  begin
-    // При завершении программы сбрасываем флаг перехвата
-    DebugHook := OldDebugHook;
-    if ExceptionFlags <> cContinuable then
-      _BaseRaiseExceptionProc(ExceptionCode, ExceptionFlags, NumberOfArguments, Args)
-  end
-  else
+//  if InDebugMode then
+//  begin
+//    // Дебагер сам отработает все коды эксепшинов
+//    _BaseRaiseExceptionProc(ExceptionCode, ExceptionFlags, NumberOfArguments, Args);
+//  end
+//  else
   begin
     if (ExceptionCode = cNonDelphiException) then
     begin
-      // Для системных эксепшинов получаем CallStack
       ContextRecord := TParamArray(Args^)[0];
       ExceptionObj := TParamArray(Args^)[1];
       ExceptionObj.SetStackInfo(GetCallStack(ContextRecord));
@@ -205,87 +160,22 @@ begin
       ExceptionObj.SetStackInfo(GetCallStack(TParamArray(Args^)[0]{Address}, TParamArray(Args^)[5]{Stack frame}));
     end;
 
-    {$IFDEF TEST}
-    Log.AddDbgText(Format('ExceptionCode: $%x; ExceptionFlags: %d', [ExceptionCode, ExceptionFlags]));
-    {$ENDIF}
-
     if ExceptionFlags <> cContinuable then
     begin
-      DebugHook := OldDebugHook;
+      if not InDebugMode then
+        DebugHook := OldDebugHook;
       try
         _BaseRaiseExceptionProc(ExceptionCode, ExceptionFlags, NumberOfArguments, Args)
       finally
-        DebugHook := 1;
+        if not InDebugMode then
+          DebugHook := 1;
       end;
     end;
   end;
 end;
 
-{$IFDEF TEST}
-
-procedure TestAVException;
-var
-  SL: TStringList;
+procedure _InitExceptionHook;
 begin
-  Log.AddDbgText('TestAVException -> Start');
-  try
-    try
-      SL := TStringList.Create;
-      FreeAndNil(SL);
-
-      SL.Add('Test AV');
-
-      Log.AddDbgText('TestAVException -> ERROR: After AV');
-    finally
-      Log.AddDbgText('TestAVException -> OK: Finally');
-    end;
-
-    Log.AddDbgText('TestAVException -> ERROR: After finally');
-  except
-    on E: Exception do
-      Log.AddDbgText('TestAVException -> OK: Except: ' + E.Message);
-  end;
-end;
-
-procedure TestOSException;
-begin
-  TestAVException;
-end;
-
-procedure TestDelphiException;
-begin
-  Log.AddDbgText('TestDelphiException -> Start');
-  try
-    try
-      raise Exception.Create('Test Delphi Exception');
-      Log.AddDbgText('TestDelphiException -> ERROR: After Raise');
-    finally
-      Log.AddDbgText('TestDelphiException -> OK: Finally');
-    end;
-
-    Log.AddDbgText('TestDelphiException -> ERROR: After Finally');
-  except
-    on E: Exception do
-      Log.AddDbgText('TestDelphiException -> OK: Except: ' + E.Message);
-  end;
-end;
-
-procedure Test;
-begin
-  try
-    //TestDelphiException;
-    //TestOSException;
-  except
-    on E: Exception do
-    begin
-      Log.AddException('uExceptionHook.Test', E);
-      Raise;
-    end;
-  end;
-end;
-{$ENDIF}
-
-initialization
   // Блокировка всех системынх сообщений про ошибку
   {$IFNDEF DEBUG}
   SetErrorMode(SEM_FAILCRITICALERRORS or SEM_NOGPFAULTERRORBOX or SEM_NOALIGNMENTFAULTEXCEPT or SEM_NOOPENFILEERRORBOX);
@@ -294,47 +184,39 @@ initialization
   // Приложение запущено по дебагом
   InDebugMode := (DebugHook <> 0);
 
-  {$IFDEF TEST}
-  Log.AddDbgText(Format('DebugHook: %d', [DebugHook]));
-  {$ENDIF}
   OldDebugHook := DebugHook;
 
   if not InDebugMode then
     DebugHook := 1; // Для вызова RaiseExceptionProc
 
-  if not InDebugMode then
+  //if not InDebugMode then
   begin
     _BaseRaiseExceptionProc := RaiseExceptionProc;
     RaiseExceptionProc := @_RaiseExceptionProc;
 
-    //EAccessViolation.CleanUpStackInfoProc := @_AVCleanUpStackInfoProc;
-    //EAccessViolation.GetStackInfoStringProc := @_AVGetStackInfoStringProc;
-
-    // SYNCWIN-1898
-    EExternal.CleanUpStackInfoProc := @_AVCleanUpStackInfoProc;
-    EExternal.GetStackInfoStringProc := @_AVGetStackInfoStringProc;
-
-    TStackException.CleanUpStackInfoProc := @_AVCleanUpStackInfoProc;
-    TStackException.GetStackInfoStringProc := @_AVGetStackInfoStringProc;
+    Exception.CleanUpStackInfoProc := @_CleanUpStackInfoProc;
+    Exception.GetStackInfoStringProc := @_GetStackInfoStringProc;
   end;
+end;
 
-  {$IFDEF TEST}
-  Test;
-  {$ENDIF}
-
-finalization
+procedure _ReleaseExceptionHook;
+begin
   if not InDebugMode then
     DebugHook := OldDebugHook;
 
-  if not InDebugMode then
+  //if not InDebugMode then
   begin
     RaiseExceptionProc := @_BaseRaiseExceptionProc;
 
-    //EAccessViolation.CleanUpStackInfoProc := nil;
-    //EAccessViolation.GetStackInfoStringProc := nil;
-
-    // SYNCWIN-1898
-    EExternal.CleanUpStackInfoProc := nil;
-    EExternal.GetStackInfoStringProc := nil;
+    Exception.CleanUpStackInfoProc := nil;
+    Exception.GetStackInfoStringProc := nil;
   end;
+end;
+
+initialization
+  _InitExceptionHook;
+
+finalization
+  _ReleaseExceptionHook;
+
 end.
