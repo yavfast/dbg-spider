@@ -268,6 +268,17 @@ type
     acStepOut: TAction;
     acExcepInfoRefresh: TAction;
     tsLockTracking: TTabSheet;
+    acTabLockTracking: TAction;
+    vstLockThreads: TVirtualStringTree;
+    pLockTrackingInfo: TPanel;
+    cbLockTracking: TCoolBar;
+    actbLockTracking: TActionToolBar;
+    pLockTrackingAdv: TPanel;
+    vstLockTrackingList: TVirtualStringTree;
+    pLockTrackingThInfo: TPanel;
+    vstLockTrackingThreadsInfo: TVirtualStringTree;
+    splLockTrackingAdv: TSplitter;
+    synmLockTracking: TSynMemo;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -369,6 +380,9 @@ type
     procedure vstUpdateInfoGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstUpdateInfoDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
+
+    procedure vstLockThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+
 
     procedure tmrThreadsUpdateTimer(Sender: TObject);
     procedure cbCPUTimeLineClick(Sender: TObject);
@@ -496,7 +510,9 @@ type
     procedure DrawBackgroundEx(GP: IGPGraphics; const R: TRect; const BkColor: TColor);
 
     procedure AddProcess(const ProcessID: Cardinal);
+    function AddProcessToTree(Tree: TBaseVirtualTree): PVirtualNode;
     procedure AddThread(const ThreadID: Cardinal);
+    function AddThreadToTree(Tree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
     procedure SyncNodes(Tree: TBaseVirtualTree; Node: PVirtualNode);
 
     function EllapsedToTime(const Ellapsed: UInt64): String;
@@ -914,6 +930,8 @@ begin
   acTabMemoryInfo.Checked := (CurTag = acTabMemoryInfo.Tag);
   acTabExceptions.Checked := (CurTag = acTabExceptions.Tag);
   acTabCodeTracking.Checked := (CurTag = acTabCodeTracking.Tag);
+  acTabLockTracking.Checked := (CurTag = acTabLockTracking.Tag);
+  acTabUpdateInfo.Checked := (CurTag = acTabUpdateInfo.Tag);
 
   pcMain.ActivePageIndex := CurTag;
 
@@ -957,36 +975,34 @@ var
   TimeLineNode: PVirtualNode;
 begin
   // Threads timeline
-  NameNode := vstThreads.AddChild(Nil);
-  TimeLineNode := vdtTimeLine.AddChild(Nil);
+  NameNode := AddProcessToTree(vstThreads);
+  TimeLineNode := AddProcessToTree(vdtTimeLine);
 
   LinkData := vstThreads.GetNodeData(NameNode);
   LinkData^.SyncNode := TimeLineNode;
-  LinkData^.ProcessData := gvDebuger.ProcessData;
-  LinkData^.LinkType := ltProcess;
 
   LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
   LinkData^.SyncNode := NameNode;
-  LinkData^.ProcessData := gvDebuger.ProcessData;
-  LinkData^.LinkType := ltProcess;
 
   // Memory Info
-  NameNode := vstMemInfoThreads.AddChild(Nil);
-  LinkData := vstMemInfoThreads.GetNodeData(NameNode);
-  LinkData^.SyncNode := nil;
-  LinkData^.ProcessData := gvDebuger.ProcessData;
-  LinkData^.LinkType := ltProcess;
+  AddProcessToTree(vstMemInfoThreads);
 
   // Exceptions
-  NameNode := vstExceptionThreads.AddChild(Nil);
-  LinkData := vstExceptionThreads.GetNodeData(NameNode);
-  LinkData^.SyncNode := nil;
-  LinkData^.ProcessData := gvDebuger.ProcessData;
-  LinkData^.LinkType := ltProcess;
+  AddProcessToTree(vstExceptionThreads);
 
   // Code Tracking
-  NameNode := vstTrackThreads.AddChild(Nil);
-  LinkData := vstTrackThreads.GetNodeData(NameNode);
+  AddProcessToTree(vstTrackThreads);
+
+  // Lock Tracking
+  AddProcessToTree(vstLockThreads);
+end;
+
+function TMainForm.AddProcessToTree(Tree: TBaseVirtualTree): PVirtualNode;
+var
+  LinkData: PLinkData;
+begin
+  Result := Tree.AddChild(Nil);
+  LinkData := Tree.GetNodeData(Result);
   LinkData^.SyncNode := nil;
   LinkData^.ProcessData := gvDebuger.ProcessData;
   LinkData^.LinkType := ltProcess;
@@ -1083,151 +1099,83 @@ end;
 
 procedure TMainForm.AddThread(const ThreadID: Cardinal);
 var
-  LinkData: PLinkData;
+  ThData: PThreadData;
   NameNode: PVirtualNode;
   TimeLineNode: PVirtualNode;
-  ThData: PThreadData;
+  LinkData: PLinkData;
+begin
+  ThData := gvDebuger.GetThreadData(ThreadID);
+  if ThData = nil then Exit;
+
+  // Timeline
+  vstThreads.BeginUpdate;
+  vdtTimeLine.BeginUpdate;
+  try
+    NameNode := AddThreadToTree(vstThreads, ThData);
+    TimeLineNode := AddThreadToTree(vdtTimeLine, ThData);
+
+    LinkData := vstThreads.GetNodeData(NameNode);
+    LinkData^.SyncNode := TimeLineNode;
+
+    LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
+    LinkData^.SyncNode := NameNode;
+  finally
+    vstThreads.EndUpdate;
+    vdtTimeLine.EndUpdate;
+  end;
+
+  // Memory Info
+  AddThreadToTree(vstMemInfoThreads, ThData);
+
+  // Exceptions
+  AddThreadToTree(vstExceptionThreads, ThData);
+
+  // Code Tracking
+  AddThreadToTree(vstTrackThreads, ThData);
+
+  // Lock Tracking
+  AddThreadToTree(vstLockThreads, ThData);
+end;
+
+function TMainForm.AddThreadToTree(Tree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
+var
+  LinkData: PLinkData;
   ParentThData: PThreadData;
   ParentId: Cardinal;
   ParentNode: PVirtualNode;
   CurNode: PVirtualNode;
 begin
-  vstThreads.BeginUpdate;
-  vdtTimeLine.BeginUpdate;
-  CurNode := vstThreads.FocusedNode;
+  Tree.BeginUpdate;
+  CurNode := Tree.FocusedNode;
   try
-    ThData := gvDebuger.GetThreadData(ThreadID);
-
-    if ThData = nil then Exit;
+    ParentNode := Nil;
 
     ParentId := ThData^.ThreadAdvInfo^.ThreadParentId;
 
-    // Threads timeline
-    ParentThData := Nil;
-    ParentNode := Nil;
     if ParentId <> 0 then
     begin
       ParentThData := gvDebuger.GetThreadData(ParentId);
 
       if ParentThData = nil then
         // Если родительский поток завершился раньше старта дочернего
-        ParentNode := FindThreadNodeById(vstThreads, ParentId)
+        ParentNode := FindThreadNodeById(Tree, ParentId)
       else
-        ParentNode := FindThreadNode(vstThreads, ParentThData);
+        ParentNode := FindThreadNode(Tree, ParentThData);
     end;
 
     if ParentNode = Nil then
-      ParentNode := vstThreads.RootNode^.FirstChild;
+      ParentNode := Tree.RootNode^.FirstChild;
 
-    NameNode := vstThreads.AddChild(ParentNode);
-    vstThreads.Expanded[ParentNode] := True;
+    Result := Tree.AddChild(ParentNode);
+    Tree.Expanded[ParentNode] := True;
 
-    LinkData := vstThreads.GetNodeData(ParentNode);
-    ParentNode := LinkData^.SyncNode;
-
-    TimeLineNode := vdtTimeLine.AddChild(ParentNode);
-    vdtTimeLine.Expanded[ParentNode] := True;
-
-    LinkData := vstThreads.GetNodeData(NameNode);
-    LinkData^.SyncNode := TimeLineNode;
-    LinkData^.ThreadData := ThData;
-    LinkData^.LinkType := ltThread;
-
-    LinkData := vdtTimeLine.GetNodeData(TimeLineNode);
-    LinkData^.SyncNode := NameNode;
-    LinkData^.ThreadData := ThData;
-    LinkData^.LinkType := ltThread;
-  finally
-    vstThreads.FocusedNode := CurNode;
-    vstThreads.EndUpdate;
-    vdtTimeLine.EndUpdate;
-  end;
-
-  // Memory Info
-  vstMemInfoThreads.BeginUpdate;
-  CurNode := vstMemInfoThreads.FocusedNode;
-  try
-    ParentNode := Nil;
-    if ParentId <> 0 then
-    begin
-      if ParentThData = nil then
-        // Если родительский поток завершился раньше старта дочернего
-        ParentNode := FindThreadNodeById(vstMemInfoThreads, ParentId)
-      else
-        ParentNode := FindThreadNode(vstMemInfoThreads, ParentThData);
-    end;
-
-    if ParentNode = Nil then
-      ParentNode := vstMemInfoThreads.RootNode^.FirstChild;
-
-    NameNode := vstMemInfoThreads.AddChild(ParentNode);
-    vstMemInfoThreads.Expanded[ParentNode] := True;
-
-    LinkData := vstMemInfoThreads.GetNodeData(NameNode);
+    LinkData := Tree.GetNodeData(Result);
     LinkData^.SyncNode := nil;
     LinkData^.ThreadData := ThData;
     LinkData^.LinkType := ltThread;
   finally
-    vstMemInfoThreads.FocusedNode := CurNode;
-    vstMemInfoThreads.EndUpdate;
-  end;
-
-  // Exceptions
-  vstExceptionThreads.BeginUpdate;
-  CurNode := vstExceptionThreads.FocusedNode;
-  try
-    ParentNode := Nil;
-    if ParentId <> 0 then
-    begin
-      if ParentThData = nil then
-        // Если родительский поток завершился раньше старта дочернего
-        ParentNode := FindThreadNodeById(vstExceptionThreads, ParentId)
-      else
-        ParentNode := FindThreadNode(vstExceptionThreads, ParentThData);
-    end;
-
-    if ParentNode = Nil then
-      ParentNode := vstExceptionThreads.RootNode^.FirstChild;
-
-    NameNode := vstExceptionThreads.AddChild(ParentNode);
-    vstExceptionThreads.Expanded[ParentNode] := True;
-
-    LinkData := vstExceptionThreads.GetNodeData(NameNode);
-    LinkData^.SyncNode := nil;
-    LinkData^.ThreadData := ThData;
-    LinkData^.LinkType := ltThread;
-  finally
-    vstExceptionThreads.FocusedNode := CurNode;
-    vstExceptionThreads.EndUpdate;
-  end;
-
-  // Code Tracking
-  vstTrackThreads.BeginUpdate;
-  CurNode := vstTrackThreads.FocusedNode;
-  try
-    ParentNode := Nil;
-    if ParentId <> 0 then
-    begin
-      if ParentThData = nil then
-        // Если родительский поток завершился раньше старта дочернего
-        ParentNode := FindThreadNodeById(vstTrackThreads, ParentId)
-      else
-        ParentNode := FindThreadNode(vstTrackThreads, ParentThData);
-    end;
-
-    if ParentNode = Nil then
-      ParentNode := vstTrackThreads.RootNode^.FirstChild;
-
-    NameNode := vstTrackThreads.AddChild(ParentNode);
-    vstTrackThreads.Expanded[ParentNode] := True;
-
-    LinkData := vstTrackThreads.GetNodeData(NameNode);
-    LinkData^.SyncNode := nil;
-    LinkData^.ThreadData := ThData;
-    LinkData^.LinkType := ltThread;
-  finally
-    vstTrackThreads.FocusedNode := CurNode;
-    vstTrackThreads.EndUpdate;
+    Tree.FocusedNode := CurNode;
+    Tree.EndUpdate;
   end;
 end;
 
@@ -4082,6 +4030,39 @@ begin
             1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
             2: if ThData^.DbgExceptionsCount > 0 then
                  CellText := Format('%d', [ThData^.DbgExceptionsCount]);
+          end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstLockThreadsGetText(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
+  var CellText: string);
+var
+  Data: PLinkData;
+  ThData: PThreadData;
+  ProcData: PProcessData;
+begin
+  CellText := ' ';
+
+  Data := Sender.GetNodeData(Node);
+  case Data^.LinkType of
+    ltProcess:
+      begin
+        ProcData := Data^.ProcessData;
+        if ProcData <> nil then
+          case Column of
+            0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
+            1: CellText := Format('%d(%x)', [ProcData^.ProcessID, ProcData^.ProcessID]);
+          end;
+      end;
+    ltThread:
+      begin
+        ThData := Data^.ThreadData;
+        if ThData <> nil then
+          case Column of
+            0: CellText := ThData^.ThreadAdvInfo^.AsString;
+            1: CellText := Format('%d(%x)', [ThData^.ThreadID, ThData^.ThreadID]);
           end;
       end;
   end;

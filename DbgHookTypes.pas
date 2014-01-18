@@ -52,6 +52,7 @@ type
     SyncObjsStateType: TDbgSyncObjsStateType;
     Id: NativeUInt;
     Data: NativeUInt;
+    AdvData: NativeUInt;
     CurTime: Int64;
   end;
 

@@ -32,7 +32,7 @@ procedure _OutSyncObjsInfo;
 
 implementation
 
-uses DbgHookCS, SysUtils, Classes, DbgHookTypes, WinAPIUtils, JclPEImage{TODO: Remove JCL};
+uses DbgHookCS, SysUtils, Classes, DbgHookTypes, WinAPIUtils, JclPEImage{TODO: Remove JCL}, DBGHookUtils;
 
 var
   _SyncObjsInfoList: PDbgSyncObjsInfoList = nil;
@@ -89,6 +89,7 @@ begin
   end;
 end;
 
+(*
 procedure _AddToSyncObjsAdvInfo(const Data: NativeUInt);
 begin
   _SyncObjsAdvInfoList^[_SyncObjsAdvInfoListCnt] := Data;
@@ -119,7 +120,7 @@ var
   end;
 
 begin
-  if Assigned(Data) and (Data^.LockCount - Data^.RecursionCount >= 0) then
+  if Assigned(Data) and (Data^.OwningThread <> 0) and (Data^.OwningThread <> GetCurrentThreadId) then
   begin
     _AddToSyncObjsAdvInfo(Id);
 
@@ -135,6 +136,26 @@ begin
   case DbgSyncObjsType of
     soEnterCriticalSection:
       _AddCSAdvInfo(Id, Pointer(Data));
+  end;
+end;
+*)
+
+procedure _AddCSAdvInfo(const SyncObjsInfo: PDbgSyncObjsInfo);
+begin
+  case SyncObjsInfo^.SyncObjsStateType of
+    sosEnter:
+      begin
+        if IsValidAddr(Pointer(SyncObjsInfo^.Data)) then
+          SyncObjsInfo^.AdvData := NativeUInt(PRTLCriticalSection(SyncObjsInfo^.Data)^.OwningThread);
+      end;
+  end;
+end;
+
+procedure _AddSyncObjsAdvInfo(const SyncObjsInfo: PDbgSyncObjsInfo);
+begin
+  case SyncObjsInfo^.SyncObjsType of
+    soEnterCriticalSection:
+      _AddCSAdvInfo(SyncObjsInfo);
   end;
 end;
 
@@ -156,10 +177,10 @@ begin
     SyncObjsInfo^.SyncObjsStateType := DbgSyncObjsStateType;
     SyncObjsInfo^.Id := Id;
     SyncObjsInfo^.Data := Data;
+    SyncObjsInfo^.AdvData := 0;
     SyncObjsInfo^.CurTime := CurTime;
 
-    if DbgSyncObjsStateType = sosEnter then
-      _AddSyncObjsAdvInfo(DbgSyncObjsType, Id, Data);
+    _AddSyncObjsAdvInfo(SyncObjsInfo);
 
     Inc(_SyncObjsInfoListCnt);
 
