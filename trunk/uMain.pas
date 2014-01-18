@@ -1361,6 +1361,8 @@ begin
 
   UpdateStatusInfo;
 
+  tmrThreadsUpdate.Enabled := Assigned(gvDebugInfo) and Assigned(gvDebuger) and gvDebuger.Active;
+
   if not tmrThreadsUpdate.Enabled then
     UpdateTrees;
 end;
@@ -3312,7 +3314,7 @@ begin
   UpdateDebugActions;
   UpdateStatusInfo;
 
-  tmrThreadsUpdate.Enabled := (gvDebugInfo <> nil) and (gvDebuger <> nil) and gvDebuger.Active;
+  tmrThreadsUpdate.Enabled := (gvDebugInfo <> nil) and (gvDebuger <> nil);
 
   if tmrThreadsUpdate.Enabled then
     UpdateTrees;
