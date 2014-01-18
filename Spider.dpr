@@ -41,7 +41,8 @@ uses
   uUpdateInfo in 'uUpdateInfo.pas',
   uFeedback in 'uFeedback.pas' {frmFeedback},
   GdiPlus in 'GdiPlus\GdiPlus.pas',
-  GdiPlusHelpers in 'GdiPlus\GdiPlusHelpers.pas';
+  GdiPlusHelpers in 'GdiPlus\GdiPlusHelpers.pas',
+  uExceptionHook in 'uExceptionHook.pas';
 
 {$R *.res}
 
