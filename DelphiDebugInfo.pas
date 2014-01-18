@@ -26,7 +26,7 @@ Type
     procedure LoadSymbols(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
     function GetUnitFileName(const UnitName: String): String;
     procedure LoadConst(OwnerInfo: TSegmentCodeInfo; ConstSymbol: TJclTD32ConstantSymbolInfo);
-    procedure LoadLines(UnitInfo: TUnitInfo; Source: TJclTD32SourceModuleInfo);
+    //procedure LoadLines(UnitInfo: TUnitInfo; Source: TJclTD32SourceModuleInfo);
     procedure LoadSourceLines(UnitInfo: TUnitInfo; UnitSourceModuleInfo: TUnitSourceModuleInfo; Source: TJclTD32SourceModuleInfo);
     procedure LoadSegments(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
     procedure LoadSourceModules(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
@@ -46,6 +46,8 @@ Type
     procedure SetDelphiVersion(const Value: TDelphiVersion);
     procedure InitCodeTracking(const SetBP: Boolean);
     procedure FillSystemUnits;
+
+    function GetDBGFileName(const FileName: String): String;
   Protected
     Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Override;
   Public
@@ -125,7 +127,7 @@ Uses
   ClassUtils,
   DebugHook,
   StrUtils,
-  System.Contnrs, Vcl.Forms;
+  System.Contnrs, Vcl.Forms, JclWin32;
 { .............................................................................. }
 
 { .............................................................................. }
@@ -478,6 +480,7 @@ Begin
   End;
 End;
 
+(*
 Procedure TDelphiDebugInfo.LoadLines(UnitInfo: TUnitInfo; Source: TJclTD32SourceModuleInfo);
 Var
   I: Integer;
@@ -500,6 +503,7 @@ Begin
       F.Lines.Add(L);
   End;
 End;
+*)
 
 const
   _DefJclSymbolTypeKindToTypeKind: array[Low(TJclSymbolTypeKind) .. High(TJclSymbolTypeKind)] of TTypeKind = (
@@ -1517,7 +1521,8 @@ Begin
     FImage := TJclPeBorTD32Image.Create(True);
     DoProgress('Load image', 5);
 
-    FImage.FileName := FileName;
+    FImage.FileName := GetDBGFileName(FileName);
+
     DoProgress('Load debug info', 10);
     Result := FImage.IsTD32DebugPresent;
     If Result And ALoadDebugInfo and (FImage.TD32Scanner.ModuleCount > 0) Then
@@ -1540,6 +1545,9 @@ Begin
 
       DoProgress('Check debug info', 80);
       ResolveUnits;
+
+      // Выгружать нельзя, так как используется для DebugInfo
+      //UnMapAndLoad(FImage.LoadedImage);
     End;
     DoProgress('Debug info loaded', 99);
   End;
@@ -1582,17 +1590,29 @@ End;
 
 { ............................................................................... }
 Procedure TDelphiDebugInfo.ClearDebugInfo;
+var
+  DbgFileName: String;
 Begin
   FIsHookSet := False;
 
   if Assigned(FImage) then
+  begin
+    DbgFileName := '';
+
+    if DebugInfoLoaded then
+      DbgFileName := FImage.FileName;
+
     FreeAndNil(FImage);
+
+    if DebugInfoLoaded and (DbgFileName <> '') then
+      DeleteFile(PWideChar(DbgFileName));
+  end;
 
   FDelphiVersion := dvAuto;
   FSystemUnits.Clear;
   FAddressInfoList.Clear;
 
-  Inherited;
+  Inherited ClearDebugInfo;
 End;
 { ............................................................................... }
 
@@ -1654,6 +1674,39 @@ begin
       Result := String(ClassName);
     end;
 end;
+function TDelphiDebugInfo.GetDBGFileName(const FileName: String): String;
+var
+  I: Integer;
+begin
+  // Создаем копию исполняемого файла для загрузки дебажной информации
+  // TODO: Мониторилка за изменением исполняемого файла и обновление дебажной инфы
+  I := 0;
+  repeat
+    Result := ChangeFileExt(FileName, '.~dbg');
+    if FileExists(Result) then
+    begin
+      if DeleteFile(PWideChar(Result)) then
+        Break
+      else
+        Result := ChangeFileExt(FileName, '.~dbg' + IntToStr(I));
+
+      Inc(I);
+
+      if I >= 10 then
+      begin
+        Result := FileName;
+        Break;
+      end;
+    end
+    else
+      Break;
+  until False;
+
+  if Result <> FileName then
+    if not CopyFile(PWideChar(FileName), PWideChar(Result), True) then
+      Result := FileName;
+end;
+
 { ............................................................................... }
 
 { ............................................................................... }
