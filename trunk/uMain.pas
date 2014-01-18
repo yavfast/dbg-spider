@@ -795,6 +795,8 @@ end;
 
 procedure TMainForm.acRunExecute(Sender: TObject);
 begin
+  SendGAEvent('Run Spider project', GetAppID, 'Run');
+
   acRun.Enabled := False;
 
   ClearTrees;
