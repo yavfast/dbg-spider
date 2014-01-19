@@ -7,7 +7,7 @@ procedure ResetPerfomance; stdcall;
 
 implementation
 
-uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory, DbgHookSyncObjs;
+uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory, DbgHookSyncObjs, DbgHookUtils;
 
 type
   TPerfThread = class(TThread)
@@ -25,7 +25,7 @@ procedure InitPerfomance(Delta: Cardinal); stdcall;
 begin
   _Delta := Delta;
   _PerfThread := TPerfThread.Create;
-  OutputDebugString(PWideChar(Format('Init perfomance thread (%d msec) - ok', [_Delta])));
+  _Log(Format('Init perfomance thread (%d msec) - ok', [_Delta]));
 end;
 
 procedure ResetPerfomance; stdcall;
@@ -38,10 +38,10 @@ begin
     _PerfThread.WaitFor;
     FreeAndNil(_PerfThread);
 
-    OutputDebugStringA('Reset perfomance thread - ok');
+    _Log('Reset perfomance thread - ok');
   except
     on E: Exception do
-      OutputDebugStringA(PAnsiChar('Reset perfomance thread fail: ' + E.Message));
+      _Log('Reset perfomance thread fail: ' + E.Message);
   end;
 end;
 
@@ -81,7 +81,7 @@ begin
     end;
   except
     on E: Exception do
-      OutputDebugStringW(PWideChar(Format('Fail perfomance thread: [%s] %s', [E.ClassName, E.Message])));
+      _Log(Format('Fail perfomance thread: [%s] %s', [E.ClassName, E.Message]));
   end;
   FreeMemory(DbgInfo);
 end;

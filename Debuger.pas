@@ -95,8 +95,7 @@ type
     procedure UpdateMemoryInfoObjectTypes;
     function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
 
-    procedure LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal;
-      const SyncObjsAdvInfoPack: Pointer; const AdvCount: Cardinal);
+    procedure LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
 
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
     procedure DoSetBreakpointF(const Address: Pointer; var SaveByte: Byte);
@@ -2298,8 +2297,6 @@ var
   DbgInfoType: TDbgInfoType;
   Ptr: Pointer;
   Size: Cardinal;
-  AdvPtr: Pointer;
-  AdvSize: Cardinal;
 begin
   ER := @DebugEvent^.Exception.ExceptionRecord;
   DbgInfoType := TDbgInfoType(ER^.ExceptionInformation[0]);
@@ -2310,10 +2307,7 @@ begin
         Ptr := Pointer(ER^.ExceptionInformation[1]);
         Size := ER^.ExceptionInformation[2];
 
-        AdvPtr := Pointer(ER^.ExceptionInformation[3]);
-        AdvSize := ER^.ExceptionInformation[4];
-
-        LoadSyncObjsInfoPack(Ptr, Size, AdvPtr, AdvSize);
+        LoadSyncObjsInfoPack(Ptr, Size);
       end;
   end;
 end;
@@ -2605,10 +2599,8 @@ end;
 
 var
   _DbgSyncObjsInfoList: PDbgSyncObjsInfoList = Nil;
-  _DbgSyncObjsAdvInfoList: PDbgSyncObjsAdvInfoList = Nil;
 
-procedure TDebuger.LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal;
-  const SyncObjsAdvInfoPack: Pointer; const AdvCount: Cardinal);
+procedure TDebuger.LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
 var
   CurPerfIdx: Cardinal;
   ThData: PThreadData;
@@ -2616,7 +2608,6 @@ var
   SyncObjsInfo: PDbgSyncObjsInfo;
   ThSyncObjsInfo: PSyncObjsInfo;
   SyncObjsLink: PSyncObjsInfo;
-  //AdvIdx: Integer;
 
   function FindLink(const Id: NativeUInt): PSyncObjsInfo;
   var
@@ -2636,7 +2627,7 @@ var
     Result := nil;
   end;
 
-  function FindCSLink(const CSData: NativeUInt): PSyncObjsInfo;
+  function FindCSLink(const CSData: PRTLCriticalSection): PSyncObjsInfo;
   var
     Idx: Integer;
   begin
@@ -2646,7 +2637,7 @@ var
       Result := ThData^.DbgSyncObjsInfo[Idx];
       if (Result^.SyncObjsInfo.SyncObjsType = soInCriticalSection) and
         (Result^.Link = nil) and
-        (Result^.SyncObjsInfo.Data = CSData) and
+        (Result^.SyncObjsInfo.CS = CSData) and
         (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter)
       then
         Exit;
@@ -2660,18 +2651,6 @@ var
 begin
   if ReadData(SyncObjsInfoPack, _DbgSyncObjsInfoList, Count * SizeOf(TDbgSyncObjsInfo)) then
   begin
-    (*
-    AdvIdx := -1;
-
-    if AdvCount > 0 then
-    begin
-      if not ReadData(SyncObjsAdvInfoPack, _DbgSyncObjsAdvInfoList, AdvCount * SizeOf(NativeUInt)) then
-        RaiseDebugCoreException();
-
-      AdvIdx := 0;
-    end;
-    *)
-
     CurPerfIdx := ProcessData.CurDbgPointIdx;
 
     // TODO: Можно вынести обработку в отдельный поток
@@ -2695,7 +2674,7 @@ begin
               if SyncObjsInfo^.SyncObjsStateType = sosLeave then
               begin
                 if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
-                  SyncObjsLink := FindCSLink(SyncObjsInfo^.Data)
+                  SyncObjsLink := FindCSLink(SyncObjsInfo^.CS)
                 else
                   SyncObjsLink := FindLink(SyncObjsInfo^.Id);
               end;
@@ -2712,20 +2691,6 @@ begin
                 SyncObjsLink^.Link := ThSyncObjsInfo;
 
               ThSyncObjsInfo^.SyncObjsInfo := SyncObjsInfo^;
-
-              (*
-              if AdvIdx >= 0 then
-              begin
-                if _DbgSyncObjsAdvInfoList[AdvIdx] = SyncObjsInfo^.Id then
-                begin
-                  ThSyncObjsInfo^.SyncObjsAdvInfo := TDbgSyncObjsAdvInfo.Create;
-                  AdvIdx := ThSyncObjsInfo^.SyncObjsAdvInfo.Load(_DbgSyncObjsAdvInfoList, AdvIdx);
-
-                  if AdvIdx >= AdvCount then
-                    AdvIdx := -1;
-                end;
-              end;
-              *)
             finally
               ThData^.DbgSyncObjsInfo.EndRead;
             end;
@@ -3569,11 +3534,9 @@ begin
     Result := FlushInstructionCache(FProcessData.AttachedProcessHandle, AddrPrt, DataSize);
 end;
 
-
 initialization
   _DbgMemInfoList := AllocMem(SizeOf(TDbgMemInfoList));
   _DbgSyncObjsInfoList := AllocMem(SizeOf(TDbgSyncObjsInfoList));
-  _DbgSyncObjsAdvInfoList := AllocMem(SizeOf(TDbgSyncObjsAdvInfoList));
 
 finalization
   FreeMemory(_DbgMemInfoList);
@@ -3581,9 +3544,6 @@ finalization
 
   FreeMemory(_DbgSyncObjsInfoList);
   _DbgSyncObjsInfoList := nil;
-
-  FreeMemory(_DbgSyncObjsAdvInfoList);
-  _DbgSyncObjsAdvInfoList := nil;
 
   if gvDebuger <> Nil then
     FreeAndNil(gvDebuger);

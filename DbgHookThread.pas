@@ -7,7 +7,7 @@ procedure ResetThreadHook; stdcall;
 
 implementation
 
-uses Windows, SysUtils, Classes, DbgHookTypes, DbgHookCS, JclPEImage{TODO: Remove JCL};
+uses Windows, SysUtils, Classes, DbgHookTypes, DbgHookCS, DbgHookUtils, JclPEImage{TODO: Remove JCL};
 
 type
   TKernel32_CreateThread = function(SecurityAttributes: Pointer; StackSize: LongWord;
@@ -88,7 +88,7 @@ begin
     _PeMapImgHooks := TJclPeMapImgHooks.Create;
 
     ProcAddr := GetProcAddress(GetModuleHandle(kernel32), 'CreateThread');
-    OutputDebugStringA(PAnsiChar(AnsiString(Format('CreateThread: %p', [ProcAddr]))));
+    _Log(Format('CreateThread: %p', [ProcAddr]));
 
     ThreadsLock.Enter;
     try
@@ -130,13 +130,13 @@ end;
 
 function InitThreadHook(ImageBase: Pointer): Boolean; stdcall;
 begin
-  OutputDebugStringA('Init debug hooks...');
+  _Log('Init debug hooks...');
 
   Result := _HookThreads(ImageBase);
   if Result then
-    OutputDebugStringA('Init thread hook - ok')
+    _Log('Init thread hook - ok')
   else
-    OutputDebugStringA('Init thread hook - fail')
+    _Log('Init thread hook - fail')
 end;
 
 procedure ResetThreadHook; stdcall;
@@ -144,10 +144,10 @@ begin
   try
     _UnHookThreads;
 
-    OutputDebugStringA('Reset thread hook - ok');
+    _Log('Reset thread hook - ok');
   except
     on E: Exception do
-      OutputDebugStringA(PAnsiChar('Reset thread hook fail: ' + E.Message));
+      _Log('Reset thread hook fail: ' + E.Message);
   end;
 end;
 

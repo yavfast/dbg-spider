@@ -129,6 +129,7 @@ const
   );
 
   _DefSyncObjsColors: array[Low(TDbgSyncObjsType) .. High(TDbgSyncObjsType)] of TColor = (
+    clDefault,
     clSilver, // soSleep
     clGray, // soWaitForSingleObject
     clGray, // soWaitForMultipleObjects
@@ -138,6 +139,7 @@ const
   );
 
   _SyncObjsColorNames: array[Low(TDbgSyncObjsType) .. High(TDbgSyncObjsType)] of String = (
+    'unknown',
     'sleep', // soSleep
     'waitforsingleobject', // soWaitForSingleObject
     'waitformultipleobjects', // soWaitForMultipleObjects

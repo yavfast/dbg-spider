@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsLockTracking
+    ActivePage = tsCodeTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -1913,6 +1913,7 @@ object MainForm: TMainForm
         TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
         OnColumnResize = vstThreadsColumnResize
         OnDrawText = vstThreadsDrawText
+        OnFocusChanged = vstLockThreadsFocusChanged
         OnGetText = vstLockThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
         Columns = <
