@@ -38,21 +38,17 @@ var
   _SyncObjsInfoList: PDbgSyncObjsInfoList = nil;
   _SyncObjsInfoListCnt: Integer = 0;
 
-  _SyncObjsAdvInfoList: PDbgSyncObjsAdvInfoList = nil;
-  _SyncObjsAdvInfoListCnt: Integer = 0;
-
   SyncObjsLock: TDbgCriticalSection = nil;
   SyncObjsId: Integer = 0;
 
 type
   PSyncObjsOutDbgInfo = ^TSyncObjsOutDbgInfo;
-  TSyncObjsOutDbgInfo = array[0..4] of NativeUInt;
+  TSyncObjsOutDbgInfo = array[0..2] of NativeUInt;
 
 threadvar
   _SyncObjsOutDbgInfo: TSyncObjsOutDbgInfo;
 
-procedure _SyncObjsOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: NativeUInt;
-  AdvPtr: Pointer; const AdvCount: NativeUInt);
+procedure _SyncObjsOutInfo(const DbgInfoType: TDbgInfoType; Ptr: Pointer; const Count: NativeUInt);
 var
   SyncObjsOutDbgInfo: PSyncObjsOutDbgInfo;
 begin
@@ -61,10 +57,8 @@ begin
   SyncObjsOutDbgInfo[0] := NativeUInt(DbgInfoType);
   SyncObjsOutDbgInfo[1] := NativeUInt(Ptr);
   SyncObjsOutDbgInfo[2] := NativeUInt(Count);
-  SyncObjsOutDbgInfo[3] := NativeUInt(AdvPtr);
-  SyncObjsOutDbgInfo[4] := NativeUInt(AdvCount);
 
-  RaiseException(DBG_EXCEPTION, 0, 5, @SyncObjsOutDbgInfo[0]);
+  RaiseException(DBG_EXCEPTION, 0, 3, @SyncObjsOutDbgInfo[0]);
 end;
 
 procedure _OutSyncObjsInfo;
@@ -76,13 +70,10 @@ begin
   try
     if _SyncObjsInfoListCnt > 0 then
     begin
-      _SyncObjsOutInfo(dstSyncObjsInfo,
-        @_SyncObjsInfoList^[0], _SyncObjsInfoListCnt,
-        @_SyncObjsAdvInfoList^[0], _SyncObjsAdvInfoListCnt);
+      _SyncObjsOutInfo(dstSyncObjsInfo, @_SyncObjsInfoList^[0], _SyncObjsInfoListCnt);
 
       // сброс указателей на нулевой элемент
       _SyncObjsInfoListCnt := 0;
-      _SyncObjsAdvInfoListCnt := 0;
     end;
   finally
     SyncObjsLock.Leave;
@@ -142,11 +133,24 @@ end;
 
 procedure _AddCSAdvInfo(const SyncObjsInfo: PDbgSyncObjsInfo);
 begin
-  case SyncObjsInfo^.SyncObjsStateType of
-    sosEnter:
-      begin
-        if IsValidAddr(Pointer(SyncObjsInfo^.Data)) then
-          SyncObjsInfo^.AdvData := NativeUInt(PRTLCriticalSection(SyncObjsInfo^.Data)^.OwningThread);
+  case SyncObjsInfo^.SyncObjsType of
+    soEnterCriticalSection:
+      case SyncObjsInfo^.SyncObjsStateType of
+        sosEnter:
+          begin
+            // Определение потока, который лочит CS
+            if IsValidAddr(SyncObjsInfo^.CS) then
+              SyncObjsInfo^.OwningThread := SyncObjsInfo^.CS^.OwningThread;
+          end;
+      end;
+    soLeaveCriticalSection:
+      case SyncObjsInfo^.SyncObjsStateType of
+        sosLeave:
+          begin
+            // Определение потока, следующего в очереди на CS
+            if IsValidAddr(SyncObjsInfo^.CS) then
+              SyncObjsInfo^.OwningThread := SyncObjsInfo^.CS^.OwningThread;
+          end;
       end;
   end;
 end;
@@ -154,13 +158,13 @@ end;
 procedure _AddSyncObjsAdvInfo(const SyncObjsInfo: PDbgSyncObjsInfo);
 begin
   case SyncObjsInfo^.SyncObjsType of
-    soEnterCriticalSection:
+    soEnterCriticalSection, soLeaveCriticalSection:
       _AddCSAdvInfo(SyncObjsInfo);
   end;
 end;
 
 procedure _AddSyncObjsInfo(const DbgSyncObjsType: TDbgSyncObjsType; const DbgSyncObjsStateType: TDbgSyncObjsStateType;
-  const Id: NativeUInt; const Data: NativeUInt);
+  const Id: NativeUInt; const Data: NativeUInt); stdcall;
 var
   SyncObjsInfo: PDbgSyncObjsInfo;
   CurTime: Int64;
@@ -171,20 +175,35 @@ begin
   if _SyncObjsInfoList <> Nil then
   begin
     SyncObjsInfo := @_SyncObjsInfoList^[_SyncObjsInfoListCnt];
+    ZeroMemory(SyncObjsInfo, SizeOf(TDbgSyncObjsInfo));
 
-    SyncObjsInfo^.ThreadId := GetCurrentThreadId;
-    SyncObjsInfo^.SyncObjsType := DbgSyncObjsType;
-    SyncObjsInfo^.SyncObjsStateType := DbgSyncObjsStateType;
     SyncObjsInfo^.Id := Id;
-    SyncObjsInfo^.Data := Data;
-    SyncObjsInfo^.AdvData := 0;
+    SyncObjsInfo^.ThreadId := GetCurrentThreadId;
     SyncObjsInfo^.CurTime := CurTime;
+    SyncObjsInfo^.SyncObjsStateType := DbgSyncObjsStateType;
+    SyncObjsInfo^.SyncObjsType := DbgSyncObjsType;
+
+    case SyncObjsInfo^.SyncObjsType of
+      soSleep:
+        SyncObjsInfo^.MSec := Data;
+      soWaitForSingleObject:
+        SyncObjsInfo^.Handle := THandle(Data);
+      soWaitForMultipleObjects:
+        SyncObjsInfo^.Handles := PWOHandleArray(Data);
+      soEnterCriticalSection,
+      soLeaveCriticalSection,
+      soInCriticalSection:
+        SyncObjsInfo^.CS := PRTLCriticalSection(Data);
+    end;
+
+    if DbgSyncObjsStateType = sosEnter then
+      GetCallStack(SyncObjsInfo^.Stack, -2);
 
     _AddSyncObjsAdvInfo(SyncObjsInfo);
 
     Inc(_SyncObjsInfoListCnt);
 
-    if (_SyncObjsInfoListCnt = _DbgSyncObjsListLength) or (_SyncObjsAdvInfoListCnt >= _DbgSyncObjsAdvListOutLength) then
+    if (_SyncObjsInfoListCnt = _DbgSyncObjsListLength) then
       _OutSyncObjsInfo;
   end;
   SyncObjsLock.Leave;
@@ -272,10 +291,12 @@ var
 begin
   if not SyncObjsHooked then
   begin
+    Result := False;
+
     H := GetModuleHandle(kernel32);
     if H = 0 then
     begin
-      OutputDebugStringA('GetModuleHandle(kernel32) - fail');
+      _Log('GetModuleHandle(kernel32) - fail');
       Exit;
     end;
 
@@ -289,35 +310,35 @@ begin
       if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookSleep) then
       begin
         @Kernel32_Sleep := ProcAddr;
-        OutputDebugStringA('Hook Sleep - ok');
+        _Log('Hook Sleep - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'WaitForSingleObject');
       if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForSingleObject) then
       begin
         @Kernel32_WaitForSingleObject := ProcAddr;
-        OutputDebugStringA('Hook WaitForSingleObject - ok');
+        _Log('Hook WaitForSingleObject - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'WaitForMultipleObjects');
       if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForMultipleObjects) then
       begin
         @Kernel32_WaitForMultipleObjects := ProcAddr;
-        OutputDebugStringA('Hook WaitForMultipleObjects - ok');
+        _Log('Hook WaitForMultipleObjects - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'EnterCriticalSection');
       if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookEnterCriticalSection) then
       begin
         @Kernel32_EnterCriticalSection := ProcAddr;
-        OutputDebugStringA('Hook EnterCriticalSection - ok');
+        _Log('Hook EnterCriticalSection - ok');
       end;
 
       ProcAddr := GetProcAddress(H, 'LeaveCriticalSection');
       if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookLeaveCriticalSection) then
       begin
         @Kernel32_LeaveCriticalSection := ProcAddr;
-        OutputDebugStringA('Hook LeaveCriticalSection - ok');
+        _Log('Hook LeaveCriticalSection - ok');
       end;
 
       SyncObjsHooked := True;
@@ -352,15 +373,14 @@ end;
 function InitSyncObjsHook(ImageBase: Pointer): Boolean; stdcall;
 begin
   _SyncObjsInfoList := AllocMem(SizeOf(TDbgSyncObjsInfoList));
-  _SyncObjsAdvInfoList := AllocMem(SizeOf(TDbgSyncObjsAdvInfoList));
 
   SyncObjsLock := TDbgCriticalSection.Create;
 
   Result := _HookSyncObjs(ImageBase);
   if Result then
-    OutputDebugStringA('Init SyncObjs hooks - ok')
+    _Log('Init SyncObjs hooks - ok')
   else
-    OutputDebugStringA('Init SyncObjs hooks - fail')
+    _Log('Init SyncObjs hooks - fail')
 end;
 
 procedure ResetSyncObjsHook; stdcall;
@@ -383,9 +403,6 @@ begin
 
         FreeMemory(_SyncObjsInfoList);
         _SyncObjsInfoList := nil;
-
-        FreeMemory(_SyncObjsAdvInfoList);
-        _SyncObjsAdvInfoList := nil;
       finally
         SyncObjsLock.Leave;
       end;
@@ -393,10 +410,10 @@ begin
 
     FreeAndNil(SyncObjsLock);
 
-    OutputDebugStringA('Reset SyncObjs hooks - ok');
+    _Log('Reset SyncObjs hooks - ok');
   except
     on E: Exception do
-      OutputDebugStringA(PAnsiChar('Reset SyncObjs hooks fail: ' + E.Message));
+      _Log('Reset SyncObjs hooks fail: ' + E.Message);
   end;
 end;
 

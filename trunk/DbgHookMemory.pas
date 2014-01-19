@@ -65,44 +65,6 @@ begin
   RaiseException(DBG_EXCEPTION, 0, 2, @MemOutDbgInfo[0]);
 end;
 
-procedure GetCallStack(var Stack: TDbgMemInfoStack); stdcall;
-var
-  TopOfStack: TJclAddr;
-  BaseOfStack: TJclAddr;
-  StackFrame: PStackFrame;
-  Level: Integer;
-begin
-  try
-    ZeroMemory(@Stack[0], Length(Stack) * SizeOf(Pointer));
-
-    Level := -2; // это в нашей dll-ке
-    StackFrame := GetFramePointer;
-    BaseOfStack := TJclAddr(StackFrame) - 1;
-    TopOfStack := GetStackTop;
-
-    while (Level < Length(Stack)) and (
-      (Level < 0) or (
-        (BaseOfStack < TJclAddr(StackFrame)) and
-        (TJclAddr(StackFrame) < TopOfStack) and
-        IsValidAddr(StackFrame)
-        // TODO: По какой-то причине эта проверка сильно тупит
-        // and IsValidCodeAddr(Pointer(StackFrame^.CallerAddr))
-        )
-      )
-    do begin
-      if Level >= 0 then
-        Stack[Level] := Pointer(StackFrame^.CallerAddr - 1);
-
-      StackFrame := PStackFrame(StackFrame^.CallerFrame);
-
-      Inc(Level);
-    end;
-  except
-    on E: Exception do
-      _LogException(E, _EHOOK_GetCallStack);
-  end;
-end;
-
 function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
 begin
   Result := False;
@@ -141,7 +103,7 @@ begin
     miGetMem:
     begin
       DbgMemInfo.Size := _Size;
-      GetCallStack(DbgMemInfo.Stack);
+      GetCallStack(DbgMemInfo.Stack, -2);
     end;
     miFreeMem:
     begin
@@ -237,7 +199,8 @@ end;
 
 procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
 begin
-  OutputDebugStringA('Init memory hooks...');
+  _Log('Init memory hooks...');
+
   MemInfoListCnt := 0;
   MemCallStack := MemoryCallStack;
 
@@ -271,7 +234,7 @@ begin
 
   // _SetMemHookStatus(0);
 
-  OutputDebugStringA('Init memory hooks - ok');
+  _Log('Init memory hooks - ok');
 end;
 
 procedure ResetMemoryHook; stdcall;
@@ -294,7 +257,7 @@ begin
     while not MemInfoLock.TryEnter do
       SwitchToThread;
     try
-    // Сбрасываем буффер
+      // Сбрасываем буффер
       _OutMemInfoBuf(dstMemInfo);
 
       FreeMemory(MemInfoList);
@@ -307,10 +270,10 @@ begin
 
     FreeAndNil(MemLock);
 
-    OutputDebugStringA('Reset memory hooks - ok');
+    _Log('Reset memory hooks - ok');
   except
     on E: Exception do
-      OutputDebugStringA(PAnsiChar('Reset memory hooks fail: ' + E.Message));
+      _Log('Reset memory hooks fail: ' + E.Message);
   end;
 end;
 

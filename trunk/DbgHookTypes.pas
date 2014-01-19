@@ -18,8 +18,8 @@ type
 
   TDbgMemInfoType = (miGetMem = 0, miFreeMem);
 
-  TDbgMemInfoStack = array[0..31] of Pointer;
-  TObjClassTypeName = array[0..SizeOf(TDbgMemInfoStack) - 1] of AnsiChar;
+  TDbgHookInfoStack = array[0..31] of Pointer;
+  TObjClassTypeName = array[0..SizeOf(TDbgHookInfoStack) - 1] of AnsiChar;
 
   PDbgMemInfo = ^TDbgMemInfo;
   TDbgMemInfo = packed record
@@ -28,7 +28,7 @@ type
     case MemInfoType: TDbgMemInfoType of
       miGetMem: (
         Size: Cardinal;
-        Stack: TDbgMemInfoStack;
+        Stack: TDbgHookInfoStack;
       );
       miFreeMem: (
         ObjClassType: TObjClassTypeName;
@@ -38,29 +38,47 @@ type
   // SyncObjs
 
   TDbgSyncObjsType = (
-    soSleep = 0,
+    soUnknown = 0,
+    soSleep,
     soWaitForSingleObject, soWaitForMultipleObjects,
     soEnterCriticalSection, soLeaveCriticalSection, soInCriticalSection
   );
 
-  TDbgSyncObjsStateType = (sosEnter = 0, sosLeave = 1);
+  TDbgSyncObjsStateType = (sosUnknown = 0, sosEnter, sosLeave);
 
   PDbgSyncObjsInfo = ^TDbgSyncObjsInfo;
   TDbgSyncObjsInfo = packed record
-    ThreadId: Cardinal;
-    SyncObjsType: TDbgSyncObjsType;
-    SyncObjsStateType: TDbgSyncObjsStateType;
     Id: NativeUInt;
-    Data: NativeUInt;
-    AdvData: NativeUInt;
+    ThreadId: Cardinal;
     CurTime: Int64;
+    Stack: TDbgHookInfoStack;
+    SyncObjsStateType: TDbgSyncObjsStateType;
+    case SyncObjsType: TDbgSyncObjsType of
+      soUnknown: (
+        //Data: NativeUInt;
+        //AdvData: NativeUInt;
+      );
+      soSleep: (
+        MSec: NativeUInt;
+      );
+      soWaitForSingleObject: (
+        Handle: THandle;
+      );
+      soWaitForMultipleObjects: (
+        Handles: PWOHandleArray;
+      );
+      soEnterCriticalSection,
+      soLeaveCriticalSection,
+      soInCriticalSection:
+      (
+        CS: PRTLCriticalSection;
+        OwningThread: THandle;
+      );
   end;
 
 const
   _DbgMemListLength = ($FFFFF div SizeOf(TDbgMemInfo));
-  _DbgSyncObjsListLength = ($FFFF div SizeOf(TDbgSyncObjsInfo));
-  _DbgSyncObjsAdvListLength = $FFFF;
-  _DbgSyncObjsAdvListOutLength = _DbgSyncObjsAdvListLength - 32;
+  _DbgSyncObjsListLength = ($FFFFF div SizeOf(TDbgSyncObjsInfo));
 
 type
   PDbgMemInfoList = ^TDbgMemInfoList;
@@ -68,10 +86,6 @@ type
 
   PDbgSyncObjsInfoList = ^TDbgSyncObjsInfoList;
   TDbgSyncObjsInfoList = array[0.._DbgSyncObjsListLength - 1] of TDbgSyncObjsInfo;
-
-  { [ID][Size N][Data 0]..[Data N-1] }
-  PDbgSyncObjsAdvInfoList = ^TDbgSyncObjsAdvInfoList;
-  TDbgSyncObjsAdvInfoList = array[0..(_DbgSyncObjsAdvListLength - 1)] of NativeUInt;
 
 implementation
 

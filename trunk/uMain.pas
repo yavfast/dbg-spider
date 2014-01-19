@@ -382,6 +382,7 @@ type
       const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
 
     procedure vstLockThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstLockThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
 
     procedure tmrThreadsUpdateTimer(Sender: TObject);
@@ -524,6 +525,9 @@ type
     function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
     function FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TUnitInfo): PVirtualNode;
     function FindTrackFuncNode(vTree: TBaseVirtualTree; const FuncInfo: TFuncInfo): PVirtualNode;
+
+    procedure LoadLockTrackThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
+
 
     function FindNode(vTree: TBaseVirtualTree; Node: PVirtualNode; CheckFunc: TCheckFunc; CmpData: Pointer): PVirtualNode;
 
@@ -1314,12 +1318,17 @@ begin
       UpdateDebugActions;
   end;
 
+  // Включаем таймер, который обновит окна и определит свой статус
+  tmrThreadsUpdate.Enabled := True;
+
+  (*
   UpdateStatusInfo;
 
   tmrThreadsUpdate.Enabled := Assigned(gvDebugInfo) and Assigned(gvDebuger) and gvDebuger.Active;
 
   if not tmrThreadsUpdate.Enabled then
     UpdateTrees;
+  *)
 end;
 
 function OffsetToTime(const Offset: Cardinal): String;
@@ -2132,6 +2141,11 @@ end;
 procedure TMainForm.LoadGUIOptions;
 begin
   LoadRecentProjects;
+end;
+
+procedure TMainForm.LoadLockTrackThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
+begin
+
 end;
 
 procedure TMainForm.LoadMemInfoChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
@@ -3268,11 +3282,9 @@ procedure TMainForm.tmrThreadsUpdateTimer(Sender: TObject);
 begin
   UpdateDebugActions;
   UpdateStatusInfo;
+  UpdateTrees;
 
-  tmrThreadsUpdate.Enabled := (gvDebugInfo <> nil) and (gvDebuger <> nil);
-
-  if tmrThreadsUpdate.Enabled then
-    UpdateTrees;
+  tmrThreadsUpdate.Enabled := (gvDebugInfo <> nil) and (gvDebuger <> nil) and gvDebuger.Active;
 end;
 
 procedure TMainForm.UpdateMainActions;
@@ -4039,6 +4051,21 @@ begin
                  CellText := Format('%d', [ThData^.DbgExceptionsCount]);
           end;
       end;
+  end;
+end;
+
+procedure TMainForm.vstLockThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  Data: PLinkData;
+begin
+  if Node = nil then Exit;
+
+  Data := vstLockThreads.GetNodeData(Node);
+  case Data^.LinkType of
+    //ltProcess:
+    //  LoadTrackProcessFunctions(Data^.ProcessData, Node);
+    ltThread:
+      LoadLockTrackThreadFunctions(Data^.ThreadData, Node);
   end;
 end;
 
