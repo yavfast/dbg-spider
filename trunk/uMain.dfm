@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsCodeTracking
+    ActivePage = tsLog
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -40,6 +40,13 @@ object MainForm: TMainForm
         BevelInner = bvNone
         BevelOuter = bvNone
         BorderStyle = bsNone
+        ClipboardFormats.Strings = (
+          'CSV'
+          'HTML Format'
+          'Plain text'
+          'Rich Text Format'
+          'Rich Text Format Without Objects'
+          'Unicode text')
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -50,14 +57,16 @@ object MainForm: TMainForm
         Indent = 0
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
-        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
+        TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toReportMode, toToggleOnDblClick, toWheelPanning, toEditOnClick]
         TreeOptions.PaintOptions = [toShowDropmark, toShowHorzGridLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+        TreeOptions.StringOptions = [toAutoAcceptEditChange]
         OnColumnResize = vstLogColumnResize
         OnDrawText = vstLogDrawText
         OnGetText = vstLogGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
         OnResize = vstLogResize
+        ExplicitTop = 1
         Columns = <
           item
             Alignment = taRightJustify
@@ -89,6 +98,13 @@ object MainForm: TMainForm
         BevelInner = bvNone
         BevelOuter = bvNone
         BorderStyle = bsNone
+        ClipboardFormats.Strings = (
+          'CSV'
+          'HTML Format'
+          'Plain text'
+          'Rich Text Format'
+          'Rich Text Format Without Objects'
+          'Unicode text')
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -101,7 +117,7 @@ object MainForm: TMainForm
         TabOrder = 0
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
         OnColumnResize = vstThreadsColumnResize
         OnCompareNodes = vstDbgInfoUnitsCompareNodes
         OnFocusChanged = vstDbgInfoUnitsFocusChanged
@@ -147,7 +163,7 @@ object MainForm: TMainForm
           Top = 0
           Width = 848
           Height = 517
-          ActivePage = tsDbgUnitConsts
+          ActivePage = tsDbgUnitFunctions
           Align = alClient
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
@@ -162,6 +178,13 @@ object MainForm: TMainForm
               BevelInner = bvNone
               BevelOuter = bvNone
               BorderStyle = bsNone
+              ClipboardFormats.Strings = (
+                'CSV'
+                'HTML Format'
+                'Plain text'
+                'Rich Text Format'
+                'Rich Text Format Without Objects'
+                'Unicode text')
               Header.AutoSizeIndex = 0
               Header.Font.Charset = DEFAULT_CHARSET
               Header.Font.Color = clWindowText
@@ -173,7 +196,7 @@ object MainForm: TMainForm
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
               OnGetText = vstDbgInfoConstsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
               Columns = <
@@ -214,6 +237,13 @@ object MainForm: TMainForm
               BevelInner = bvNone
               BevelOuter = bvNone
               BorderStyle = bsNone
+              ClipboardFormats.Strings = (
+                'CSV'
+                'HTML Format'
+                'Plain text'
+                'Rich Text Format'
+                'Rich Text Format Without Objects'
+                'Unicode text')
               Header.AutoSizeIndex = 0
               Header.Font.Charset = DEFAULT_CHARSET
               Header.Font.Color = clWindowText
@@ -225,7 +255,7 @@ object MainForm: TMainForm
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
               OnGetText = vstDbgInfoTypesGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
               Columns = <
@@ -274,6 +304,13 @@ object MainForm: TMainForm
               BevelInner = bvNone
               BevelOuter = bvNone
               BorderStyle = bsNone
+              ClipboardFormats.Strings = (
+                'CSV'
+                'HTML Format'
+                'Plain text'
+                'Rich Text Format'
+                'Rich Text Format Without Objects'
+                'Unicode text')
               Header.AutoSizeIndex = 0
               Header.Font.Charset = DEFAULT_CHARSET
               Header.Font.Color = clWindowText
@@ -285,7 +322,7 @@ object MainForm: TMainForm
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
               OnGetText = vstDbgInfoVarsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
               Columns = <
@@ -326,6 +363,13 @@ object MainForm: TMainForm
               BevelInner = bvNone
               BevelOuter = bvNone
               BorderStyle = bsNone
+              ClipboardFormats.Strings = (
+                'CSV'
+                'HTML Format'
+                'Plain text'
+                'Rich Text Format'
+                'Rich Text Format Without Objects'
+                'Unicode text')
               Header.AutoSizeIndex = 0
               Header.Font.Charset = DEFAULT_CHARSET
               Header.Font.Color = clWindowText
@@ -337,7 +381,7 @@ object MainForm: TMainForm
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
               OnColumnResize = vstThreadsColumnResize
               OnFocusChanged = vstDbgInfoFunctionsFocusChanged
               OnGetText = vstDbgInfoFunctionsGetText
@@ -397,6 +441,13 @@ object MainForm: TMainForm
                 BevelInner = bvNone
                 BevelOuter = bvNone
                 BorderStyle = bsNone
+                ClipboardFormats.Strings = (
+                  'CSV'
+                  'HTML Format'
+                  'Plain text'
+                  'Rich Text Format'
+                  'Rich Text Format Without Objects'
+                  'Unicode text')
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -408,7 +459,7 @@ object MainForm: TMainForm
                 TabOrder = 0
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                 OnGetText = vstDbgInfoFuncVarsGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
                 Columns = <
@@ -501,6 +552,13 @@ object MainForm: TMainForm
         Height = 517
         Align = alLeft
         BorderStyle = bsNone
+        ClipboardFormats.Strings = (
+          'CSV'
+          'HTML Format'
+          'Plain text'
+          'Rich Text Format'
+          'Rich Text Format Without Objects'
+          'Unicode text')
         Colors.FocusedSelectionColor = clBtnFace
         Colors.FocusedSelectionBorderColor = clBtnFace
         Colors.SelectionRectangleBlendColor = clBtnFace
@@ -609,6 +667,13 @@ object MainForm: TMainForm
         Width = 476
         Height = 517
         Align = alLeft
+        ClipboardFormats.Strings = (
+          'CSV'
+          'HTML Format'
+          'Plain text'
+          'Rich Text Format'
+          'Rich Text Format Without Objects'
+          'Unicode text')
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -753,6 +818,13 @@ object MainForm: TMainForm
                   Width = 421
                   Height = 225
                   Align = alTop
+                  ClipboardFormats.Strings = (
+                    'CSV'
+                    'HTML Format'
+                    'Plain text'
+                    'Rich Text Format'
+                    'Rich Text Format Without Objects'
+                    'Unicode text')
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -765,7 +837,7 @@ object MainForm: TMainForm
                   TabOrder = 0
                   TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                   TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                   OnFocusChanged = vstMemStackFocusChanged
                   OnGetText = vstMemStackGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -830,6 +902,13 @@ object MainForm: TMainForm
                 Width = 305
                 Height = 465
                 Align = alLeft
+                ClipboardFormats.Strings = (
+                  'CSV'
+                  'HTML Format'
+                  'Plain text'
+                  'Rich Text Format'
+                  'Rich Text Format Without Objects'
+                  'Unicode text')
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -845,7 +924,7 @@ object MainForm: TMainForm
                 TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                TreeOptions.SelectionOptions = [toFullRowSelect]
+                TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
                 OnColumnResize = vstThreadsColumnResize
                 OnCompareNodes = vstMemInfoObjectsCompareNodes
                 OnFocusChanged = vstMemListFocusChanged
@@ -912,6 +991,13 @@ object MainForm: TMainForm
                 BevelInner = bvNone
                 BevelOuter = bvNone
                 BorderStyle = bsNone
+                ClipboardFormats.Strings = (
+                  'CSV'
+                  'HTML Format'
+                  'Plain text'
+                  'Rich Text Format'
+                  'Rich Text Format Without Objects'
+                  'Unicode text')
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -926,13 +1012,15 @@ object MainForm: TMainForm
                 TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                 OnColumnResize = vstThreadsColumnResize
                 OnCompareNodes = vstMemInfoFuncTreeCompareNodes
                 OnDrawText = vstTrackFuncsDrawText
                 OnFocusChanged = vstMemInfoFuncTreeFocusChanged
                 OnGetText = vstMemInfoFuncTreeGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitLeft = 2
+                ExplicitTop = -3
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -999,6 +1087,13 @@ object MainForm: TMainForm
                       BevelInner = bvNone
                       BevelOuter = bvNone
                       BorderStyle = bsNone
+                      ClipboardFormats.Strings = (
+                        'CSV'
+                        'HTML Format'
+                        'Plain text'
+                        'Rich Text Format'
+                        'Rich Text Format Without Objects'
+                        'Unicode text')
                       Header.AutoSizeIndex = 0
                       Header.Font.Charset = DEFAULT_CHARSET
                       Header.Font.Color = clWindowText
@@ -1010,7 +1105,7 @@ object MainForm: TMainForm
                       TabOrder = 0
                       TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                       TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                      TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                      TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                       OnDblClick = vstMemInfoFuncParentsDblClick
                       OnDrawText = vstTrackFuncLinksDrawText
                       OnGetText = vstMemInfoFuncParentsGetText
@@ -1057,6 +1152,13 @@ object MainForm: TMainForm
                       BevelInner = bvNone
                       BevelOuter = bvNone
                       BorderStyle = bsNone
+                      ClipboardFormats.Strings = (
+                        'CSV'
+                        'HTML Format'
+                        'Plain text'
+                        'Rich Text Format'
+                        'Rich Text Format Without Objects'
+                        'Unicode text')
                       Header.AutoSizeIndex = 0
                       Header.Font.Charset = DEFAULT_CHARSET
                       Header.Font.Color = clWindowText
@@ -1068,7 +1170,7 @@ object MainForm: TMainForm
                       TabOrder = 1
                       TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                       TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                      TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                      TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                       OnDblClick = vstMemInfoFuncChildsDblClick
                       OnDrawText = vstTrackFuncLinksDrawText
                       OnGetText = vstMemInfoFuncChildsGetText
@@ -1154,6 +1256,13 @@ object MainForm: TMainForm
                 Width = 356
                 Height = 249
                 Align = alLeft
+                ClipboardFormats.Strings = (
+                  'CSV'
+                  'HTML Format'
+                  'Plain text'
+                  'Rich Text Format'
+                  'Rich Text Format Without Objects'
+                  'Unicode text')
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -1169,7 +1278,7 @@ object MainForm: TMainForm
                 TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                TreeOptions.SelectionOptions = [toFullRowSelect]
+                TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
                 OnColumnResize = vstThreadsColumnResize
                 OnCompareNodes = vstMemInfoObjectsCompareNodes
                 OnFocusChanged = vstMemInfoObjectsFocusChanged
@@ -1207,6 +1316,13 @@ object MainForm: TMainForm
                 Width = 370
                 Height = 249
                 Align = alClient
+                ClipboardFormats.Strings = (
+                  'CSV'
+                  'HTML Format'
+                  'Plain text'
+                  'Rich Text Format'
+                  'Rich Text Format Without Objects'
+                  'Unicode text')
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -1219,10 +1335,12 @@ object MainForm: TMainForm
                 TabOrder = 1
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                 OnDblClick = vstMemInfoObjStackDblClick
                 OnGetText = vstMemStackGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitLeft = 362
+                ExplicitTop = -1
                 Columns = <
                   item
                     Alignment = taRightJustify
@@ -1266,6 +1384,13 @@ object MainForm: TMainForm
         Width = 401
         Height = 517
         Align = alLeft
+        ClipboardFormats.Strings = (
+          'CSV'
+          'HTML Format'
+          'Plain text'
+          'Rich Text Format'
+          'Rich Text Format Without Objects'
+          'Unicode text')
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -1334,6 +1459,13 @@ object MainForm: TMainForm
             Width = 511
             Height = 493
             Align = alLeft
+            ClipboardFormats.Strings = (
+              'CSV'
+              'HTML Format'
+              'Plain text'
+              'Rich Text Format'
+              'Rich Text Format Without Objects'
+              'Unicode text')
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
@@ -1348,7 +1480,7 @@ object MainForm: TMainForm
             TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-            TreeOptions.SelectionOptions = [toFullRowSelect]
+            TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
             OnColumnResize = vstThreadsColumnResize
             OnFocusChanged = vstExceptionListFocusChanged
             OnGetText = vstExceptionListGetText
@@ -1404,6 +1536,13 @@ object MainForm: TMainForm
               Width = 298
               Height = 217
               Align = alTop
+              ClipboardFormats.Strings = (
+                'CSV'
+                'HTML Format'
+                'Plain text'
+                'Rich Text Format'
+                'Rich Text Format Without Objects'
+                'Unicode text')
               Header.AutoSizeIndex = 0
               Header.Font.Charset = DEFAULT_CHARSET
               Header.Font.Color = clWindowText
@@ -1416,7 +1555,7 @@ object MainForm: TMainForm
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+              TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
               OnFocusChanged = vstExceptionCallStackFocusChanged
               OnGetText = vstExceptionCallStackGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -1526,6 +1665,13 @@ object MainForm: TMainForm
         Height = 517
         Align = alLeft
         BorderStyle = bsNone
+        ClipboardFormats.Strings = (
+          'CSV'
+          'HTML Format'
+          'Plain text'
+          'Rich Text Format'
+          'Rich Text Format Without Objects'
+          'Unicode text')
         Colors.FocusedSelectionColor = clBtnFace
         Colors.FocusedSelectionBorderColor = clBtnFace
         Colors.SelectionRectangleBlendColor = clBtnFace
@@ -1615,6 +1761,13 @@ object MainForm: TMainForm
             BevelInner = bvNone
             BevelOuter = bvNone
             BorderStyle = bsNone
+            ClipboardFormats.Strings = (
+              'CSV'
+              'HTML Format'
+              'Plain text'
+              'Rich Text Format'
+              'Rich Text Format Without Objects'
+              'Unicode text')
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
@@ -1629,7 +1782,7 @@ object MainForm: TMainForm
             TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+            TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
             OnColumnResize = vstThreadsColumnResize
             OnCompareNodes = vstTrackFuncsCompareNodes
             OnDrawText = vstTrackFuncsDrawText
@@ -1637,6 +1790,8 @@ object MainForm: TMainForm
             OnFocusChanging = vstTrackFuncsFocusChanging
             OnGetText = vstTrackFuncsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            ExplicitLeft = -2
+            ExplicitTop = -2
             Columns = <
               item
                 CaptionAlignment = taCenter
@@ -1704,6 +1859,13 @@ object MainForm: TMainForm
                   BevelInner = bvNone
                   BevelOuter = bvNone
                   BorderStyle = bsNone
+                  ClipboardFormats.Strings = (
+                    'CSV'
+                    'HTML Format'
+                    'Plain text'
+                    'Rich Text Format'
+                    'Rich Text Format Without Objects'
+                    'Unicode text')
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -1716,7 +1878,7 @@ object MainForm: TMainForm
                   TabOrder = 0
                   TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                   TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                   OnDblClick = vstTrackFuncParentDblClick
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstTrackFuncParentGetText
@@ -1763,6 +1925,13 @@ object MainForm: TMainForm
                   BevelInner = bvNone
                   BevelOuter = bvNone
                   BorderStyle = bsNone
+                  ClipboardFormats.Strings = (
+                    'CSV'
+                    'HTML Format'
+                    'Plain text'
+                    'Rich Text Format'
+                    'Rich Text Format Without Objects'
+                    'Unicode text')
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -1774,7 +1943,7 @@ object MainForm: TMainForm
                   TabOrder = 1
                   TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                   TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
-                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+                  TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
                   OnDblClick = vstTrackFuncChildsDblClick
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstTrackFuncChildsGetText
@@ -2165,6 +2334,13 @@ object MainForm: TMainForm
         Width = 1210
         Height = 493
         Align = alClient
+        ClipboardFormats.Strings = (
+          'CSV'
+          'HTML Format'
+          'Plain text'
+          'Rich Text Format'
+          'Rich Text Format Without Objects'
+          'Unicode text')
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -2174,7 +2350,7 @@ object MainForm: TMainForm
         Header.Options = [hoAutoResize, hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
         TabOrder = 0
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages]
-        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
+        TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
         OnDrawText = vstUpdateInfoDrawText
         OnGetText = vstUpdateInfoGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -3106,6 +3282,7 @@ object MainForm: TMainForm
       Tag = 6
       Category = 'MainTabs'
       Caption = 'Lock tracking'
+      Visible = False
       OnExecute = acMainTabExecute
     end
     object acTabUpdateInfo: TAction
@@ -3114,6 +3291,13 @@ object MainForm: TMainForm
       Caption = 'Update Info'
       Visible = False
       OnExecute = acMainTabExecute
+    end
+    object acCopy: TAction
+      Caption = 'acCopy'
+      SecondaryShortCuts.Strings = (
+        'Ctrl+Ins')
+      ShortCut = 16451
+      OnExecute = acCopyExecute
     end
   end
   object OD: TFileOpenDialog
@@ -3452,6 +3636,7 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
+            Visible = False
             Action = acTabLockTracking
             Caption = 'L&ock tracking'
           end

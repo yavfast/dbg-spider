@@ -279,6 +279,7 @@ type
     vstLockTrackingThreadsInfo: TVirtualStringTree;
     splLockTrackingAdv: TSplitter;
     synmLockTracking: TSynMemo;
+    acCopy: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -435,6 +436,7 @@ type
     procedure acOpenSiteExecute(Sender: TObject);
     procedure acFeedbackExecute(Sender: TObject);
     procedure acExcepInfoRefreshExecute(Sender: TObject);
+    procedure acCopyExecute(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -667,6 +669,12 @@ end;
 procedure TMainForm.acContinueExecute(Sender: TObject);
 begin
   _AC.TraceDebug(dtsContinue);
+end;
+
+procedure TMainForm.acCopyExecute(Sender: TObject);
+begin
+  if Assigned(ActiveControl) then
+    ActiveControl.Perform(WM_COPY, 0, 0);
 end;
 
 procedure TMainForm.acCPUTimeLineExecute(Sender: TObject);
