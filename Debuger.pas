@@ -692,7 +692,7 @@ begin
 
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
 
-    Result^.DbgGetMemInfo := TGetMemInfo.Create(1024, True);
+    Result^.DbgGetMemInfo := TGetMemInfoList.Create(1024, True);
     Result^.DbgGetMemInfo.OwnsValues := True;
     Result^.DbgGetMemUnitList := TTrackUnitInfoList.Create(512);
     //Result^.DbgGetMemFuncList := TTrackFuncInfoList.Create(4096);
@@ -1022,7 +1022,7 @@ begin
 
   FProcessData.Started := _QueryPerformanceCounter;
   FProcessData.DbgPoints := TCollectList<TProcessPoint>.Create;
-  FProcessData.DbgGetMemInfo := TGetMemInfo.Create(1024, True);
+  FProcessData.DbgGetMemInfo := TGetMemInfoList.Create(1024, True);
   FProcessData.DbgGetMemInfo.OwnsValues := True;
 
   FProcessData.ProcessGetMemCount := 0;
@@ -2679,18 +2679,23 @@ begin
                   SyncObjsLink := FindLink(SyncObjsInfo^.Id);
               end;
 
-              ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
+              ThData^.DbgSyncObjsInfo.BeginWrite;
+              try
+                ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
 
-              if ThData^.State = tsFinished then
-                ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
-              else
-                ThSyncObjsInfo^.PerfIdx := CurPerfIdx;
+                if ThData^.State = tsFinished then
+                  ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
+                else
+                  ThSyncObjsInfo^.PerfIdx := CurPerfIdx;
 
-              ThSyncObjsInfo^.Link := SyncObjsLink;
-              if SyncObjsLink <> nil then
-                SyncObjsLink^.Link := ThSyncObjsInfo;
+                ThSyncObjsInfo^.Link := SyncObjsLink;
+                if SyncObjsLink <> nil then
+                  SyncObjsLink^.Link := ThSyncObjsInfo;
 
-              ThSyncObjsInfo^.SyncObjsInfo := SyncObjsInfo^;
+                ThSyncObjsInfo^.SyncObjsInfo := SyncObjsInfo^;
+              finally
+                ThData^.DbgSyncObjsInfo.EndWrite;
+              end;
             finally
               ThData^.DbgSyncObjsInfo.EndRead;
             end;
@@ -3472,7 +3477,7 @@ procedure TDebuger.UpdateMemoryInfoObjectTypes;
 var
   Idx: Integer;
   ThData: PThreadData;
-  GetMemInfo: TGetMemInfo;
+  GetMemInfo: TGetMemInfoList;
   GetMemInfoItem: TGetMemInfoItem;
 begin
   Idx := 0;

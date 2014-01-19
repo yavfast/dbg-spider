@@ -493,7 +493,7 @@ type
     procedure LoadMemInfoThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
     procedure LoadMemInfoParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
     procedure LoadMemInfoChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
-    procedure LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfo; SyncNode: PVirtualNode);
+    procedure LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfoList; SyncNode: PVirtualNode);
     procedure LoadMemInfoObjectStack(Tree: TBaseVirtualTree; MemInfo: PGetMemInfo; SyncNode: PVirtualNode);
 
     procedure AddTrackHistory(TrackFuncInfo: TTrackFuncInfo);
@@ -2203,7 +2203,7 @@ begin
   end;
 end;
 
-procedure TMainForm.LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfo; SyncNode: PVirtualNode);
+procedure TMainForm.LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfoList; SyncNode: PVirtualNode);
 var
   MItem: TGetMemInfoItem;
   MemNode: PVirtualNode;
@@ -4527,7 +4527,7 @@ var
 
   ThData: PThreadData;
   ProcData: PProcessData;
-  MemInfo: TGetMemInfo;
+  MemInfo: TGetMemInfoList;
   GetMemInfo: PGetMemInfo;
 begin
   vstMemInfoObjStack.Clear;
@@ -4583,7 +4583,7 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
 
-  MemInfo: TGetMemInfo;
+  MemInfo: TGetMemInfoList;
   GetMemInfo: PGetMemInfo;
 begin
   MemInfo := Nil;
@@ -4678,7 +4678,7 @@ var
   Data: PLinkData;
   ThData: PThreadData;
   ProcData: PProcessData;
-  MemInfo: TGetMemInfo;
+  MemInfo: TGetMemInfoList;
 begin
   vstMemList.Clear;
   vstMemStack.Clear;
@@ -4767,7 +4767,7 @@ var
 
   ThData: PThreadData;
   ProcData: PProcessData;
-  MemInfo: TGetMemInfo;
+  MemInfo: TGetMemInfoList;
   GetMemInfo: PGetMemInfo;
 begin
   vstMemStack.Clear;
@@ -4815,7 +4815,7 @@ var
 
   ThData: PThreadData;
   ProcData: PProcessData;
-  MemInfo: TGetMemInfo;
+  MemInfo: TGetMemInfoList;
   GetMemInfo: PGetMemInfo;
 begin
   MemInfo := Nil;

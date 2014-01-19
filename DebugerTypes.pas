@@ -208,7 +208,7 @@ type
     procedure CheckObjectType;
   end;
 
-  TGetMemInfo = TPointerDictionary<Pointer,PGetMemInfo>;
+  TGetMemInfoList = TPointerDictionary<Pointer,PGetMemInfo>;
   TGetMemInfoItem = TPair<Pointer,PGetMemInfo>;
 
   PSyncObjsInfo = ^RSyncObjsInfo;
@@ -375,7 +375,7 @@ type
     FParentFuncs: TCallFuncCounter;
     FChildFuncs: TCallFuncCounter;
 
-    FGetMemList: TGetMemInfo;
+    FGetMemList: TGetMemInfoList;
   public
     constructor Create(AFuncInfo: TObject);
     destructor Destroy; override;
@@ -408,7 +408,7 @@ type
     property ParentFuncs: TCallFuncCounter read FParentFuncs;
     property ChildFuncs: TCallFuncCounter read FChildFuncs;
 
-    property GetMemList: TGetMemInfo read FGetMemList;
+    property GetMemList: TGetMemInfoList read FGetMemList;
   end;
 
   TTrackFuncInfoList = class(TTrackFuncInfoBaseList)
@@ -462,7 +462,7 @@ type
 
     DbgPoints: TThreadPointList;
 
-    DbgGetMemInfo: TGetMemInfo;
+    DbgGetMemInfo: TGetMemInfoList;
     DbgGetMemInfoSize: Cardinal;
 
     DbgSyncObjsInfo: TSyncObjsInfoList;
@@ -535,7 +535,7 @@ type
 
     DbgPoints: TProcessPointList;
 
-    DbgGetMemInfo: TGetMemInfo; // ”казатели с коллизи€ми
+    DbgGetMemInfo: TGetMemInfoList; // ”казатели с коллизи€ми
     DbgGetMemInfoSize: Cardinal;
 
     ProcessGetMemCount: Cardinal;
@@ -1010,7 +1010,7 @@ procedure TTrackFuncInfo.AddGetMemInfo(const GetMemInfo: PGetMemInfo);
 begin
   if FGetMemList = Nil then
   begin
-    FGetMemList := TGetMemInfo.Create(256, True);
+    FGetMemList := TGetMemInfoList.Create(256, True);
     FGetMemList.OwnsValues := False;
   end;
 
