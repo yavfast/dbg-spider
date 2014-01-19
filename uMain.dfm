@@ -3286,7 +3286,7 @@ object MainForm: TMainForm
       OnExecute = acMainTabExecute
     end
     object acTabUpdateInfo: TAction
-      Tag = 6
+      Tag = 7
       Category = 'MainTabs'
       Caption = 'Update Info'
       Visible = False
