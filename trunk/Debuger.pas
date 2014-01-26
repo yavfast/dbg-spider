@@ -694,7 +694,7 @@ begin
 
     Result^.DbgGetMemInfo := TGetMemInfoList.Create(1024, True);
     Result^.DbgGetMemInfo.OwnsValues := True;
-    Result^.DbgGetMemUnitList := TTrackUnitInfoList.Create(512);
+    Result^.DbgGetMemUnitList := TMemInfoTrackUnitInfoList.Create(512);
     //Result^.DbgGetMemFuncList := TTrackFuncInfoList.Create(4096);
 
     Result^.DbgExceptions := TThreadList.Create;
@@ -702,8 +702,8 @@ begin
     Result^.DbgSyncObjsInfo := TCollectList<RSyncObjsInfo>.Create;
 
     Result^.DbgTrackEventCount := 0;
-    Result^.DbgTrackUnitList := TTrackUnitInfoList.Create(512);
-    Result^.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
+    Result^.DbgTrackUnitList := TCodeTrackUnitInfoList.Create(512);
+    Result^.DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096);
     Result^.DbgTrackStack := TTrackStack.Create;
 
     if AddProcessPointInfo(ptThreadInfo) then
@@ -1031,8 +1031,8 @@ begin
   FProcessData.DbgExceptions.Clear;
 
   FProcessData.DbgTrackEventCount := 0;
-  FProcessData.DbgTrackUnitList := TTrackUnitInfoList.Create(4096);
-  FProcessData.DbgTrackFuncList := TTrackFuncInfoList.Create(4096);
+  FProcessData.DbgTrackUnitList := TCodeTrackUnitInfoList.Create(4096);
+  FProcessData.DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096);
 
   DbgTrackBreakpoints := nil;
   DbgTrackRETBreakpoints := nil;
@@ -1924,10 +1924,10 @@ var
 
   procedure _RegisterTrackPoint;
   var
-    TrackFuncInfo: TTrackFuncInfo;
+    TrackFuncInfo: TCodeTrackFuncInfo;
     ParentCallFuncInfo: PCallFuncInfo;
     ParentFuncInfo: TFuncInfo;
-    ParentTrackFuncInfo: TTrackFuncInfo;
+    ParentTrackFuncInfo: TCodeTrackFuncInfo;
 
     TrackStackPoint: PTrackStackPoint;
     CurTime: UInt64;
@@ -1938,7 +1938,7 @@ var
     // --- Регистрируем вызываемую функцию в текущем потоке --- //
     Inc(ThData^.DbgTrackEventCount);
 
-    TrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo);
+    TrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo));
     ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 
     TrackFuncInfo.IncCallCount;
@@ -1950,7 +1950,7 @@ var
     ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
     if Assigned(ParentFuncInfo) then
     begin
-      ParentTrackFuncInfo := ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo);
+      ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
       ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
 
       ParentTrackFuncInfo.AddChildCall(Address);
@@ -1973,7 +1973,7 @@ var
     // --- Регистрируем вызываемую функцию в процессе --- //
     Inc(FProcessData.DbgTrackEventCount);
 
-    TrackFuncInfo := FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo);
+    TrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo));
     FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 
     TrackFuncInfo.IncCallCount;
@@ -1985,7 +1985,7 @@ var
     ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
     if Assigned(ParentFuncInfo) then
     begin
-      ParentTrackFuncInfo := FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo);
+      ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
       FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
 
       ParentTrackFuncInfo.AddChildCall(Address);
