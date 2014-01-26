@@ -4,9 +4,7 @@ Interface
 
 Uses
   SysUtils, Windows, Classes, DebugInfo, Debuger, DebugerTypes, JclTD32Ex;
-{ .............................................................................. }
 
-{ .............................................................................. }
 Type
   TDelphiVersion = (dvAuto = 0, dvD1 = 8, dvD2 = 9, dvD3 = 10, dvD4 = 12, dvD5 = 13, dvD6 = 14, dvD7 = 15, dvD8 = 16, dvD2005 = 17, dvD2006_7 = 18,
     dvD2009 = 20, dvD2010 = 21, dvDXE = 22, dvDXE2 = 23, dvDXE3 = 24, dvDXE4 = 25);
@@ -104,13 +102,9 @@ Type
 
     property DelphiVersion: TDelphiVersion read FDelphiVersion write SetDelphiVersion;
   End;
-  { .............................................................................. }
 
-  { .............................................................................. }
 Function HasDelphiDebugInfo(Const AFileName: String): Boolean;
-{ .............................................................................. }
 
-{ .............................................................................. }
 Implementation
 
 Uses
@@ -128,9 +122,7 @@ Uses
   DebugHook,
   StrUtils,
   System.Contnrs, Vcl.Forms, JclWin32;
-{ .............................................................................. }
 
-{ .............................................................................. }
 Const
   cContinuable = 0;
   cNonContinuable = 1;
@@ -142,9 +134,7 @@ Const
   cDelphiUnhandled = DWORD($0EEDFAE3);
   cNonDelphiException = DWORD($0EEDFAE4);
   cDelphiExitFinally = DWORD($0EEDFAE5);
-  { .............................................................................. }
 
-  { ............................................................................... }
 Function HasDelphiDebugInfo(Const AFileName: String): Boolean;
 Var
   PEImage: TJclPeBorTD32Image;
@@ -161,11 +151,9 @@ Begin
     End;
   End;
 End;
-{ ............................................................................... }
 
 { TDelphiDebugInfo }
 
-{ ............................................................................... }
 Constructor TDelphiDebugInfo.Create;
 Begin
   Inherited Create;
@@ -195,20 +183,18 @@ begin
   Else
     Result := 'Unsupported data type';
 end;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Destructor TDelphiDebugInfo.Destroy;
 Begin
+  ClearDebugInfo;
+
   FreeAndNil(FImage);
   FreeAndNil(FSystemUnits);
   FreeAndNil(FAddressInfoList);
 
-  Inherited;
+  Inherited Destroy;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 function TDelphiDebugInfo.ParseConstName(ConstInfo: TConstInfo): String;
 var
   SL: TStringArray;
@@ -1364,9 +1350,6 @@ begin
     Result := VarToStrDef(Value, '');
 end;
 
-{ ............................................................................... }
-
-{ ............................................................................... }
 Function TDelphiDebugInfo.FindUnitByAddr(const Addr: Pointer): TUnitInfo;
 var
   I, J: Integer;
@@ -1391,9 +1374,7 @@ Begin
 
   Result := Nil;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 procedure TDelphiDebugInfo.FillSystemUnits;
 begin
   FSystemUnits.Clear;
@@ -1456,9 +1437,7 @@ Begin
   End;
   Result := Nil;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
 Var
   LineIdx: Integer;
@@ -1501,9 +1480,7 @@ Begin
 
   Result := Nil;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean;
 Var
   I: Integer;
@@ -1552,16 +1529,12 @@ Begin
     DoProgress('Debug info loaded', 99);
   End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.CheckAddr(Const Addr: TPointer): Boolean;
 Begin
   Result := FindUnitByAddr(Addr) <> Nil;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: Boolean): Boolean;
 Begin
   Result := Inherited CheckDebugException(ExceptionRecord, IsTraceException);
@@ -1572,9 +1545,7 @@ Begin
     Result := ExceptionRecord^.ExceptionFlags = cContinuable;
   End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.CheckSystemFile(Const FileName: String): Boolean;
 Var
   FN: String;
@@ -1586,9 +1557,7 @@ Begin
   if Length(SL) > 0 then
     Result := (FSystemUnits.IndexOf(SL[0]) >= 0);
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Procedure TDelphiDebugInfo.ClearDebugInfo;
 var
   DbgFileName: String;
@@ -1609,21 +1578,21 @@ Begin
   end;
 
   FDelphiVersion := dvAuto;
-  FSystemUnits.Clear;
-  FAddressInfoList.Clear;
+
+  if Assigned(FSystemUnits) then
+    FSystemUnits.Clear;
+
+  if Assigned(FAddressInfoList) then
+    FAddressInfoList.Clear;
 
   Inherited ClearDebugInfo;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.HasDebugInfo(Const FileName: String): Boolean;
 Begin
   Result := HasDelphiDebugInfo(FileName);
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.GetAddrInfo(Var Addr: Pointer; Const FileName: String; Line: Cardinal): TFindResult;
 Var
   Index: Integer;
@@ -1650,9 +1619,7 @@ Begin
     End;
   End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 function TDelphiDebugInfo.GetClassName(ObjectPtr: Pointer): String;
 Const
   _ValidChars = ['_', 'a' .. 'z', 'A' .. 'Z', '0' .. '9'];
@@ -1707,9 +1674,6 @@ begin
       Result := FileName;
 end;
 
-{ ............................................................................... }
-
-{ ............................................................................... }
 Function TDelphiDebugInfo.GetExceptionAddress(ExceptionRecord: PExceptionRecord): TPointer;
 Begin
   If IsDelphiException(ExceptionRecord) And (ExceptionRecord^.NumberParameters > 0) Then
@@ -1717,9 +1681,7 @@ Begin
   Else
     Result := Inherited GetExceptionAddress(ExceptionRecord);
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.GetExceptionFrame(ExceptionRecord: PExceptionRecord): TPointer;
 Begin
   If ExceptionRecord^.ExceptionCode = cDelphiException Then
@@ -1727,9 +1689,7 @@ Begin
   Else
     Result := Inherited GetExceptionFrame(ExceptionRecord);
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.GetExceptionMessage(ExceptionRecord: PExceptionRecord; const ThreadId: TThreadId): String;
 Var
   ExceptTypeAddr: TPointer;
@@ -1752,9 +1712,7 @@ Begin
   Else
     Result := Inherited GetExceptionMessage(ExceptionRecord, ThreadId);
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.GetExceptionName(ExceptionRecord: PExceptionRecord): String;
 Var
   ExceptTypeAddr: TPointer;
@@ -1767,9 +1725,7 @@ Begin
   Else
     Result := Inherited GetExceptionName(ExceptionRecord);
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.GetLineInfo(const Addr: TPointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
   GetPrevLine: Boolean): TFindResult;
 var
@@ -1826,9 +1782,7 @@ Begin
     FAddressInfoList.Lock.EndRead;
   end;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.GetLineInformation(const Addr: TPointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt;
   GetPrevLine: Boolean): TFindResult;
 Var
@@ -1881,9 +1835,7 @@ Function TDelphiDebugInfo.MakeFuncDbgFullName(Const ClassName, MethodName: AnsiS
 Begin
   Result := '@' + ClassName + '@' + MethodName;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.MakeFuncShortName(Const MethodName: AnsiString): AnsiString;
 Var
   I: Integer;
@@ -1900,9 +1852,7 @@ Begin
       Insert('@', Result, 1);
   End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.MakeFuncNativeName(Const MethodName: AnsiString): AnsiString;
 Begin
   Result := MethodName;
@@ -1913,9 +1863,7 @@ Begin
     Result := AnsiString(StringReplace(String(Result), '@', '.', [rfReplaceAll]));
   End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.Evaluate(BriefMode: Boolean; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String;
 // Var
 // Parser   : TExprParser;
@@ -2039,9 +1987,7 @@ Begin
     );
   end;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.IsDelphiException(ExceptionRecord: PExceptionRecord): Boolean;
 Begin
   Case ExceptionRecord^.ExceptionCode Of
@@ -2051,9 +1997,7 @@ Begin
     Result := False;
   End;
 End;
-{ ............................................................................... }
 
-{ ............................................................................... }
 Function TDelphiDebugInfo.IsDelphiTraceException(ExceptionRecord: PExceptionRecord): Boolean;
 Begin
   Case ExceptionRecord^.ExceptionCode Of
@@ -2067,7 +2011,6 @@ Begin
     Result := False;
   End;
 End;
-{ ............................................................................... }
 
 initialization
 

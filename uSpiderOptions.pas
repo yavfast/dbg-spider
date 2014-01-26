@@ -255,6 +255,7 @@ begin
 
   FreeAndNil(FLogColors);
   FreeAndNil(FTimelineColors);
+  FreeAndNil(FSyncObjsColors);
 
   FXML := nil;
 

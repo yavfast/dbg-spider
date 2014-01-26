@@ -469,6 +469,7 @@ type
     procedure ClearDbgInfoTrees;
     procedure ClearTrackTrees;
     procedure ClearMemInfoTrees;
+    procedure ClearLockInfoTrees;
 
     procedure UpdateTrees;
     procedure UpdateStatusInfo;
@@ -496,7 +497,7 @@ type
     procedure LoadMemInfoParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
     procedure LoadMemInfoChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
     procedure LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfoList; SyncNode: PVirtualNode);
-    procedure LoadMemInfoObjectStack(Tree: TBaseVirtualTree; MemInfo: PGetMemInfo; SyncNode: PVirtualNode);
+    procedure LoadMemInfoObjectStack(Tree: TBaseVirtualTree; MemInfo: TGetMemInfo; SyncNode: PVirtualNode);
 
     procedure AddTrackHistory(TrackFuncInfo: TTrackFuncInfo);
     procedure UpdateTrackHistoryList;
@@ -1267,10 +1268,16 @@ begin
   ClearTrees;
 
   if Assigned(gvDebugInfo) then
+  begin
     gvDebugInfo.ClearDebugInfo;
+    FreeAndNil(gvDebugInfo);
+  end;
 
   if Assigned(gvDebuger) then
+  begin
     gvDebuger.ClearDbgInfo;
+    FreeAndNil(gvDebuger);
+  end;
 
   if gvProjectOptions.ProjectName <> '' then
     FSpiderOptions.AddRecentProject(gvProjectOptions.ProjectName);
@@ -1300,6 +1307,11 @@ begin
   vstTrackFuncChilds.Clear;
 end;
 
+procedure TMainForm.ClearLockInfoTrees;
+begin
+  vstLockThreads.Clear;
+end;
+
 procedure TMainForm.ClearTrees;
 begin
   vstLog.Clear;
@@ -1307,6 +1319,7 @@ begin
   ClearDbgTrees;
   ClearDbgInfoTrees;
   ClearTrackTrees;
+  ClearLockInfoTrees;
 end;
 
 procedure TMainForm.DoAction(Action: TacAction; const Args: array of Variant);
@@ -2242,7 +2255,7 @@ begin
   end;
 end;
 
-procedure TMainForm.LoadMemInfoObjectStack(Tree: TBaseVirtualTree; MemInfo: PGetMemInfo; SyncNode: PVirtualNode);
+procedure TMainForm.LoadMemInfoObjectStack(Tree: TBaseVirtualTree; MemInfo: TGetMemInfo; SyncNode: PVirtualNode);
 var
   Idx: Integer;
   StackNode: PVirtualNode;
@@ -2424,7 +2437,10 @@ end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
+  FreeAndNil(FSpiderOptions);
   FreeAndNil(FTrackHistory);
+
+  _AC.AppClose;
 end;
 
 procedure TMainForm.FormShow(Sender: TObject);
@@ -4540,7 +4556,7 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfoList;
-  GetMemInfo: PGetMemInfo;
+  GetMemInfo: TGetMemInfo;
 begin
   vstMemInfoObjStack.Clear;
 
@@ -4596,7 +4612,7 @@ var
   ProcData: PProcessData;
 
   MemInfo: TGetMemInfoList;
-  GetMemInfo: PGetMemInfo;
+  GetMemInfo: TGetMemInfo;
 begin
   MemInfo := Nil;
   CellText := '';
@@ -4780,7 +4796,7 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfoList;
-  GetMemInfo: PGetMemInfo;
+  GetMemInfo: TGetMemInfo;
 begin
   vstMemStack.Clear;
   synmMemInfoSource.Clear;
@@ -4828,7 +4844,7 @@ var
   ThData: PThreadData;
   ProcData: PProcessData;
   MemInfo: TGetMemInfoList;
-  GetMemInfo: PGetMemInfo;
+  GetMemInfo: TGetMemInfo;
 begin
   MemInfo := Nil;
   CellText := '';

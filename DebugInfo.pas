@@ -527,7 +527,7 @@ Begin
 
   FreeAndNil(FMemoryManagerInfo);
 
-  Inherited;
+  Inherited Destroy;
 End;
 
 procedure TDebugInfo.DoProgress(const Action: String; const Progress: Integer);
