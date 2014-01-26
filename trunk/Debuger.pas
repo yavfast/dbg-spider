@@ -93,7 +93,7 @@ type
 
     procedure LoadMemoryInfoPack(const MemInfoPack: Pointer; const Count: Cardinal);
     procedure UpdateMemoryInfoObjectTypes;
-    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
+    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): Boolean;
 
     procedure LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
 
@@ -890,7 +890,9 @@ begin
 
   FDbgState := dsNone;
   FDbgTraceState := dtsContinue;
-  FTraceEvent := TEvent.Create();
+
+  FTraceEvent := TEvent.Create(nil, True, False, '');
+
   FRestoreBPIndex := -1;
   FRestoreMBPIndex := -1;
   FRestoredHWBPIndex := -1;
@@ -999,6 +1001,8 @@ begin
   FreeAndNil(FProcessData.DbgExceptions);
   FreeMemory(FProcessData);
   FProcessData := nil;
+
+  FreeAndNil(FTraceEvent);
 
   inherited;
 end;
@@ -2001,7 +2005,7 @@ var
   procedure _RegisterFreeMemInfoPoint;
   var
     FuncInfo: TFuncInfo;
-    MemInfo: PGetMemInfo;
+    MemInfo: TGetMemInfo;
     Param: TVarInfo;
     Addr: Pointer;
   begin
@@ -2015,10 +2019,10 @@ var
 
       if FindMemoryPointer(Addr, ThData, MemInfo) then
       begin
-        Dec(ThData^.DbgGetMemInfoSize, MemInfo^.Size);
+        Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
 
         Dec(FProcessData.ProcessGetMemCount);
-        Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
+        Dec(FProcessData.ProcessGetMemSize, MemInfo.Size);
 
         ThData^.DbgGetMemInfo.Remove(Addr);
       end;
@@ -2137,7 +2141,7 @@ var
     ParamAddr: TVarInfo;
     Addr: Pointer;
     Size: Cardinal;
-    NewMemInfo: PGetMemInfo;
+    NewMemInfo: TGetMemInfo;
   begin
     FuncInfo := TFuncInfo(TrackRETBp^.FuncInfo);
 
@@ -2180,21 +2184,23 @@ var
       FreeAndNil(ParamAddr);
 
       // Добавляем инфу про новый объект
-      NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
-      NewMemInfo^.PerfIdx := ProcessData.CurDbgPointIdx;
-      NewMemInfo^.ObjAddr := Addr;
-      NewMemInfo^.Size := Size;
+      //NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
+      NewMemInfo := TGetMemInfo.Create;
+
+      NewMemInfo.PerfIdx := ProcessData.CurDbgPointIdx;
+      NewMemInfo.ObjAddr := Addr;
+      NewMemInfo.Size := Size;
 
       //NewMemInfo^.Stack := DbgMemInfo^.Stack;
-      NewMemInfo^.Stack[0] := nil;
+      NewMemInfo.Stack[0] := nil;
 
-      NewMemInfo^.ObjectType := ''; // На этот момент тип ещё может быть неопределен
+      NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
 
       ThData^.DbgGetMemInfo.AddOrSetValue(Addr, NewMemInfo);
-      Inc(ThData^.DbgGetMemInfoSize, NewMemInfo^.Size);
+      Inc(ThData^.DbgGetMemInfoSize, NewMemInfo.Size);
 
       Inc(FProcessData.ProcessGetMemCount);
-      Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
+      Inc(FProcessData.ProcessGetMemSize, NewMemInfo.Size);
     end;
   end;
 
@@ -2475,7 +2481,7 @@ begin
   end;
 end;
 
-function TDebuger.FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: PGetMemInfo): Boolean;
+function TDebuger.FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): Boolean;
 var
   Idx: Integer;
 begin
@@ -2509,8 +2515,8 @@ var
   CurPerfIdx: Cardinal;
   ThData: PThreadData;
   FoundThData: PThreadData;
-  MemInfo: PGetMemInfo;
-  NewMemInfo: PGetMemInfo;
+  MemInfo: TGetMemInfo;
+  NewMemInfo: TGetMemInfo;
 begin
   if ReadData(MemInfoPack, _DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
   begin
@@ -2550,18 +2556,20 @@ begin
           *)
 
           // Добавляем инфу про новый объект
-          NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
-          NewMemInfo^.PerfIdx := CurPerfIdx;
-          NewMemInfo^.ObjAddr := DbgMemInfo^.Ptr;
-          NewMemInfo^.Size := DbgMemInfo^.Size;
-          NewMemInfo^.Stack := DbgMemInfo^.Stack;
-          NewMemInfo^.ObjectType := ''; // На этот момент тип ещё может быть неопределен
+          //NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
+          NewMemInfo := TGetMemInfo.Create;
+
+          NewMemInfo.PerfIdx := CurPerfIdx;
+          NewMemInfo.ObjAddr := DbgMemInfo^.Ptr;
+          NewMemInfo.Size := DbgMemInfo^.Size;
+          NewMemInfo.Stack := DbgMemInfo^.Stack;
+          NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
 
           ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
-          Inc(ThData^.DbgGetMemInfoSize, NewMemInfo^.Size);
+          Inc(ThData^.DbgGetMemInfoSize, NewMemInfo.Size);
 
           Inc(FProcessData.ProcessGetMemCount);
-          Inc(FProcessData.ProcessGetMemSize, NewMemInfo^.Size);
+          Inc(FProcessData.ProcessGetMemSize, NewMemInfo.Size);
 
           //ThData^.DbgGetMemUnitList.LoadStack(NewMemInfo^.Stack, True);
         end;
@@ -2574,10 +2582,10 @@ begin
           begin
             //ThData^.DbgGetMemUnitList.LoadStack(MemInfo^.Stack, False);
 
-            Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
+            Dec(FoundThData^.DbgGetMemInfoSize, MemInfo.Size);
 
             Dec(FProcessData.ProcessGetMemCount);
-            Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
+            Dec(FProcessData.ProcessGetMemSize, MemInfo.Size);
 
             FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
           end
@@ -3489,7 +3497,7 @@ begin
       if GetMemInfo.Count > 0 then
       begin
         for GetMemInfoItem in GetMemInfo do
-          GetMemInfoItem.Value^.CheckObjectType;
+          GetMemInfoItem.Value.CheckObjectType;
       end;
 
       Inc(Idx);

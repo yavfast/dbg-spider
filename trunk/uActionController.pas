@@ -1,7 +1,9 @@
 unit uActionController;
 
 interface
-  uses Classes, DebugInfo, DebugerTypes, XMLDoc, XMLIntf;
+
+uses Classes, DebugInfo, DebugerTypes, XMLDoc, XMLIntf, System.Generics.Collections,
+  System.SyncObjs;
 
 type
   TacAction = (acCreateProcess, acAddThread, acUpdateInfo, acProgress, acSetProjectName, acChangeDbgState);
@@ -17,6 +19,40 @@ type
 
   TDbgOptions = set of TDbgOption;
 
+  TArgsList = array of Variant;
+
+  TActionItem = class
+  private
+    FAction: TacAction;
+    FArgs: TArgsList;
+  public
+    constructor Create(const AAction: TacAction; const AArgs: TArgsList);
+
+    property Action: TacAction read FAction;
+    property Args: TArgsList read FArgs;
+  end;
+
+  TActionQueue = class(TQueue<TActionItem>)
+  private
+    FLock: TCriticalSection;
+    procedure Lock;
+    procedure UnLock;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    function GetAction: TActionItem;
+    procedure AddAction(const Action: TacAction; const Args: TArgsList);
+  end;
+
+  TActionThread = class(TThread)
+  protected
+    procedure Execute; override;
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
   TActionController = class
   public
     class procedure RunDebug(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0); static;
@@ -27,8 +63,12 @@ type
     class procedure Log(const LogType: TDbgLogType; const Msg: String); overload; static;
     class procedure Log(const LogType: TDbgLogType; const Msg: String; const Args: array of const); overload; static;
 
-    class procedure DoAction(const Action: TacAction; const Args: array of Variant); static;
+    class procedure DoAction(const Action: TacAction; const Args: array of Variant); overload; static;
+    class procedure DoAction(const Action: TacAction; const Args: TArgsList); overload; static;
+    class procedure DoSyncAction(const Action: TacAction; const Args: TArgsList); static;
     class procedure ViewDebugInfo(DebugInfo: TDebugInfo); static;
+
+    class procedure AppClose; static;
   end;
 
   TProjectOptions = class
@@ -87,6 +127,10 @@ implementation
 
 uses SysUtils, uMain, Debuger, uDebugerThread, ClassUtils;
 
+var
+  gvActionThread: TActionThread = nil;
+  gvActionQueue: TActionQueue = nil;
+
 { TActionController }
 
 class procedure TActionController.Log(const LogType: TDbgLogType; const Msg: String);
@@ -97,27 +141,39 @@ begin
   DoAction(acUpdateInfo, []);
 end;
 
+class procedure TActionController.AppClose;
+begin
+  gvActionThread.Terminate;
+
+  Sleep(500);
+end;
+
+class procedure TActionController.DoAction(const Action: TacAction; const Args: TArgsList);
+begin
+  gvActionQueue.AddAction(Action, Args);
+end;
+
 class procedure TActionController.DoAction(const Action: TacAction; const Args: array of Variant);
 var
-  _Action: TacAction;
-  _Args: array of Variant;
+  _Args: TArgsList;
   i: Integer;
 begin
-  _Action := Action;
-
   SetLength(_Args, Length(Args));
   for i := 0 to High(Args) do
     _Args[i] := Args[i];
 
-  if Assigned(MainForm) then
-  begin
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        MainForm.DoAction(_Action, _Args);
-      end
-    );
-  end;
+  TActionController.DoAction(Action, _Args);
+end;
+
+class procedure TActionController.DoSyncAction(const Action: TacAction; const Args: TArgsList);
+begin
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      if Assigned(MainForm) then
+        MainForm.DoAction(Action, Args);
+    end
+  );
 end;
 
 class procedure TActionController.Log(const LogType: TDbgLogType; const Msg: String; const Args: array of const);
@@ -314,10 +370,117 @@ begin
   end;
 end;
 
+{ TActionQueue }
+
+procedure TActionQueue.AddAction(const Action: TacAction; const Args: TArgsList);
+var
+  ActionItem: TActionItem;
+begin
+  Lock;
+  try
+    ActionItem := TActionItem.Create(Action, Args);
+    Enqueue(ActionItem);
+  finally
+    UnLock;
+  end;
+end;
+
+constructor TActionQueue.Create;
+begin
+  inherited;
+
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TActionQueue.Destroy;
+begin
+  FreeAndNil(FLock);
+
+  inherited;
+end;
+
+function TActionQueue.GetAction: TActionItem;
+begin
+  Lock;
+  try
+    Result := Dequeue;
+  finally
+    UnLock;
+  end;
+end;
+
+procedure TActionQueue.Lock;
+begin
+  FLock.Enter;
+end;
+
+procedure TActionQueue.UnLock;
+begin
+  FLock.Leave;
+end;
+
+{ TActionThread }
+
+constructor TActionThread.Create;
+begin
+  inherited Create(True);
+
+  FreeOnTerminate := True;
+
+  Suspended := False;
+end;
+
+destructor TActionThread.Destroy;
+begin
+  FreeAndNil(gvActionQueue);
+  gvActionThread := nil;
+
+  inherited;
+end;
+
+procedure TActionThread.Execute;
+var
+  ActionItem: TActionItem;
+begin
+  NameThreadForDebugging(ClassName);
+
+  while not Terminated do
+  begin
+    while gvActionQueue.Count > 0 do
+    begin
+      ActionItem := gvActionQueue.GetAction;
+      if Assigned(ActionItem) then
+        try
+          _AC.DoSyncAction(ActionItem.Action, ActionItem.Args);
+        finally
+          FreeAndNil(ActionItem);
+        end;
+    end;
+
+    Sleep(500);
+  end;
+end;
+
+{ TActionItem }
+
+constructor TActionItem.Create(const AAction: TacAction; const AArgs: TArgsList);
+begin
+  inherited Create;
+
+  FAction := AAction;
+  FArgs := Copy(AArgs, 0, Length(AArgs));
+end;
+
 initialization
   gvProjectOptions := TProjectOptions.Create;
+  gvActionQueue := TActionQueue.Create;
+  gvActionThread := TActionThread.Create;
 
 finalization
+  // Destroys in gvActionThread
+  //FreeAndNil(gvActionThread);
+  //FreeAndNil(gvActionQueue);
+
   FreeAndNil(gvProjectOptions);
 
 end.
