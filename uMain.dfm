@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsLog
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -3282,7 +3282,6 @@ object MainForm: TMainForm
       Tag = 6
       Category = 'MainTabs'
       Caption = 'Lock tracking'
-      Visible = False
       OnExecute = acMainTabExecute
     end
     object acTabUpdateInfo: TAction
@@ -3636,7 +3635,6 @@ object MainForm: TMainForm
             Caption = '-'
           end
           item
-            Visible = False
             Action = acTabLockTracking
             Caption = 'L&ock tracking'
           end

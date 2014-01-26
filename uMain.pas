@@ -2153,7 +2153,7 @@ end;
 
 procedure TMainForm.LoadLockTrackThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
 begin
-
+  //
 end;
 
 procedure TMainForm.LoadMemInfoChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
@@ -4201,7 +4201,7 @@ procedure TMainForm.vstMemInfoFuncChildsGetText(Sender: TBaseVirtualTree; Node: 
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
-  TrackFuncInfo: TTrackFuncInfo;
+  TrackFuncInfo: TMemInfoTrackFuncInfo;
 begin
   CellText := ' ';
 
@@ -4215,7 +4215,7 @@ begin
       end;
     ltTrackFuncInfo:
       begin
-        TrackFuncInfo := Data^.TrackFuncInfo;
+        TrackFuncInfo := TMemInfoTrackFuncInfo(Data^.TrackFuncInfo);
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CurCount);
@@ -4274,7 +4274,7 @@ procedure TMainForm.vstMemInfoFuncParentsGetText(Sender: TBaseVirtualTree; Node:
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
-  TrackFuncInfo: TTrackFuncInfo;
+  TrackFuncInfo: TMemInfoTrackFuncInfo;
 begin
   CellText := ' ';
 
@@ -4288,7 +4288,7 @@ begin
       end;
     ltTrackFuncInfo:
       begin
-        TrackFuncInfo := Data^.TrackFuncInfo;
+        TrackFuncInfo := TMemInfoTrackFuncInfo(Data^.TrackFuncInfo);
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CurCount);
@@ -4365,8 +4365,8 @@ begin
 
         if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
         begin
-          ValueS1 := Data1^.TrackFuncInfo.Size;
-          ValueS2 := Data2^.TrackFuncInfo.Size;
+          ValueS1 := TMemInfoTrackFuncInfo(Data1^.TrackFuncInfo).Size;
+          ValueS2 := TMemInfoTrackFuncInfo(Data2^.TrackFuncInfo).Size;
         end;
 
         Result := Compare(ValueS1, ValueS2);
@@ -4377,17 +4377,21 @@ end;
 procedure TMainForm.vstMemInfoFuncTreeFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 var
   Data: PLinkData;
+  TrackFuncInfo: TMemInfoTrackFuncInfo;
 begin
   Data := vstMemInfoFuncTree.GetNodeData(Node);
   case Data^.LinkType of
     ltTrackFuncInfo:
       begin
         vstMemInfoObjStack.Clear;
-        LoadMemInfoObjects(vstMemInfoObjects, Data^.TrackFuncInfo.GetMemList, Node);
-        LoadMemInfoParentFunctions(Data^.TrackFuncInfo, Node);
-        LoadMemInfoChildFunctions(Data^.TrackFuncInfo, Node);
 
-        LoadFunctionSource(synmMemInfoFuncSrc, TFuncInfo(Data^.TrackFuncInfo.FuncInfo));
+        TrackFuncInfo := TMemInfoTrackFuncInfo(Data^.TrackFuncInfo);
+
+        LoadMemInfoObjects(vstMemInfoObjects, TrackFuncInfo.GetMemList, Node);
+        LoadMemInfoParentFunctions(TrackFuncInfo, Node);
+        LoadMemInfoChildFunctions(TrackFuncInfo, Node);
+
+        LoadFunctionSource(synmMemInfoFuncSrc, TFuncInfo(TrackFuncInfo.FuncInfo));
       end;
   else
     begin
@@ -4406,7 +4410,7 @@ var
   Data: PLinkData;
   ThData: PThreadData;
   ProcData: PProcessData;
-  TrackFuncInfo: TTrackFuncInfo;
+  TrackFuncInfo: TMemInfoTrackFuncInfo;
   TrackUnitInfo: TTrackUnitInfo;
 begin
   CellText := ' ';
@@ -4432,7 +4436,7 @@ begin
       end;
     ltTrackFuncInfo:
       begin
-        TrackFuncInfo := Data^.TrackFuncInfo;
+        TrackFuncInfo := TMemInfoTrackFuncInfo(Data^.TrackFuncInfo);
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackFuncInfo.CurCount);
@@ -5037,7 +5041,7 @@ procedure TMainForm.vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PV
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
-  TrackFuncInfo: TTrackFuncInfo;
+  TrackFuncInfo: TCodeTrackFuncInfo;
 begin
   CellText := ' ';
 
@@ -5051,7 +5055,7 @@ begin
       end;
     ltTrackFuncInfo:
       begin
-        TrackFuncInfo := Data^.TrackFuncInfo;
+        TrackFuncInfo := TCodeTrackFuncInfo(Data^.TrackFuncInfo);
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
@@ -5183,7 +5187,7 @@ procedure TMainForm.vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PV
 var
   Data: PLinkData;
   TrackCallFuncInfo: PCallFuncInfo;
-  TrackFuncInfo: TTrackFuncInfo;
+  TrackFuncInfo: TCodeTrackFuncInfo;
 begin
   CellText := ' ';
 
@@ -5197,7 +5201,7 @@ begin
       end;
     ltTrackFuncInfo:
       begin
-        TrackFuncInfo := Data^.TrackFuncInfo;
+        TrackFuncInfo := TCodeTrackFuncInfo(Data^.TrackFuncInfo);
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           2: CellText := IntToStr(TrackFuncInfo.CallCount);
@@ -5273,8 +5277,8 @@ begin
 
         if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
         begin
-          Value1 := Data1^.TrackFuncInfo.CPUEllapsed;
-          Value2 := Data2^.TrackFuncInfo.CPUEllapsed;
+          Value1 := TCodeTrackFuncInfo(Data1^.TrackFuncInfo).CPUEllapsed;
+          Value2 := TCodeTrackFuncInfo(Data2^.TrackFuncInfo).CPUEllapsed;
         end
         else
         if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
@@ -5345,7 +5349,7 @@ var
   SyncData: PLinkData;
   ThData: PThreadData;
   ProcData: PProcessData;
-  TrackFuncInfo: TTrackFuncInfo;
+  TrackFuncInfo: TCodeTrackFuncInfo;
   TrackUnitInfo: TTrackUnitInfo;
 begin
   CellText := ' ';
@@ -5371,7 +5375,7 @@ begin
       end;
     ltTrackFuncInfo:
       begin
-        TrackFuncInfo := Data^.TrackFuncInfo;
+        TrackFuncInfo := TCodeTrackFuncInfo(Data^.TrackFuncInfo);
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackFuncInfo.CallCount);
