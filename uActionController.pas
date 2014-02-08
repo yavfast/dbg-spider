@@ -107,6 +107,9 @@ type
     procedure NewConfig;
     procedure Save;
 
+    class function GetDefProjectSource(const ProjectName: String): String; static;
+    class function GetDefDelphiSource: String; static;
+
     property ProjectName: String read GetProjectName;
     property ApplicationName: String read GetApplicationName write SetApplicationName;
     property ProjectStorage: String read GetProjectStorage write SetProjectStorage;
@@ -125,7 +128,8 @@ var
 
 implementation
 
-uses SysUtils, uMain, Debuger, uDebugerThread, ClassUtils;
+uses SysUtils, uMain, Debuger, uDebugerThread, ClassUtils, JclIDEUtils,
+  System.IOUtils, System.Types;
 
 var
   gvActionThread: TActionThread = nil;
@@ -301,6 +305,60 @@ end;
 procedure TProjectOptions.SetApplicationName(const Value: String);
 begin
   SetXMLValue('application_name', Value);
+end;
+
+class function TProjectOptions.GetDefDelphiSource: String;
+var
+  Installations: TJclBorRADToolInstallations;
+  DelphiRoot: String;
+begin
+  Result := '';
+
+  Installations := TJclBorRADToolInstallations.Create;
+  try
+    if Installations.Count > 0 then
+    begin
+      DelphiRoot := Installations.Installations[Installations.Count - 1].RootDir;
+      Result := IncludeTrailingPathDelimiter(DelphiRoot) + 'source';
+    end;
+  finally
+    FreeAndNil(Installations);
+  end;
+end;
+
+class function TProjectOptions.GetDefProjectSource(const ProjectName: String): String;
+var
+  DprName: String;
+  DprPathName: String;
+  Find: TStringDynArray;
+begin
+  Result := '';
+
+  if ProjectName <> '' then
+  begin
+    DprName := ExtractFileName(ProjectName);
+    DprName := ChangeFileExt(DprName, '.dpr');
+
+    Result := ExtractFileDir(ProjectName);
+
+    while (Result <> '') and TDirectory.Exists(Result) do
+    begin
+      DprPathName := Result + PathDelim + DprName;
+      if TFile.Exists(DprPathName) then
+        Break;
+
+      Find := TDirectory.GetFiles(Result, '*.dpr');
+      if Length(Find) > 0 then
+        Break;
+
+      Result := ExtractFileDir(Result);
+    end;
+
+    if Result <> '' then
+    begin
+      // TODO: Source dirs from DPR
+    end;
+  end;
 end;
 
 function TProjectOptions.GetDelphiSource: String;

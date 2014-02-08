@@ -164,6 +164,7 @@ begin
 
   if odApplication.Execute then
   begin
+    // Project settings
     lbeApplication.Text := odApplication.FileName;
 
     if lbeProjectName.Text = '' then
@@ -172,6 +173,14 @@ begin
     if lbeProjectStorage.Text = '' then
       lbeProjectStorage.Text := ExtractFilePath(lbeProjectName.Text) + '_spider_storage';
 
+    // Source settings
+    if lbeProjectSource.Text = '' then
+      lbeProjectSource.Text := TProjectOptions.GetDefProjectSource(odApplication.FileName);
+
+    if lbeDelphiSource.Text = '' then
+      lbeDelphiSource.Text := TProjectOptions.GetDefDelphiSource;
+
+    // Run parameters
     if lbeWorkDir.Text = '' then
       lbeWorkDir.Text := ExtractFilePath(lbeProjectName.Text);
   end;
