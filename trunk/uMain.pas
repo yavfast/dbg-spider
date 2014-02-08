@@ -3238,6 +3238,8 @@ begin
       begin
         gvProjectOptions.Open(_DEFAULT_PROJECT);
         gvProjectOptions.ApplicationName := ProjectName;
+        gvProjectOptions.ProjectSource := TProjectOptions.GetDefProjectSource(ProjectName);
+        gvProjectOptions.DelphiSource := TProjectOptions.GetDefDelphiSource;
       end;
   end;
 

@@ -28,11 +28,23 @@ object fmProjectOptions: TfmProjectOptions
     Top = 0
     Width = 454
     Height = 185
-    ActivePage = tsRunParams
+    ActivePage = tsProject
     Align = alClient
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
     TabOrder = 0
     object tsProject: TTabSheet
       Caption = 'Project settings'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
       object lbeApplication: TLabeledEdit
         Left = 7
         Top = 24
@@ -91,7 +103,13 @@ object fmProjectOptions: TfmProjectOptions
     end
     object tsSources: TTabSheet
       Caption = 'Source settings'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = []
       ImageIndex = 1
+      ParentFont = False
       object lbeProjectSource: TLabeledEdit
         Left = 7
         Top = 24
@@ -131,7 +149,13 @@ object fmProjectOptions: TfmProjectOptions
     end
     object tsRunParams: TTabSheet
       Caption = 'Run parameters'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = []
       ImageIndex = 2
+      ParentFont = False
       object lbeParameters: TLabeledEdit
         Left = 7
         Top = 24
@@ -153,7 +177,7 @@ object fmProjectOptions: TfmProjectOptions
         TabOrder = 1
       end
       object btnSelWorkDir: TBitBtn
-        Left = 383
+        Left = 384
         Top = 70
         Width = 33
         Height = 25
