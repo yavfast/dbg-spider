@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsMemInfo
+    ActivePage = tsCodeTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -66,7 +66,6 @@ object MainForm: TMainForm
         OnGetText = vstLogGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
         OnResize = vstLogResize
-        ExplicitTop = 1
         Columns = <
           item
             Alignment = taRightJustify
@@ -483,60 +482,50 @@ object MainForm: TMainForm
                     WideText = 'Param kind'
                   end>
               end
-              object synmDbgInfoFuncAdv: TSynMemo
+              inline svfDbgInfoFuncAdv: TSourceViewFrame
                 Left = 0
                 Top = 196
                 Width = 293
                 Height = 293
                 Align = alClient
-                Font.Charset = DEFAULT_CHARSET
-                Font.Color = clWindowText
-                Font.Height = -13
-                Font.Name = 'Courier New'
-                Font.Style = []
                 TabOrder = 1
-                Gutter.AutoSize = True
-                Gutter.Font.Charset = DEFAULT_CHARSET
-                Gutter.Font.Color = clWindowText
-                Gutter.Font.Height = -11
-                Gutter.Font.Name = 'Courier New'
-                Gutter.Font.Style = []
-                Gutter.ShowLineNumbers = True
-                Highlighter = dmShareData.synPas1
-                ReadOnly = True
-                RightEdge = 0
-                SearchEngine = dmShareData.synRegexSearch1
-                FontSmoothing = fsmNone
+                ExplicitLeft = -382
+                ExplicitTop = 129
+                inherited synmSourceView: TSynMemo
+                  Width = 293
+                  Height = 272
+                  ExplicitLeft = 0
+                  ExplicitTop = 21
+                  ExplicitWidth = 675
+                  ExplicitHeight = 339
+                end
+                inherited eSrcFileName: TEdit
+                  Width = 293
+                end
               end
             end
           end
           object tsDbgUnitSource: TTabSheet
             Caption = 'Source'
             ImageIndex = 4
-            object synmDbgInfoUnitSource: TSynMemo
+            inline svfDbgInfoUnitSource: TSourceViewFrame
               Left = 0
               Top = 0
               Width = 840
               Height = 489
               Align = alClient
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWindowText
-              Font.Height = -13
-              Font.Name = 'Courier New'
-              Font.Style = []
               TabOrder = 0
-              Gutter.AutoSize = True
-              Gutter.Font.Charset = DEFAULT_CHARSET
-              Gutter.Font.Color = clWindowText
-              Gutter.Font.Height = -11
-              Gutter.Font.Name = 'Courier New'
-              Gutter.Font.Style = []
-              Gutter.ShowLineNumbers = True
-              Highlighter = dmShareData.synPas1
-              ReadOnly = True
-              RightEdge = 0
-              SearchEngine = dmShareData.synRegexSearch1
-              FontSmoothing = fsmNone
+              inherited synmSourceView: TSynMemo
+                Width = 840
+                Height = 468
+                ExplicitLeft = 0
+                ExplicitTop = 21
+                ExplicitWidth = 675
+                ExplicitHeight = 339
+              end
+              inherited eSrcFileName: TEdit
+                Width = 840
+              end
             end
           end
         end
@@ -870,30 +859,25 @@ object MainForm: TMainForm
                       WideText = 'Call stack function'
                     end>
                 end
-                object synmMemInfoSource: TSynMemo
+                inline svfMemInfoSource: TSourceViewFrame
                   Left = 0
                   Top = 228
                   Width = 421
                   Height = 237
                   Align = alClient
-                  Font.Charset = DEFAULT_CHARSET
-                  Font.Color = clWindowText
-                  Font.Height = -13
-                  Font.Name = 'Courier New'
-                  Font.Style = []
                   TabOrder = 1
-                  Gutter.AutoSize = True
-                  Gutter.Font.Charset = DEFAULT_CHARSET
-                  Gutter.Font.Color = clWindowText
-                  Gutter.Font.Height = -11
-                  Gutter.Font.Name = 'Courier New'
-                  Gutter.Font.Style = []
-                  Gutter.ShowLineNumbers = True
-                  Highlighter = dmShareData.synPas1
-                  ReadOnly = True
-                  RightEdge = 0
-                  SearchEngine = dmShareData.synRegexSearch1
-                  FontSmoothing = fsmNone
+                  ExplicitTop = 228
+                  inherited synmSourceView: TSynMemo
+                    Width = 421
+                    Height = 216
+                    ExplicitLeft = 0
+                    ExplicitTop = 21
+                    ExplicitWidth = 675
+                    ExplicitHeight = 339
+                  end
+                  inherited eSrcFileName: TEdit
+                    Width = 421
+                  end
                 end
               end
               object vstMemList: TVirtualStringTree
@@ -1019,8 +1003,6 @@ object MainForm: TMainForm
                 OnFocusChanged = vstMemInfoFuncTreeFocusChanged
                 OnGetText = vstMemInfoFuncTreeGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                ExplicitLeft = 2
-                ExplicitTop = -3
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -1212,29 +1194,24 @@ object MainForm: TMainForm
                 object tsMemInfoFuncSrc: TTabSheet
                   Caption = 'Source'
                   ImageIndex = 1
-                  object synmMemInfoFuncSrc: TSynMemo
+                  inline svfMemInfoFuncSrc: TSourceViewFrame
                     Left = 0
                     Top = 0
                     Width = 262
                     Height = 185
                     Align = alClient
-                    Font.Charset = DEFAULT_CHARSET
-                    Font.Color = clWindowText
-                    Font.Height = -13
-                    Font.Name = 'Courier New'
-                    Font.Style = []
                     TabOrder = 0
-                    Gutter.AutoSize = True
-                    Gutter.Font.Charset = DEFAULT_CHARSET
-                    Gutter.Font.Color = clWindowText
-                    Gutter.Font.Height = -11
-                    Gutter.Font.Name = 'Courier New'
-                    Gutter.Font.Style = []
-                    Gutter.ShowLineNumbers = True
-                    Highlighter = dmShareData.synPas1
-                    ReadOnly = True
-                    RightEdge = 0
-                    FontSmoothing = fsmNone
+                    inherited synmSourceView: TSynMemo
+                      Width = 262
+                      Height = 164
+                      ExplicitLeft = 0
+                      ExplicitTop = 21
+                      ExplicitWidth = 675
+                      ExplicitHeight = 339
+                    end
+                    inherited eSrcFileName: TEdit
+                      Width = 262
+                    end
                   end
                 end
               end
@@ -1339,8 +1316,6 @@ object MainForm: TMainForm
                 OnDblClick = vstMemInfoObjStackDblClick
                 OnGetText = vstMemStackGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
-                ExplicitLeft = 362
-                ExplicitTop = -1
                 Columns = <
                   item
                     Alignment = taRightJustify
@@ -1559,8 +1534,6 @@ object MainForm: TMainForm
               OnFocusChanged = vstExceptionCallStackFocusChanged
               OnGetText = vstExceptionCallStackGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
-              ExplicitLeft = 6
-              ExplicitTop = -3
               Columns = <
                 item
                   Alignment = taRightJustify
@@ -1590,29 +1563,25 @@ object MainForm: TMainForm
                   WideText = 'Call stack function'
                 end>
             end
-            object synmExceptInfoSource: TSynMemo
+            inline svfExceptInfoSource: TSourceViewFrame
               Left = 0
               Top = 220
               Width = 298
               Height = 273
               Align = alClient
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWindowText
-              Font.Height = -13
-              Font.Name = 'Courier New'
-              Font.Style = []
               TabOrder = 1
-              Gutter.AutoSize = True
-              Gutter.Font.Charset = DEFAULT_CHARSET
-              Gutter.Font.Color = clWindowText
-              Gutter.Font.Height = -11
-              Gutter.Font.Name = 'Courier New'
-              Gutter.Font.Style = []
-              Gutter.ShowLineNumbers = True
-              Highlighter = dmShareData.synPas1
-              ReadOnly = True
-              RightEdge = 0
-              FontSmoothing = fsmNone
+              ExplicitTop = 220
+              inherited synmSourceView: TSynMemo
+                Width = 298
+                Height = 252
+                ExplicitLeft = 0
+                ExplicitTop = 21
+                ExplicitWidth = 675
+                ExplicitHeight = 339
+              end
+              inherited eSrcFileName: TEdit
+                Width = 298
+              end
             end
           end
         end
@@ -1790,8 +1759,6 @@ object MainForm: TMainForm
             OnFocusChanging = vstTrackFuncsFocusChanging
             OnGetText = vstTrackFuncsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
-            ExplicitLeft = -2
-            ExplicitTop = -2
             Columns = <
               item
                 CaptionAlignment = taCenter
@@ -1985,29 +1952,24 @@ object MainForm: TMainForm
             object tsTrackFuncAdvSrc: TTabSheet
               Caption = 'Source'
               ImageIndex = 1
-              object synmTrackFuncAdvSource: TSynMemo
+              inline svfTrackFuncAdvSource: TSourceViewFrame
                 Left = 0
                 Top = 0
                 Width = 213
                 Height = 463
                 Align = alClient
-                Font.Charset = DEFAULT_CHARSET
-                Font.Color = clWindowText
-                Font.Height = -13
-                Font.Name = 'Courier New'
-                Font.Style = []
                 TabOrder = 0
-                Gutter.AutoSize = True
-                Gutter.Font.Charset = DEFAULT_CHARSET
-                Gutter.Font.Color = clWindowText
-                Gutter.Font.Height = -11
-                Gutter.Font.Name = 'Courier New'
-                Gutter.Font.Style = []
-                Gutter.ShowLineNumbers = True
-                Highlighter = dmShareData.synPas1
-                ReadOnly = True
-                RightEdge = 0
-                FontSmoothing = fsmNone
+                inherited synmSourceView: TSynMemo
+                  Width = 213
+                  Height = 442
+                  ExplicitLeft = 0
+                  ExplicitTop = 21
+                  ExplicitWidth = 675
+                  ExplicitHeight = 339
+                end
+                inherited eSrcFileName: TEdit
+                  Width = 213
+                end
               end
             end
           end
@@ -2121,10 +2083,6 @@ object MainForm: TMainForm
         Caption = 'pLockTrackingInfo'
         ShowCaption = False
         TabOrder = 1
-        ExplicitLeft = 592
-        ExplicitTop = 96
-        ExplicitWidth = 185
-        ExplicitHeight = 41
         object cbLockTracking: TCoolBar
           Left = 0
           Top = 0
@@ -2170,10 +2128,6 @@ object MainForm: TMainForm
           Caption = 'pLockTrackingAdv'
           ShowCaption = False
           TabOrder = 1
-          ExplicitLeft = 160
-          ExplicitTop = 104
-          ExplicitWidth = 185
-          ExplicitHeight = 41
           object vstLockTrackingList: TVirtualStringTree
             Left = 0
             Top = 0
@@ -2245,10 +2199,6 @@ object MainForm: TMainForm
             Caption = 'pLockTrackingThInfo'
             ShowCaption = False
             TabOrder = 1
-            ExplicitLeft = 568
-            ExplicitTop = 104
-            ExplicitWidth = 185
-            ExplicitHeight = 41
             object splLockTrackingAdv: TSplitter
               Left = 0
               Top = 217
@@ -2295,31 +2245,25 @@ object MainForm: TMainForm
                   WideText = 'Line'
                 end>
             end
-            object synmLockTracking: TSynMemo
+            inline svfLockTracking: TSourceViewFrame
               Left = 0
               Top = 220
               Width = 236
               Height = 272
               Align = alClient
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWindowText
-              Font.Height = -13
-              Font.Name = 'Courier New'
-              Font.Style = []
               TabOrder = 1
-              Gutter.AutoSize = True
-              Gutter.Font.Charset = DEFAULT_CHARSET
-              Gutter.Font.Color = clWindowText
-              Gutter.Font.Height = -11
-              Gutter.Font.Name = 'Courier New'
-              Gutter.Font.Style = []
-              Gutter.ShowLineNumbers = True
-              Highlighter = dmShareData.synPas1
-              ReadOnly = True
-              RightEdge = 0
-              FontSmoothing = fsmNone
-              ExplicitWidth = 298
-              ExplicitHeight = 273
+              ExplicitTop = 220
+              inherited synmSourceView: TSynMemo
+                Width = 236
+                Height = 251
+                ExplicitLeft = 0
+                ExplicitTop = 21
+                ExplicitWidth = 675
+                ExplicitHeight = 339
+              end
+              inherited eSrcFileName: TEdit
+                Width = 236
+              end
             end
           end
         end
