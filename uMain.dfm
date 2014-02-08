@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsCodeTracking
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -489,18 +489,20 @@ object MainForm: TMainForm
                 Height = 293
                 Align = alClient
                 TabOrder = 1
-                ExplicitLeft = -382
-                ExplicitTop = 129
+                ExplicitTop = 196
+                ExplicitWidth = 293
+                ExplicitHeight = 293
                 inherited synmSourceView: TSynMemo
                   Width = 293
                   Height = 272
                   ExplicitLeft = 0
                   ExplicitTop = 21
-                  ExplicitWidth = 675
-                  ExplicitHeight = 339
+                  ExplicitWidth = 293
+                  ExplicitHeight = 272
                 end
                 inherited eSrcFileName: TEdit
                   Width = 293
+                  ExplicitWidth = 293
                 end
               end
             end
@@ -515,16 +517,19 @@ object MainForm: TMainForm
               Height = 489
               Align = alClient
               TabOrder = 0
+              ExplicitWidth = 840
+              ExplicitHeight = 489
               inherited synmSourceView: TSynMemo
                 Width = 840
                 Height = 468
                 ExplicitLeft = 0
                 ExplicitTop = 21
-                ExplicitWidth = 675
-                ExplicitHeight = 339
+                ExplicitWidth = 840
+                ExplicitHeight = 468
               end
               inherited eSrcFileName: TEdit
                 Width = 840
+                ExplicitWidth = 840
               end
             end
           end
@@ -867,16 +872,19 @@ object MainForm: TMainForm
                   Align = alClient
                   TabOrder = 1
                   ExplicitTop = 228
+                  ExplicitWidth = 421
+                  ExplicitHeight = 237
                   inherited synmSourceView: TSynMemo
                     Width = 421
                     Height = 216
                     ExplicitLeft = 0
                     ExplicitTop = 21
-                    ExplicitWidth = 675
-                    ExplicitHeight = 339
+                    ExplicitWidth = 421
+                    ExplicitHeight = 216
                   end
                   inherited eSrcFileName: TEdit
                     Width = 421
+                    ExplicitWidth = 421
                   end
                 end
               end
@@ -1201,16 +1209,18 @@ object MainForm: TMainForm
                     Height = 185
                     Align = alClient
                     TabOrder = 0
+                    ExplicitWidth = 262
+                    ExplicitHeight = 185
                     inherited synmSourceView: TSynMemo
                       Width = 262
                       Height = 164
                       ExplicitLeft = 0
                       ExplicitTop = 21
-                      ExplicitWidth = 675
-                      ExplicitHeight = 339
+                      ExplicitHeight = 164
                     end
                     inherited eSrcFileName: TEdit
                       Width = 262
+                      ExplicitWidth = 262
                     end
                   end
                 end
@@ -1571,16 +1581,19 @@ object MainForm: TMainForm
               Align = alClient
               TabOrder = 1
               ExplicitTop = 220
+              ExplicitWidth = 298
+              ExplicitHeight = 273
               inherited synmSourceView: TSynMemo
                 Width = 298
                 Height = 252
                 ExplicitLeft = 0
                 ExplicitTop = 21
-                ExplicitWidth = 675
-                ExplicitHeight = 339
+                ExplicitWidth = 298
+                ExplicitHeight = 252
               end
               inherited eSrcFileName: TEdit
                 Width = 298
+                ExplicitWidth = 298
               end
             end
           end
@@ -1959,16 +1972,19 @@ object MainForm: TMainForm
                 Height = 463
                 Align = alClient
                 TabOrder = 0
+                ExplicitWidth = 213
+                ExplicitHeight = 463
                 inherited synmSourceView: TSynMemo
                   Width = 213
                   Height = 442
                   ExplicitLeft = 0
                   ExplicitTop = 21
-                  ExplicitWidth = 675
-                  ExplicitHeight = 339
+                  ExplicitWidth = 213
+                  ExplicitHeight = 442
                 end
                 inherited eSrcFileName: TEdit
                   Width = 213
+                  ExplicitWidth = 213
                 end
               end
             end
@@ -2253,16 +2269,19 @@ object MainForm: TMainForm
               Align = alClient
               TabOrder = 1
               ExplicitTop = 220
+              ExplicitWidth = 236
+              ExplicitHeight = 272
               inherited synmSourceView: TSynMemo
                 Width = 236
                 Height = 251
                 ExplicitLeft = 0
                 ExplicitTop = 21
-                ExplicitWidth = 675
-                ExplicitHeight = 339
+                ExplicitWidth = 236
+                ExplicitHeight = 251
               end
               inherited eSrcFileName: TEdit
                 Width = 236
+                ExplicitWidth = 236
               end
             end
           end
@@ -3819,6 +3838,11 @@ object MainForm: TMainForm
             Caption = '&History'
             ImageIndex = 15
             CommandProperties.ButtonType = btSplit
+          end
+          item
+            Action = acMemInfoRefresh
+            Caption = '&Refresh'
+            ImageIndex = 17
           end>
         ActionBar = actbMemInfo
       end
