@@ -42,7 +42,9 @@ uses
   uFeedback in 'uFeedback.pas' {frmFeedback},
   GdiPlus in 'GdiPlus\GdiPlus.pas',
   GdiPlusHelpers in 'GdiPlus\GdiPlusHelpers.pas',
-  uExceptionHook in 'uExceptionHook.pas';
+  uExceptionHook in 'uExceptionHook.pas',
+  uRWLock in 'uRWLock.pas',
+  uSourceViewFrame in 'uSourceViewFrame.pas' {SourceViewFrame: TFrame};
 
 {$R *.res}
 

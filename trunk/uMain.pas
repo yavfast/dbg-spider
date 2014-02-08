@@ -10,8 +10,8 @@ uses
   PlatformDefaultStyleActnCtrls, ActnMan, Ribbon, RibbonLunaStyleActnCtrls,
   RibbonSilverStyleActnCtrls, ToolWin, ActnCtrls, ActnMenus,
   RibbonActnMenus, ImgList, ActnColorMaps, XPMan,
-  uActionController, uSpiderOptions, SynEdit, SynMemo, System.Actions,
-  Vcl.Menus, uUpdateInfo;
+  uActionController, uSpiderOptions, System.Actions,
+  Vcl.Menus, uUpdateInfo, uSourceViewFrame;
 
 type
   TProgectType = (ptEmpty, ptSpider, ptApplication);
@@ -152,8 +152,6 @@ type
     pDbgInfoFuncAdv: TPanel;
     vstDbgInfoFuncVars: TVirtualStringTree;
     splDbgInfoFuncAdv: TSplitter;
-    synmDbgInfoUnitSource: TSynMemo;
-    synmDbgInfoFuncAdv: TSynMemo;
     acUseShortNames: TAction;
     rbngrpDbgInfoOptions: TRibbonGroup;
     tsCodeTracking: TTabSheet;
@@ -199,7 +197,6 @@ type
     vstTrackFuncParent: TVirtualStringTree;
     vstTrackFuncChilds: TVirtualStringTree;
     tsTrackFuncAdvSrc: TTabSheet;
-    synmTrackFuncAdvSource: TSynMemo;
     cbCodeTrackingInfo: TCoolBar;
     actbCodeTrackingInfo: TActionToolBar;
     acCodeTrackHistoryBack: TAction;
@@ -226,7 +223,6 @@ type
     pMemoryInfoAdv: TPanel;
     splMemInfoAdv: TSplitter;
     vstMemStack: TVirtualStringTree;
-    synmMemInfoSource: TSynMemo;
     vstMemList: TVirtualStringTree;
     tsMemInfoTreeView: TTabSheet;
     pMemInfoTreeLeft: TPanel;
@@ -238,7 +234,6 @@ type
     vstMemInfoFuncParents: TVirtualStringTree;
     vstMemInfoFuncChilds: TVirtualStringTree;
     tsMemInfoFuncSrc: TTabSheet;
-    synmMemInfoFuncSrc: TSynMemo;
     spl2: TSplitter;
     pMemInfoButtom: TPanel;
     vstMemInfoObjects: TVirtualStringTree;
@@ -249,7 +244,6 @@ type
     pExceptInfoAdv: TPanel;
     splExceptInfoAdv: TSplitter;
     vstExceptionCallStack: TVirtualStringTree;
-    synmExceptInfoSource: TSynMemo;
     cbExceptionInfo: TCoolBar;
     actbExceptionInfo: TActionToolBar;
     acAddressInfo: TAction;
@@ -278,8 +272,14 @@ type
     pLockTrackingThInfo: TPanel;
     vstLockTrackingThreadsInfo: TVirtualStringTree;
     splLockTrackingAdv: TSplitter;
-    synmLockTracking: TSynMemo;
     acCopy: TAction;
+    svfDbgInfoFuncAdv: TSourceViewFrame;
+    svfDbgInfoUnitSource: TSourceViewFrame;
+    svfMemInfoSource: TSourceViewFrame;
+    svfMemInfoFuncSrc: TSourceViewFrame;
+    svfExceptInfoSource: TSourceViewFrame;
+    svfTrackFuncAdvSource: TSourceViewFrame;
+    svfLockTracking: TSourceViewFrame;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -485,7 +485,7 @@ type
     procedure LoadVars(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
     procedure LoadFunctions(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
     procedure LoadFunctionParams(FuncInfo: TFuncInfo; FuncNode: PVirtualNode);
-    function LoadFunctionSource(SrcMemo: TSynMemo; FuncInfo: TFuncInfo; LineNo: Integer = 0): Boolean;
+    function LoadFunctionSource(SrcView: TSourceViewFrame; FuncInfo: TFuncInfo; LineNo: Integer = 0): Boolean; overload;
     procedure LoadUnitSource(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 
     procedure LoadTrackProcessFunctions(ProcData: PProcessData; ThreadNode: PVirtualNode);
@@ -553,7 +553,7 @@ implementation
 {$R *.dfm}
 
 uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
-  uProjectOptions, SynEditTypes, WinAPIUtils, System.UITypes, System.Types,
+  uProjectOptions, WinAPIUtils, System.UITypes, System.Types,
   uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI, uFeedback,
   DbgHookTypes, Collections.Dictionaries;
 
@@ -900,7 +900,7 @@ begin
   begin
     Data := vstTrackFuncParent.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
-      if LoadFunctionSource(synmTrackFuncAdvSource, TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo), Data^.TrackCallFuncInfo^.LineNo) then
+      if LoadFunctionSource(svfTrackFuncAdvSource, TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo), Data^.TrackCallFuncInfo^.LineNo) then
         pcTrackFuncAdv.ActivePage := tsTrackFuncAdvSrc;
   end;
 end;
@@ -1220,8 +1220,8 @@ begin
   vstDbgInfoVars.Clear;
   vstDbgInfoFunctions.Clear;
   vstDbgInfoFuncVars.Clear;
-  synmDbgInfoUnitSource.Clear;
-  synmDbgInfoFuncAdv.Clear;
+  svfDbgInfoUnitSource.Clear;
+  svfDbgInfoFuncAdv.Clear;
 end;
 
 procedure TMainForm.ClearDbgTrees;
@@ -1234,7 +1234,7 @@ begin
   vstExceptionThreads.Clear;
   vstExceptionList.Clear;
   vstExceptionCallStack.Clear;
-  synmExceptInfoSource.Clear;
+  svfExceptInfoSource.Clear;
 end;
 
 procedure TMainForm.ClearMemInfoTrees;
@@ -1243,14 +1243,14 @@ begin
 
   vstMemList.Clear;
   vstMemStack.Clear;
-  synmMemInfoSource.Clear;
+  svfMemInfoSource.Clear;
 
   vstMemInfoFuncTree.Clear;
   vstMemInfoObjects.Clear;
   vstMemInfoObjStack.Clear;
   vstMemInfoFuncParents.Clear;
   vstMemInfoFuncChilds.Clear;
-  synmMemInfoFuncSrc.Clear;
+  svfMemInfoFuncSrc.Clear;
 end;
 
 procedure TMainForm.ClearProject;
@@ -2582,7 +2582,7 @@ var
 begin
   vstDbgInfoFuncVars.Clear;
   vstDbgInfoFunctions.Clear;
-  synmDbgInfoFuncAdv.Clear;
+  svfDbgInfoFuncAdv.Clear;
 
   if UnitInfo.Funcs.Count = 0 then Exit;
 
@@ -2613,67 +2613,59 @@ begin
   end;
 end;
 
-function TMainForm.LoadFunctionSource(SrcMemo: TSynMemo; FuncInfo: TFuncInfo; LineNo: Integer = 0): Boolean;
+function TMainForm.LoadFunctionSource(SrcView: TSourceViewFrame; FuncInfo: TFuncInfo; LineNo: Integer): Boolean;
 var
   UnitInfo: TUnitInfo;
   StartLine: TLineInfo;
   LineIdx: Integer;
   PrevLine: TLineInfo;
 begin
-  SrcMemo.Clear;
-
   Result := False;
 
-  if not Assigned(FuncInfo) then Exit;
+  if not Assigned(FuncInfo) then
+  begin
+    SrcView.Clear;
+    Exit;
+  end;
 
   UnitInfo := FuncInfo.UnitInfo;
-  if FileExists(UnitInfo.FullUnitName) then
-  begin
-    SrcMemo.BeginUpdate;
-    try
-      SrcMemo.Lines.LoadFromFile(UnitInfo.FullUnitName);
 
-      if LineNo = 0 then
+  SrcView.BeginUpdate;
+  try
+    SrcView.SourceFileName := UnitInfo.FullUnitName;
+
+    if LineNo = 0 then
+    begin
+      if FuncInfo.Lines.Count > 0 then
       begin
-        if FuncInfo.Lines.Count > 0 then
+        StartLine := FuncInfo.Lines[0];
+        LineIdx := UnitInfo.Lines.IndexOf(StartLine) - 1;
+        if LineIdx >= 0 then
         begin
-          StartLine := FuncInfo.Lines[0];
-          LineIdx := UnitInfo.Lines.IndexOf(StartLine) - 1;
-          if LineIdx >= 0 then
-          begin
-            PrevLine := UnitInfo.Lines[LineIdx];
-            LineNo := PrevLine.LineNo + 1;
-          end
-          else
-            LineNo := StartLine.LineNo - 2;
+          PrevLine := UnitInfo.Lines[LineIdx];
+          LineNo := PrevLine.LineNo + 1;
+        end
+        else
+          LineNo := StartLine.LineNo - 2;
 
-          if Abs(StartLine.LineNo - LineNo) < 10 then
-            SrcMemo.TopLine := LineNo
-          else
-            SrcMemo.GotoLineAndCenter(StartLine.LineNo);
+        if Abs(StartLine.LineNo - LineNo) < 10 then
+          SrcView.GotoLine(LineNo, taAlignTop)
+        else
+          SrcView.GotoLine(LineNo, taVerticalCenter);
 
-          SrcMemo.SetCaretAndSelection(
-            BufferCoord(1, StartLine.LineNo),
-            BufferCoord(1, StartLine.LineNo),
-            BufferCoord(1, StartLine.LineNo + 1)
-          );
-        end;
-      end
-      else
-      begin
-        SrcMemo.GotoLineAndCenter(LineNo);
-
-        SrcMemo.SetCaretAndSelection(
-          BufferCoord(1, LineNo),
-          BufferCoord(1, LineNo),
-          BufferCoord(1, LineNo + 1)
-        );
+        SrcView.SelectLine(StartLine.LineNo);
       end;
-    finally
-      SrcMemo.EndUpdate;
+    end
+    else
+    begin
+      SrcView.GotoLine(LineNo, taVerticalCenter);
+
+      SrcView.SelectLine(LineNo);
     end;
 
     Result := True;
+  finally
+    SrcView.EndUpdate;
   end;
 end;
 
@@ -2985,17 +2977,7 @@ end;
 
 procedure TMainForm.LoadUnitSource(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 begin
-  synmDbgInfoUnitSource.Clear;
-
-  if FileExists(UnitInfo.FullUnitName) then
-  begin
-    synmDbgInfoUnitSource.BeginUpdate;
-    try
-      synmDbgInfoUnitSource.Lines.LoadFromFile(UnitInfo.FullUnitName);
-    finally
-      synmDbgInfoUnitSource.EndUpdate;
-    end;
-  end;
+  svfDbgInfoUnitSource.SourceFileName := UnitInfo.FullUnitName;
 end;
 
 procedure TMainForm.FillUpdateInfo(Sender: TObject);
@@ -3649,7 +3631,7 @@ begin
     FuncInfo := Data^.DbgFuncInfo;
 
     LoadFunctionParams(FuncInfo, Node);
-    LoadFunctionSource(synmDbgInfoFuncAdv, FuncInfo);
+    LoadFunctionSource(svfDbgInfoFuncAdv, FuncInfo);
   end;
 end;
 
@@ -3890,7 +3872,7 @@ var
   Data: PLinkData;
   StackEntry: TStackEntry;
 begin
-  synmExceptInfoSource.Clear;
+  svfExceptInfoSource.Clear;
 
   Data := vstExceptionCallStack.GetNodeData(Node);
   if Data^.LinkType = ltExceptStack then
@@ -3900,9 +3882,9 @@ begin
     if Assigned(StackEntry) and Assigned(StackEntry.FuncInfo) then
     begin
       if Assigned(StackEntry.LineInfo) then
-        LoadFunctionSource(synmExceptInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+        LoadFunctionSource(svfExceptInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
       else
-        LoadFunctionSource(synmExceptInfoSource, StackEntry.FuncInfo);
+        LoadFunctionSource(svfExceptInfoSource, StackEntry.FuncInfo);
     end;
   end;
 end;
@@ -3946,7 +3928,7 @@ var
   StackData: PLinkData;
 begin
   vstExceptionCallStack.Clear;
-  synmExceptInfoSource.Clear;
+  svfExceptInfoSource.Clear;
 
   Data := vstExceptionList.GetNodeData(Node);
   if Data^.LinkType = ltExceptInfo then
@@ -3991,7 +3973,7 @@ var
 begin
   vstExceptionList.Clear;
   vstExceptionCallStack.Clear;
-  synmExceptInfoSource.Clear;
+  svfExceptInfoSource.Clear;
 
   if gvDebuger = Nil then Exit;
 
@@ -4205,7 +4187,7 @@ begin
           vstMemInfoFuncTree.Selected[FuncNode] := True;
 
           if LineNo <> 0 then
-            LoadFunctionSource(synmMemInfoFuncSrc, FuncInfo, LineNo);
+            LoadFunctionSource(svfMemInfoFuncSrc, FuncInfo, LineNo);
         end;
       end;
     end;
@@ -4278,7 +4260,7 @@ begin
           vstMemInfoFuncTree.Selected[FuncNode] := True;
 
           if LineNo <> 0 then
-            LoadFunctionSource(synmMemInfoFuncSrc, FuncInfo, LineNo);
+            LoadFunctionSource(svfMemInfoFuncSrc, FuncInfo, LineNo);
         end;
       end;
     end;
@@ -4407,7 +4389,7 @@ begin
         LoadMemInfoParentFunctions(TrackFuncInfo, Node);
         LoadMemInfoChildFunctions(TrackFuncInfo, Node);
 
-        LoadFunctionSource(synmMemInfoFuncSrc, TFuncInfo(TrackFuncInfo.FuncInfo));
+        LoadFunctionSource(svfMemInfoFuncSrc, TFuncInfo(TrackFuncInfo.FuncInfo));
       end;
   else
     begin
@@ -4415,7 +4397,7 @@ begin
       vstMemInfoObjStack.Clear;
       vstMemInfoFuncParents.Clear;
       vstMemInfoFuncChilds.Clear;
-      synmMemInfoFuncSrc.Clear;
+      svfMemInfoFuncSrc.Clear;
     end;
   end;
 end;
@@ -4675,7 +4657,7 @@ var
   Data: PLinkData;
   StackEntry: TStackEntry;
 begin
-  synmMemInfoFuncSrc.Clear;
+  svfMemInfoFuncSrc.Clear;
 
   if vstMemInfoObjStack.FocusedNode = Nil then
     Exit;
@@ -4689,9 +4671,9 @@ begin
       if Assigned(StackEntry.FuncInfo) then
       begin
         if Assigned(StackEntry.LineInfo) then
-          LoadFunctionSource(synmMemInfoFuncSrc, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+          LoadFunctionSource(svfMemInfoFuncSrc, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
         else
-          LoadFunctionSource(synmMemInfoFuncSrc, StackEntry.FuncInfo);
+          LoadFunctionSource(svfMemInfoFuncSrc, StackEntry.FuncInfo);
 
         pcMemInfoFuncInfo.ActivePageIndex := 1;
       end;
@@ -4710,14 +4692,14 @@ var
 begin
   vstMemList.Clear;
   vstMemStack.Clear;
-  synmMemInfoSource.Clear;
+  svfMemInfoSource.Clear;
 
   vstMemInfoFuncTree.Clear;
   vstMemInfoObjects.Clear;
   vstMemInfoObjStack.Clear;
   vstMemInfoFuncParents.Clear;
   vstMemInfoFuncChilds.Clear;
-  synmMemInfoFuncSrc.Clear;
+  svfMemInfoFuncSrc.Clear;
 
   if Node = nil then Exit;
 
@@ -4799,7 +4781,7 @@ var
   GetMemInfo: TGetMemInfo;
 begin
   vstMemStack.Clear;
-  synmMemInfoSource.Clear;
+  svfMemInfoSource.Clear;
 
   Data := vstMemList.GetNodeData(Node);
 
@@ -4899,7 +4881,7 @@ var
   Data: PLinkData;
   StackEntry: TStackEntry;
 begin
-  synmMemInfoSource.Clear;
+  svfMemInfoSource.Clear;
 
   Data := vstMemStack.GetNodeData(Node);
   if Data^.LinkType = ltMemStack then
@@ -4910,9 +4892,9 @@ begin
       if Assigned(StackEntry.FuncInfo) then
       begin
         if Assigned(StackEntry.LineInfo) then
-          LoadFunctionSource(synmMemInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+          LoadFunctionSource(svfMemInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
         else
-          LoadFunctionSource(synmMemInfoSource, StackEntry.FuncInfo);
+          LoadFunctionSource(svfMemInfoSource, StackEntry.FuncInfo);
       end;
     finally
       FreeAndNil(StackEntry);
@@ -5118,7 +5100,7 @@ begin
           vstTrackFuncs.Selected[FuncNode] := True;
 
           if LineNo <> 0 then
-            LoadFunctionSource(synmTrackFuncAdvSource, FuncInfo, LineNo);
+            LoadFunctionSource(svfTrackFuncAdvSource, FuncInfo, LineNo);
         end;
       end;
     end;
@@ -5332,13 +5314,13 @@ begin
         LoadTrackParentFunctions(Data^.TrackFuncInfo, Node);
         LoadTrackChildFunctions(Data^.TrackFuncInfo, Node);
 
-        LoadFunctionSource(synmTrackFuncAdvSource, TFuncInfo(Data^.TrackFuncInfo.FuncInfo));
+        LoadFunctionSource(svfTrackFuncAdvSource, TFuncInfo(Data^.TrackFuncInfo.FuncInfo));
       end;
   else
     begin
       vstTrackFuncParent.Clear;
       vstTrackFuncChilds.Clear;
-      synmTrackFuncAdvSource.Clear;
+      svfTrackFuncAdvSource.Clear;
     end;
   end;
 end;
