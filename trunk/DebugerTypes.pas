@@ -299,8 +299,8 @@ type
     LineNo: Cardinal;
     CallCount: UInt64;
     Data: UInt64;
-
-    property Ellapsed: UInt64 read Data write Data;
+  public
+    property Elapsed: UInt64 read Data write Data;
     property Size: UInt64 read Data write Data;
   end;
 
@@ -309,6 +309,7 @@ type
     function AddNewCallFunc(const Addr: Pointer): PCallFuncInfo;
   public
     function AddCallFunc(const Addr: Pointer): PCallFuncInfo;
+    function GetCallFunc(const Addr: Pointer): PCallFuncInfo;
   end;
   TCallFuncCounterPair = TPair<Pointer,PCallFuncInfo>;
 
@@ -339,12 +340,12 @@ type
 
   TCodeTrackUnitInfo = class(TTrackUnitInfo)
   private
-    FEllapsed: UInt64;
+    FElapsed: UInt64;
   public
-    procedure GrowEllapsed(const Value: UInt64); inline;
+    procedure GrowElapsed(const Value: UInt64); inline;
 
     // TODO: высчитать общее время выполнения функций юнита с учетом вложенности
-    // property Ellapsed: UInt64 read FEllapsed;
+    // property Elapsed: UInt64 read FElapsed;
   end;
 
   TMemInfoTrackUnitInfo = class(TTrackUnitInfo)
@@ -361,7 +362,10 @@ type
   end;
 
   TSyncObjsTrackUnitInfo = class(TTrackUnitInfo)
-
+  private
+    FWaitTime: Int64;
+  public
+    procedure GrowWaitTime(const Value: Int64); inline;
   end;
 
   TTrackUnitInfoList = class(TTrackUnitInfoBaseList)
@@ -389,6 +393,8 @@ type
   TSyncObjsTrackUnitInfoList = class(TTrackUnitInfoList)
   protected
     function CreateTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo; override;
+  public
+    procedure LoadStack(const SyncObjsInfo: PSyncObjsInfo);
   end;
 
   TTrackFuncInfo = class
@@ -442,15 +448,20 @@ type
 
   TCodeTrackFuncInfo = class(TTrackFuncInfo)
   private
-    FCPUEllapsed: UInt64;
+    FCPUElapsed: UInt64;
   public
-    procedure GrowEllapsed(const Value: UInt64); inline;
+    procedure GrowElapsed(const Value: UInt64); inline;
 
-    property CPUEllapsed: UInt64 read FCPUEllapsed;
+    property CPUElapsed: UInt64 read FCPUElapsed;
   end;
 
   TSyncObjsTrackFuncInfo = class(TTrackFuncInfo)
+  private
+    FWaitTime: Int64;
+  public
+    procedure GrowWaitTime(const Value: Int64); inline;
 
+    property WaitTime: Int64 read FWaitTime;
   end;
 
   TTrackFuncInfoList = class(TTrackFuncInfoBaseList)
@@ -491,7 +502,7 @@ type
     TrackRETBreakpoint: PTrackRETBreakpoint;
 
     Enter: UInt64;
-    Ellapsed: UInt64;
+    Elapsed: UInt64;
 
     property Leave: UInt64 read GetLeave write SetLeave;
   end;
@@ -514,9 +525,9 @@ type
     Context: PContext; // Указатель должен быть выровнен по памяти 32 бит
     Breakpoint: PHardwareBreakpoint;
     Started: Int64;         // момент запуска
-    Ellapsed: Int64;        // время выполнения
+    Elapsed: Int64;        // время выполнения
 
-    CPUEllapsed: UInt64;    // циклы CPU
+    CPUElapsed: UInt64;    // циклы CPU
     CPUTime: UInt64;        // время использования CPU
 
     DbgPoints: TThreadPointList;
@@ -589,9 +600,9 @@ type
     PEImage: TJclPeImage;
 
     Started: Int64;
-    Ellapsed: Int64;
+    Elapsed: Int64;
     CPUTime: UInt64;
-    CPUEllapsed: UInt64; // время использования CPU
+    CPUElapsed: UInt64; // время использования CPU
 
     DbgPoints: TProcessPointList;
 
@@ -615,7 +626,7 @@ type
 
     //DbgShareMem: THandle; // FileMap для взаимодействия с процессом
 
-    function Ellapsed_MSec: Cardinal; // msec
+    function Elapsed_MSec: Cardinal; // msec
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PProcessPoint;
     function CurDbgPointIdx: Cardinal;
@@ -720,7 +731,7 @@ begin
     Result := 0;
 end;
 
-function TProcessData.Ellapsed_MSec: Cardinal;
+function TProcessData.Elapsed_MSec: Cardinal;
 var
   Cur: Int64;
   Freq: Int64;
@@ -728,7 +739,7 @@ begin
   if State = psActive then
     Cur := _QueryPerformanceCounter
   else
-    Cur := Ellapsed;
+    Cur := Elapsed;
 
   Freq := _QueryPerformanceFrequency;
   Result := ((Cur - Started) * 1000) div Freq;
@@ -761,6 +772,7 @@ begin
 
   FreeAndNil(DbgGetMemInfo);
   FreeAndNil(DbgGetMemUnitList);
+  FreeAndNil(DbgSyncObjsUnitList);
   //FreeAndNil(DbgGetMemFuncList);
   FreeAndNil(DbgSyncObjsInfo);
   FreeAndNil(DbgExceptions);
@@ -1099,10 +1111,10 @@ end;
 
 { TCodeTrackFuncInfo }
 
-procedure TCodeTrackFuncInfo.GrowEllapsed(const Value: UInt64);
+procedure TCodeTrackFuncInfo.GrowElapsed(const Value: UInt64);
 begin
-  Inc(FCPUEllapsed, Value);
-  TCodeTrackUnitInfo(FTrackUnitInfo).GrowEllapsed(Value);
+  Inc(FCPUElapsed, Value);
+  TCodeTrackUnitInfo(FTrackUnitInfo).GrowElapsed(Value);
 end;
 
 { TMemInfoTrackFuncInfo }
@@ -1172,6 +1184,11 @@ end;
 
 function TCallFuncCounter.AddCallFunc(const Addr: Pointer): PCallFuncInfo;
 begin
+  Result := Nil;
+
+  if (Addr = Nil) or (Addr = Pointer(-1)) then
+    Exit;
+
   if TryGetValue(Addr, Result) then
     Inc(Result^.CallCount)
   else
@@ -1199,6 +1216,12 @@ begin
     if Assigned(LineInfo) then
       Result^.LineNo := LineInfo.LineNo;
   end;
+end;
+
+function TCallFuncCounter.GetCallFunc(const Addr: Pointer): PCallFuncInfo;
+begin
+  if not TryGetValue(Addr, Result) then
+    Result := Nil;
 end;
 
 { TTrackUnitInfoList }
@@ -1254,6 +1277,9 @@ begin
     for I := 0 to High(GetMemInfo.Stack) do
     begin
       Addr := GetMemInfo.Stack[I];
+
+      if (Addr = nil) or (Addr = Pointer(-1)) then Break;
+
       if StackEntry.UpdateInfo(Addr) <> slNotFound then
       begin
         TrackUnitInfo := TMemInfoTrackUnitInfo(GetTrackUnitInfo(StackEntry.UnitInfo));
@@ -1271,18 +1297,22 @@ begin
         TMemInfoTrackFuncInfo(TrackFuncInfo).GrowSize(GetMemInfo.Size);
         TMemInfoTrackFuncInfo(TrackFuncInfo).AddGetMemInfo(GetMemInfo);
 
+        // TODO: Искать функцию с валидным Addr
         if I > 0 then
         begin
           Addr := GetMemInfo.Stack[I - 1];
           CallFuncInfo := TrackFuncInfo.AddChildCall(Addr);
-          Inc(CallFuncInfo^.Data, GetMemInfo.Size);
+          if Assigned(CallFuncInfo) then
+            Inc(CallFuncInfo^.Data, GetMemInfo.Size);
         end;
 
+        // TODO: Искать функцию с валидным Addr
         if I < High(GetMemInfo.Stack) then
         begin
           Addr := GetMemInfo.Stack[I + 1];
           CallFuncInfo := TrackFuncInfo.AddParentCall(Addr);
-          Inc(CallFuncInfo^.Data, GetMemInfo.Size);
+          if Assigned(CallFuncInfo) then
+            Inc(CallFuncInfo^.Data, GetMemInfo.Size);
         end;
       end;
     end;
@@ -1316,21 +1346,21 @@ begin
   Inc(FCallCount);
 end;
 
-procedure TCodeTrackUnitInfo.GrowEllapsed(const Value: UInt64);
+procedure TCodeTrackUnitInfo.GrowElapsed(const Value: UInt64);
 begin
-  Inc(FEllapsed, Value);
+  Inc(FElapsed, Value);
 end;
 
 { TTrackStackPoint }
 
 function TTrackStackPoint.GetLeave: UInt64;
 begin
-  Result := Enter + Ellapsed;
+  Result := Enter + Elapsed;
 end;
 
 procedure TTrackStackPoint.SetLeave(const Value: UInt64);
 begin
-  Ellapsed := (Value - Enter) + 1;
+  Elapsed := (Value - Enter) + 1;
 end;
 
 { TSyncObjsInfo }
@@ -1432,11 +1462,118 @@ begin
   Result := TSyncObjsTrackUnitInfo.Create(UnitInfo);
 end;
 
+procedure TSyncObjsTrackUnitInfoList.LoadStack(const SyncObjsInfo: PSyncObjsInfo);
+var
+  StackEntry: TStackEntry;
+  I: Integer;
+  Addr: Pointer;
+  TrackUnitInfo: TSyncObjsTrackUnitInfo;
+  TrackFuncInfo: TTrackFuncInfo;
+  CallFuncInfo: PCallFuncInfo;
+  DbgSyncObjsInfo: PDbgSyncObjsInfo;
+  WaitTime: Int64;
+begin
+  StackEntry := TStackEntry.Create;
+  try
+    DbgSyncObjsInfo := @SyncObjsInfo^.SyncObjsInfo;
+
+    for I := 0 to High(DbgSyncObjsInfo^.Stack) do
+    begin
+      Addr := DbgSyncObjsInfo^.Stack[I];
+
+      if (Addr = nil) or (Addr = Pointer(-1)) then Break;
+
+      if StackEntry.UpdateInfo(Addr) <> slNotFound then
+      begin
+        TrackUnitInfo := TSyncObjsTrackUnitInfo(GetTrackUnitInfo(StackEntry.UnitInfo));
+
+        // TrackFuncInfo
+        if not TrackUnitInfo.FuncInfoList.TryGetValue(StackEntry.FuncInfo, TrackFuncInfo) then
+        begin
+          TrackFuncInfo := TSyncObjsTrackFuncInfo.Create(StackEntry.FuncInfo);
+          TrackFuncInfo.TrackUnitInfo := TrackUnitInfo;
+
+          TrackUnitInfo.FuncInfoList.AddOrSetValue(StackEntry.FuncInfo, TrackFuncInfo);
+        end;
+
+        case DbgSyncObjsInfo^.SyncObjsStateType of
+          sosEnter:
+            begin
+              // Регистрируем вход в SyncObj
+              TSyncObjsTrackFuncInfo(TrackFuncInfo).IncCallCount;
+
+              // Add info for Child Call
+              (*
+              if I > 0 then
+              begin
+                Addr := DbgSyncObjsInfo^.Stack[I - 1];
+                TrackFuncInfo.AddChildCall(Addr);
+              end;
+
+              // Add info for Parent Call
+              if I < High(DbgSyncObjsInfo^.Stack) then
+              begin
+                Addr := DbgSyncObjsInfo^.Stack[I + 1];
+                TrackFuncInfo.AddParentCall(Addr);
+              end;
+              *)
+            end;
+          sosLeave:
+            begin
+              // Регистрируем выход из SyncObj
+              WaitTime := DbgSyncObjsInfo^.CurTime - SyncObjsInfo^.Link^.SyncObjsInfo.CurTime;
+              TSyncObjsTrackFuncInfo(TrackFuncInfo).GrowWaitTime(WaitTime);
+
+              // Add info for Child Call
+              // TODO: Искать функцию с валидным Addr
+              (*
+              if I > 0 then
+              begin
+                Addr := DbgSyncObjsInfo^.Stack[I - 1];
+                CallFuncInfo := TrackFuncInfo.ChildFuncs.GetCallFunc(Addr);
+                if Assigned(CallFuncInfo) then
+                  Inc(CallFuncInfo^.Data, WaitTime);
+              end;
+
+              // Add info for Parent Call
+              // TODO: Искать функцию с валидным Addr
+              if I < High(DbgSyncObjsInfo^.Stack) then
+              begin
+                Addr := DbgSyncObjsInfo^.Stack[I + 1];
+                CallFuncInfo := TrackFuncInfo.ParentFuncs.GetCallFunc(Addr);
+                if Assigned(CallFuncInfo) then
+                  Inc(CallFuncInfo^.Data, WaitTime);
+              end;
+              *)
+            end;
+        end;
+      end;
+    end;
+  finally
+    FreeAndNil(StackEntry);
+  end;
+end;
+
 { TSyncObjsTrackFuncInfoList }
 
 function TSyncObjsTrackFuncInfoList.CreateTrackFuncInfo(const FuncInfo: TObject): TTrackFuncInfo;
 begin
   Result := TSyncObjsTrackFuncInfo.Create(FuncInfo);
+end;
+
+{ TSyncObjsTrackFuncInfo }
+
+procedure TSyncObjsTrackFuncInfo.GrowWaitTime(const Value: Int64);
+begin
+  Inc(FWaitTime, Value);
+  TSyncObjsTrackUnitInfo(FTrackUnitInfo).GrowWaitTime(Value);
+end;
+
+{ TSyncObjsTrackUnitInfo }
+
+procedure TSyncObjsTrackUnitInfo.GrowWaitTime(const Value: Int64);
+begin
+  Inc(FWaitTime, Value);
 end;
 
 end.

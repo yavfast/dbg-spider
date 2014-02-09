@@ -510,7 +510,7 @@ begin
     ptPerfomance:
       begin
         // Относительное время выполнения
-        ThreadData^.Ellapsed := FProcessData.Ellapsed - ThreadData^.Started;
+        ThreadData^.Elapsed := FProcessData.Elapsed - ThreadData^.Started;
 
         // Сохраняем время CPU
         PrevTime := ThreadData^.CPUTime;
@@ -519,8 +519,8 @@ begin
 
         // Счетчик таймера CPU
         Cur := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
-        Prev := ThreadData^.CPUEllapsed;
-        ThreadData^.CPUEllapsed := Cur;
+        Prev := ThreadData^.CPUElapsed;
+        ThreadData^.CPUElapsed := Cur;
 
         // Добавляем инфу, когда поток активен
         Result := (Delta > 0);
@@ -548,12 +548,12 @@ begin
           end;
         ptStop:
           begin
-            ThreadData^.Ellapsed :=
+            ThreadData^.Elapsed :=
               (FProcessData.Started + FProcessData.DbgPointByIdx(ThPoint^.PerfIdx)^.FromStart) - ThreadData^.Started;
 
             ThreadData^.CPUTime := GetThreadCPUTime(ThreadData^.ThreadHandle);
 
-            ThreadData^.CPUEllapsed := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
+            ThreadData^.CPUElapsed := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
           end;
         ptException:
           begin
@@ -619,8 +619,8 @@ begin
       end;
     ptStop:
       begin
-        FProcessData.Ellapsed := PCur;
-        FProcessData.CPUEllapsed := _QueryProcessCycleTime(FProcessData.AttachedProcessHandle);
+        FProcessData.Elapsed := PCur;
+        FProcessData.CPUElapsed := _QueryProcessCycleTime(FProcessData.AttachedProcessHandle);
         FProcessData.CPUTime := CurTime;
 
         Result := True;
@@ -628,13 +628,13 @@ begin
     ptPerfomance:
       begin
         // дельта абсолютного времени
-        PPrev := FProcessData.Ellapsed;
-        FProcessData.Ellapsed := PCur;
+        PPrev := FProcessData.Elapsed;
+        FProcessData.Elapsed := PCur;
 
         // дельта счетчика таймера CPU
         Cur := _QueryProcessCycleTime(FProcessData.AttachedProcessHandle);
-        Prev := FProcessData.CPUEllapsed;
-        FProcessData.CPUEllapsed := Cur;
+        Prev := FProcessData.CPUElapsed;
+        FProcessData.CPUElapsed := Cur;
 
         // Время CPU процесса
         PrevTime := FProcessData.CPUTime;
@@ -687,23 +687,25 @@ begin
     Result^.Breakpoint := GetMemory(SizeOf(THardwareBreakpoint));
 
     Result^.Started := 0;
-    Result^.Ellapsed := 0;
-    Result^.CPUEllapsed := 0;
+    Result^.Elapsed := 0;
+    Result^.CPUElapsed := 0;
 
     Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
 
     Result^.DbgGetMemInfo := TGetMemInfoList.Create(1024, True);
     Result^.DbgGetMemInfo.OwnsValues := True;
-    Result^.DbgGetMemUnitList := TMemInfoTrackUnitInfoList.Create(512);
-    //Result^.DbgGetMemFuncList := TTrackFuncInfoList.Create(4096);
+
+    Result^.DbgGetMemUnitList := TMemInfoTrackUnitInfoList.Create(512, True);
+
+    Result^.DbgSyncObjsUnitList := TSyncObjsTrackUnitInfoList.Create(512, True);
 
     Result^.DbgExceptions := TThreadList.Create;
 
     Result^.DbgSyncObjsInfo := TCollectList<RSyncObjsInfo>.Create;
 
     Result^.DbgTrackEventCount := 0;
-    Result^.DbgTrackUnitList := TCodeTrackUnitInfoList.Create(512);
-    Result^.DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096);
+    Result^.DbgTrackUnitList := TCodeTrackUnitInfoList.Create(512, True);
+    Result^.DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096, True);
     Result^.DbgTrackStack := TTrackStack.Create;
 
     if AddProcessPointInfo(ptThreadInfo) then
@@ -1972,7 +1974,7 @@ var
     TrackStackPoint^.ParentTrackFuncInfo := ParentTrackFuncInfo;
     TrackStackPoint^.TrackRETBreakpoint := TrackRETBreakpoint;
     TrackStackPoint^.Enter := CurTime;
-    TrackStackPoint^.Ellapsed := 0;
+    TrackStackPoint^.Elapsed := 0;
 
     // --- Регистрируем вызываемую функцию в процессе --- //
     Inc(FProcessData.DbgTrackEventCount);
@@ -2091,18 +2093,18 @@ var
       // Увеличиваем счетчик самой функции
       TrackStackPoint^.Leave := CurTime;
       // Thread
-      TrackStackPoint^.TrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
+      TrackStackPoint^.TrackFuncInfo.GrowElapsed(TrackStackPoint^.Elapsed);
       // Proc
-      TrackStackPoint^.ProcTrackFuncInfo.GrowEllapsed(TrackStackPoint^.Ellapsed);
+      TrackStackPoint^.ProcTrackFuncInfo.GrowElapsed(TrackStackPoint^.Elapsed);
 
       // Увеличиваем счетчик родителя
       // Thread
       if TrackStackPoint^.TrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-        Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+        Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
 
       // Proc
       if TrackStackPoint^.ProcTrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-        Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+        Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
 
       // Увеличиваем свой счетчик у родителя
       // Thread
@@ -2110,7 +2112,7 @@ var
       begin
         FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
         if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+          Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
       end;
 
       // Proc
@@ -2118,7 +2120,7 @@ var
       begin
         FuncAddress := TFuncInfo(TrackStackPoint^.ProcTrackFuncInfo.FuncInfo).Address;
         if TrackStackPoint^.ProcParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-          Inc(CallFuncInfo^.Data, TrackStackPoint^.Ellapsed);
+          Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
       end;
 
       // Если это вершина стека - выходим
@@ -2562,7 +2564,7 @@ begin
           NewMemInfo.PerfIdx := CurPerfIdx;
           NewMemInfo.ObjAddr := DbgMemInfo^.Ptr;
           NewMemInfo.Size := DbgMemInfo^.Size;
-          NewMemInfo.Stack := DbgMemInfo^.Stack;
+          NewMemInfo.Stack := DbgMemInfo^.Stack; // TODO: Можно грузить не весь стек
           NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
 
           ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
@@ -2681,6 +2683,7 @@ begin
 
               if SyncObjsInfo^.SyncObjsStateType = sosLeave then
               begin
+                // Поиск sosEnter вызова
                 if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
                   SyncObjsLink := FindCSLink(SyncObjsInfo^.CS)
                 else
@@ -2689,6 +2692,7 @@ begin
 
               ThData^.DbgSyncObjsInfo.BeginWrite;
               try
+                // Добавляем инфу про новый элемент
                 ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
 
                 if ThData^.State = tsFinished then
@@ -2704,6 +2708,9 @@ begin
               finally
                 ThData^.DbgSyncObjsInfo.EndWrite;
               end;
+
+              // Формируем стек вызова
+              //ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
             finally
               ThData^.DbgSyncObjsInfo.EndRead;
             end;
