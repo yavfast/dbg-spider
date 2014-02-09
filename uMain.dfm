@@ -24,12 +24,16 @@ object MainForm: TMainForm
     Top = 167
     Width = 1218
     Height = 545
-    ActivePage = tsMemInfo
+    ActivePage = tsCodeTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
     object tsLog: TTabSheet
       Caption = 'Log'
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vstLog: TVirtualStringTree
         Left = 0
         Top = 0
@@ -87,6 +91,10 @@ object MainForm: TMainForm
       Caption = 'Debug info'
       Highlighted = True
       ImageIndex = 5
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vstDbgInfoUnits: TVirtualStringTree
         Left = 0
         Top = 0
@@ -167,6 +175,10 @@ object MainForm: TMainForm
           TabOrder = 0
           object tsDbgUnitConsts: TTabSheet
             Caption = 'Consts'
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object vstDbgInfoConsts: TVirtualStringTree
               Left = 0
               Top = 0
@@ -226,6 +238,10 @@ object MainForm: TMainForm
           object tsDbgUnitTypes: TTabSheet
             Caption = 'Types'
             ImageIndex = 1
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object vstDbgInfoTypes: TVirtualStringTree
               Left = 0
               Top = 0
@@ -293,6 +309,10 @@ object MainForm: TMainForm
           object tsDbgUnitVars: TTabSheet
             Caption = 'Vars'
             ImageIndex = 2
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object vstDbgInfoVars: TVirtualStringTree
               Left = 0
               Top = 0
@@ -352,6 +372,10 @@ object MainForm: TMainForm
           object tsDbgUnitFunctions: TTabSheet
             Caption = 'Functions'
             ImageIndex = 3
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object vstDbgInfoFunctions: TVirtualStringTree
               Left = 0
               Top = 0
@@ -510,6 +534,10 @@ object MainForm: TMainForm
           object tsDbgUnitSource: TTabSheet
             Caption = 'Source'
             ImageIndex = 4
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             inline svfDbgInfoUnitSource: TSourceViewFrame
               Left = 0
               Top = 0
@@ -539,6 +567,10 @@ object MainForm: TMainForm
     object tsThreads1: TTabSheet
       Caption = 'Threads timeline'
       ImageIndex = 3
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -655,6 +687,10 @@ object MainForm: TMainForm
     object tsMemInfo: TTabSheet
       Caption = 'Memory Info'
       ImageIndex = 3
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vstMemInfoThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -779,6 +815,10 @@ object MainForm: TMainForm
           OnChange = pcMemInfoChange
           object tsMemInfoViewStack: TTabSheet
             Caption = 'Simple view'
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object pnl1: TPanel
               Left = 0
               Top = 0
@@ -953,6 +993,10 @@ object MainForm: TMainForm
           object tsMemInfoTreeView: TTabSheet
             Caption = 'Tree view'
             ImageIndex = 1
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object spl2: TSplitter
               Left = 0
               Top = 213
@@ -1048,6 +1092,10 @@ object MainForm: TMainForm
                 TabOrder = 1
                 object tsMemInfoFuncLinks: TTabSheet
                   Caption = 'Links'
+                  ExplicitLeft = 0
+                  ExplicitTop = 0
+                  ExplicitWidth = 0
+                  ExplicitHeight = 0
                   object pMemInfoFuncLinks: TPanel
                     Left = 0
                     Top = 0
@@ -1202,6 +1250,10 @@ object MainForm: TMainForm
                 object tsMemInfoFuncSrc: TTabSheet
                   Caption = 'Source'
                   ImageIndex = 1
+                  ExplicitLeft = 0
+                  ExplicitTop = 0
+                  ExplicitWidth = 0
+                  ExplicitHeight = 0
                   inline svfMemInfoFuncSrc: TSourceViewFrame
                     Left = 0
                     Top = 0
@@ -1363,6 +1415,10 @@ object MainForm: TMainForm
     object tsExceptions: TTabSheet
       Caption = 'Exceptions'
       ImageIndex = 4
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vstExceptionThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -1640,6 +1696,10 @@ object MainForm: TMainForm
     object tsCodeTracking: TTabSheet
       Caption = 'Code tracking'
       ImageIndex = 5
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vstTrackThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -1809,6 +1869,10 @@ object MainForm: TMainForm
             TabOrder = 1
             object tsTrackFuncAdvLinks: TTabSheet
               Caption = 'Links'
+              ExplicitLeft = 0
+              ExplicitTop = 0
+              ExplicitWidth = 0
+              ExplicitHeight = 0
               object pTrackFuncAdv: TPanel
                 Left = 0
                 Top = 0
@@ -1965,6 +2029,10 @@ object MainForm: TMainForm
             object tsTrackFuncAdvSrc: TTabSheet
               Caption = 'Source'
               ImageIndex = 1
+              ExplicitLeft = 0
+              ExplicitTop = 0
+              ExplicitWidth = 0
+              ExplicitHeight = 0
               inline svfTrackFuncAdvSource: TSourceViewFrame
                 Left = 0
                 Top = 0
@@ -2031,6 +2099,10 @@ object MainForm: TMainForm
     object tsLockTracking: TTabSheet
       Caption = 'Lock tracking'
       ImageIndex = 7
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object vstLockThreads: TVirtualStringTree
         Left = 0
         Top = 0
@@ -2320,7 +2392,7 @@ object MainForm: TMainForm
         Columns = <
           item
             Position = 0
-            Width = 1206
+            Width = 1210
             WideText = 'Info'
           end>
       end
@@ -2789,7 +2861,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 44
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2797,7 +2869,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg info:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
       end
       object pStatusDbgState: TPanel
@@ -2814,7 +2885,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 51
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2822,7 +2893,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg state:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
         object lbStatusDbgStateValue: TLabel
           AlignWithMargins = True
@@ -2854,7 +2924,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 59
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2862,7 +2932,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg events:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
         object lbStatusEventsCntValue: TLabel
           AlignWithMargins = True
@@ -2895,7 +2964,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 66
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -2903,7 +2972,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Track events:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
         object lbStatusTrackEventCntValue: TLabel
           AlignWithMargins = True
