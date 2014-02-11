@@ -140,7 +140,7 @@ begin
           begin
             // Определение потока, который лочит CS
             if IsValidAddr(SyncObjsInfo^.CS) then
-              SyncObjsInfo^.OwningThread := SyncObjsInfo^.CS^.OwningThread;
+              SyncObjsInfo^.OwningThreadId := SyncObjsInfo^.CS^.OwningThread;
           end;
       end;
     soLeaveCriticalSection:
@@ -149,7 +149,7 @@ begin
           begin
             // Определение потока, следующего в очереди на CS
             if IsValidAddr(SyncObjsInfo^.CS) then
-              SyncObjsInfo^.OwningThread := SyncObjsInfo^.CS^.OwningThread;
+              SyncObjsInfo^.OwningThreadId := SyncObjsInfo^.CS^.OwningThread;
           end;
       end;
   end;
@@ -193,10 +193,13 @@ begin
       soEnterCriticalSection,
       soLeaveCriticalSection,
       soInCriticalSection:
-        SyncObjsInfo^.CS := PRTLCriticalSection(Data);
+        begin
+          SyncObjsInfo^.CS := PRTLCriticalSection(Data);
+          SyncObjsInfo^.OwningThreadId := 0;
+        end;
     end;
 
-    if DbgSyncObjsStateType = sosEnter then
+    if (DbgSyncObjsStateType = sosEnter) or (SyncObjsInfo^.SyncObjsType = soInCriticalSection) then
       GetCallStack(SyncObjsInfo^.Stack, -2);
 
     _AddSyncObjsAdvInfo(SyncObjsInfo);

@@ -338,104 +338,7 @@ implementation
 
 uses
   RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes, WinAPIUtils,
-  System.Contnrs, System.AnsiStrings;
-
-type
-  TCollectList<T> = class(TBaseCollectList)
-  private
-    FSegSize: Cardinal;
-    FSegList: TSegList<T>;
-  protected
-    function GetItem(const Index: Cardinal): PData; override;
-    procedure CheckSeg(const Seg: Integer); override;
-
-    function IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean; override;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    function Add: PData; override;
-    procedure Clear; override;
-  end;
-
-{ TCollectList<T> }
-
-function TCollectList<T>.Add: PData;
-var
-  Idx: Cardinal;
-  Seg, Offset: Integer;
-begin
-  BeginWrite;
-  Idx := Count;
-  IndexToSegment(Idx, Seg, Offset);
-  CheckSeg(Seg);
-  inherited Add;
-
-  Result := @FSegList[Seg][Offset];
-
-  FillChar(Result^, SizeOf(T), 0);
-  EndWrite;
-end;
-
-procedure TCollectList<T>.CheckSeg(const Seg: Integer);
-begin
-  BeginRead;
-  if Length(FSegList) <= Seg then
-  begin
-    BeginWrite;
-    SetLength(FSegList, Seg + 1);
-    SetLength(FSegList[Seg], FSegSize);
-    EndWrite;
-  end;
-  EndRead;
-end;
-
-procedure TCollectList<T>.Clear;
-begin
-  BeginWrite;
-  SetLength(FSegList, 0);
-  inherited Clear;
-  EndWrite;
-end;
-
-constructor TCollectList<T>.Create;
-begin
-  inherited Create;
-
-  FSegSize := _SEGMENT_SIZE div SizeOf(T);
-  SetLength(FSegList, 0);
-end;
-
-destructor TCollectList<T>.Destroy;
-begin
-  Clear;
-
-  inherited;
-end;
-
-function TCollectList<T>.GetItem(const Index: Cardinal): PData;
-var
-  Seg, Offset: Integer;
-begin
-  Result := nil;
-
-  if IndexToSegment(Index, Seg, Offset) then
-  begin
-    BeginRead;
-    Result := @FSegList[Seg][Offset];
-    EndRead;
-  end
-  else
-    RaiseError(@EIndexError, [Index]);
-end;
-
-function TCollectList<T>.IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
-begin
-  Result := Index < Count;
-
-  Seg := Index div FSegSize;
-  Offset := Index mod FSegSize;
-end;
+  System.Contnrs, System.AnsiStrings, CollectList;
 
 function _DbgPerfomanceHook(pvParam: Pointer): DWORD; stdcall;
 begin
@@ -1557,6 +1460,10 @@ function TDebuger.IsValidAddr(const Addr: Pointer): Boolean;
 Var
   mbi: PMemoryBasicInformation;
 Begin
+  Result := False;
+
+  if (Addr = nil) or (Addr = Pointer(-1)) then Exit;
+
   mbi := GetMemory(SizeOf(TMemoryBasicInformation));
   try
     Result := (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0);
@@ -2710,7 +2617,9 @@ begin
               end;
 
               // Формируем стек вызова
-              //ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
+              if SyncObjsInfo^.SyncObjsType = soEnterCriticalSection then
+                ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
+
             finally
               ThData^.DbgSyncObjsInfo.EndRead;
             end;

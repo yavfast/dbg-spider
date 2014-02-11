@@ -72,7 +72,7 @@ type
       soInCriticalSection:
       (
         CS: PRTLCriticalSection;
-        OwningThread: THandle;
+        OwningThreadId: Cardinal;
       );
   end;
 
