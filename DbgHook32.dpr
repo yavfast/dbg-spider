@@ -8,7 +8,8 @@ uses
   DbgHookMemory in 'DbgHookMemory.pas',
   DbgHookSyncObjs in 'DbgHookSyncObjs.pas',
   DbgHookCS in 'DbgHookCS.pas',
-  DbgHookUtils in 'DbgHookUtils.pas';
+  DbgHookUtils in 'DbgHookUtils.pas',
+  WinAPIUtils in 'WinAPIUtils.pas';
 
 exports
   InitThreadHook,

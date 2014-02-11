@@ -44,7 +44,8 @@ uses
   GdiPlusHelpers in 'GdiPlus\GdiPlusHelpers.pas',
   uExceptionHook in 'uExceptionHook.pas',
   uRWLock in 'uRWLock.pas',
-  uSourceViewFrame in 'uSourceViewFrame.pas' {SourceViewFrame: TFrame};
+  uSourceViewFrame in 'uSourceViewFrame.pas' {SourceViewFrame: TFrame},
+  CollectList in 'CollectList.pas';
 
 {$R *.res}
 

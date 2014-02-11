@@ -3,48 +3,10 @@ unit DebugerTypes;
 interface
 
 uses SysUtils, Windows, Classes, JclPeImage, SyncObjs, ClassUtils, DbgHookTypes, Contnrs,
-  Generics.Collections, Collections.Dictionaries;
-
-const
-  _SEGMENT_SIZE = 16 * 1024;
+  Generics.Collections, Collections.Dictionaries, CollectList;
 
 type
   TSysUInt = NativeUInt;
-
-  TSegment<T> = Array of T;
-
-  TSegList<T> = Array of TSegment<T>;
-
-  TCollectListError = class(Exception);
-
-  PData = Pointer;
-
-  TBaseCollectList = class
-  private
-    FCount: Cardinal;
-    FLock: TMREWSync;
-  protected
-    function GetItem(const Index: Cardinal): PData; virtual; abstract;
-    procedure CheckSeg(const Seg: Integer); virtual; abstract;
-
-    function IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean; virtual; abstract;
-    procedure RaiseError(Msg: PString; const Args: Array of const);
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    function Add: PData; virtual;
-    procedure Clear; virtual;
-
-    procedure BeginRead; inline;
-    procedure EndRead; inline;
-    procedure BeginWrite; inline;
-    procedure EndWrite; inline;
-
-    property Count: Cardinal read FCount;
-    property Items[const Index: Cardinal]: PData read GetItem; default;
-    property Lock: TMREWSync read FLock;
-  end;
 
 const
   EXCEPTION_SET_THREAD_NAME = $406D1388;
@@ -217,9 +179,19 @@ type
     PerfIdx: Cardinal;
     Link: PSyncObjsInfo;
     SyncObjsInfo: TDbgSyncObjsInfo;
+  public
+    function WaitTime: Int64;
   end;
 
   TSyncObjsInfoList = TBaseCollectList; // TCollectList<RSyncObjsInfo>;
+
+  PRPSyncObjsInfo = ^RPSyncObjsInfo;
+  RPSyncObjsInfo = record
+    SyncObjsInfo: PSyncObjsInfo;
+  end;
+
+  // Список SyncObjs, которые вызываются из текущей функции или вложенных
+  TFuncSyncObjsInfoList = TCollectList<RPSyncObjsInfo>;
 
   PThreadData = ^TThreadData;
 
@@ -366,6 +338,8 @@ type
     FWaitTime: Int64;
   public
     procedure GrowWaitTime(const Value: Int64); inline;
+
+    property WaitTime: Int64 read FWaitTime;
   end;
 
   TTrackUnitInfoList = class(TTrackUnitInfoBaseList)
@@ -458,10 +432,15 @@ type
   TSyncObjsTrackFuncInfo = class(TTrackFuncInfo)
   private
     FWaitTime: Int64;
+    FSyncObjsList: TFuncSyncObjsInfoList;
   public
+    constructor Create(AFuncInfo: TObject);
+    destructor Destroy; override;
+
     procedure GrowWaitTime(const Value: Int64); inline;
 
     property WaitTime: Int64 read FWaitTime;
+    property SyncObjsList: TFuncSyncObjsInfoList read FSyncObjsList;
   end;
 
   TTrackFuncInfoList = class(TTrackFuncInfoBaseList)
@@ -654,8 +633,9 @@ type
     LogMessage: String;
   End;
 
-  TDbgLog = class(TThreadList)
+  TDbgLog = class(TList)
   private
+    FLock: TMREWSync;
     function GetItem(const Index: Integer): TDbgLogItem;
   public
     constructor Create;
@@ -663,12 +643,11 @@ type
 
     procedure ClearLog;
 
-    function Count: Integer;
-
     procedure Add(const LogType: TDbgLogType; const Msg: String); overload;
     procedure Add(const LogType: TDbgLogType; const FmtMsg: String; const Args: array of Const); overload;
 
     property Items[const Index: Integer]: TDbgLogItem read GetItem; default;
+    property Lock: TMREWSync read FLock;
   end;
 
 procedure RaiseDebugCoreException(const Msg: String = '');
@@ -878,60 +857,6 @@ begin
       Result := 'unknown';
 end;
 
-{ TBaseCollectList }
-
-function TBaseCollectList.Add: PData;
-begin
-  Result := Nil;
-  Inc(FCount);
-end;
-
-procedure TBaseCollectList.Clear;
-begin
-  FCount := 0;
-end;
-
-constructor TBaseCollectList.Create;
-begin
-  inherited;
-
-  FCount := 0;
-  FLock := TMREWSync.Create;
-end;
-
-destructor TBaseCollectList.Destroy;
-begin
-  Clear;
-  FreeAndNil(FLock);
-
-  inherited;
-end;
-
-procedure TBaseCollectList.BeginRead;
-begin
-  FLock.BeginRead;
-end;
-
-procedure TBaseCollectList.BeginWrite;
-begin
-  FLock.BeginWrite;
-end;
-
-procedure TBaseCollectList.RaiseError(Msg: PString; const Args: array of const);
-begin
-  raise TCollectListError.CreateFmt(Msg^, Args);
-end;
-
-procedure TBaseCollectList.EndRead;
-begin
-  FLock.EndRead;
-end;
-
-procedure TBaseCollectList.EndWrite;
-begin
-  FLock.EndWrite;
-end;
-
 { RGetMemInfo }
 
 procedure TGetMemInfo.CheckObjectType;
@@ -1012,7 +937,12 @@ begin
   LogItem.DateTime := Now;
   LogItem.LogMessage := Msg;
 
-  inherited Add(LogItem);
+  FLock.BeginWrite;
+  try
+    inherited Add(LogItem);
+  finally
+    FLock.EndWrite;
+  end;
 end;
 
 procedure TDbgLog.Add(const LogType: TDbgLogType; const FmtMsg: String; const Args: array of Const);
@@ -1021,53 +951,39 @@ begin
 end;
 
 procedure TDbgLog.ClearLog;
-var
-  L: TList;
 begin
-  L := LockList;
+  FLock.BeginWrite;
   try
-    ClearList(L);
+    ClearList(Self);
   finally
-    UnlockList;
+    FLock.EndWrite;
   end;
 end;
 
-function TDbgLog.Count: Integer;
-var
-  L: TList;
-begin
-  L := LockList;
-  Result := L.Count;
-  UnlockList;
-end;
-
 constructor TDbgLog.Create;
-var
-  L: TList;
 begin
   inherited Create;
 
-  L := LockList;
-  L.Capacity := 1000;
-  UnlockList;
+  Capacity := 1000;
+  FLock := TMREWSync.Create;
 end;
 
 destructor TDbgLog.Destroy;
 begin
   ClearLog;
 
+  FreeAndNil(FLock);
+
   inherited;
 end;
 
 function TDbgLog.GetItem(const Index: Integer): TDbgLogItem;
-var
-  L: TList;
 begin
-  L := LockList;
+  FLock.BeginRead;
   try
-    Result := L[Index];
+    Result := TDbgLogItem(List[Index]);
   finally
-    UnlockList;
+    FLock.EndRead;
   end;
 end;
 
@@ -1472,11 +1388,33 @@ var
   CallFuncInfo: PCallFuncInfo;
   DbgSyncObjsInfo: PDbgSyncObjsInfo;
   WaitTime: Int64;
+  ThData: PThreadData;
+  SyncObjsListItem: PRPSyncObjsInfo;
 begin
+  if SyncObjsInfo = Nil then Exit;
+
   StackEntry := TStackEntry.Create;
   try
     DbgSyncObjsInfo := @SyncObjsInfo^.SyncObjsInfo;
 
+    // Если нет стека для выхода из SyncObj, то берем стек для входа
+    if (DbgSyncObjsInfo^.SyncObjsStateType = sosLeave) and (DbgSyncObjsInfo^.Stack[0] = nil) then
+      if Assigned(SyncObjsInfo^.Link) then
+        DbgSyncObjsInfo := @SyncObjsInfo^.Link^.SyncObjsInfo;
+
+    // TODO: Добавить опцию дебагера
+    if DbgSyncObjsInfo^.SyncObjsType = soEnterCriticalSection then
+    begin
+      // Не логируем критические секции без блокировки
+      if DbgSyncObjsInfo^.OwningThreadId = 0 then
+        Exit;
+
+      // Игнорим рекурсивную блокировку в своем потоке
+      if (DbgSyncObjsInfo^.ThreadId = DbgSyncObjsInfo^.OwningThreadId) then
+        Exit;
+    end;
+
+    // Проход по стеку
     for I := 0 to High(DbgSyncObjsInfo^.Stack) do
     begin
       Addr := DbgSyncObjsInfo^.Stack[I];
@@ -1496,55 +1434,56 @@ begin
           TrackUnitInfo.FuncInfoList.AddOrSetValue(StackEntry.FuncInfo, TrackFuncInfo);
         end;
 
-        case DbgSyncObjsInfo^.SyncObjsStateType of
+        case SyncObjsInfo^.SyncObjsInfo.SyncObjsStateType of
           sosEnter:
             begin
               // Регистрируем вход в SyncObj
               TSyncObjsTrackFuncInfo(TrackFuncInfo).IncCallCount;
 
-              // Add info for Child Call
-              (*
+              // Добавляем SyncObj в список текущей функции
+              SyncObjsListItem := TSyncObjsTrackFuncInfo(TrackFuncInfo).SyncObjsList.Add;
+              SyncObjsListItem^.SyncObjsInfo := SyncObjsInfo;
+
+              // TODO: Искать функцию с валидным Addr
               if I > 0 then
               begin
                 Addr := DbgSyncObjsInfo^.Stack[I - 1];
                 TrackFuncInfo.AddChildCall(Addr);
               end;
 
-              // Add info for Parent Call
+              // TODO: Искать функцию с валидным Addr
               if I < High(DbgSyncObjsInfo^.Stack) then
               begin
                 Addr := DbgSyncObjsInfo^.Stack[I + 1];
                 TrackFuncInfo.AddParentCall(Addr);
               end;
-              *)
             end;
           sosLeave:
             begin
               // Регистрируем выход из SyncObj
-              WaitTime := DbgSyncObjsInfo^.CurTime - SyncObjsInfo^.Link^.SyncObjsInfo.CurTime;
-              TSyncObjsTrackFuncInfo(TrackFuncInfo).GrowWaitTime(WaitTime);
-
-              // Add info for Child Call
-              // TODO: Искать функцию с валидным Addr
-              (*
-              if I > 0 then
+              if Assigned(SyncObjsInfo^.Link) then
               begin
-                Addr := DbgSyncObjsInfo^.Stack[I - 1];
-                CallFuncInfo := TrackFuncInfo.ChildFuncs.GetCallFunc(Addr);
-                if Assigned(CallFuncInfo) then
-                  Inc(CallFuncInfo^.Data, WaitTime);
-              end;
+                WaitTime := SyncObjsInfo^.SyncObjsInfo.CurTime - SyncObjsInfo^.Link^.SyncObjsInfo.CurTime;
+                TSyncObjsTrackFuncInfo(TrackFuncInfo).GrowWaitTime(WaitTime);
 
-              // Add info for Parent Call
-              // TODO: Искать функцию с валидным Addr
-              if I < High(DbgSyncObjsInfo^.Stack) then
-              begin
-                Addr := DbgSyncObjsInfo^.Stack[I + 1];
-                CallFuncInfo := TrackFuncInfo.ParentFuncs.GetCallFunc(Addr);
-                if Assigned(CallFuncInfo) then
-                  Inc(CallFuncInfo^.Data, WaitTime);
+                // TODO: Искать функцию с валидным Addr
+                if I > 0 then
+                begin
+                  Addr := DbgSyncObjsInfo^.Stack[I - 1];
+                  CallFuncInfo := TrackFuncInfo.ChildFuncs.GetCallFunc(Addr);
+                  if Assigned(CallFuncInfo) then
+                    Inc(CallFuncInfo^.Data, WaitTime);
+                end;
+
+                // TODO: Искать функцию с валидным Addr
+                if I < High(DbgSyncObjsInfo^.Stack) then
+                begin
+                  Addr := DbgSyncObjsInfo^.Stack[I + 1];
+                  CallFuncInfo := TrackFuncInfo.ParentFuncs.GetCallFunc(Addr);
+                  if Assigned(CallFuncInfo) then
+                    Inc(CallFuncInfo^.Data, WaitTime);
+                end;
               end;
-              *)
             end;
         end;
       end;
@@ -1563,6 +1502,20 @@ end;
 
 { TSyncObjsTrackFuncInfo }
 
+constructor TSyncObjsTrackFuncInfo.Create(AFuncInfo: TObject);
+begin
+  inherited Create(AFuncInfo);
+
+  FSyncObjsList := TFuncSyncObjsInfoList.Create(32 * SizeOf(Pointer));
+end;
+
+destructor TSyncObjsTrackFuncInfo.Destroy;
+begin
+  FreeAndNil(FSyncObjsList);
+
+  inherited;
+end;
+
 procedure TSyncObjsTrackFuncInfo.GrowWaitTime(const Value: Int64);
 begin
   Inc(FWaitTime, Value);
@@ -1574,6 +1527,16 @@ end;
 procedure TSyncObjsTrackUnitInfo.GrowWaitTime(const Value: Int64);
 begin
   Inc(FWaitTime, Value);
+end;
+
+{ RSyncObjsInfo }
+
+function RSyncObjsInfo.WaitTime: Int64;
+begin
+  Result := 0;
+
+  if Assigned(Link) then
+    Result := Abs(SyncObjsInfo.CurTime - Link^.SyncObjsInfo.CurTime);
 end;
 
 end.

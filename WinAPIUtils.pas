@@ -10,6 +10,8 @@ function _QueryPerformanceFrequency: Int64;
 function _QueryThreadCycleTime(const ThreadHandle: THandle): UInt64;
 function _QueryProcessCycleTime(const ProcessHandle: THandle): UInt64;
 
+function _GetThreadId(ThreadHandle: THandle): DWORD;
+
 function GetProcessCPUTime(const hProcess: THandle): UInt64;
 function GetThreadCPUTime(const hThread: THandle): UInt64;
 
@@ -35,6 +37,7 @@ function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL
 function DebugBreakProcess(Process: THandle): BOOL; stdcall; external kernel32 name 'DebugBreakProcess';
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall; external kernel32;
 function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall; external kernel32;
+function GetThreadId(ThreadHandle: THandle): DWORD; stdcall; external kernel32 name 'GetThreadId';
 function CoCreateGuid(out guid: TGUID): HResult; stdcall; external 'ole32.dll' name 'CoCreateGuid';
 
 function GetGUID: String;
@@ -225,6 +228,11 @@ begin
     RaiseWinAPIException;
 
   FreeMem(Res);
+end;
+
+function _GetThreadId(ThreadHandle: THandle): DWORD;
+begin
+  Result := GetThreadId(ThreadHandle);
 end;
 
 

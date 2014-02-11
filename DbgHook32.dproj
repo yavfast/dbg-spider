@@ -73,6 +73,7 @@
         <DCCReference Include="DbgHookSyncObjs.pas"/>
         <DCCReference Include="DbgHookCS.pas"/>
         <DCCReference Include="DbgHookUtils.pas"/>
+        <DCCReference Include="WinAPIUtils.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
