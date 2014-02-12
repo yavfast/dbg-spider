@@ -542,7 +542,7 @@ object MainForm: TMainForm
       object vstThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 451
+        Width = 460
         Height = 517
         Align = alLeft
         BorderStyle = bsNone
@@ -595,7 +595,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 1
-            Width = 80
+            Width = 90
             WideText = 'ID'
           end
           item
@@ -608,9 +608,9 @@ object MainForm: TMainForm
           end>
       end
       object vdtTimeLine: TVirtualDrawTree
-        Left = 451
+        Left = 460
         Top = 0
-        Width = 759
+        Width = 750
         Height = 517
         Align = alClient
         BorderStyle = bsNone
@@ -642,6 +642,8 @@ object MainForm: TMainForm
         OnHeaderDrawQueryElements = vdtTimeLineHeaderDrawQueryElements
         OnPaintBackground = vdtTimeLinePaintBackground
         OnScroll = vdtTimeLineScroll
+        ExplicitLeft = 451
+        ExplicitWidth = 759
         Columns = <
           item
             BiDiMode = bdLeftToRight
@@ -658,7 +660,7 @@ object MainForm: TMainForm
       object vstMemInfoThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 476
+        Width = 486
         Height = 517
         Align = alLeft
         ClipboardFormats.Strings = (
@@ -700,7 +702,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
             Position = 1
-            Width = 80
+            Width = 90
             WideText = 'ID'
           end
           item
@@ -720,9 +722,9 @@ object MainForm: TMainForm
           end>
       end
       object pMemInfoClient: TPanel
-        Left = 476
+        Left = 486
         Top = 0
-        Width = 734
+        Width = 724
         Height = 517
         Align = alClient
         BevelEdges = []
@@ -730,10 +732,12 @@ object MainForm: TMainForm
         Caption = 'pMemInfoClient'
         ShowCaption = False
         TabOrder = 1
+        ExplicitLeft = 476
+        ExplicitWidth = 734
         object cbMemInfo: TCoolBar
           Left = 0
           Top = 0
-          Width = 734
+          Width = 724
           Height = 24
           AutoSize = True
           BandBorderStyle = bsNone
@@ -742,16 +746,17 @@ object MainForm: TMainForm
               Control = actbMemInfo
               ImageIndex = -1
               MinHeight = 24
-              Width = 732
+              Width = 722
             end>
           EdgeBorders = []
           EdgeInner = esNone
           EdgeOuter = esNone
           FixedOrder = True
+          ExplicitWidth = 734
           object actbMemInfo: TActionToolBar
             Left = 2
             Top = 0
-            Width = 732
+            Width = 722
             Height = 24
             ActionManager = amMain
             Caption = 'actbMemInfo'
@@ -771,36 +776,40 @@ object MainForm: TMainForm
         object pcMemInfo: TPageControl
           Left = 0
           Top = 24
-          Width = 734
+          Width = 724
           Height = 493
           ActivePage = tsMemInfoTreeView
           Align = alClient
           TabOrder = 1
           OnChange = pcMemInfoChange
+          ExplicitWidth = 734
           object tsMemInfoViewStack: TTabSheet
             Caption = 'Simple view'
+            ExplicitWidth = 726
             object pnl1: TPanel
               Left = 0
               Top = 0
-              Width = 726
+              Width = 716
               Height = 465
               Align = alClient
               BevelOuter = bvNone
               TabOrder = 0
+              ExplicitWidth = 726
               object pMemoryInfoAdv: TPanel
                 Left = 305
                 Top = 0
-                Width = 421
+                Width = 411
                 Height = 465
                 Align = alClient
                 BevelOuter = bvNone
                 Caption = 'pMemoryInfoAdv'
                 ShowCaption = False
                 TabOrder = 0
+                ExplicitWidth = 421
                 object splMemInfoAdv: TSplitter
                   Left = 0
                   Top = 225
-                  Width = 421
+                  Width = 411
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
@@ -809,7 +818,7 @@ object MainForm: TMainForm
                 object vstMemStack: TVirtualStringTree
                   Left = 0
                   Top = 0
-                  Width = 421
+                  Width = 411
                   Height = 225
                   Align = alTop
                   ClipboardFormats.Strings = (
@@ -835,6 +844,7 @@ object MainForm: TMainForm
                   OnFocusChanged = vstMemStackFocusChanged
                   OnGetText = vstMemStackGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  ExplicitWidth = 421
                   Columns = <
                     item
                       Alignment = taRightJustify
@@ -867,7 +877,7 @@ object MainForm: TMainForm
                 inline svfMemInfoSource: TSourceViewFrame
                   Left = 0
                   Top = 228
-                  Width = 421
+                  Width = 411
                   Height = 237
                   Align = alClient
                   TabOrder = 1
@@ -875,7 +885,7 @@ object MainForm: TMainForm
                   ExplicitWidth = 421
                   ExplicitHeight = 237
                   inherited synmSourceView: TSynMemo
-                    Width = 421
+                    Width = 411
                     Height = 216
                     ExplicitLeft = 0
                     ExplicitTop = 21
@@ -883,7 +893,7 @@ object MainForm: TMainForm
                     ExplicitHeight = 216
                   end
                   inherited eSrcFileName: TEdit
-                    Width = 421
+                    Width = 411
                     ExplicitWidth = 421
                   end
                 end
@@ -953,10 +963,11 @@ object MainForm: TMainForm
           object tsMemInfoTreeView: TTabSheet
             Caption = 'Tree view'
             ImageIndex = 1
+            ExplicitWidth = 726
             object spl2: TSplitter
               Left = 0
               Top = 213
-              Width = 726
+              Width = 716
               Height = 3
               Cursor = crVSplit
               Align = alBottom
@@ -965,7 +976,7 @@ object MainForm: TMainForm
             object pMemInfoTreeLeft: TPanel
               Left = 0
               Top = 0
-              Width = 726
+              Width = 716
               Height = 213
               Align = alClient
               BevelEdges = []
@@ -973,6 +984,7 @@ object MainForm: TMainForm
               Caption = 'pMemInfoTreeLeft'
               ShowCaption = False
               TabOrder = 0
+              ExplicitWidth = 726
               object vstMemInfoFuncTree: TVirtualStringTree
                 Left = 0
                 Top = 0
@@ -1041,27 +1053,30 @@ object MainForm: TMainForm
               object pcMemInfoFuncInfo: TPageControl
                 Left = 456
                 Top = 0
-                Width = 270
+                Width = 260
                 Height = 213
                 ActivePage = tsMemInfoFuncLinks
                 Align = alClient
                 TabOrder = 1
+                ExplicitWidth = 270
                 object tsMemInfoFuncLinks: TTabSheet
                   Caption = 'Links'
+                  ExplicitWidth = 262
                   object pMemInfoFuncLinks: TPanel
                     Left = 0
                     Top = 0
-                    Width = 262
+                    Width = 252
                     Height = 185
                     Align = alClient
                     BevelOuter = bvNone
                     ShowCaption = False
                     TabOrder = 0
                     OnResize = pMemInfoFuncLinksResize
+                    ExplicitWidth = 262
                     object spl1: TSplitter
                       Left = 0
                       Top = 100
-                      Width = 262
+                      Width = 252
                       Height = 3
                       Cursor = crVSplit
                       Align = alTop
@@ -1070,7 +1085,7 @@ object MainForm: TMainForm
                     object vstMemInfoFuncParents: TVirtualStringTree
                       Left = 0
                       Top = 0
-                      Width = 262
+                      Width = 252
                       Height = 100
                       Align = alTop
                       BevelEdges = []
@@ -1100,6 +1115,7 @@ object MainForm: TMainForm
                       OnDrawText = vstTrackFuncLinksDrawText
                       OnGetText = vstMemInfoFuncLinksGetText
                       OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                      ExplicitWidth = 262
                       Columns = <
                         item
                           CaptionAlignment = taCenter
@@ -1135,7 +1151,7 @@ object MainForm: TMainForm
                     object vstMemInfoFuncChilds: TVirtualStringTree
                       Left = 0
                       Top = 103
-                      Width = 262
+                      Width = 252
                       Height = 82
                       Align = alClient
                       BevelEdges = []
@@ -1165,6 +1181,7 @@ object MainForm: TMainForm
                       OnDrawText = vstTrackFuncLinksDrawText
                       OnGetText = vstMemInfoFuncLinksGetText
                       OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                      ExplicitWidth = 262
                       Columns = <
                         item
                           CaptionAlignment = taCenter
@@ -1202,24 +1219,25 @@ object MainForm: TMainForm
                 object tsMemInfoFuncSrc: TTabSheet
                   Caption = 'Source'
                   ImageIndex = 1
+                  ExplicitWidth = 262
                   inline svfMemInfoFuncSrc: TSourceViewFrame
                     Left = 0
                     Top = 0
-                    Width = 262
+                    Width = 252
                     Height = 185
                     Align = alClient
                     TabOrder = 0
                     ExplicitWidth = 262
                     ExplicitHeight = 185
                     inherited synmSourceView: TSynMemo
-                      Width = 262
+                      Width = 252
                       Height = 164
                       ExplicitLeft = 0
                       ExplicitTop = 21
                       ExplicitHeight = 164
                     end
                     inherited eSrcFileName: TEdit
-                      Width = 262
+                      Width = 252
                       ExplicitWidth = 262
                     end
                   end
@@ -1229,7 +1247,7 @@ object MainForm: TMainForm
             object pMemInfoButtom: TPanel
               Left = 0
               Top = 216
-              Width = 726
+              Width = 716
               Height = 249
               Align = alBottom
               BevelEdges = []
@@ -1237,6 +1255,7 @@ object MainForm: TMainForm
               Caption = 'pMemInfoButtom'
               ShowCaption = False
               TabOrder = 1
+              ExplicitWidth = 726
               object vstMemInfoObjects: TVirtualStringTree
                 Left = 0
                 Top = 0
@@ -1300,7 +1319,7 @@ object MainForm: TMainForm
               object vstMemInfoObjStack: TVirtualStringTree
                 Left = 356
                 Top = 0
-                Width = 370
+                Width = 360
                 Height = 249
                 Align = alClient
                 ClipboardFormats.Strings = (
@@ -1326,6 +1345,7 @@ object MainForm: TMainForm
                 OnDblClick = vstMemInfoObjStackDblClick
                 OnGetText = vstMemStackGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                ExplicitWidth = 370
                 Columns = <
                   item
                     Alignment = taRightJustify
@@ -1339,7 +1359,7 @@ object MainForm: TMainForm
                     CaptionAlignment = taCenter
                     Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                     Position = 1
-                    Width = 120
+                    Width = 150
                     WideText = 'Unit'
                   end
                   item
@@ -1366,7 +1386,7 @@ object MainForm: TMainForm
       object vstExceptionThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 401
+        Width = 411
         Height = 517
         Align = alLeft
         ClipboardFormats.Strings = (
@@ -1408,7 +1428,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
             Position = 1
-            Width = 80
+            Width = 90
             WideText = 'ID'
           end
           item
@@ -1420,9 +1440,9 @@ object MainForm: TMainForm
           end>
       end
       object pExceptionInfo: TPanel
-        Left = 401
+        Left = 411
         Top = 0
-        Width = 809
+        Width = 799
         Height = 517
         Align = alClient
         BevelEdges = []
@@ -1430,14 +1450,17 @@ object MainForm: TMainForm
         Caption = 'pExceptionInfo'
         ShowCaption = False
         TabOrder = 1
+        ExplicitLeft = 401
+        ExplicitWidth = 809
         object pnl2: TPanel
           Left = 0
           Top = 24
-          Width = 809
+          Width = 799
           Height = 493
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 0
+          ExplicitWidth = 809
           object vstExceptionList: TVirtualStringTree
             Left = 0
             Top = 0
@@ -1498,7 +1521,7 @@ object MainForm: TMainForm
           object pExceptInfoAdv: TPanel
             Left = 511
             Top = 0
-            Width = 298
+            Width = 288
             Height = 493
             Align = alClient
             BevelEdges = []
@@ -1506,10 +1529,11 @@ object MainForm: TMainForm
             Caption = 'pExceptInfoAdv'
             ShowCaption = False
             TabOrder = 1
+            ExplicitWidth = 298
             object splExceptInfoAdv: TSplitter
               Left = 0
               Top = 217
-              Width = 298
+              Width = 288
               Height = 3
               Cursor = crVSplit
               Align = alTop
@@ -1518,7 +1542,7 @@ object MainForm: TMainForm
             object vstExceptionCallStack: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 298
+              Width = 288
               Height = 217
               Align = alTop
               ClipboardFormats.Strings = (
@@ -1544,6 +1568,7 @@ object MainForm: TMainForm
               OnFocusChanged = vstExceptionCallStackFocusChanged
               OnGetText = vstExceptionCallStackGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              ExplicitWidth = 298
               Columns = <
                 item
                   Alignment = taRightJustify
@@ -1576,7 +1601,7 @@ object MainForm: TMainForm
             inline svfExceptInfoSource: TSourceViewFrame
               Left = 0
               Top = 220
-              Width = 298
+              Width = 288
               Height = 273
               Align = alClient
               TabOrder = 1
@@ -1584,7 +1609,7 @@ object MainForm: TMainForm
               ExplicitWidth = 298
               ExplicitHeight = 273
               inherited synmSourceView: TSynMemo
-                Width = 298
+                Width = 288
                 Height = 252
                 ExplicitLeft = 0
                 ExplicitTop = 21
@@ -1592,7 +1617,7 @@ object MainForm: TMainForm
                 ExplicitHeight = 252
               end
               inherited eSrcFileName: TEdit
-                Width = 298
+                Width = 288
                 ExplicitWidth = 298
               end
             end
@@ -1601,7 +1626,7 @@ object MainForm: TMainForm
         object cbExceptionInfo: TCoolBar
           Left = 0
           Top = 0
-          Width = 809
+          Width = 799
           Height = 24
           AutoSize = True
           BandBorderStyle = bsNone
@@ -1610,16 +1635,17 @@ object MainForm: TMainForm
               Control = actbExceptionInfo
               ImageIndex = -1
               MinHeight = 24
-              Width = 807
+              Width = 797
             end>
           EdgeBorders = [ebTop]
           EdgeInner = esNone
           EdgeOuter = esNone
           FixedOrder = True
+          ExplicitWidth = 809
           object actbExceptionInfo: TActionToolBar
             Left = 2
             Top = 0
-            Width = 807
+            Width = 797
             Height = 24
             ActionManager = amMain
             Caption = 'actbExceptionInfo'
@@ -1643,7 +1669,7 @@ object MainForm: TMainForm
       object vstTrackThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 532
+        Width = 542
         Height = 517
         Align = alLeft
         BorderStyle = bsNone
@@ -1693,7 +1719,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 1
-            Width = 80
+            Width = 90
             WideText = 'ID'
           end
           item
@@ -1714,25 +1740,28 @@ object MainForm: TMainForm
           end>
       end
       object pCodeTrackingInfo: TPanel
-        Left = 532
+        Left = 542
         Top = 0
-        Width = 678
+        Width = 668
         Height = 517
         Align = alClient
         BevelOuter = bvNone
         Caption = 'pCodeTrackingInfo'
         ShowCaption = False
         TabOrder = 1
+        ExplicitLeft = 532
+        ExplicitWidth = 678
         object pTrackAdv: TPanel
           Left = 0
           Top = 26
-          Width = 678
+          Width = 668
           Height = 491
           Align = alClient
           BevelOuter = bvNone
           Caption = 'pTrackAdv'
           ShowCaption = False
           TabOrder = 0
+          ExplicitWidth = 678
           object vstTrackFuncs: TVirtualStringTree
             Left = 0
             Top = 0
@@ -1802,17 +1831,19 @@ object MainForm: TMainForm
           object pcTrackFuncAdv: TPageControl
             Left = 457
             Top = 0
-            Width = 221
+            Width = 211
             Height = 491
             ActivePage = tsTrackFuncAdvLinks
             Align = alClient
             TabOrder = 1
+            ExplicitWidth = 221
             object tsTrackFuncAdvLinks: TTabSheet
               Caption = 'Links'
+              ExplicitWidth = 213
               object pTrackFuncAdv: TPanel
                 Left = 0
                 Top = 0
-                Width = 213
+                Width = 203
                 Height = 463
                 Align = alClient
                 BevelOuter = bvNone
@@ -1820,10 +1851,11 @@ object MainForm: TMainForm
                 ShowCaption = False
                 TabOrder = 0
                 OnResize = pTrackFuncAdvResize
+                ExplicitWidth = 213
                 object splTrackFuncAdv: TSplitter
                   Left = 0
                   Top = 329
-                  Width = 213
+                  Width = 203
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
@@ -1832,7 +1864,7 @@ object MainForm: TMainForm
                 object vstTrackFuncParent: TVirtualStringTree
                   Left = 0
                   Top = 0
-                  Width = 213
+                  Width = 203
                   Height = 329
                   Align = alTop
                   BevelEdges = []
@@ -1863,6 +1895,7 @@ object MainForm: TMainForm
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstTrackFuncParentGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  ExplicitWidth = 213
                   Columns = <
                     item
                       CaptionAlignment = taCenter
@@ -1898,7 +1931,7 @@ object MainForm: TMainForm
                 object vstTrackFuncChilds: TVirtualStringTree
                   Left = 0
                   Top = 332
-                  Width = 213
+                  Width = 203
                   Height = 131
                   Align = alClient
                   BevelEdges = []
@@ -1928,6 +1961,7 @@ object MainForm: TMainForm
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstTrackFuncChildsGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  ExplicitWidth = 213
                   Columns = <
                     item
                       CaptionAlignment = taCenter
@@ -1965,17 +1999,18 @@ object MainForm: TMainForm
             object tsTrackFuncAdvSrc: TTabSheet
               Caption = 'Source'
               ImageIndex = 1
+              ExplicitWidth = 213
               inline svfTrackFuncAdvSource: TSourceViewFrame
                 Left = 0
                 Top = 0
-                Width = 213
+                Width = 203
                 Height = 463
                 Align = alClient
                 TabOrder = 0
                 ExplicitWidth = 213
                 ExplicitHeight = 463
                 inherited synmSourceView: TSynMemo
-                  Width = 213
+                  Width = 203
                   Height = 442
                   ExplicitLeft = 0
                   ExplicitTop = 21
@@ -1983,7 +2018,7 @@ object MainForm: TMainForm
                   ExplicitHeight = 442
                 end
                 inherited eSrcFileName: TEdit
-                  Width = 213
+                  Width = 203
                   ExplicitWidth = 213
                 end
               end
@@ -1993,7 +2028,7 @@ object MainForm: TMainForm
         object cbCodeTrackingInfo: TCoolBar
           Left = 0
           Top = 0
-          Width = 678
+          Width = 668
           Height = 26
           AutoSize = True
           BandBorderStyle = bsNone
@@ -2002,15 +2037,16 @@ object MainForm: TMainForm
               Control = actbCodeTrackingInfo
               ImageIndex = -1
               MinHeight = 26
-              Width = 676
+              Width = 666
             end>
           EdgeBorders = []
           FixedSize = True
           FixedOrder = True
+          ExplicitWidth = 678
           object actbCodeTrackingInfo: TActionToolBar
             Left = 2
             Top = 0
-            Width = 676
+            Width = 666
             Height = 26
             ActionManager = amMain
             Caption = 'actbCodeTrackingInfo'
@@ -2034,7 +2070,7 @@ object MainForm: TMainForm
       object vstLockThreads: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 467
+        Width = 477
         Height = 517
         Align = alLeft
         BorderStyle = bsNone
@@ -2076,7 +2112,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coUseCaptionAlignment]
             Position = 1
-            Width = 80
+            Width = 90
             WideText = 'ID'
           end
           item
@@ -2089,9 +2125,9 @@ object MainForm: TMainForm
           end>
       end
       object pLockTrackingInfo: TPanel
-        Left = 467
+        Left = 477
         Top = 0
-        Width = 743
+        Width = 733
         Height = 517
         Align = alClient
         BevelEdges = []
@@ -2099,10 +2135,12 @@ object MainForm: TMainForm
         Caption = 'pLockTrackingInfo'
         ShowCaption = False
         TabOrder = 1
+        ExplicitLeft = 467
+        ExplicitWidth = 743
         object spl4: TSplitter
           Left = 0
           Top = 245
-          Width = 743
+          Width = 733
           Height = 3
           Cursor = crVSplit
           Align = alBottom
@@ -2112,23 +2150,26 @@ object MainForm: TMainForm
         object cbLockTracking: TCoolBar
           Left = 0
           Top = 0
-          Width = 743
-          Height = 25
+          Width = 733
+          Height = 24
           AutoSize = True
           BandBorderStyle = bsNone
           Bands = <
             item
               Control = actbLockTracking
               ImageIndex = -1
-              Width = 741
+              MinHeight = 24
+              Width = 731
             end>
           EdgeInner = esNone
           EdgeOuter = esNone
+          FixedOrder = True
           object actbLockTracking: TActionToolBar
-            Left = 11
+            Left = 2
             Top = 0
-            Width = 732
-            Height = 25
+            Width = 731
+            Height = 24
+            ActionManager = amMain
             Caption = 'actbLockTracking'
             Color = clMenuBar
             ColorMap.DisabledFontColor = 7171437
@@ -2146,20 +2187,22 @@ object MainForm: TMainForm
         end
         object pLockTrackingAdv: TPanel
           Left = 0
-          Top = 25
-          Width = 743
-          Height = 220
+          Top = 24
+          Width = 733
+          Height = 221
           Align = alClient
           BevelOuter = bvNone
           Caption = 'pLockTrackingAdv'
           ShowCaption = False
           TabOrder = 1
+          ExplicitTop = 25
+          ExplicitWidth = 743
           ExplicitHeight = 240
           object vstLockTrackingList: TVirtualStringTree
             Left = 0
             Top = 0
             Width = 457
-            Height = 220
+            Height = 221
             Align = alLeft
             BevelEdges = []
             BevelInner = bvNone
@@ -2172,7 +2215,7 @@ object MainForm: TMainForm
             Header.Font.Name = 'Tahoma'
             Header.Font.Style = []
             Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
-            Header.SortColumn = 1
+            Header.SortColumn = 2
             Header.SortDirection = sdDescending
             ScrollBarOptions.AlwaysVisible = True
             TabOrder = 0
@@ -2181,6 +2224,7 @@ object MainForm: TMainForm
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
             OnColumnResize = vstThreadsColumnResize
+            OnCompareNodes = vstLockTrackingListCompareNodes
             OnDrawText = vstTrackFuncsDrawText
             OnFocusChanged = vstLockTrackingListFocusChanged
             OnGetText = vstLockTrackingListGetText
@@ -2206,6 +2250,7 @@ object MainForm: TMainForm
               item
                 Alignment = taRightJustify
                 CaptionAlignment = taCenter
+                DefaultSortDirection = sdDescending
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                 Position = 2
                 Width = 70
@@ -2215,39 +2260,41 @@ object MainForm: TMainForm
           object pcLockTrackingLinks: TPageControl
             Left = 457
             Top = 0
-            Width = 286
-            Height = 220
+            Width = 276
+            Height = 221
             ActivePage = ts1
             Align = alClient
             TabOrder = 1
+            ExplicitWidth = 286
             ExplicitHeight = 240
             object ts1: TTabSheet
               Caption = 'Links'
+              ExplicitWidth = 278
               ExplicitHeight = 212
               object pLockTrackingLinks: TPanel
                 Left = 0
                 Top = 0
-                Width = 278
-                Height = 192
+                Width = 268
+                Height = 193
                 Align = alClient
                 BevelOuter = bvNone
                 ShowCaption = False
                 TabOrder = 0
                 OnResize = pLockTrackingLinksResize
+                ExplicitWidth = 278
                 ExplicitHeight = 212
                 object spl3: TSplitter
                   Left = 0
                   Top = 100
-                  Width = 278
+                  Width = 268
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
-                  ExplicitWidth = 268
                 end
                 object vstLockTrackingParents: TVirtualStringTree
                   Left = 0
                   Top = 0
-                  Width = 278
+                  Width = 268
                   Height = 100
                   Align = alTop
                   BevelEdges = []
@@ -2273,9 +2320,11 @@ object MainForm: TMainForm
                   TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                   TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                   TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+                  OnDblClick = vstLockTrackingParentsDblClick
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstLockTrackingLinksGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  ExplicitWidth = 278
                   Columns = <
                     item
                       CaptionAlignment = taCenter
@@ -2311,8 +2360,8 @@ object MainForm: TMainForm
                 object vstLockTrackingChilds: TVirtualStringTree
                   Left = 0
                   Top = 103
-                  Width = 278
-                  Height = 89
+                  Width = 268
+                  Height = 90
                   Align = alClient
                   BevelEdges = []
                   BevelInner = bvNone
@@ -2337,9 +2386,11 @@ object MainForm: TMainForm
                   TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                   TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                   TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+                  OnDblClick = vstLockTrackingChildsDblClick
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstLockTrackingLinksGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  ExplicitWidth = 278
                   ExplicitHeight = 109
                   Columns = <
                     item
@@ -2378,26 +2429,27 @@ object MainForm: TMainForm
             object ts2: TTabSheet
               Caption = 'Source'
               ImageIndex = 1
+              ExplicitWidth = 278
               ExplicitHeight = 212
               inline svfLockTrackingSource: TSourceViewFrame
                 Left = 0
                 Top = 0
-                Width = 278
-                Height = 192
+                Width = 268
+                Height = 193
                 Align = alClient
                 TabOrder = 0
                 ExplicitWidth = 278
                 ExplicitHeight = 212
                 inherited synmSourceView: TSynMemo
-                  Width = 278
-                  Height = 171
+                  Width = 268
+                  Height = 172
                   ExplicitLeft = 0
                   ExplicitTop = 21
                   ExplicitWidth = 278
                   ExplicitHeight = 191
                 end
                 inherited eSrcFileName: TEdit
-                  Width = 278
+                  Width = 268
                   ExplicitWidth = 278
                 end
               end
@@ -2407,7 +2459,7 @@ object MainForm: TMainForm
         object p2: TPanel
           Left = 0
           Top = 248
-          Width = 743
+          Width = 733
           Height = 269
           Align = alBottom
           BevelEdges = []
@@ -2415,6 +2467,7 @@ object MainForm: TMainForm
           Caption = 'pMemInfoButtom'
           ShowCaption = False
           TabOrder = 2
+          ExplicitWidth = 743
           object vstLockTrackingSyncObjs: TVirtualStringTree
             Left = 0
             Top = 0
@@ -2435,6 +2488,7 @@ object MainForm: TMainForm
             Header.Font.Name = 'Tahoma'
             Header.Font.Style = []
             Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
+            Header.SortColumn = 2
             Header.SortDirection = sdDescending
             Header.Style = hsFlatButtons
             ScrollBarOptions.AlwaysVisible = True
@@ -2444,6 +2498,7 @@ object MainForm: TMainForm
             TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
             OnColumnResize = vstThreadsColumnResize
+            OnCompareNodes = vstLockTrackingSyncObjsCompareNodes
             OnFocusChanged = vstLockTrackingSyncObjsFocusChanged
             OnGetText = vstLockTrackingSyncObjsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
@@ -2476,7 +2531,7 @@ object MainForm: TMainForm
           object vstLockTrackingSyncObjStack: TVirtualStringTree
             Left = 331
             Top = 0
-            Width = 412
+            Width = 402
             Height = 269
             Align = alClient
             ClipboardFormats.Strings = (
@@ -2499,6 +2554,7 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+            OnDblClick = vstLockTrackingSyncObjStackDblClick
             OnGetText = vstLockTrackingSyncObjStackGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
             ExplicitLeft = 311
@@ -2517,7 +2573,7 @@ object MainForm: TMainForm
                 CaptionAlignment = taCenter
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                 Position = 1
-                Width = 120
+                Width = 150
                 WideText = 'Unit'
               end
               item
@@ -3509,6 +3565,12 @@ object MainForm: TMainForm
       ShortCut = 16451
       OnExecute = acCopyExecute
     end
+    object acLockTrackingRefresh: TAction
+      Category = 'LockTrack'
+      Caption = 'Refresh'
+      ImageIndex = 17
+      OnExecute = acLockTrackingRefreshExecute
+    end
   end
   object OD: TFileOpenDialog
     FavoriteLinks = <>
@@ -4126,6 +4188,15 @@ object MainForm: TMainForm
             CommandProperties.ButtonSize = bsLarge
           end>
         ActionBar = rbngrpFeedback
+      end
+      item
+        Items = <
+          item
+            Action = acLockTrackingRefresh
+            Caption = '&Refresh'
+            ImageIndex = 17
+          end>
+        ActionBar = actbLockTracking
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain

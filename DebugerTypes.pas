@@ -333,14 +333,7 @@ type
     property CurCount: Int64 read FCurCount;
   end;
 
-  TSyncObjsTrackUnitInfo = class(TTrackUnitInfo)
-  private
-    FWaitTime: Int64;
-  public
-    procedure GrowWaitTime(const Value: Int64); inline;
-
-    property WaitTime: Int64 read FWaitTime;
-  end;
+  TSyncObjsTrackUnitInfo = class(TTrackUnitInfo);
 
   TTrackUnitInfoList = class(TTrackUnitInfoBaseList)
   protected
@@ -504,10 +497,12 @@ type
     Context: PContext; // Указатель должен быть выровнен по памяти 32 бит
     Breakpoint: PHardwareBreakpoint;
     Started: Int64;         // момент запуска
-    Elapsed: Int64;        // время выполнения
+    Elapsed: Int64;         // время выполнения
 
-    CPUElapsed: UInt64;    // циклы CPU
+    CPUElapsed: UInt64;     // циклы CPU
     CPUTime: UInt64;        // время использования CPU
+
+    WaitTime: Int64;        // Время блокировок
 
     DbgPoints: TThreadPointList;
 
@@ -1463,8 +1458,15 @@ begin
               // Регистрируем выход из SyncObj
               if Assigned(SyncObjsInfo^.Link) then
               begin
-                WaitTime := SyncObjsInfo^.SyncObjsInfo.CurTime - SyncObjsInfo^.Link^.SyncObjsInfo.CurTime;
+                WaitTime := SyncObjsInfo^.WaitTime;
                 TSyncObjsTrackFuncInfo(TrackFuncInfo).GrowWaitTime(WaitTime);
+
+                // Увеличиваем счетчик потока
+                if I = 0 then
+                begin
+                  ThData := gvDebuger.GetThreadData(SyncObjsInfo^.SyncObjsInfo.ThreadId, True);
+                  TInterlocked.Add(ThData^.WaitTime, WaitTime);
+                end;
 
                 // TODO: Искать функцию с валидным Addr
                 if I > 0 then
@@ -1517,14 +1519,6 @@ begin
 end;
 
 procedure TSyncObjsTrackFuncInfo.GrowWaitTime(const Value: Int64);
-begin
-  Inc(FWaitTime, Value);
-  TSyncObjsTrackUnitInfo(FTrackUnitInfo).GrowWaitTime(Value);
-end;
-
-{ TSyncObjsTrackUnitInfo }
-
-procedure TSyncObjsTrackUnitInfo.GrowWaitTime(const Value: Int64);
 begin
   Inc(FWaitTime, Value);
 end;
