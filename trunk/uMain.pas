@@ -292,6 +292,7 @@ type
     vstLockTrackingSyncObjs: TVirtualStringTree;
     vstLockTrackingSyncObjStack: TVirtualStringTree;
     spl4: TSplitter;
+    acLockTrackingRefresh: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -463,6 +464,16 @@ type
     procedure pLockTrackingLinksResize(Sender: TObject);
     procedure vstLockTrackingSyncObjStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstLockTrackingParentsDblClick(Sender: TObject);
+    procedure vstLockTrackingChildsDblClick(Sender: TObject);
+    procedure vstLockTrackingSyncObjStackDblClick(Sender: TObject);
+    procedure vstLockTrackingListCompareNodes(Sender: TBaseVirtualTree;
+      Node1, Node2: PVirtualNode; Column: TColumnIndex;
+      var Result: Integer);
+    procedure vstLockTrackingSyncObjsCompareNodes(Sender: TBaseVirtualTree;
+      Node1, Node2: PVirtualNode; Column: TColumnIndex;
+      var Result: Integer);
+    procedure acLockTrackingRefreshExecute(Sender: TObject);
 
   private
     FSpiderOptions: TSpiderOptions;
@@ -783,6 +794,11 @@ begin
       end;
     end;
   end;
+end;
+
+procedure TMainForm.acLockTrackingRefreshExecute(Sender: TObject);
+begin
+  vstLockThreadsFocusChanged(vstLockThreads, vstLockThreads.FocusedNode, 0);
 end;
 
 procedure TMainForm.acOpenProjectExecute(Sender: TObject);
@@ -3794,6 +3810,38 @@ begin
   LoadUnits;
 end;
 
+procedure TMainForm.vstLockTrackingSyncObjStackDblClick(Sender: TObject);
+var
+  Data: PLinkData;
+  StackEntry: TStackEntry;
+begin
+  svfLockTrackingSource.Clear;
+
+  if vstLockTrackingSyncObjStack.FocusedNode = Nil then
+    Exit;
+
+  Data := vstLockTrackingSyncObjStack.GetNodeData(vstLockTrackingSyncObjStack.FocusedNode);
+  if Data^.LinkType = ltSyncObjStack then
+  begin
+    StackEntry := TStackEntry.Create;
+    try
+      StackEntry.UpdateInfo(Data^.SyncObjStackPtr);
+
+      if Assigned(StackEntry.FuncInfo) then
+      begin
+        if Assigned(StackEntry.LineInfo) then
+          LoadFunctionSource(svfLockTrackingSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+        else
+          LoadFunctionSource(svfLockTrackingSource, StackEntry.FuncInfo);
+
+        pcLockTrackingLinks.ActivePageIndex := 1;
+      end;
+    finally
+      FreeAndNil(StackEntry);
+    end;
+  end;
+end;
+
 procedure TMainForm.vstLockTrackingSyncObjStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: string);
 var
@@ -4340,7 +4388,74 @@ begin
           case Column of
             0: CellText := ThData^.ThreadAdvInfo^.AsString;
             1: CellText := ThreadIDToStr(ThData^.ThreadID);
+            2: if ThData^.WaitTime <> 0 then
+              CellText := ElapsedToTime(ThData^.WaitTime);
           end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstLockTrackingListCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  ValueU1, ValueU2: UInt64;
+  ValueS1, ValueS2: Int64;
+begin
+  Data1 := Sender.GetNodeData(Node1);
+  Data2 := Sender.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Name1 := TFuncInfo(Data1^.TrackFuncInfo.FuncInfo).ShortName;
+          Name2 := TFuncInfo(Data2^.TrackFuncInfo.FuncInfo).ShortName;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          Name1 := TUnitInfo(Data1^.TrackUnitInfo.UnitInfo).ShortName;
+          Name2 := TUnitInfo(Data2^.TrackUnitInfo.UnitInfo).ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        ValueU1 := 0;
+        ValueU2 := 0;
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          ValueU1 := Data1^.TrackFuncInfo.CallCount;
+          ValueU2 := Data2^.TrackFuncInfo.CallCount;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          ValueU1 := Data1^.TrackUnitInfo.CallCount;
+          ValueU2 := Data2^.TrackUnitInfo.CallCount;
+        end;
+
+        Result := Compare(ValueU1, ValueU2);
+      end;
+    2:
+      begin
+        ValueS1 := 0;
+        ValueS2 := 0;
+
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          ValueS1 := TSyncObjsTrackFuncInfo(Data1^.TrackFuncInfo).WaitTime;
+          ValueS2 := TSyncObjsTrackFuncInfo(Data2^.TrackFuncInfo).WaitTime;
+        end;
+
+        Result := Compare(ValueS1, ValueS2);
       end;
   end;
 end;
@@ -4393,8 +4508,6 @@ begin
         ProcData := Data^.ProcessData;
         case Column of
           0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-          //1: CellText := IntToStr(ProcData^.DbgTrackEventCount);
-          //2: CellText := ElapsedToTime(ProcData^.CPUTime);
         end;
       end;
     ltThread:
@@ -4402,8 +4515,8 @@ begin
         ThData := Data^.ThreadData;
         case Column of
           0: CellText := ThData^.ThreadAdvInfo^.AsString;
-          //1: CellText := IntToStr(ThData^.DbgTrackEventCount);
-          //2: CellText := ElapsedToTime(ThData^.CPUTime);
+          1: ;
+          2: CellText := ElapsedToTime(ThData^.WaitTime);
         end;
       end;
     ltTrackFuncInfo:
@@ -4420,9 +4533,97 @@ begin
         TrackUnitInfo := TSyncObjsTrackUnitInfo(Data^.TrackUnitInfo);
         case Column of
           0: CellText := TUnitInfo(TrackUnitInfo.UnitInfo).ShortName;
-          1: CellText := IntToStr(TrackUnitInfo.CallCount);
-          2: CellText := ElapsedToTime(TrackUnitInfo.WaitTime);
         end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstLockTrackingParentsDblClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  FuncNode: PVirtualNode;
+  LineNo: Cardinal;
+begin
+  Node := vstLockTrackingParents.FocusedNode;
+  if Assigned(Node) then
+  begin
+    Data := vstLockTrackingParents.GetNodeData(Node);
+    if Data^.LinkType = ltTrackCallFuncInfo then
+    begin
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      if Assigned(FuncInfo) then
+      begin
+        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+
+        FuncNode := FindTrackFuncNode(vstLockTrackingList, FuncInfo);
+        if Assigned(FuncNode) then
+        begin
+          vstLockTrackingList.ClearSelection;
+          vstLockTrackingList.FocusedNode := FuncNode;
+          vstLockTrackingList.Selected[FuncNode] := True;
+
+          if LineNo <> 0 then
+            LoadFunctionSource(svfLockTrackingSource, FuncInfo, LineNo);
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TMainForm.vstLockTrackingSyncObjsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  Th1, Th2: NativeUInt;
+  WaitTime1, WaitTime2: Int64;
+begin
+  Data1 := Sender.GetNodeData(Node1);
+  Data2 := Sender.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltSyncObjInfo) and (Data1^.LinkType = ltSyncObjInfo) then
+        begin
+          vstLockTrackingSyncObjsGetText(Sender, Node1, Column, ttNormal, Name1);
+          vstLockTrackingSyncObjsGetText(Sender, Node2, Column, ttNormal, Name2);
+        end;
+
+        if TVirtualStringTree(Sender).Header.SortDirection = sdAscending then
+          Result := Compare(Name1, Name2, 1)
+        else
+          Result := Compare(Name1, Name2, -1);
+      end;
+    1:
+      begin
+        Th1 := 0;
+        Th2 := 0;
+
+        if (Data1^.LinkType = ltSyncObjInfo) and (Data1^.LinkType = ltSyncObjInfo) then
+        begin
+          Th1 := NativeUInt(Data1^.SyncObjItem^.SyncObjsInfo.ThreadId);
+          Th2 := NativeUInt(Data2^.SyncObjItem^.SyncObjsInfo.ThreadId);
+        end;
+
+        Result := Compare(Th1, Th2);
+      end;
+    2:
+      begin
+        WaitTime1 := 0;
+        WaitTime2 := 0;
+
+        if (Data1^.LinkType = ltSyncObjInfo) and (Data1^.LinkType = ltSyncObjInfo) then
+        begin
+          WaitTime1 := NativeUInt(Data1^.SyncObjItem^.WaitTime);
+          WaitTime2 := NativeUInt(Data2^.SyncObjItem^.WaitTime);
+        end;
+
+        Result := Compare(WaitTime1, WaitTime2);
       end;
   end;
 end;
@@ -4468,6 +4669,40 @@ begin
           end;
         end;
       end;
+  end;
+end;
+
+procedure TMainForm.vstLockTrackingChildsDblClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+  Data: PLinkData;
+  FuncInfo: TFuncInfo;
+  FuncNode: PVirtualNode;
+  LineNo: Cardinal;
+begin
+  Node := vstLockTrackingChilds.FocusedNode;
+  if Assigned(Node) then
+  begin
+    Data := vstLockTrackingChilds.GetNodeData(Node);
+    if Data^.LinkType = ltTrackCallFuncInfo then
+    begin
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      if Assigned(FuncInfo) then
+      begin
+        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+
+        FuncNode := FindTrackFuncNode(vstLockTrackingList, FuncInfo);
+        if Assigned(FuncNode) then
+        begin
+          vstLockTrackingList.ClearSelection;
+          vstLockTrackingList.FocusedNode := FuncNode;
+          vstLockTrackingList.Selected[FuncNode] := True;
+
+          if LineNo <> 0 then
+            LoadFunctionSource(svfLockTrackingSource, FuncInfo, LineNo);
+        end;
+      end;
+    end;
   end;
 end;
 
@@ -5030,8 +5265,9 @@ begin
   if Data^.LinkType = ltMemStack then
   begin
     StackEntry := TStackEntry.Create;
-    StackEntry.UpdateInfo(Data^.MemStackPtr);
     try
+      StackEntry.UpdateInfo(Data^.MemStackPtr);
+
       if Assigned(StackEntry.FuncInfo) then
       begin
         if Assigned(StackEntry.LineInfo) then
