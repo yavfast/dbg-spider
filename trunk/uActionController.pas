@@ -504,7 +504,7 @@ begin
 
   while not Terminated do
   begin
-    while gvActionQueue.Count > 0 do
+    while not Terminated and (gvActionQueue.Count > 0) do
     begin
       ActionItem := gvActionQueue.GetAction;
       if Assigned(ActionItem) then
@@ -515,7 +515,8 @@ begin
         end;
     end;
 
-    Sleep(500);
+    if not Terminated then
+      Sleep(500);
   end;
 end;
 
