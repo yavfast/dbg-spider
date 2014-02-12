@@ -40,8 +40,6 @@ type
     function GetFirstWriter: Integer;
     function GetWaitIndex(const ThreadID: TThreadID): Integer;
 
-    procedure RaiseRWLockException(const Msg: String);
-
     function AddRWNode(const AThreadID: TThreadID): TRWThreadNode;
     function GetRWThreadNode(const AThreadID: TThreadID): TRWThreadNode;
 
@@ -49,6 +47,8 @@ type
 
     property RWNode[const Index: Integer]: TRWThreadNode read GetRWNode;
     property RWNodeCount: Integer read GetRWNodeCount;
+  protected
+    procedure RaiseRWLockException(const Msg: String);
   public
     constructor Create;
     destructor Destroy; override;

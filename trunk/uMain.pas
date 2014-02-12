@@ -4494,9 +4494,7 @@ procedure TMainForm.vstLockTrackingListGetText(Sender: TBaseVirtualTree; Node: P
   var CellText: string);
 var
   Data: PLinkData;
-  SyncData: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
   TrackFuncInfo: TSyncObjsTrackFuncInfo;
   TrackUnitInfo: TSyncObjsTrackUnitInfo;
 begin
@@ -4505,7 +4503,6 @@ begin
   case Data^.LinkType of
     ltProcess:
       begin
-        ProcData := Data^.ProcessData;
         case Column of
           0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
         end;
