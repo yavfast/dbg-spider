@@ -2519,12 +2519,7 @@ var
 
 procedure TDebuger.LoadSyncObjsInfoPack(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
 var
-  CurPerfIdx: Cardinal;
   ThData: PThreadData;
-  Idx: Integer;
-  SyncObjsInfo: PDbgSyncObjsInfo;
-  ThSyncObjsInfo: PSyncObjsInfo;
-  SyncObjsLink: PSyncObjsInfo;
 
   function FindLink(const Id: NativeUInt): PSyncObjsInfo;
   var
@@ -2565,6 +2560,12 @@ var
     Result := nil;
   end;
 
+var
+  Idx: Integer;
+  CurPerfIdx: Cardinal;
+  SyncObjsInfo: PDbgSyncObjsInfo;
+  ThSyncObjsInfo: PSyncObjsInfo;
+  SyncObjsLink: PSyncObjsInfo;
 begin
   if ReadData(SyncObjsInfoPack, _DbgSyncObjsInfoList, Count * SizeOf(TDbgSyncObjsInfo)) then
   begin
@@ -2582,7 +2583,7 @@ begin
         RaiseDebugCoreException();
 
       case SyncObjsInfo^.SyncObjsType of
-        soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection:
+        soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection, soSendMessage:
           begin
             ThData^.DbgSyncObjsInfo.BeginRead;
             try
@@ -2611,7 +2612,7 @@ begin
                 if SyncObjsLink <> nil then
                   SyncObjsLink^.Link := ThSyncObjsInfo;
 
-                ThSyncObjsInfo^.SyncObjsInfo := SyncObjsInfo^;
+                ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
               finally
                 ThData^.DbgSyncObjsInfo.EndWrite;
               end;

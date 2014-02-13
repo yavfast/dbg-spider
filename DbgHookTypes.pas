@@ -18,7 +18,9 @@ type
 
   TDbgMemInfoType = (miGetMem = 0, miFreeMem);
 
+  PDbgHookInfoStack = ^TDbgHookInfoStack;
   TDbgHookInfoStack = array[0..31] of Pointer;
+
   TObjClassTypeName = array[0..SizeOf(TDbgHookInfoStack) - 1] of AnsiChar;
 
   PDbgMemInfo = ^TDbgMemInfo;
@@ -41,7 +43,8 @@ type
     soUnknown = 0,
     soSleep,
     soWaitForSingleObject, soWaitForMultipleObjects,
-    soEnterCriticalSection, soLeaveCriticalSection, soInCriticalSection
+    soEnterCriticalSection, soLeaveCriticalSection, soInCriticalSection,
+    soSendMessage
   );
 
   TDbgSyncObjsStateType = (sosUnknown = 0, sosEnter, sosLeave);
@@ -54,17 +57,18 @@ type
     Stack: TDbgHookInfoStack;
     SyncObjsStateType: TDbgSyncObjsStateType;
     case SyncObjsType: TDbgSyncObjsType of
-      soUnknown: (
-        //Data: NativeUInt;
-        //AdvData: NativeUInt;
-      );
-      soSleep: (
+      soUnknown:
+      ();
+      soSleep:
+      (
         MSec: NativeUInt;
       );
-      soWaitForSingleObject: (
+      soWaitForSingleObject:
+      (
         Handle: THandle;
       );
-      soWaitForMultipleObjects: (
+      soWaitForMultipleObjects:
+      (
         Handles: PWOHandleArray;
       );
       soEnterCriticalSection,
@@ -74,6 +78,8 @@ type
         CS: PRTLCriticalSection;
         OwningThreadId: Cardinal;
       );
+      soSendMessage:
+      ();
   end;
 
 const

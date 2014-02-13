@@ -135,7 +135,8 @@ const
     clGray, // soWaitForMultipleObjects
     clYellow, // soEnterCriticalSection
     clLime, // soLeaveCriticalSection
-    clMaroon // soInCriticalSection
+    clMaroon, // soInCriticalSection
+    clYellow // soSendMessage
   );
 
   _SyncObjsColorNames: array[Low(TDbgSyncObjsType) .. High(TDbgSyncObjsType)] of String = (
@@ -145,7 +146,8 @@ const
     'waitformultipleobjects', // soWaitForMultipleObjects
     'entercriticalsection', // soEnterCriticalSection
     'leavecriticalsection', // soLeaveCriticalSection
-    'incriticalsection' // soInCriticalSection
+    'incriticalsection', // soInCriticalSection
+    'sendmessage' // soSendMessage
   );
 
 { TSpiderOptions }

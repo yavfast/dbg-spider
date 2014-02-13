@@ -1950,7 +1950,7 @@ begin
             );
       end;
 
-      if not gvDebuger.TrackSystemUnits and (UnitInfo.GetUnitType = utSystem) then
+      if not gvDebuger.TrackSystemUnits and (UnitInfo.UnitType = utSystem) then
         Continue;
 
       for J := 0 to UnitInfo.Funcs.Count - 1 do

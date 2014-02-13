@@ -274,9 +274,11 @@ Type
     function ParamsAsString: String;
   End;
 
-  TUnitType = (utUnknown, utProject, utSystem, utExternal);
+  TUnitType = (utUnknown, utProject, utSystem, utComponentLib, utExternal);
 
   TUnitInfo = Class(TSegmentCodeInfo)
+  protected
+    function GetUnitType: TUnitType;
   public
     Segments: TList;
     SourceSegments: TList;
@@ -292,7 +294,8 @@ Type
     function ShortName: String; Override;
 
     function FullUnitName: String;
-    function GetUnitType: TUnitType;
+
+    property UnitType: TUnitType read GetUnitType;
   end;
 
   TDLLInfo = Class(TSegmentCodeInfo)

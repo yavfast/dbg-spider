@@ -141,6 +141,8 @@ type
     EBP: Pointer;
   end;
 
+  TDbgInfoStack = array of Pointer;
+
   TMemAction = (maGetMem = 0, maFreeMem);
 
   PMemInfo = ^TMemInfo;
@@ -174,11 +176,48 @@ type
   TGetMemInfoList = TObjectDictionary<Pointer,TGetMemInfo>;
   TGetMemInfoItem = TPair<Pointer,TGetMemInfo>;
 
+  PDbgSyncObjsInfoEx = ^TDbgSyncObjsInfoEx;
+  TDbgSyncObjsInfoEx = packed record
+  public
+    procedure LoadStack(const DbgStack: PDbgHookInfoStack);
+    procedure Init(const SyncObjsInfo: PDbgSyncObjsInfo);
+  public
+    Id: NativeUInt;
+    ThreadId: Cardinal;
+    CurTime: Int64;
+    Stack: TDbgInfoStack;
+    SyncObjsStateType: TDbgSyncObjsStateType;
+    case SyncObjsType: TDbgSyncObjsType of
+      soUnknown:
+      ();
+      soSleep:
+      (
+        MSec: NativeUInt;
+      );
+      soWaitForSingleObject:
+      (
+        Handle: THandle;
+      );
+      soWaitForMultipleObjects:
+      (
+        Handles: PWOHandleArray;
+      );
+      soEnterCriticalSection,
+      soLeaveCriticalSection,
+      soInCriticalSection:
+      (
+        CS: PRTLCriticalSection;
+        OwningThreadId: Cardinal;
+      );
+      soSendMessage:
+      ();
+  end;
+
   PSyncObjsInfo = ^RSyncObjsInfo;
   RSyncObjsInfo = record
     PerfIdx: Cardinal;
     Link: PSyncObjsInfo;
-    SyncObjsInfo: TDbgSyncObjsInfo;
+    SyncObjsInfo: TDbgSyncObjsInfoEx;
   public
     function WaitTime: Int64;
   end;
@@ -1381,7 +1420,7 @@ var
   TrackUnitInfo: TSyncObjsTrackUnitInfo;
   TrackFuncInfo: TTrackFuncInfo;
   CallFuncInfo: PCallFuncInfo;
-  DbgSyncObjsInfo: PDbgSyncObjsInfo;
+  DbgSyncObjsInfo: PDbgSyncObjsInfoEx;
   WaitTime: Int64;
   ThData: PThreadData;
   SyncObjsListItem: PRPSyncObjsInfo;
@@ -1393,7 +1432,7 @@ begin
     DbgSyncObjsInfo := @SyncObjsInfo^.SyncObjsInfo;
 
     // Если нет стека для выхода из SyncObj, то берем стек для входа
-    if (DbgSyncObjsInfo^.SyncObjsStateType = sosLeave) and (DbgSyncObjsInfo^.Stack[0] = nil) then
+    if (DbgSyncObjsInfo^.SyncObjsStateType = sosLeave) and (Length(DbgSyncObjsInfo^.Stack) = 0) then
       if Assigned(SyncObjsInfo^.Link) then
         DbgSyncObjsInfo := @SyncObjsInfo^.Link^.SyncObjsInfo;
 
@@ -1414,7 +1453,7 @@ begin
     begin
       Addr := DbgSyncObjsInfo^.Stack[I];
 
-      if (Addr = nil) or (Addr = Pointer(-1)) then Break;
+      //if (Addr = nil) or (Addr = Pointer(-1)) then Break;
 
       if StackEntry.UpdateInfo(Addr) <> slNotFound then
       begin
@@ -1531,6 +1570,58 @@ begin
 
   if Assigned(Link) then
     Result := Abs(SyncObjsInfo.CurTime - Link^.SyncObjsInfo.CurTime);
+end;
+
+{ TDbgSyncObjsInfoEx }
+
+procedure TDbgSyncObjsInfoEx.Init(const SyncObjsInfo: PDbgSyncObjsInfo);
+begin
+  Id := SyncObjsInfo^.Id;
+  ThreadId := SyncObjsInfo^.ThreadId;
+  CurTime := SyncObjsInfo^.CurTime;
+  SyncObjsStateType := SyncObjsInfo^.SyncObjsStateType;
+  SyncObjsType := SyncObjsInfo^.SyncObjsType;
+  case SyncObjsType of
+    soUnknown: ;
+    soSleep:
+      MSec := SyncObjsInfo^.MSec;
+    soWaitForSingleObject:
+      Handle := SyncObjsInfo^.Handle;
+    soWaitForMultipleObjects:
+      Handles := SyncObjsInfo^.Handles;
+    soEnterCriticalSection,
+    soLeaveCriticalSection,
+    soInCriticalSection:
+      begin
+        CS := SyncObjsInfo^.CS;
+        OwningThreadId := SyncObjsInfo^.OwningThreadId;
+      end;
+    soSendMessage: ;
+  end;
+
+  LoadStack(@SyncObjsInfo^.Stack);
+end;
+
+procedure TDbgSyncObjsInfoEx.LoadStack(const DbgStack: PDbgHookInfoStack);
+var
+  I: Integer;
+  Ptr: Pointer;
+begin
+  I := 0;
+  while I < Length(DbgStack^) do
+  begin
+    Ptr := DbgStack^[I];
+
+    if (Ptr = nil) or (Ptr = Pointer(-1)) then
+    begin
+      SetLength(Stack, I);
+      Move(DbgStack^[0], Stack[0], I * SizeOf(Pointer));
+
+      Exit;
+    end;
+
+    Inc(I);
+  end;
 end;
 
 end.
