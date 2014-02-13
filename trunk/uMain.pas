@@ -17,7 +17,7 @@ type
   TProgectType = (ptEmpty, ptSpider, ptApplication);
 
   TLinkType = (ltNone = 0, ltProject, ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
-    ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
+    ltDbgUnitGroup, ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
     ltDbgFuncParamInfo, ltDbgLogItem, ltTrackFuncInfo, ltTrackUnitInfo, ltTrackCallFuncInfo,
     ltSpiderInfo, ltVersionInfo, ltChangeLogItemInfo, ltSyncObjInfo, ltSyncObjStack);
 
@@ -41,6 +41,8 @@ type
         (ExceptInfo: TExceptInfo);
       ltExceptStack:
         (ExceptStackEntry: TStackEntry);
+      ltDbgUnitGroup:
+        (DbgUnitGroupType: TUnitType);
       ltDbgUnitInfo:
         (DbgUnitInfo: TUnitInfo);
       ltDbgConstInfo:
@@ -346,6 +348,8 @@ type
     procedure vstExceptionCallStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 
     procedure vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstDbgInfoUnitsDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+      const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
     procedure vstDbgInfoUnitsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
     procedure vstDbgInfoUnitsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
 
@@ -3153,20 +3157,47 @@ end;
 procedure TMainForm.LoadUnits;
 var
   I: Integer;
+  UnitGroupType: TUnitType;
+  UnitGroupNodes: array[Low(TUnitType)..High(TUnitType)] of PVirtualNode;
   UnitNode: PVirtualNode;
+  UnitGroupNode: PVirtualNode;
   LinkData: PLinkData;
+  UnitInfo: TUnitInfo;
 begin
   vstDbgInfoUnits.Clear;
 
   vstDbgInfoUnits.BeginUpdate;
   try
+    for UnitGroupType := Low(TUnitType) to High(TUnitType) do
+    begin
+      UnitGroupNode := vstDbgInfoUnits.AddChild(nil);
+      UnitGroupNode.CheckType := ctTriStateCheckBox;
+
+      LinkData := vstDbgInfoUnits.GetNodeData(UnitGroupNode);
+      LinkData^.DbgUnitGroupType := UnitGroupType;
+      LinkData^.LinkType := ltDbgUnitGroup;
+
+      UnitGroupNodes[UnitGroupType] := UnitGroupNode;
+    end;
+
     for I := 0 to gvDebugInfo.Units.Count - 1 do
     begin
-      UnitNode := vstDbgInfoUnits.AddChild(nil);
+      UnitInfo := TUnitInfo(gvDebugInfo.Units.Objects[I]);
+
+      UnitGroupNode := UnitGroupNodes[UnitInfo.UnitType];
+
+      UnitNode := vstDbgInfoUnits.AddChild(UnitGroupNode);
+      UnitNode.CheckType := ctTriStateCheckBox;
+
       LinkData := vstDbgInfoUnits.GetNodeData(UnitNode);
 
-      LinkData^.DbgUnitInfo := TUnitInfo(gvDebugInfo.Units.Objects[I]);
+      LinkData^.DbgUnitInfo := UnitInfo;
       LinkData^.LinkType := ltDbgUnitInfo;
+    end;
+
+    for UnitGroupType := Low(TUnitType) to High(TUnitType) do
+    begin
+      vstDbgInfoUnits.Expanded[UnitGroupNodes[UnitGroupType]] := True;
     end;
   finally
     vstDbgInfoUnits.EndUpdate;
@@ -4087,19 +4118,38 @@ begin
   end;
 end;
 
+procedure TMainForm.vstDbgInfoUnitsDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
+var
+  Data: PLinkData;
+begin
+  Data := vstDbgInfoUnits.GetNodeData(Node);
+  case Data^.LinkType of
+    ltDbgUnitGroup:
+      begin
+        TargetCanvas.Font.Style := [fsBold];
+      end;
+  end;
+end;
+
 procedure TMainForm.vstDbgInfoUnitsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 var
   Data: PLinkData;
   UnitInfo: TUnitInfo;
 begin
   Data := vstDbgInfoUnits.GetNodeData(Node);
-  UnitInfo := Data^.DbgUnitInfo;
+  case Data^.LinkType of
+    ltDbgUnitInfo:
+      begin
+        UnitInfo := Data^.DbgUnitInfo;
 
-  LoadConsts(UnitInfo, Node);
-  LoadTypes(UnitInfo, Node);
-  LoadVars(UnitInfo, Node);
-  LoadFunctions(UnitInfo, Node);
-  LoadUnitSource(UnitInfo, Node);
+        LoadConsts(UnitInfo, Node);
+        LoadTypes(UnitInfo, Node);
+        LoadVars(UnitInfo, Node);
+        LoadFunctions(UnitInfo, Node);
+        LoadUnitSource(UnitInfo, Node);
+      end;
+  end;
 end;
 
 procedure TMainForm.vstDbgInfoUnitsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
@@ -4110,13 +4160,31 @@ begin
   CellText := ' ';
   Data := vstDbgInfoUnits.GetNodeData(Node);
   case Data^.LinkType of
+    ltDbgUnitGroup:
+      begin
+        if Column = 0 then
+        begin
+          case Data^.DbgUnitGroupType of
+            utUnknown:
+              CellText := 'Other';
+            utProject:
+              CellText := 'Project units';
+            utSystem:
+              CellText := 'System units';
+            utComponentLib:
+              CellText := 'Components';
+            utExternal:
+              CellText := 'External';
+          end;
+        end;
+      end;
     ltDbgUnitInfo:
       begin
         UnitInfo := Data^.DbgUnitInfo;
         case Column of
           0: CellText := UnitInfo.ShortName;
-          1: CellText := Format('%p', [UnitInfo.Address]);
-          2: CellText := Format('%d', [UnitInfo.Size]);
+          1: CellText := Format('%p ', [UnitInfo.Address]);
+          2: CellText := Format('%d ', [UnitInfo.Size]);
         end;
       end;
   end;
@@ -4350,6 +4418,13 @@ var
   Data: PLinkData;
 begin
   if Node = nil then Exit;
+
+  vstLockTrackingList.Clear;
+  vstLockTrackingParents.Clear;
+  vstLockTrackingChilds.Clear;
+  vstLockTrackingSyncObjs.Clear;
+  vstLockTrackingSyncObjStack.Clear;
+  svfLockTrackingSource.Clear;
 
   Data := vstLockThreads.GetNodeData(Node);
   case Data^.LinkType of
