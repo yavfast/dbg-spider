@@ -131,6 +131,7 @@ var
   Seg, Offset: Integer;
 begin
   BeginWrite;
+
   Idx := Count;
   IndexToSegment(Idx, Seg, Offset);
   CheckSeg(Seg);
@@ -139,6 +140,8 @@ begin
   Result := @FSegList[Seg][Offset];
 
   FillChar(Result^, SizeOf(T), 0);
+  //Initialize(T(Result^));
+
   EndWrite;
 end;
 

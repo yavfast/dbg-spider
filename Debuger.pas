@@ -2471,8 +2471,9 @@ begin
           NewMemInfo.PerfIdx := CurPerfIdx;
           NewMemInfo.ObjAddr := DbgMemInfo^.Ptr;
           NewMemInfo.Size := DbgMemInfo^.Size;
-          NewMemInfo.Stack := DbgMemInfo^.Stack; // TODO: Можно грузить не весь стек
           NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
+
+          NewMemInfo.LoadStack(@DbgMemInfo^.Stack);
 
           ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
           Inc(ThData^.DbgGetMemInfoSize, NewMemInfo.Size);

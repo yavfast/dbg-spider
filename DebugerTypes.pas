@@ -166,11 +166,12 @@ type
     PerfIdx: Cardinal;
     ObjAddr: Pointer;
     Size: Cardinal;
-    Stack: TDbgHookInfoStack;
+    Stack: TDbgInfoStack;
     ObjectType: String;
 
     function GetObjectType: String;
     procedure CheckObjectType;
+    procedure LoadStack(const DbgStack: PDbgHookInfoStack);
   end;
 
   TGetMemInfoList = TObjectDictionary<Pointer,TGetMemInfo>;
@@ -907,6 +908,28 @@ begin
   CheckObjectType;
 
   Result := String(ObjectType);
+end;
+
+procedure TGetMemInfo.LoadStack(const DbgStack: PDbgHookInfoStack);
+var
+  I: Integer;
+  Ptr: Pointer;
+begin
+  I := 0;
+  while I < Length(DbgStack^) do
+  begin
+    Ptr := DbgStack^[I];
+
+    if (Ptr = nil) or (Ptr = Pointer(-1)) then
+    begin
+      SetLength(Stack, I);
+      Move(DbgStack^[0], Stack[0], I * SizeOf(Pointer));
+
+      Exit;
+    end;
+
+    Inc(I);
+  end;
 end;
 
 { TExceptInfo }
