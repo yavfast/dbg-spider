@@ -1331,24 +1331,12 @@ begin
     acStop.Execute;
 
     while gvDebuger.Active do
-    begin
       Application.ProcessMessages;
-    end;
   end;
 
   ClearTrees;
 
-  if Assigned(gvDebugInfo) then
-  begin
-    gvDebugInfo.ClearDebugInfo;
-    FreeAndNil(gvDebugInfo);
-  end;
-
-  if Assigned(gvDebuger) then
-  begin
-    gvDebuger.ClearDbgInfo;
-    FreeAndNil(gvDebuger);
-  end;
+  _AC.ClearDebug(True);
 
   if gvProjectOptions.ProjectName <> '' then
     FSpiderOptions.AddRecentProject(gvProjectOptions.ProjectName);
