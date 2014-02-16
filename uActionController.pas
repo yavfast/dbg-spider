@@ -41,6 +41,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
+    procedure Clear;
+
     function GetAction: TActionItem;
     procedure AddAction(const Action: TacAction; const Args: TArgsList);
   end;
@@ -67,6 +69,8 @@ type
     class procedure DoAction(const Action: TacAction; const Args: TArgsList); overload; static;
     class procedure DoSyncAction(const Action: TacAction; const Args: TArgsList); static;
     class procedure ViewDebugInfo(DebugInfo: TDebugInfo); static;
+
+    class procedure ClearDebug(const DbgFree: Boolean); static;
 
     class procedure AppClose; static;
   end;
@@ -150,6 +154,25 @@ begin
   gvActionThread.Terminate;
 
   Sleep(500);
+end;
+
+class procedure TActionController.ClearDebug(const DbgFree: Boolean);
+begin
+  gvActionQueue.Clear;
+
+  if Assigned(gvDebugInfo) then
+  begin
+    gvDebugInfo.ClearDebugInfo;
+    if DbgFree then
+      FreeAndNil(gvDebugInfo);
+  end;
+
+  if Assigned(gvDebuger) then
+  begin
+    gvDebuger.ClearDbgInfo;
+    if DbgFree then
+      FreeAndNil(gvDebuger);
+  end;
 end;
 
 class procedure TActionController.DoAction(const Action: TacAction; const Args: TArgsList);
@@ -438,6 +461,22 @@ begin
   try
     ActionItem := TActionItem.Create(Action, Args);
     Enqueue(ActionItem);
+  finally
+    UnLock;
+  end;
+end;
+
+procedure TActionQueue.Clear;
+var
+  Action: TActionItem;
+begin
+  Lock;
+  try
+    while Count > 0 do
+    begin
+      Action := GetAction;
+      FreeAndNil(Action);
+    end;
   finally
     UnLock;
   end;

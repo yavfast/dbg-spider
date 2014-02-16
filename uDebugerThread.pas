@@ -210,7 +210,8 @@ end;
 
 procedure TDebugerThread.LoadDebugInfo;
 begin
-  gvDebugInfo.ClearDebugInfo;
+  _AC.ClearDebug(False);
+
   _AC.DoAction(acUpdateInfo, []);
 
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
