@@ -295,6 +295,10 @@ type
     vstLockTrackingSyncObjStack: TVirtualStringTree;
     spl4: TSplitter;
     acLockTrackingRefresh: TAction;
+    rbngrpLockTracking: TRibbonGroup;
+    acLockTracking: TAction;
+    acViewSyncObjsOnTimeLine: TAction;
+    rbnpgOptions: TRibbonPage;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -478,6 +482,8 @@ type
       Node1, Node2: PVirtualNode; Column: TColumnIndex;
       var Result: Integer);
     procedure acLockTrackingRefreshExecute(Sender: TObject);
+    procedure acLockTrackingExecute(Sender: TObject);
+    procedure acViewSyncObjsOnTimeLineExecute(Sender: TObject);
 
   private
     FSpiderOptions: TSpiderOptions;
@@ -800,6 +806,11 @@ begin
   end;
 end;
 
+procedure TMainForm.acLockTrackingExecute(Sender: TObject);
+begin
+  //
+end;
+
 procedure TMainForm.acLockTrackingRefreshExecute(Sender: TObject);
 begin
   vstLockThreadsFocusChanged(vstLockThreads, vstLockThreads.FocusedNode, 0);
@@ -941,6 +952,11 @@ begin
     gvDebugInfo.UseShortNames := acUseShortNames.Checked;
     UpdateTrees;
   end;
+end;
+
+procedure TMainForm.acViewSyncObjsOnTimeLineExecute(Sender: TObject);
+begin
+  //
 end;
 
 procedure TMainForm.acParentViewSourceExecute(Sender: TObject);
@@ -3762,6 +3778,9 @@ begin
     6: begin
       vstLockThreads.Invalidate;
       vstLockTrackingList.Invalidate;
+      vstLockTrackingParents.Invalidate;
+      vstLockTrackingChilds.Invalidate;
+      vstLockTrackingSyncObjs.Invalidate;
     end;
   end;
 end;

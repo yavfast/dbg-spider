@@ -2465,7 +2465,6 @@ begin
           *)
 
           // Добавляем инфу про новый объект
-          //NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
           NewMemInfo := TGetMemInfo.Create;
 
           NewMemInfo.PerfIdx := CurPerfIdx;
@@ -2480,8 +2479,6 @@ begin
 
           Inc(FProcessData.ProcessGetMemCount);
           Inc(FProcessData.ProcessGetMemSize, NewMemInfo.Size);
-
-          //ThData^.DbgGetMemUnitList.LoadStack(NewMemInfo^.Stack, True);
         end;
         miFreeMem:
         begin
@@ -2490,8 +2487,6 @@ begin
           FoundThData := ThData;
           if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
           begin
-            //ThData^.DbgGetMemUnitList.LoadStack(MemInfo^.Stack, False);
-
             Dec(FoundThData^.DbgGetMemInfoSize, MemInfo.Size);
 
             Dec(FProcessData.ProcessGetMemCount);
