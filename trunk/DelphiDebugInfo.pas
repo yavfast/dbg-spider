@@ -1983,7 +1983,8 @@ Begin
       Format('%s\DbgHook32.dll', [ExtractFileDir(Application.ExeName)]),
       Pointer(FImage.OptionalHeader32.ImageBase),
       MemoryManagerInfo.VarInfo,
-      gvDebuger.MemoryCallStack
+      gvDebuger.MemoryCallStack,
+      gvDebuger.SyncObjsTracking
     );
   end;
 End;

@@ -44,6 +44,8 @@ type
 
     FCodeTracking: Boolean;
     FTrackSystemUnits: Boolean;
+
+    FSyncObjsTracking: Boolean;
     // ---
 
     FMemoryBPCheckMode: Boolean;
@@ -107,6 +109,7 @@ type
     procedure SetDbgTraceState(const Value: TDbgTraceState);
     procedure SetDbgState(const Value: TDbgState);
     function GetActive: Boolean;
+    procedure SetSyncObjsTracking(const Value: Boolean);
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -327,6 +330,8 @@ type
 
     property CodeTracking: Boolean read FCodeTracking write SetCodeTracking;
     property TrackSystemUnits: Boolean read FTrackSystemUnits write SetTrackSystemUnits;
+
+    property SyncObjsTracking: Boolean read FSyncObjsTracking write SetSyncObjsTracking;
 
     property MemoryBPCheckMode: Boolean read FMemoryBPCheckMode write FMemoryBPCheckMode;
   end;
@@ -3021,6 +3026,11 @@ begin
   ThData^.Context^.EFlags := ThData^.Context^.EFlags or EFLAGS_TF;
 
   Check(SetThreadContext(ThData^.ThreadHandle, ThData^.Context^));
+end;
+
+procedure TDebuger.SetSyncObjsTracking(const Value: Boolean);
+begin
+  FSyncObjsTracking := Value;
 end;
 
 procedure TDebuger.SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean);
