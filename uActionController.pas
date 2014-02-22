@@ -14,7 +14,8 @@ type
     doProfiler,
     doMemProfiler, doMemCallStack, doMemCheckDoubleFree,
     doExceptions, doExceptionCallStack,
-    doCodeTracking, doTrackSystemUnits
+    doCodeTracking, doTrackSystemUnits,
+    doSyncObjsTracking
   );
 
   TDbgOptions = set of TDbgOption;
@@ -57,7 +58,7 @@ type
 
   TActionController = class
   public
-    class procedure RunDebug(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0); static;
+    class procedure RunDebug(const ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0); static;
     class procedure StopDebug; static;
     class procedure PauseDebug; static;
     class procedure TraceDebug(const TraceType: TDbgTraceState); static;
@@ -213,7 +214,7 @@ begin
   TActionController.TraceDebug(dtsPause);
 end;
 
-class procedure TActionController.RunDebug(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
+class procedure TActionController.RunDebug(const ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
 begin
   if not Assigned(_DbgThread) then
     _DbgThread := TDebugerThread.Create(ADbgOptions, AProcessID);

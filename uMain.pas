@@ -299,6 +299,7 @@ type
     acLockTracking: TAction;
     acViewSyncObjsOnTimeLine: TAction;
     rbnpgOptions: TRibbonPage;
+    acDebugOptions: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -484,6 +485,7 @@ type
     procedure acLockTrackingRefreshExecute(Sender: TObject);
     procedure acLockTrackingExecute(Sender: TObject);
     procedure acViewSyncObjsOnTimeLineExecute(Sender: TObject);
+    procedure acDebugOptionsExecute(Sender: TObject);
 
   private
     FSpiderOptions: TSpiderOptions;
@@ -737,6 +739,11 @@ begin
   UpdateTrees;
 end;
 
+procedure TMainForm.acDebugOptionsExecute(Sender: TObject);
+begin
+  rbnMain.TabIndex := rbnpgOptions.Index;
+end;
+
 procedure TMainForm.acEditProjectExecute(Sender: TObject);
 begin
   OpenProjectOptions(otEdit);
@@ -884,6 +891,11 @@ begin
     if acTrackSystemUnits.Checked then
       Include(Result, doTrackSystemUnits);
   end;
+
+  if acLockTracking.Checked then
+  begin
+    Include(Result, doSyncObjsTracking);
+  end;
 end;
 
 procedure TMainForm.acRunExecute(Sender: TObject);
@@ -956,7 +968,7 @@ end;
 
 procedure TMainForm.acViewSyncObjsOnTimeLineExecute(Sender: TObject);
 begin
-  //
+  UpdateTrees;
 end;
 
 procedure TMainForm.acParentViewSourceExecute(Sender: TObject);
@@ -1741,54 +1753,57 @@ begin
     IdxL := 0;
 
     // Отрисовка SyncObjs
-    if ThData^.DbgSyncObjsInfo.Count > 0 then
+    if acLockTracking.Checked and acViewSyncObjsOnTimeLine.Checked then
     begin
-      IdxL1 := 0;
-
-      // Поиск первого левого элемента
-      if IdxL > 0 then
+      if ThData^.DbgSyncObjsInfo.Count > 0 then
       begin
-        IdxR1 := ThData^.DbgSyncObjsInfo.Count - 1;
+        IdxL1 := 0;
 
-        repeat
-          Idx := (IdxL1 + IdxR1) div 2;
-          SyncObjsInfo := ThData^.DbgSyncObjsByIdx(Idx);
+        // Поиск первого левого элемента
+        if IdxL > 0 then
+        begin
+          IdxR1 := ThData^.DbgSyncObjsInfo.Count - 1;
 
-          if SyncObjsInfo^.PerfIdx > IdxL then
-            IdxR1 := Idx
-          else
-          begin
-            IdxL1 := Idx;
+          repeat
+            Idx := (IdxL1 + IdxR1) div 2;
+            SyncObjsInfo := ThData^.DbgSyncObjsByIdx(Idx);
 
-            if IdxL1 = IdxL then
+            if SyncObjsInfo^.PerfIdx > IdxL then
+              IdxR1 := Idx
+            else
             begin
-              while (IdxL1 > 0) do
+              IdxL1 := Idx;
+
+              if IdxL1 = IdxL then
               begin
-                SyncObjsInfo := ThData^.DbgSyncObjsByIdx(IdxL1);
+                while (IdxL1 > 0) do
+                begin
+                  SyncObjsInfo := ThData^.DbgSyncObjsByIdx(IdxL1);
 
-                if SyncObjsInfo^.PerfIdx <> IdxL then
-                  Break;
+                  if SyncObjsInfo^.PerfIdx <> IdxL then
+                    Break;
 
-                Dec(IdxL1);
+                  Dec(IdxL1);
+                end;
+
+                Break;
               end;
-
-              Break;
             end;
-          end;
-        until (IdxR1 - IdxL1 <= 1);
-      end;
+          until (IdxR1 - IdxL1 <= 1);
+        end;
 
-      for I := IdxL1 to ThData^.DbgSyncObjsInfo.Count - 1 do
-      begin
-        SyncObjsInfo := ThData^.DbgSyncObjsByIdx(I);
+        for I := IdxL1 to ThData^.DbgSyncObjsInfo.Count - 1 do
+        begin
+          SyncObjsInfo := ThData^.DbgSyncObjsByIdx(I);
 
-        T3 := SyncObjsInfo^.PerfIdx;
-        X3 := R.Left + Integer(T3 - CurOffset) - 1;
+          T3 := SyncObjsInfo^.PerfIdx;
+          X3 := R.Left + Integer(T3 - CurOffset) - 1;
 
-        if (X3 > R.Right) then
-          Break;
+          if (X3 > R.Right) then
+            Break;
 
-        _DrawSyncObjs(SyncObjsInfo);
+          _DrawSyncObjs(SyncObjsInfo);
+        end;
       end;
     end;
 
@@ -1954,58 +1969,61 @@ begin
     IdxL := 0;
 
     // Отрисовка SyncObjs
-    if ThData^.DbgSyncObjsInfo.Count > 0 then
+    if acLockTracking.Checked and acViewSyncObjsOnTimeLine.Checked then
     begin
-      IdxL1 := 0;
-
-      // Поиск первого левого элемента
-      if IdxL > 0 then
+      if ThData^.DbgSyncObjsInfo.Count > 0 then
       begin
-        IdxR1 := ThData^.DbgSyncObjsInfo.Count - 1;
+        IdxL1 := 0;
 
-        repeat
-          Idx := (IdxL1 + IdxR1) div 2;
-          SyncObjsInfo := ThData^.DbgSyncObjsByIdx(Idx);
+        // Поиск первого левого элемента
+        if IdxL > 0 then
+        begin
+          IdxR1 := ThData^.DbgSyncObjsInfo.Count - 1;
+
+          repeat
+            Idx := (IdxL1 + IdxR1) div 2;
+            SyncObjsInfo := ThData^.DbgSyncObjsByIdx(Idx);
+            ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
+
+            if (ProcPoint^.FromStart div F) > IdxL then
+              IdxR1 := Idx
+            else
+            begin
+              IdxL1 := Idx;
+
+              if IdxL1 = IdxL then
+              begin
+                while (IdxL1 > 0) do
+                begin
+                  SyncObjsInfo := ThData^.DbgSyncObjsByIdx(IdxL1);
+                  ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
+
+                  // TODO: optimize
+                  if (ProcPoint^.FromStart div F) <> IdxL then
+                    Break;
+
+                  Dec(IdxL1);
+                end;
+
+                Break;
+              end;
+            end;
+          until (IdxR1 - IdxL1 <= 1);
+        end;
+
+        for I := IdxL1 to ThData^.DbgSyncObjsInfo.Count - 1 do
+        begin
+          SyncObjsInfo := ThData^.DbgSyncObjsByIdx(I);
           ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
 
-          if (ProcPoint^.FromStart div F) > IdxL then
-            IdxR1 := Idx
-          else
-          begin
-            IdxL1 := Idx;
+          T3 := ProcPoint^.FromStart div F;
+          X3 := R.Left + Integer(T3 - Offset) - 1;
 
-            if IdxL1 = IdxL then
-            begin
-              while (IdxL1 > 0) do
-              begin
-                SyncObjsInfo := ThData^.DbgSyncObjsByIdx(IdxL1);
-                ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
+          if (X3 > R.Right) then
+            Break;
 
-                // TODO: optimize
-                if (ProcPoint^.FromStart div F) <> IdxL then
-                  Break;
-
-                Dec(IdxL1);
-              end;
-
-              Break;
-            end;
-          end;
-        until (IdxR1 - IdxL1 <= 1);
-      end;
-
-      for I := IdxL1 to ThData^.DbgSyncObjsInfo.Count - 1 do
-      begin
-        SyncObjsInfo := ThData^.DbgSyncObjsByIdx(I);
-        ProcPoint := gvDebuger.ProcessData.DbgPointByIdx(SyncObjsInfo^.PerfIdx);
-
-        T3 := ProcPoint^.FromStart div F;
-        X3 := R.Left + Integer(T3 - Offset) - 1;
-
-        if (X3 > R.Right) then
-          Break;
-
-        _DrawSyncObjs(SyncObjsInfo);
+          _DrawSyncObjs(SyncObjsInfo);
+        end;
       end;
     end;
 

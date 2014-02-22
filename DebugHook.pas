@@ -4,7 +4,8 @@ interface
 
 uses Windows, DebugInfo;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo; MemoryCallStack: Boolean): Boolean;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo;
+  MemoryCallStack: Boolean; SyncObjsHook: Boolean): Boolean;
 function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
 
 implementation
@@ -43,6 +44,8 @@ type
     MemoryMgr        : Pointer;
     MemoryCallStack  : Boolean;
     PerfDelta        : Cardinal;
+
+    SyncObjsHook     : Boolean;
   end;
 
 procedure _DbgLoader(DbgLoaderInfo: PDbgLoaderInfo); stdcall;
@@ -77,14 +80,17 @@ begin
 
       if (@InitThreadHook <> nil) and InitThreadHook(ImageBase) then
       begin
-        if (@InitSyncObjsHook <> nil) then
+        // 1 - хуки на системные функции
+        if SyncObjsHook and (@InitSyncObjsHook <> nil) then
           InitSyncObjsHook(ImageBase);
 
-        if (@InitPerfomance <> nil) then
-          InitPerfomance(PerfDelta);
-
+        // 2 - перекрываем менеджер памяти
         if (@InitMemoryHook <> nil) and (MemoryMgr <> Nil) then
           InitMemoryHook(MemoryMgr, MemoryCallStack);
+
+        // 3 - запускаем поток обработки дебажной информации
+        if (@InitPerfomance <> nil) then
+          InitPerfomance(PerfDelta);
       end;
 
       ExitThread(0);
@@ -95,7 +101,8 @@ begin
 end;
 procedure _DbgLoaderEnd; begin end;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo; MemoryCallStack: Boolean): Boolean;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo;
+  MemoryCallStack: Boolean; SyncObjsHook: Boolean): Boolean;
 var
   DbgLoaderInfo: TDbgLoaderInfo;
   hKernel32: THandle;
@@ -111,6 +118,8 @@ begin
 
   DbgLoaderInfo.MemoryCallStack := MemoryCallStack;
   DbgLoaderInfo.PerfDelta := 10;
+
+  DbgLoaderInfo.SyncObjsHook := SyncObjsHook;
 
   hKernel32 := GetModuleHandle('kernel32.dll');
   @DbgLoaderInfo.LoadLibrary    := GetProcAddress(hKernel32, 'LoadLibraryA');

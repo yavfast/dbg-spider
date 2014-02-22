@@ -47,7 +47,7 @@ type
     property RunParams: String read GetRunParams;
     property WorkingDirectory: String read GetWorkingDirectory;
   public
-    constructor Create(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
+    constructor Create(const ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
     destructor Destroy; override;
   end;
 
@@ -60,7 +60,7 @@ uses Debuger, DebugInfo, DelphiDebugInfo;
 
 { TDebugerThread }
 
-constructor TDebugerThread.Create(ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
+constructor TDebugerThread.Create(const ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
@@ -138,6 +138,8 @@ begin
 
       gvDebuger.CodeTracking := (doCodeTracking in FDbgOptions);
       gvDebuger.TrackSystemUnits := gvDebuger.CodeTracking and (doTrackSystemUnits in FDbgOptions);
+
+      gvDebuger.SyncObjsTracking := (doSyncObjsTracking in FDbgOptions);
 
       _AC.Log(dltInfo, 'Start debug process');
       try

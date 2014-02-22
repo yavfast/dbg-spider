@@ -77,7 +77,8 @@ begin
         RaiseException(DBG_EXCEPTION, 0, 1, DbgInfo);
 
       // —брос буфера по локам
-      _OutSyncObjsInfo;
+      if SyncObjsHooked then
+        _OutSyncObjsInfo;
     end;
   except
     on E: Exception do
