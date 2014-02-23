@@ -1257,13 +1257,18 @@ begin
 
     if ParentId <> 0 then
     begin
-      ParentThData := gvDebuger.GetThreadData(ParentId);
+      ParentThData := gvDebuger.GetThreadData(ParentId, True);
 
+      if ParentThData <> nil then
+        ParentNode := FindThreadNode(Tree, ParentThData);
+
+      (*
       if ParentThData = nil then
         // Если родительский поток завершился раньше старта дочернего
         ParentNode := FindThreadNodeById(Tree, ParentId)
       else
         ParentNode := FindThreadNode(Tree, ParentThData);
+      *)
     end;
 
     if ParentNode = Nil then
@@ -4751,6 +4756,8 @@ begin
           case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
             soEnterCriticalSection:
               CellText := 'EnterCriticalSection';
+            soSendMessage:
+              CellText := 'SendMessage';
           end;
         end;
         1: begin
@@ -4761,7 +4768,7 @@ begin
         end;
         2: begin
           case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
-            soEnterCriticalSection:
+            soEnterCriticalSection, soSendMessage:
               CellText := ElapsedToTime(Data^.SyncObjItem^.WaitTime);
           end;
         end;

@@ -1450,27 +1450,36 @@ var
 begin
   if SyncObjsInfo = Nil then Exit;
 
+  DbgSyncObjsInfo := @SyncObjsInfo^.SyncObjsInfo;
+
+  // Если нет стека для выхода из SyncObj, то берем стек для входа
+  if (DbgSyncObjsInfo^.SyncObjsStateType = sosLeave) and (Length(DbgSyncObjsInfo^.Stack) = 0) then
+    if Assigned(SyncObjsInfo^.Link) then
+      DbgSyncObjsInfo := @SyncObjsInfo^.Link^.SyncObjsInfo;
+
+  // TODO: Добавить опцию дебагера
+  // Проверка на игноры
+  case DbgSyncObjsInfo^.SyncObjsType of
+    soEnterCriticalSection:
+      begin
+        // Не логируем критические секции без блокировки
+        if DbgSyncObjsInfo^.OwningThreadId = 0 then
+          Exit;
+
+        // Игнорим рекурсивную блокировку в своем потоке
+        if (DbgSyncObjsInfo^.ThreadId = DbgSyncObjsInfo^.OwningThreadId) then
+          Exit;
+      end;
+    soSendMessage:
+      begin
+        // Игнорим SendMessage в главном потоке
+        if DbgSyncObjsInfo^.ThreadId = gvDebuger.ProcessData^.MainThreadID then
+          Exit;
+      end;
+  end;
+
   StackEntry := TStackEntry.Create;
   try
-    DbgSyncObjsInfo := @SyncObjsInfo^.SyncObjsInfo;
-
-    // Если нет стека для выхода из SyncObj, то берем стек для входа
-    if (DbgSyncObjsInfo^.SyncObjsStateType = sosLeave) and (Length(DbgSyncObjsInfo^.Stack) = 0) then
-      if Assigned(SyncObjsInfo^.Link) then
-        DbgSyncObjsInfo := @SyncObjsInfo^.Link^.SyncObjsInfo;
-
-    // TODO: Добавить опцию дебагера
-    if DbgSyncObjsInfo^.SyncObjsType = soEnterCriticalSection then
-    begin
-      // Не логируем критические секции без блокировки
-      if DbgSyncObjsInfo^.OwningThreadId = 0 then
-        Exit;
-
-      // Игнорим рекурсивную блокировку в своем потоке
-      if (DbgSyncObjsInfo^.ThreadId = DbgSyncObjsInfo^.OwningThreadId) then
-        Exit;
-    end;
-
     // Проход по стеку
     for I := 0 to High(DbgSyncObjsInfo^.Stack) do
     begin

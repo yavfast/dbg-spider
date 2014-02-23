@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1212
     Height = 545
-    ActivePage = tsThreads1
+    ActivePage = tsLockTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -758,7 +758,7 @@ object MainForm: TMainForm
             Caption = 'actbMemInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = clWhite
             EdgeInner = esNone
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
@@ -1627,7 +1627,7 @@ object MainForm: TMainForm
             Caption = 'actbExceptionInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = clWhite
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2018,7 +2018,7 @@ object MainForm: TMainForm
             Caption = 'actbCodeTrackingInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = clWhite
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2137,7 +2137,7 @@ object MainForm: TMainForm
             Caption = 'actbLockTracking'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = clWhite
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2596,7 +2596,7 @@ object MainForm: TMainForm
           Caption = 'actbUpdateInfo'
           ColorMap.MenuColor = clMenu
           ColorMap.BtnSelectedColor = clBtnFace
-          ColorMap.UnusedColor = 13684944
+          ColorMap.UnusedColor = clWhite
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clBlack
           Font.Height = -11
@@ -2866,7 +2866,7 @@ object MainForm: TMainForm
         AlignWithMargins = True
         Left = 240
         Top = 3
-        Width = 154
+        Width = 123
         Height = 86
         ActionManager = amMain
         Caption = 'Memory info options'
@@ -2875,35 +2875,35 @@ object MainForm: TMainForm
       object rbngrpExceptionOptions: TRibbonGroup
         Tag = 4
         AlignWithMargins = True
-        Left = 396
+        Left = 481
         Top = 3
         Width = 131
         Height = 86
         ActionManager = amMain
         Caption = 'Exception options'
-        GroupIndex = 3
+        GroupIndex = 4
       end
       object rbngrpCodeTracking: TRibbonGroup
         Tag = 5
         AlignWithMargins = True
-        Left = 529
+        Left = 614
         Top = 3
         Width = 127
         Height = 86
         ActionManager = amMain
         Caption = 'Code tracking options'
-        GroupIndex = 4
+        GroupIndex = 5
       end
       object rbngrpLockTracking: TRibbonGroup
         Tag = 6
         AlignWithMargins = True
-        Left = 658
+        Left = 365
         Top = 3
         Width = 114
         Height = 86
         ActionManager = amMain
         Caption = 'Lock tracking options'
-        GroupIndex = 5
+        GroupIndex = 3
       end
     end
     object rbpMain: TRibbonPage
@@ -2935,7 +2935,7 @@ object MainForm: TMainForm
       object rbngrpDebug: TRibbonGroup
         Left = 327
         Top = 3
-        Width = 121
+        Width = 181
         Height = 86
         ActionManager = amMain
         Caption = 'Debug'
@@ -2943,7 +2943,7 @@ object MainForm: TMainForm
       end
       object rbngrpFeedback: TRibbonGroup
         AlignWithMargins = True
-        Left = 450
+        Left = 510
         Top = 3
         Width = 61
         Height = 86
@@ -2980,7 +2980,7 @@ object MainForm: TMainForm
       Caption = 'actbMainTabs'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
+      ColorMap.UnusedColor = clWhite
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
@@ -3547,15 +3547,23 @@ object MainForm: TMainForm
     end
     object acLockTracking: TAction
       Category = 'Options'
+      AutoCheck = True
       Caption = 'Lock tracking'
       Checked = True
       OnExecute = acLockTrackingExecute
     end
     object acViewSyncObjsOnTimeLine: TAction
       Category = 'Options'
+      AutoCheck = True
       Caption = 'View on timeline'
       Checked = True
       OnExecute = acViewSyncObjsOnTimeLineExecute
+    end
+    object acDebugOptions: TAction
+      Category = 'Options'
+      Caption = 'Options'
+      ImageIndex = 23
+      OnExecute = acDebugOptionsExecute
     end
   end
   object OD: TFileOpenDialog
@@ -3802,6 +3810,15 @@ object MainForm: TMainForm
             Action = acPauseContinue
             Caption = '&Pause'
             ImageIndex = 6
+          end
+          item
+            Caption = '-'
+          end
+          item
+            Action = acDebugOptions
+            Caption = '&Options'
+            ImageIndex = 23
+            CommandProperties.ButtonSize = bsLarge
           end>
         ActionBar = rbngrpDebug
       end
@@ -4024,12 +4041,6 @@ object MainForm: TMainForm
             Caption = '&GetMem call stack'
             CommandStyle = csCheckBox
             CommandProperties.Width = -1
-          end
-          item
-            Action = acMemInfoDblFree
-            Caption = '&Double FreeMem control'
-            CommandStyle = csCheckBox
-            CommandProperties.Width = -1
           end>
         ActionBar = rbngrpMemInfoOptions
       end
@@ -4177,6 +4188,15 @@ object MainForm: TMainForm
             CommandProperties.Width = -1
           end>
         ActionBar = rbngrpLockTracking
+      end
+      item
+        Items = <
+          item
+            Action = acDebugOptions
+            Caption = '&Options'
+            ImageIndex = 23
+            CommandProperties.ButtonSize = bsLarge
+          end>
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain

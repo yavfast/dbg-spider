@@ -2619,7 +2619,7 @@ begin
               end;
 
               // Формируем стек вызова
-              if SyncObjsInfo^.SyncObjsType = soEnterCriticalSection then
+              if SyncObjsInfo^.SyncObjsType in [soEnterCriticalSection, soSendMessage] then
                 ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
 
             finally

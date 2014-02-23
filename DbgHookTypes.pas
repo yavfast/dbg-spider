@@ -79,7 +79,9 @@ type
         OwningThreadId: Cardinal;
       );
       soSendMessage:
-      ();
+      (
+        Msg: UINT;
+      );
   end;
 
 const
