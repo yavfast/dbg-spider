@@ -68,7 +68,8 @@ type
 
     class procedure DoAction(const Action: TacAction; const Args: array of Variant); overload; static;
     class procedure DoAction(const Action: TacAction; const Args: TArgsList); overload; static;
-    class procedure DoSyncAction(const Action: TacAction; const Args: TArgsList); static;
+    class procedure DoSyncAction(const Action: TacAction; const Args: array of Variant); overload; static;
+    class procedure DoSyncAction(const Action: TacAction; const Args: TArgsList); overload; static;
     class procedure ViewDebugInfo(DebugInfo: TDebugInfo); static;
 
     class procedure ClearDebug(const DbgFree: Boolean); static;
@@ -179,6 +180,18 @@ end;
 class procedure TActionController.DoAction(const Action: TacAction; const Args: TArgsList);
 begin
   gvActionQueue.AddAction(Action, Args);
+end;
+
+class procedure TActionController.DoSyncAction(const Action: TacAction; const Args: array of Variant);
+var
+  _Args: TArgsList;
+  i: Integer;
+begin
+  SetLength(_Args, Length(Args));
+  for i := 0 to High(Args) do
+    _Args[i] := Args[i];
+
+  TActionController.DoSyncAction(Action, _Args);
 end;
 
 class procedure TActionController.DoAction(const Action: TacAction; const Args: array of Variant);

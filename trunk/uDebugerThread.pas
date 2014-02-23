@@ -260,14 +260,14 @@ procedure TDebugerThread.OnCreateProcess(Sender: TObject; ProcessId: TProcessId;
 begin
   _AC.Log(dltProcessEvent, 'Process Start ID: %d', [ProcessId]);
 
-  _AC.DoAction(acChangeDbgState, []);
-  _AC.DoAction(acCreateProcess, [ProcessId]);
+  _AC.DoSyncAction(acChangeDbgState, []);
+  _AC.DoSyncAction(acCreateProcess, [ProcessId]);
 end;
 
 procedure TDebugerThread.OnCreateThread(Sender: TObject; ThreadId: TThreadId; Data: PCreateThreadDebugInfo);
 begin
   _AC.Log(dltThreadEvent, 'Thread Create ID: %d', [ThreadID]);
-  _AC.DoAction(acAddThread, [ThreadID]);
+  _AC.DoSyncAction(acAddThread, [ThreadID]);
 end;
 
 procedure TDebugerThread.OnDbgLog(Sender: TObject; ThreadId: TThreadId; const Data: String);

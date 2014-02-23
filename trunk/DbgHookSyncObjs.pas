@@ -7,23 +7,42 @@ uses Windows;
 type
   TKernel32_Sleep =
     procedure (milliseconds: Cardinal); stdcall;
+
   TKernel32_EnterCriticalSection =
     procedure (var lpCriticalSection: TRTLCriticalSection); stdcall;
   TKernel32_LeaveCriticalSection =
     procedure (var lpCriticalSection: TRTLCriticalSection); stdcall;
+
   TKernel32_WaitForSingleObject =
     function (hHandle: THandle; dwMilliseconds: DWORD): DWORD; stdcall;
   TKernel32_WaitForMultipleObjects =
     function (nCount: DWORD; lpHandles: PWOHandleArray; bWaitAll: BOOL; dwMilliseconds: DWORD): DWORD; stdcall;
 
+  TKernel32_SendMessageA =
+    function (hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+  TKernel32_SendMessageW =
+    function (hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+  TKernel32_SendMessageTimeoutA =
+    function (hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM; fuFlags, uTimeout: UINT; lpdwResult: PDWORD_PTR): LRESULT; stdcall;
+  TKernel32_SendMessageTimeoutW =
+    function (hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM; fuFlags, uTimeout: UINT; lpdwResult: PDWORD_PTR): LRESULT; stdcall;
+
+
 var
   SyncObjsHooked: Boolean = False;
 
   Kernel32_Sleep: TKernel32_Sleep = nil;
+
   Kernel32_EnterCriticalSection: TKernel32_EnterCriticalSection = nil;
   Kernel32_LeaveCriticalSection: TKernel32_LeaveCriticalSection = nil;
+
   Kernel32_WaitForSingleObject: TKernel32_WaitForSingleObject = nil;
   Kernel32_WaitForMultipleObjects: TKernel32_WaitForMultipleObjects = nil;
+
+  Kernel32_SendMessageA: TKernel32_SendMessageA = Nil;
+  Kernel32_SendMessageW: TKernel32_SendMessageW = Nil;
+  Kernel32_SendMessageTimeoutA: TKernel32_SendMessageTimeoutA = Nil;
+  Kernel32_SendMessageTimeoutW: TKernel32_SendMessageTimeoutW = Nil;
 
 function InitSyncObjsHook(ImageBase: Pointer): Boolean; stdcall;
 procedure ResetSyncObjsHook; stdcall;
@@ -197,6 +216,8 @@ begin
           SyncObjsInfo^.CS := PRTLCriticalSection(Data);
           SyncObjsInfo^.OwningThreadId := 0;
         end;
+      soSendMessage:
+        SyncObjsInfo^.Msg := UINT(Data);
     end;
 
     if (DbgSyncObjsStateType = sosEnter) or (SyncObjsInfo^.SyncObjsType = soInCriticalSection) then
@@ -284,65 +305,124 @@ begin
   _AddSyncObjsInfo(soWaitForMultipleObjects, sosLeave, Id, NativeUInt(Pointer(lpHandles)));
 end;
 
+function _HookSendMessageA(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+var
+  Id: NativeUInt;
+begin
+  Id := NativeUInt(InterlockedIncrement(SyncObjsId));
+
+  _AddSyncObjsInfo(soSendMessage, sosEnter, Id, NativeUInt(Msg));
+
+  Result := Kernel32_SendMessageA(hWnd, Msg, wParam, lParam);
+
+  _AddSyncObjsInfo(soSendMessage, sosLeave, Id, NativeUInt(Msg));
+end;
+
+function _HookSendMessageW(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+var
+  Id: NativeUInt;
+begin
+  Id := NativeUInt(InterlockedIncrement(SyncObjsId));
+
+  _AddSyncObjsInfo(soSendMessage, sosEnter, Id, NativeUInt(Msg));
+
+  Result := Kernel32_SendMessageW(hWnd, Msg, wParam, lParam);
+
+  _AddSyncObjsInfo(soSendMessage, sosLeave, Id, NativeUInt(Msg));
+end;
+
+function _HookSendMessageTimeoutA(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM; fuFlags, uTimeout: UINT; lpdwResult: PDWORD_PTR): LRESULT; stdcall;
+var
+  Id: NativeUInt;
+begin
+  Id := NativeUInt(InterlockedIncrement(SyncObjsId));
+
+  _AddSyncObjsInfo(soSendMessage, sosEnter, Id, NativeUInt(Msg));
+
+  Result := Kernel32_SendMessageTimeoutA(hWnd, Msg, wParam, lParam, fuFlags, uTimeout, lpdwResult);
+
+  _AddSyncObjsInfo(soSendMessage, sosLeave, Id, NativeUInt(Msg));
+end;
+
+function _HookSendMessageTimeoutW(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM; fuFlags, uTimeout: UINT; lpdwResult: PDWORD_PTR): LRESULT; stdcall;
+var
+  Id: NativeUInt;
+begin
+  Id := NativeUInt(InterlockedIncrement(SyncObjsId));
+
+  _AddSyncObjsInfo(soSendMessage, sosEnter, Id, NativeUInt(Msg));
+
+  Result := Kernel32_SendMessageTimeoutW(hWnd, Msg, wParam, lParam, fuFlags, uTimeout, lpdwResult);
+
+  _AddSyncObjsInfo(soSendMessage, sosLeave, Id, NativeUInt(Msg));
+end;
+
+
 var
   _PeMapImgHooks: TJclPeMapImgHooks = Nil;
+  _hKernel32: THandle = 0;
+  _hUser32: THandle = 0;
+  _ImageBase: Pointer = Nil;
 
-function _HookSyncObjs(ImageBase: Pointer): Boolean;
+function _ReplaceImport(ModuleName: PWideChar; lpProcName: LPCSTR; HookProc: Pointer; var BaseProc: Pointer): Boolean;
 var
   ProcAddr: Pointer;
-  H: THandle;
+  hModule: THandle;
+begin
+  Result := False;
+
+  hModule := GetModuleHandle(ModuleName);
+  if hModule = 0 then
+  begin
+    _Log(Format('GetModuleHandle "%s" - fail', [String(ModuleName)]));
+    Exit;
+  end;
+
+  ProcAddr := GetProcAddress(hModule, lpProcName);
+  if ProcAddr = Nil then
+  begin
+    _Log(Format('Hook %s - fail GetProcAddress', [String(lpProcName)]));
+    Exit;
+  end;
+
+  if _PeMapImgHooks.ReplaceImport(_ImageBase, ModuleName, ProcAddr, HookProc) then
+  begin
+    BaseProc := ProcAddr;
+    Result := True;
+
+    _Log(Format('Hook %s - ok', [String(lpProcName)]));
+  end
+  else
+    // Функция не используется в проекте
+    _Log(Format('Hook %s - skip', [String(lpProcName)]));
+end;
+
+function _HookSyncObjs(ImageBase: Pointer): Boolean;
 begin
   if not SyncObjsHooked then
   begin
     Result := False;
 
-    H := GetModuleHandle(kernel32);
-    if H = 0 then
-    begin
-      _Log('GetModuleHandle(kernel32) - fail');
-      Exit;
-    end;
-
     SyncObjsLock := TDbgCriticalSection.Create;
 
     _PeMapImgHooks := TJclPeMapImgHooks.Create;
 
+    _ImageBase := ImageBase;
+
     SyncObjsLock.Enter;
     try
-      ProcAddr := GetProcAddress(H, 'Sleep');
-      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookSleep) then
-      begin
-        @Kernel32_Sleep := ProcAddr;
-        _Log('Hook Sleep - ok');
-      end;
+      _ReplaceImport(kernel32, 'Sleep', @_HookSleep, @Kernel32_Sleep);
 
-      ProcAddr := GetProcAddress(H, 'WaitForSingleObject');
-      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForSingleObject) then
-      begin
-        @Kernel32_WaitForSingleObject := ProcAddr;
-        _Log('Hook WaitForSingleObject - ok');
-      end;
+      _ReplaceImport(kernel32, 'EnterCriticalSection', @_HookEnterCriticalSection, @Kernel32_EnterCriticalSection);
+      _ReplaceImport(kernel32, 'LeaveCriticalSection', @_HookLeaveCriticalSection, @Kernel32_LeaveCriticalSection);
 
-      ProcAddr := GetProcAddress(H, 'WaitForMultipleObjects');
-      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookWaitForMultipleObjects) then
-      begin
-        @Kernel32_WaitForMultipleObjects := ProcAddr;
-        _Log('Hook WaitForMultipleObjects - ok');
-      end;
+      _ReplaceImport(kernel32, 'WaitForSingleObject', @_HookWaitForSingleObject, @Kernel32_WaitForSingleObject);
+      _ReplaceImport(kernel32, 'WaitForMultipleObjects', @_HookWaitForMultipleObjects, @Kernel32_WaitForMultipleObjects);
 
-      ProcAddr := GetProcAddress(H, 'EnterCriticalSection');
-      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookEnterCriticalSection) then
-      begin
-        @Kernel32_EnterCriticalSection := ProcAddr;
-        _Log('Hook EnterCriticalSection - ok');
-      end;
-
-      ProcAddr := GetProcAddress(H, 'LeaveCriticalSection');
-      if Assigned(ProcAddr) and _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookLeaveCriticalSection) then
-      begin
-        @Kernel32_LeaveCriticalSection := ProcAddr;
-        _Log('Hook LeaveCriticalSection - ok');
-      end;
+      _ReplaceImport(user32, 'SendMessageA', @_HookSendMessageA, @Kernel32_SendMessageA);
+      _ReplaceImport(user32, 'SendMessageW', @_HookSendMessageW, @Kernel32_SendMessageW);
+      _ReplaceImport(user32, 'SendMessageTimeoutA', @_HookSendMessageTimeoutA, @Kernel32_SendMessageTimeoutA);
+      _ReplaceImport(user32, 'SendMessageTimeoutW', @_HookSendMessageTimeoutW, @Kernel32_SendMessageTimeoutW);
 
       SyncObjsHooked := True;
       Result := True;
@@ -360,14 +440,25 @@ begin
   begin
     if Assigned(@Kernel32_Sleep) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_Sleep);
+
     if Assigned(@Kernel32_EnterCriticalSection) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_EnterCriticalSection);
     if Assigned(@Kernel32_LeaveCriticalSection) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_LeaveCriticalSection);
+
     if Assigned(@Kernel32_WaitForSingleObject) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForSingleObject);
     if Assigned(@Kernel32_WaitForMultipleObjects) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForMultipleObjects);
+
+    if Assigned(@Kernel32_SendMessageA) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_SendMessageA);
+    if Assigned(@Kernel32_SendMessageW) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_SendMessageW);
+    if Assigned(@Kernel32_SendMessageTimeoutA) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_SendMessageTimeoutA);
+    if Assigned(@Kernel32_SendMessageTimeoutW) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_SendMessageTimeoutW);
 
     FreeAndNil(_PeMapImgHooks);
   end;
