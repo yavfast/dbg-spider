@@ -78,10 +78,12 @@ begin
   _TimerQueue := CreateTimerQueue;
   if _TimerQueue <> 0 then
   begin
+    (*
     if CreateTimerQueueTimer(_SamplingTimer, _TimerQueue, @_OutSamplingInfo, nil, 100, 1, WT_EXECUTEDEFAULT) then
       _Log(Format('Init sampling timer (%d msec) - ok', [1]))
     else
       _Log(Format('Init sampling timer (%d msec) - fail', [1]));
+    *)
 
     if CreateTimerQueueTimer(_OutDbgInfoTimer, _TimerQueue, @_OutDbgInfo, nil, _Delta, _Delta, WT_EXECUTEDEFAULT) then
       _Log(Format('Init perfomance timer (%d msec) - ok', [_Delta]))

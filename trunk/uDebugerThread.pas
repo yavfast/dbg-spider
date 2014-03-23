@@ -223,21 +223,26 @@ begin
 
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
+    _AC.Log(dltInfo, 'Scan source dirs');
+    gvDebugInfo.UpdateSourceDirs(utSystem, DelphiSourceDirs);
+    gvDebugInfo.UpdateSourceDirs(utProject, ProjectSourceDirs);
+
     _AC.Log(dltInfo, 'Load debug info for "%s"', [AppName]);
     FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName);
 
     if not FDbgInfoLoaded then
     begin
       InitDebugInfo('.map');
+
+      _AC.Log(dltInfo, 'Scan source dirs');
+      gvDebugInfo.UpdateSourceDirs(utSystem, DelphiSourceDirs);
+      gvDebugInfo.UpdateSourceDirs(utProject, ProjectSourceDirs);
+
       FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName);
     end;
 
     if FDbgInfoLoaded then
     begin
-      _AC.Log(dltInfo, 'Scan source dirs');
-      gvDebugInfo.UpdateSourceDirs(utSystem, DelphiSourceDirs);
-      gvDebugInfo.UpdateSourceDirs(utProject, ProjectSourceDirs);
-
       _AC.Log(dltInfo, 'Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, AppName]);
       _AC.ViewDebugInfo(gvDebugInfo);
 
