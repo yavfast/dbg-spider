@@ -232,7 +232,6 @@ begin
   except
     on E: Exception do
     begin
-      Result := False;
       FreeAndNil(FMapScanner);
 
       raise;
@@ -395,7 +394,6 @@ end;
 procedure TMapDebugInfo.LoadProc(Proc: PJclMapProcName);
 var
   UnitSegmentInfo: TUnitSegmentInfo;
-  UnitSourceModuleInfo: TUnitSourceModuleInfo;
   SegmentClassInfo: TSegmentClassInfo;
   ProcAddress: Pointer;
 
