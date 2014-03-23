@@ -140,12 +140,12 @@ var
   ContextRecord: PContext;
   ExceptionObj: HookException;
 begin
-//  if InDebugMode then
-//  begin
-//    // Дебагер сам отработает все коды эксепшинов
-//    _BaseRaiseExceptionProc(ExceptionCode, ExceptionFlags, NumberOfArguments, Args);
-//  end
-//  else
+  if InDebugMode then
+  begin
+    // Дебагер сам отработает все коды эксепшинов
+    _BaseRaiseExceptionProc(ExceptionCode, ExceptionFlags, NumberOfArguments, Args);
+  end
+  else
   begin
     if (ExceptionCode = cNonDelphiException) then
     begin

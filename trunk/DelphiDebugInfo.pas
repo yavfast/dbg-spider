@@ -11,7 +11,6 @@ Type
 
   TDelphiDebugInfo = Class(TDebugInfo)
   Private
-    FImage: TJclPeBorTD32Image;
     FDelphiVersion: TDelphiVersion;
     FSystemUnits: TStringList;
     FAddressInfoList: TAddressInfoList;
@@ -32,6 +31,8 @@ Type
     procedure LoadUsedUnits(UnitInfo: TUnitInfo; Module: TJclTD32ModuleInfo);
     function RegisterIndex(const Index: Byte): Integer;
 
+    procedure InitSegments;
+
     Function ParseUnit(Module: TJclTD32ModuleInfo): TUnitInfo;
 
     Procedure ResolveUnits;
@@ -45,8 +46,11 @@ Type
     procedure InitCodeTracking(const SetBP: Boolean);
     procedure FillSystemUnits;
 
-    function GetDBGFileName(const FileName: String): String;
   Protected
+    FImage: TJclPeBorTD32Image;
+
+    function GetDBGFileName(const FileName: String): String;
+
     Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Override;
   Public
     Constructor Create;
@@ -68,7 +72,6 @@ Type
     Function GetAddrInfo(Var Addr: Pointer; Const FileName: String; Line: Cardinal): TFindResult; Override;
 
     Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo; GetPrevLine: Boolean): TFindResult; Override;
-    Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: Boolean): TFindResult; Override;
 
     Function MakeFuncDbgFullName(Const ClassName, MethodName: AnsiString): AnsiString; Override;
     Function MakeFuncShortName(Const MethodName: AnsiString): AnsiString; Override;
@@ -80,7 +83,7 @@ Type
     Function VarValueAsString(const Value: Variant): String; override;
 
     function GetSystemUnit: TUnitInfo;
-    function GetMemoryManager: TVarInfo;
+    function GetMemoryManager: TVarInfo; virtual;
     function SetDebugHook(const Value: Byte): Boolean;
 
     procedure SetMemoryManagerBreakpoints; Override;
@@ -287,10 +290,7 @@ Begin
   Result := TUnitInfo.Create;
   Result.SymbolInfo := Module;
 
-  If Module.SourceModuleCount > 0 Then
-    Result.NameId := Module.SourceModules[0].NameIndex
-  Else
-    Result.NameId := Module.NameIndex;
+  Result.NameId := Module.NameIndex;
 
   Units.AddObject(Result.ShortName, Result);
   UnitsByAddr.Add(Result);
@@ -382,22 +382,37 @@ Begin
     SegmentInfo := Module.Segment[I];
 
     S := TUnitSegmentInfo.Create;
-    S.Offset := SegmentInfo.Offset + FImage.ImageSectionHeaders[SegmentInfo.Segment - 1].VirtualAddress + ImageBase;
+    S.Address := Pointer(SegmentInfo.Offset + FImage.ImageSectionHeaders[SegmentInfo.Segment - 1].VirtualAddress + ImageBase);
 
     S.Size := SegmentInfo.Size;
-    S.SegType := TUnitSegmentType(SegmentInfo.Flags);
 
-    if (S.SegType = ustCode) and ((UnitInfo.Address = Nil) or (Cardinal(UnitInfo.Address) > S.Offset)) then
-      UnitInfo.Address := Pointer(S.Offset);
-
-    case S.SegType of
-      ustData:
-        Inc(UnitInfo.Size, S.Size);
-      ustCode:
-        Inc(UnitInfo.Size, S.Size);
-      else
-        RaiseDebugCoreException('');
+    //   $0000  Data segment
+    //   $0001  Code segment
+    case SegmentInfo.Flags of
+      $0000:
+        S.SegmentClassInfo := GetSegmentByType(ustData);
+      $0001:
+        S.SegmentClassInfo := GetSegmentByType(ustCode);
+    else
+      RaiseDebugCoreException();
     end;
+
+    if Assigned(S.SegmentClassInfo) then
+    begin
+      if (S.SegmentClassInfo.SegType = ustCode) and
+        ((UnitInfo.Address = Nil) or (Cardinal(UnitInfo.Address) > Cardinal(S.Address)))
+      then
+        UnitInfo.Address := Pointer(S.Address);
+
+      case S.SegmentClassInfo.SegType of
+        ustData:
+          Inc(UnitInfo.Size, S.Size);
+        ustCode:
+          Inc(UnitInfo.Size, S.Size);
+      end;
+    end
+    else
+      RaiseDebugCoreException('');
 
     UnitInfo.Segments.Add(S);
   End;
@@ -418,6 +433,8 @@ Begin
     L := TLineInfo.Create;
     L.LineNo := LineInfo.LineNo; // - 1; ???
     L.Address := Pointer(LineInfo.Offset + FImage.ImageSectionHeaders[LineInfo.Segment - 1].VirtualAddress + ImageBase);
+    L.SrcSegment := UnitSourceModuleInfo;
+
     UnitSourceModuleInfo.Lines.Add(L);
 
     UnitInfo.Lines.Add(L);
@@ -439,6 +456,7 @@ begin
     SourceModuleInfo := Module.SourceModules[I];
 
     SM := TUnitSourceModuleInfo.Create;
+    SM.UnitInfo := UnitInfo;
     SM.NameId := SourceModuleInfo.NameIndex;
     SM.SymbolInfo := SourceModuleInfo;
 
@@ -1317,6 +1335,8 @@ var
 begin
   if MemoryManagerInfo.VarInfo = nil then Exit;
 
+  if MemoryManagerInfo.VarInfo.DataType = nil then Exit;
+
   Members := MemoryManagerInfo.VarInfo.DataType.Members;
   if Assigned(Members) and (Members.Count > 0) then
   begin
@@ -1365,8 +1385,8 @@ Begin
     begin
       Segment := Result.Segments[J];
 
-      if (Segment.SegType = ustCode) and
-        (Cardinal(Addr) >= Segment.Offset) and (Cardinal(Addr) <= Cardinal(Segment.Offset + Segment.Size))
+      if Assigned(Segment.SegmentClassInfo) and (Segment.SegmentClassInfo.SegType = ustCode) and
+        (Cardinal(Addr) >= Cardinal(Segment.Address)) and (Cardinal(Addr) <= (Cardinal(Segment.Address) + Segment.Size))
       then
         Exit;
     end;
@@ -1408,6 +1428,7 @@ begin
   FSystemUnits.Add('Web');
   FSystemUnits.Add('Data');
 
+  (*
   FSystemUnits.Add('acPNG');
   FSystemUnits.Add('sCommonData');
   FSystemUnits.Add('acZLibEx');
@@ -1417,6 +1438,7 @@ begin
   FSystemUnits.Add('sSkinManager');
   FSystemUnits.Add('sGraphUtils');
   FSystemUnits.Add('acntUtils');
+  *)
 
   FSystemUnits.Sorted := True;
 end;
@@ -1510,6 +1532,8 @@ Begin
         ddtTDS:
           FDebugInfoType := 'External(TDS)';
       end;
+
+      InitSegments;
 
       Delta := 70 / FImage.TD32Scanner.ModuleCount;
       For I := 0 To FImage.TD32Scanner.ModuleCount - 1 Do
@@ -1641,6 +1665,7 @@ begin
       Result := String(ClassName);
     end;
 end;
+
 function TDelphiDebugInfo.GetDBGFileName(const FileName: String): String;
 var
   I: Integer;
@@ -1783,27 +1808,6 @@ Begin
   end;
 End;
 
-Function TDelphiDebugInfo.GetLineInformation(const Addr: TPointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt;
-  GetPrevLine: Boolean): TFindResult;
-Var
-  UnitInfo: TUnitInfo;
-  FuncInfo: TFuncInfo;
-  LineInfo: TLineInfo;
-Begin
-  UnitName := '';
-  FuncName := '';
-  Line := -1;
-
-  Result := GetLineInfo(Addr, UnitInfo, FuncInfo, LineInfo, GetPrevLine);
-  If Result <> slNotFound Then
-  Begin
-    UnitName := UnitInfo.FullUnitName;
-    FuncName := String(FuncInfo.Name);
-    If LineInfo <> Nil Then
-      Line := LineInfo.LineNo;
-  End;
-End;
-
 function TDelphiDebugInfo.GetMemoryManager: TVarInfo;
 const
   _TMemoryManager: AnsiString = 'TMemoryManager';
@@ -1942,10 +1946,10 @@ begin
       for J := 0 to UnitInfo.Segments.Count - 1 do
       begin
         Segment := UnitInfo.Segments[J];
-        if Segment.SegType = ustCode then
+        if Assigned(Segment.SegmentClassInfo) and (Segment.SegmentClassInfo.SegType = ustCode) then
             Assert(
               VirtualProtectEx(
-                gvDebuger.ProcessData.AttachedProcessHandle, Pointer(Segment.Offset), Segment.Size, PAGE_EXECUTE_READWRITE, OldProtect
+                gvDebuger.ProcessData.AttachedProcessHandle, Pointer(Segment.Address), Segment.Size, PAGE_EXECUTE_READWRITE, OldProtect
               )
             );
       end;
@@ -1988,6 +1992,43 @@ Begin
     );
   end;
 End;
+
+procedure TDelphiDebugInfo.InitSegments;
+var
+  Idx: Integer;
+  Segment: TSegmentClassInfo;
+  ImageSectionHeader: TImageSectionHeader;
+begin
+  Segments.Clear;
+
+  for Idx := 0 to FImage.ImageSectionCount - 1 do
+  begin
+    Segment := TSegmentClassInfo.Create;
+
+    Segment.SegType := TSegmentClassInfo.StrToSegmentType(FImage.ImageSectionNames[Idx]);
+
+    ImageSectionHeader := FImage.ImageSectionHeaders[Idx];
+    Segment.Address := Pointer(ImageSectionHeader.VirtualAddress + ImageBase);
+    Segment.Size := ImageSectionHeader.SizeOfRawData;
+    Segment.ID := Idx + 1;
+
+    Segments.AddObject(FImage.ImageSectionNames[Idx], Segment);
+  end;
+
+  (*
+  Segment := TSegmentClassInfo.Create;
+  Segment.ID := $0000;
+  Segment.SegType := ustData;
+
+  Segments.AddObject('DATA', Segment);
+
+  Segment := TSegmentClassInfo.Create;
+  Segment.ID := $0001;
+  Segment.SegType := ustCode;
+
+  Segments.AddObject('CODE', Segment);
+  *)
+end;
 
 Function TDelphiDebugInfo.IsDelphiException(ExceptionRecord: PExceptionRecord): Boolean;
 Begin

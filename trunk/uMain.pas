@@ -14,7 +14,7 @@ uses
   Vcl.Menus, uUpdateInfo, uSourceViewFrame;
 
 type
-  TProgectType = (ptEmpty, ptSpider, ptApplication);
+  TProgectType = (ptEmpty, ptSpider, ptApplication, ptDebugInfo);
 
   TLinkType = (ltNone = 0, ltProject, ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
     ltDbgUnitGroup, ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
@@ -300,6 +300,7 @@ type
     acViewSyncObjsOnTimeLine: TAction;
     rbnpgOptions: TRibbonPage;
     acDebugOptions: TAction;
+    rbngrpProfilers: TRibbonGroup;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -2868,6 +2869,10 @@ begin
       if FuncInfo.Lines.Count > 0 then
       begin
         StartLine := FuncInfo.Lines[0];
+
+        if Assigned(StartLine.SrcSegment) then
+          SrcView.SourceFileName := StartLine.SrcSegment.FullUnitName;
+
         LineIdx := UnitInfo.Lines.IndexOf(StartLine) - 1;
         if LineIdx >= 0 then
         begin
@@ -3487,6 +3492,9 @@ begin
   if AnsiSameText(Ext, '.exe') then
     FProjectType := ptApplication
   else
+  if AnsiSameText(Ext, '.map') then
+    FProjectType := ptDebugInfo
+  else
     Exit;
 
   rbnMain.Caption := ProjectName;
@@ -3497,8 +3505,15 @@ begin
         gvProjectOptions.Open(ProjectName);
     ptApplication:
       begin
-        gvProjectOptions.Open(_DEFAULT_PROJECT);
+        gvProjectOptions.Open(ChangeFileExt(ProjectName, '.spider'));
         gvProjectOptions.ApplicationName := ProjectName;
+        gvProjectOptions.ProjectSource := TProjectOptions.GetDefProjectSource(ProjectName);
+        gvProjectOptions.DelphiSource := TProjectOptions.GetDefDelphiSource;
+      end;
+    ptDebugInfo:
+      begin
+        gvProjectOptions.Open(ChangeFileExt(ProjectName, '.spider'));
+        gvProjectOptions.ApplicationName := ChangeFileExt(ProjectName, '.exe');
         gvProjectOptions.ProjectSource := TProjectOptions.GetDefProjectSource(ProjectName);
         gvProjectOptions.DelphiSource := TProjectOptions.GetDefDelphiSource;
       end;
@@ -4033,7 +4048,7 @@ begin
         VarInfo := Data^.DbgFuncParamInfo;
         case Column of
           0: CellText := VarInfo.ShortName;
-          1: CellText := VarInfo.DataType.ShortName;
+          1: CellText := VarInfo.DataTypeName;
           2:
             begin
               case VarInfo.VarKind of
@@ -4243,7 +4258,7 @@ begin
 
         case Column of
           0: CellText := VarInfo.ShortName;
-          1: CellText := VarInfo.DataType.ShortName;
+          1: CellText := VarInfo.DataTypeName;
           2: CellText := Format('%p', [Pointer(VarInfo.Offset)]);
         end;
       end;

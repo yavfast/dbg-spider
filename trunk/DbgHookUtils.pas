@@ -70,22 +70,29 @@ threadvar
 
 function IsValidCodeAddr(const Addr: Pointer): Boolean;
 const
-  _PAGE_CODE: Cardinal = (PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
+  _PAGE_CODE = DWORD(PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
+var
+  Buf: PMemoryBasicInformation;
 Begin
   Result := False;
 
   if (Addr = nil) or (Addr = Pointer(-1)) then Exit;
 
-  Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0) And ((_Buf.Protect And _PAGE_CODE) <> 0);
+  Buf := @_Buf;
+  Result := (VirtualQuery(Addr, Buf^, SizeOf(TMemoryBasicInformation)) <> 0) And ((Buf^.Protect And _PAGE_CODE) <> 0);
 end;
 
 function IsValidAddr(const Addr: Pointer): Boolean;
+var
+  Buf: PMemoryBasicInformation;
 Begin
   Result := False;
 
   if (Addr = nil) or (Addr = Pointer(-1)) then Exit;
 
-  Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0);
+  Buf := @_Buf;
+
+  Result := (VirtualQuery(Addr, Buf^, SizeOf(TMemoryBasicInformation)) <> 0);
 end;
 
 function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): Boolean;

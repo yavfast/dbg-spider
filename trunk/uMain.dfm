@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1212
     Height = 545
-    ActivePage = tsLockTracking
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -743,22 +743,22 @@ object MainForm: TMainForm
               Control = actbMemInfo
               ImageIndex = -1
               MinHeight = 24
-              Width = 716
+              Width = 718
             end>
           EdgeBorders = []
           EdgeInner = esNone
           EdgeOuter = esNone
           FixedOrder = True
           object actbMemInfo: TActionToolBar
-            Left = 2
+            Left = 0
             Top = 0
-            Width = 716
+            Width = 718
             Height = 24
             ActionManager = amMain
             Caption = 'actbMemInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = clWhite
+            ColorMap.UnusedColor = 13684944
             EdgeInner = esNone
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
@@ -1612,22 +1612,22 @@ object MainForm: TMainForm
               Control = actbExceptionInfo
               ImageIndex = -1
               MinHeight = 24
-              Width = 791
+              Width = 793
             end>
           EdgeBorders = [ebTop]
           EdgeInner = esNone
           EdgeOuter = esNone
           FixedOrder = True
           object actbExceptionInfo: TActionToolBar
-            Left = 2
+            Left = 0
             Top = 0
-            Width = 791
+            Width = 793
             Height = 24
             ActionManager = amMain
             Caption = 'actbExceptionInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = clWhite
+            ColorMap.UnusedColor = 13684944
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2004,21 +2004,21 @@ object MainForm: TMainForm
               Control = actbCodeTrackingInfo
               ImageIndex = -1
               MinHeight = 26
-              Width = 660
+              Width = 662
             end>
           EdgeBorders = []
           FixedSize = True
           FixedOrder = True
           object actbCodeTrackingInfo: TActionToolBar
-            Left = 2
+            Left = 0
             Top = 0
-            Width = 660
+            Width = 662
             Height = 26
             ActionManager = amMain
             Caption = 'actbCodeTrackingInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = clWhite
+            ColorMap.UnusedColor = 13684944
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2123,21 +2123,21 @@ object MainForm: TMainForm
               Control = actbLockTracking
               ImageIndex = -1
               MinHeight = 24
-              Width = 725
+              Width = 727
             end>
           EdgeInner = esNone
           EdgeOuter = esNone
           FixedOrder = True
           object actbLockTracking: TActionToolBar
-            Left = 2
+            Left = 0
             Top = 0
-            Width = 725
+            Width = 727
             Height = 24
             ActionManager = amMain
             Caption = 'actbLockTracking'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = clWhite
+            ColorMap.UnusedColor = 13684944
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2582,21 +2582,21 @@ object MainForm: TMainForm
             Control = actbUpdateInfo
             ImageIndex = -1
             MinHeight = 24
-            Width = 1202
+            Width = 1204
           end>
         EdgeInner = esNone
         EdgeOuter = esNone
         FixedOrder = True
         object actbUpdateInfo: TActionToolBar
-          Left = 2
+          Left = 0
           Top = 0
-          Width = 1202
+          Width = 1204
           Height = 24
           ActionManager = amMain
           Caption = 'actbUpdateInfo'
           ColorMap.MenuColor = clMenu
           ColorMap.BtnSelectedColor = clBtnFace
-          ColorMap.UnusedColor = clWhite
+          ColorMap.UnusedColor = 13684944
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clBlack
           Font.Height = -11
@@ -2765,6 +2765,7 @@ object MainForm: TMainForm
         Caption = 'Options'
         Page = rbnpgOptions
       end>
+    TabIndex = 1
     UseCustomFrame = False
     DesignSize = (
       1212
@@ -2833,6 +2834,62 @@ object MainForm: TMainForm
       Width = 48
       Height = 24
       ActionManager = amMain
+    end
+    object rbpMain: TRibbonPage
+      Left = 0
+      Top = 50
+      Width = 1211
+      Height = 93
+      Caption = 'Menu'
+      Index = 0
+      object rbgProject: TRibbonGroup
+        Left = 4
+        Top = 3
+        Width = 197
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Project'
+        GroupIndex = 0
+      end
+      object rbgApplication: TRibbonGroup
+        Left = 203
+        Top = 3
+        Width = 122
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Application'
+        GroupIndex = 1
+        Rows = 2
+      end
+      object rbngrpDebug: TRibbonGroup
+        Left = 327
+        Top = 3
+        Width = 181
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Debug'
+        GroupIndex = 2
+      end
+      object rbngrpFeedback: TRibbonGroup
+        AlignWithMargins = True
+        Left = 616
+        Top = 3
+        Width = 61
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Feedback'
+        GroupIndex = 9
+        Rows = 1
+      end
+      object rbngrpProfilers: TRibbonGroup
+        Left = 510
+        Top = 3
+        Width = 104
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Active profilers'
+        GroupIndex = 4
+      end
     end
     object rbnpgOptions: TRibbonPage
       Left = 0
@@ -2906,53 +2963,6 @@ object MainForm: TMainForm
         GroupIndex = 3
       end
     end
-    object rbpMain: TRibbonPage
-      Left = 0
-      Top = 50
-      Width = 1211
-      Height = 93
-      Caption = 'Menu'
-      Index = 0
-      object rbgProject: TRibbonGroup
-        Left = 4
-        Top = 3
-        Width = 197
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Project'
-        GroupIndex = 0
-      end
-      object rbgApplication: TRibbonGroup
-        Left = 203
-        Top = 3
-        Width = 122
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Application'
-        GroupIndex = 1
-        Rows = 2
-      end
-      object rbngrpDebug: TRibbonGroup
-        Left = 327
-        Top = 3
-        Width = 181
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Debug'
-        GroupIndex = 2
-      end
-      object rbngrpFeedback: TRibbonGroup
-        AlignWithMargins = True
-        Left = 510
-        Top = 3
-        Width = 61
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Feedback'
-        GroupIndex = 9
-        Rows = 1
-      end
-    end
   end
   object cbMainTabs: TCoolBar
     Left = 0
@@ -2965,22 +2975,22 @@ object MainForm: TMainForm
         Control = actbMainTabs
         ImageIndex = -1
         MinHeight = 24
-        Width = 1210
+        Width = 1212
       end>
     EdgeBorders = []
     FixedSize = True
     FixedOrder = True
     object actbMainTabs: TActionToolBar
-      Left = 2
+      Left = 0
       Top = 0
-      Width = 1210
+      Width = 1212
       Height = 24
       ActionManager = amMain
       AllowHiding = False
       Caption = 'actbMainTabs'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = clWhite
+      ColorMap.UnusedColor = 13684944
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
@@ -3003,7 +3013,7 @@ object MainForm: TMainForm
         Control = pStatusBar
         HorizontalOnly = True
         ImageIndex = -1
-        Width = 1210
+        Width = 1212
       end>
     EdgeBorders = []
     EdgeInner = esNone
@@ -3011,9 +3021,9 @@ object MainForm: TMainForm
     FixedSize = True
     FixedOrder = True
     object pStatusBar: TPanel
-      Left = 2
+      Left = 0
       Top = 0
-      Width = 1210
+      Width = 1212
       Height = 25
       BevelEdges = []
       BevelOuter = bvNone
@@ -3039,7 +3049,7 @@ object MainForm: TMainForm
         TabOrder = 0
       end
       object pStatusDbgInfo: TPanel
-        Left = 1074
+        Left = 1076
         Top = 0
         Width = 136
         Height = 25
@@ -3079,7 +3089,7 @@ object MainForm: TMainForm
         end
       end
       object pStatusDbgState: TPanel
-        Left = 954
+        Left = 956
         Top = 0
         Width = 120
         Height = 25
@@ -3119,7 +3129,7 @@ object MainForm: TMainForm
         end
       end
       object pStatusEventCnt: TPanel
-        Left = 834
+        Left = 836
         Top = 0
         Width = 120
         Height = 25
@@ -3160,7 +3170,7 @@ object MainForm: TMainForm
         end
       end
       object pStatusTrackEventCnt: TPanel
-        Left = 703
+        Left = 705
         Top = 0
         Width = 131
         Height = 25
@@ -3571,7 +3581,7 @@ object MainForm: TMainForm
     FileTypes = <
       item
         DisplayName = 'All supported'
-        FileMask = '*.spider;*.exe;*.tds'
+        FileMask = '*.spider;*.exe;*.tds;*.map'
       end
       item
         DisplayName = 'Spider project (*.spider)'
@@ -3584,6 +3594,10 @@ object MainForm: TMainForm
       item
         DisplayName = 'External debug info (*.tds)'
         FileMask = '*.tds'
+      end
+      item
+        DisplayName = 'External debug info (*.map)'
+        FileMask = '*.map'
       end>
     Options = [fdoFileMustExist]
     Left = 112
@@ -4197,6 +4211,28 @@ object MainForm: TMainForm
             ImageIndex = 23
             CommandProperties.ButtonSize = bsLarge
           end>
+      end
+      item
+        Items = <
+          item
+            Action = acMemoryInfo
+            Caption = '&Memory info'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
+            Action = acLockTracking
+            Caption = '&Lock tracking'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
+            Action = acCodeTracking
+            Caption = '&Code tracking'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end>
+        ActionBar = rbngrpProfilers
       end>
     DisabledImages = dmShareData.imlMainSmall
     LargeDisabledImages = dmShareData.imlMain
