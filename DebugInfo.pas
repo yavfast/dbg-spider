@@ -298,7 +298,7 @@ Type
     function ParamsAsString: String;
   End;
 
-  TUnitType = (utUnknown, utProject, utSystem, utComponentLib, utExternal);
+  TUnitType = (utProject, utSystem, utComponentLib, utExternal, utUnknown);
 
   TUnitInfo = Class(TSegmentCodeInfo)
   protected
@@ -729,30 +729,52 @@ Begin
 End;
 
 function TDebugInfo.FullUnitName(const UnitName: String): String;
+const
+  _PAS = '.pas';
+  _INC = '.inc';
+  _DPR = '.dpr';
 var
   Res: String;
+  ResExt: String;
   ST: TUnitType;
 begin
-  Res := '';
-
   for ST := Low(TUnitType) to High(TUnitType) do
   begin
-    Res := ExtractFileName(UnitName);
+    Res := AnsiLowerCase(UnitName);
 
-    if not FDirs[ST].TryGetValue(AnsiLowerCase(Res), Result) then
+    ResExt := ExtractFileExt(Res);
+
+    if (Length(ResExt) <> 4) or ((ResExt <> _PAS) and (ResExt <> _INC) and (ResExt <> _DPR)) then
+      Res := Res + _PAS;
+
+    if not FDirs[ST].TryGetValue(Res, Result) then
     begin
-      if not SameText(ExtractFileExt(Res), '.pas') then
+      if not SameStr(ResExt, _PAS) then
       begin
-        Res := Res + '.pas';
-        if FDirs[ST].TryGetValue(AnsiLowerCase(Res), Result) then
+        Res := ChangeFileExt(Res, _PAS);
+        if FDirs[ST].TryGetValue(Res, Result) then
           Exit;
       end;
 
-      Result := Res;
+      if not SameStr(ResExt, _INC) then
+      begin
+        Res := ChangeFileExt(Res, _INC);
+        if FDirs[ST].TryGetValue(Res, Result) then
+          Exit;
+      end;
+
+      if not SameStr(ResExt, _DPR) then
+      begin
+        Res := ChangeFileExt(Res, _DPR);
+        if FDirs[ST].TryGetValue(Res, Result) then
+          Exit;
+      end;
     end
     else
       Exit;
   end;
+
+  Result := UnitName;
 end;
 
 function TDebugInfo.FuncByName(const FuncName: AnsiString): TFuncInfo;
