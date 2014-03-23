@@ -98,35 +98,19 @@ begin
 end;
 
 function _QueryThreadCycleTime(const ThreadHandle: THandle): UInt64;
-var
-  Res: PUInt64;
 begin
   Result := 0;
 
-  GetMem(Res, SizeOf(UInt64));
-
-  if QueryThreadCycleTime(ThreadHandle, Res) then
-    Result := Res^
-  else
+  if not QueryThreadCycleTime(ThreadHandle, @Result) then
     RaiseWinAPIException;
-
-  FreeMem(Res);
 end;
 
 function _QueryProcessCycleTime(const ProcessHandle: THandle): UInt64;
-var
-  Res: PUInt64;
 begin
   Result := 0;
 
-  GetMem(Res, SizeOf(UInt64));
-
-  if QueryProcessCycleTime(ProcessHandle, Res) then
-    Result := Res^
-  else
+  if not QueryProcessCycleTime(ProcessHandle, @Result) then
     RaiseWinAPIException;
-
-  FreeMem(Res);
 end;
 
 function FileTimeToDateTime(const FileTime: TFileTime): TDateTime;
@@ -166,68 +150,45 @@ type
     CT, ET, KT, UT: TFileTime;
   end;
 
+threadvar
+  _CPUTimeRes: RCPUTime;
+
 function GetProcessCPUTime(const hProcess: THandle): UInt64;
-var
-  FT: PCPUTime;
 begin
   Result := 0;
-  GetMem(FT, SizeOf(RCPUTime));
 
-  with FT^ do
+  with _CPUTimeRes do
     if GetProcessTimes(hProcess, CT, ET, KT, UT) then
       Result := FileTimeToInt64(KT) + FileTimeToInt64(UT)
     else
       RaiseWinAPIException;
-
-  FreeMem(FT);
 end;
 
 function GetThreadCPUTime(const hThread: THandle): UInt64;
-var
-  FT: PCPUTime;
 begin
   Result := 0;
-  GetMem(FT, SizeOf(RCPUTime));
 
-  with FT^ do
+  with _CPUTimeRes do
     if GetThreadTimes(hThread, CT, ET, KT, UT) then
       Result := FileTimeToInt64(KT) + FileTimeToInt64(UT)
     else
       RaiseWinAPIException;
-
-  FreeMem(FT);
 end;
 
 function _QueryPerformanceCounter: Int64;
-var
-  Res: PInt64;
 begin
   Result := 0;
 
-  GetMem(Res, SizeOf(Int64));
-
-  if QueryPerformanceCounter(Res^) then
-    Result := Res^
-  else
+  if not QueryPerformanceCounter(Result) then
     RaiseWinAPIException;
-
-  FreeMem(Res);
 end;
 
 function _QueryPerformanceFrequency: Int64;
-var
-  Res: PInt64;
 begin
   Result := 0;
 
-  GetMem(Res, SizeOf(Int64));
-
-  if QueryPerformanceFrequency(Res^) then
-    Result := Res^
-  else
+  if not QueryPerformanceFrequency(Result) then
     RaiseWinAPIException;
-
-  FreeMem(Res);
 end;
 
 function _GetThreadId(ThreadHandle: THandle): DWORD;

@@ -3,7 +3,7 @@
         <ProjectGuid>{99256B98-0F1D-4707-BC25-85850B6A52B7}</ProjectGuid>
         <ProjectVersion>14.6</ProjectVersion>
         <MainSource>Spider.dpr</MainSource>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
@@ -67,6 +67,7 @@
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
+        <DCC_MapFile>3</DCC_MapFile>
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
         <Icon_MainIcon>..\dbg-spider_\Spider_Icon.ico</Icon_MainIcon>
     </PropertyGroup>
@@ -134,6 +135,8 @@
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="CollectList.pas"/>
+        <DCCReference Include="MapDebugInfo.pas"/>
+        <DCCReference Include="JclPeImage.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -166,7 +169,7 @@
                     <VersionInfo Name="MajorVer">0</VersionInfo>
                     <VersionInfo Name="MinorVer">1</VersionInfo>
                     <VersionInfo Name="Release">1</VersionInfo>
-                    <VersionInfo Name="Build">312</VersionInfo>
+                    <VersionInfo Name="Build">315</VersionInfo>
                     <VersionInfo Name="Debug">False</VersionInfo>
                     <VersionInfo Name="PreRelease">False</VersionInfo>
                     <VersionInfo Name="Special">False</VersionInfo>
@@ -178,7 +181,7 @@
                 <VersionInfoKeys>
                     <VersionInfoKeys Name="CompanyName"/>
                     <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="FileVersion">0.1.1.312</VersionInfoKeys>
+                    <VersionInfoKeys Name="FileVersion">0.1.1.315</VersionInfoKeys>
                     <VersionInfoKeys Name="InternalName"/>
                     <VersionInfoKeys Name="LegalCopyright"/>
                     <VersionInfoKeys Name="LegalTrademarks"/>

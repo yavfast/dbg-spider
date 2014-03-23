@@ -12,7 +12,16 @@ const
   _EHOOK_GetObjClassType = 2;
 
 type
-  TDbgInfoType = (dstUnknown = 0, dstThreadInfo, dstMemInfo, dstPerfomance, dstPerfomanceAndInfo, dstMemHookStatus, dstSyncObjsInfo);
+  TDbgInfoType = (
+    dstUnknown = 0,
+    dstThreadInfo,
+    dstMemInfo,
+    dstPerfomance,
+    dstPerfomanceAndInfo,
+    dstMemHookStatus,
+    dstSyncObjsInfo,
+    dstSampling
+  );
 
   // Memory Info
 

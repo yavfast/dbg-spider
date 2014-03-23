@@ -15,12 +15,14 @@ Type
   TUnitInfo = Class;
   TFuncInfo = Class;
   TTypeInfo = Class;
+  TUnitSourceModuleInfo = class;
 
   { ............................................................................... }
   TLineInfo = Class
   public
     LineNo: Integer;
     Address: Pointer;
+    SrcSegment: TUnitSourceModuleInfo;
   End;
 
   TLineInfoList = TObjectList<TLineInfo>;
@@ -130,7 +132,7 @@ Type
   { .............................................................................. }
 
   { .............................................................................. }
-  TVarKind = (vkGlobal, vkStack, vkRegister, vkLink);
+  TVarKind = (vkGlobal, vkStack, vkRegister, vkLink, vkTLS);
   { .............................................................................. }
 
   { .............................................................................. }
@@ -151,6 +153,8 @@ Type
 
     function Name: AnsiString; override;
     function ShortName: String; override;
+
+    function DataTypeName: String;
 
     function AsString: String;
 
@@ -183,19 +187,35 @@ Type
   { .............................................................................. }
 
   { .............................................................................. }
-  TUnitSegmentType = (ustData = $0000, ustCode = $0001);
+  // .text,.itext,.data,.bss,.tls,.pdata,.idata,.didata,.rdata,.reloc,.rsrc
+  TSegmentType = (ustUnknown = 0, ustCode, ustICode, ustData, ustBSS, ustTLS, ustPData, ustIData, ustDIData, ustRData, ustReloc, ustSrc);
+  { .............................................................................. }
+
+  TSegmentClassInfo = class
+  public
+    Address: Pointer;
+    Size: Cardinal;
+    SegType: TSegmentType;
+    ID: Word;
+
+    function SegTypeName: String;
+    class function StrToSegmentType(const Str: String): TSegmentType; static;
+  end;
 
   TUnitSegmentInfo = Class
   public
-    Offset: Cardinal;
+    UnitInfo: TUnitInfo;
+    Address: Pointer;
     Size: Cardinal;
-    SegType: TUnitSegmentType;
+    SegmentClassInfo: TSegmentClassInfo;
   End;
   { .............................................................................. }
 
   TUnitSourceModuleInfo = Class(TNameInfo)
   public
+    UnitInfo: TUnitInfo;
     Lines: TLineInfoList;
+    Address: Pointer;
 
     Constructor Create;
     Destructor Destroy; Override;
@@ -204,6 +224,8 @@ Type
 
     function Name: AnsiString; Override;
     function ShortName: String; override;
+
+    function FullUnitName: String;
   End;
 
   { .............................................................................. }
@@ -257,6 +279,8 @@ Type
 
   TFuncInfo = Class(TSegmentCodeInfo)
     UnitInfo: TUnitInfo;
+    UnitSegment: TUnitSegmentInfo;
+
     Params: TNameList; // TODO: Отделить параметры от Vars
 
     ResultType: TTypeInfo;
@@ -294,6 +318,10 @@ Type
     function ShortName: String; Override;
 
     function FullUnitName: String;
+
+    function FindSegmentByAddr(const Addr: Pointer; const SegmentID: Word = 0): TUnitSegmentInfo;
+    function FindSourceSegmentByNameId(const NameId: TNameId): TUnitSourceModuleInfo;
+    function FindSourceSegmentByAddr(const Addr: Pointer): TUnitSourceModuleInfo;
 
     property UnitType: TUnitType read GetUnitType;
   end;
@@ -363,6 +391,7 @@ Type
   TDebugInfo = Class
   Private
     FDirs: TDbgSourceList;
+    FSegments: TStringList;
     FUnits: TStringList; // Sorted by name
     FUnitsByAddr: TSegmentCodeInfoList; // Sorted by Address
     FDbgLog: TDbgLog;
@@ -372,6 +401,7 @@ Type
     FDebugInfoLoaded: Boolean;
 
     FDebugInfoProgressCallback: TDebugInfoProgressCallback;
+
     function GetDirs(const SourceType: TUnitType): TDbgSourceDirs;
     procedure ClearDirs;
   Protected
@@ -380,6 +410,9 @@ Type
 
     procedure DoProgress(const Action: String; const Progress: Integer); virtual;
     Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Virtual; abstract;
+
+    function GetSegmentByID(const ID: Word): TSegmentClassInfo;
+    function GetSegmentByType(const SegType: TSegmentType): TSegmentClassInfo;
 
     function ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String; virtual;
     function ParseFuncName(FuncInfo: TFuncInfo): String; virtual;
@@ -402,8 +435,8 @@ Type
 
     Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
       GetPrevLine: Boolean): TFindResult; Virtual; abstract;
-    Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: Boolean): TFindResult;
-      Virtual; abstract;
+    Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String;
+      Var Line: LongInt; GetPrevLine: Boolean): TFindResult; Virtual;
 
     procedure UpdateSourceDirs(const SourceType: TUnitType; const SourceDirs: String); virtual;
     procedure AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: Boolean = True); virtual;
@@ -453,6 +486,7 @@ Type
 
     // Property SourceDirs: String read FSourceDirs;
     Property Dirs[const SourceType: TUnitType]: TDbgSourceDirs Read GetDirs;
+    Property Segments: TStringList Read FSegments;
     Property Units: TStringList Read FUnits;
     Property UnitsByAddr: TSegmentCodeInfoList read FUnitsByAddr;
 
@@ -465,6 +499,10 @@ Type
     property MemoryManagerInfo: TMemoryManagerInfo read FMemoryManagerInfo;
   End;
   { ............................................................................... }
+
+const
+  SegmentTypeNames: array[TSegmentType] of String =
+    ('', '.text', '.itext', '.data', '.bss', '.tls', '.pdata', '.idata', '.didata', '.rdata', '.reloc', '.rsrc');
 
 var
   gvDebugInfo: TDebugInfo = nil;
@@ -497,6 +535,9 @@ Begin
   for ST := Low(TUnitType) to High(TUnitType) do
     FDirs[ST] := TDbgSourceDirs.Create(4096);
 
+  FSegments := TStringList.Create;
+  FSegments.OwnsObjects := True;
+
   FUnits := TStringList.Create;
   FUnitsByAddr := TSegmentCodeInfoList.Create;
 
@@ -522,6 +563,8 @@ Begin
 
   FreeAndNil(FUnitsByAddr);
   FreeAndNil(FUnits);
+
+  FreeAndNil(FSegments);
 
   for ST := Low(TUnitType) to High(TUnitType) do
     FreeAndNil(FDirs[ST]);
@@ -733,6 +776,27 @@ Function TDebugInfo.GetFileCount: Integer;
 Begin
   Result := FUnits.Count;
 End;
+function TDebugInfo.GetLineInformation(const Addr: Pointer; var UnitName,
+  FuncName: String; var Line: Integer; GetPrevLine: Boolean): TFindResult;
+Var
+  UnitInfo: TUnitInfo;
+  FuncInfo: TFuncInfo;
+  LineInfo: TLineInfo;
+Begin
+  UnitName := '';
+  FuncName := '';
+  Line := -1;
+
+  Result := GetLineInfo(Addr, UnitInfo, FuncInfo, LineInfo, GetPrevLine);
+  If Result <> slNotFound Then
+  Begin
+    UnitName := UnitInfo.FullUnitName;
+    FuncName := String(FuncInfo.Name);
+    If LineInfo <> Nil Then
+      Line := LineInfo.LineNo;
+  End;
+end;
+
 { .............................................................................. }
 
 { .............................................................................. }
@@ -786,6 +850,35 @@ Begin
   // Result := '(' + Result + ')';
   // End;
 End;
+
+function TDebugInfo.GetSegmentByID(const ID: Word): TSegmentClassInfo;
+var
+  Idx: Integer;
+begin
+  for Idx := 0 to Segments.Count - 1 do
+  begin
+    Result := TSegmentClassInfo(Segments.Objects[Idx]);
+    if Result.ID = ID then
+      Exit;
+  end;
+
+  Result := Nil;
+end;
+
+function TDebugInfo.GetSegmentByType(const SegType: TSegmentType): TSegmentClassInfo;
+var
+  Idx: Integer;
+begin
+  for Idx := 0 to Segments.Count - 1 do
+  begin
+    Result := TSegmentClassInfo(Segments.Objects[Idx]);
+    if Result.SegType = SegType then
+      Exit;
+  end;
+
+  Result := Nil;
+end;
+
 { .............................................................................. }
 
 { .............................................................................. }
@@ -1068,7 +1161,6 @@ Begin
 End;
 { .............................................................................. }
 
-{ .............................................................................. }
 Function TDebugInfo.IsSystemException(Const ExceptionCode: DWORD): Boolean;
 Begin
   Case ExceptionCode Of
@@ -1129,6 +1221,8 @@ end;
 Constructor TFuncInfo.Create;
 Begin
   Inherited;
+
+  UnitSegment := Nil;
 
   Params := TNameList.Create;
   Params.FreeItems := False;
@@ -1364,7 +1458,10 @@ end;
 
 function TVarInfo.AsString: String;
 begin
-  Result := Format('%s: %s', [ShortName, DataType.ShortName]);
+  if Assigned(DataType) then
+    Result := Format('%s: %s', [ShortName, DataType.ShortName])
+  else
+    Result := ShortName;
 end;
 
 Constructor TVarInfo.Create;
@@ -1375,6 +1472,14 @@ Begin
   // RegisterRanges := TList.Create;
   RegisterRanges := Nil;
 End;
+
+function TVarInfo.DataTypeName: String;
+begin
+  if Assigned(DataType) then
+    Result := DataType.ShortName
+  else
+    Result := '';
+end;
 
 Destructor TVarInfo.Destroy;
 Begin
@@ -1449,6 +1554,53 @@ begin
   FreeAndNil(FuncsByAddr);
 
   Inherited;
+end;
+
+function TUnitInfo.FindSegmentByAddr(const Addr: Pointer; const SegmentID: Word = 0): TUnitSegmentInfo;
+var
+  Idx: Integer;
+begin
+  for Idx := 0 to Segments.Count - 1 do
+  begin
+    Result := Segments[Idx];
+
+    if (SegmentID <> 0) and Assigned(Result.SegmentClassInfo) and (Result.SegmentClassInfo.ID <> SegmentID) then
+      Continue;
+
+    if (Cardinal(Addr) >= Cardinal(Result.Address)) and (Cardinal(Addr) < (Cardinal(Result.Address) + Result.Size)) then
+      Exit;
+  end;
+
+  Result := Nil;
+end;
+
+function TUnitInfo.FindSourceSegmentByAddr(const Addr: Pointer): TUnitSourceModuleInfo;
+var
+  Idx: Integer;
+begin
+  for Idx := SourceSegments.Count - 1 downto 0  do
+  begin
+    Result := SourceSegments[Idx];
+
+    if (Cardinal(Addr) >= Cardinal(Result.Address)) then
+      Exit;
+  end;
+
+  Result := Nil;
+end;
+
+function TUnitInfo.FindSourceSegmentByNameId(const NameId: TNameId): TUnitSourceModuleInfo;
+var
+  Idx: Integer;
+begin
+  for Idx := 0 to SourceSegments.Count - 1 do
+  begin
+    Result := TUnitSourceModuleInfo(SourceSegments[Idx]);
+    if Result.NameId = NameId then
+      Exit;
+  end;
+
+  Result := Nil;
 end;
 
 function TUnitInfo.FullUnitName: String;
@@ -1803,7 +1955,10 @@ begin
     BinarySearch(SearchItem, Idx); // !!! ошибка поиска Idx +- 1
 
     if (Idx >= 0) and (Idx < Count) then
-      Result := Items[Idx];
+      Result := Items[Idx]
+    else
+    if Idx = Count then
+      Result := Items[Count - 1];
 
     if (Result <> Nil) then
     begin
@@ -1896,6 +2051,11 @@ begin
   inherited;
 end;
 
+function TUnitSourceModuleInfo.FullUnitName: String;
+begin
+  Result := gvDebugInfo.FullUnitName(String(Name));
+end;
+
 function TUnitSourceModuleInfo.Name: AnsiString;
 begin
   Result := gvDebugInfo.GetNameById(NameId);
@@ -1922,6 +2082,22 @@ begin
   inherited;
 
   Clear;
+end;
+
+{ TSegmentClassInfo }
+
+function TSegmentClassInfo.SegTypeName: String;
+begin
+  Result := SegmentTypeNames[SegType];
+end;
+
+class function TSegmentClassInfo.StrToSegmentType(const Str: String): TSegmentType;
+begin
+  for Result := ustCode to High(TSegmentType) do
+    if SameText(Str, SegmentTypeNames[Result]) then
+      Exit;
+
+  Result := ustUnknown;
 end;
 
 End.

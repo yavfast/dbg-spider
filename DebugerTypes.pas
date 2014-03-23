@@ -135,11 +135,15 @@ type
     Active: array [THWBPIndex] of Boolean;
   end;
 
+  (*
   PStackPoint = ^TStackPoint;
   TStackPoint = packed record
     EIP: Pointer;
     EBP: Pointer;
   end;
+
+  TStackPointList = Array of TStackPoint;
+  *)
 
   TDbgInfoStack = array of Pointer;
 
@@ -234,8 +238,6 @@ type
   TFuncSyncObjsInfoList = TCollectList<RPSyncObjsInfo>;
 
   PThreadData = ^TThreadData;
-
-  TStackPointList = Array of TStackPoint;
 
   TExceptInfo = class
   public

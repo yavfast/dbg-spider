@@ -45,7 +45,9 @@ uses
   uExceptionHook in 'uExceptionHook.pas',
   uRWLock in 'uRWLock.pas',
   uSourceViewFrame in 'uSourceViewFrame.pas' {SourceViewFrame: TFrame},
-  CollectList in 'CollectList.pas';
+  CollectList in 'CollectList.pas',
+  MapDebugInfo in 'MapDebugInfo.pas',
+  JclPeImage in 'JclPeImage.pas';
 
 {$R *.res}
 

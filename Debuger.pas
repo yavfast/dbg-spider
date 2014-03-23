@@ -164,6 +164,7 @@ type
     procedure ProcessDbgPerfomance(DebugEvent: PDebugEvent);
     procedure ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
     procedure ProcessDbgTraceInfo(DebugEvent: PDebugEvent);
+    procedure ProcessDbgSampling(DebugEvent: PDebugEvent);
 
     function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 
@@ -240,7 +241,7 @@ type
     Function IsValidCodeAddr(Const Addr: Pointer): Boolean;
     Function IsValidProcessCodeAddr(Const Addr: Pointer): Boolean;
 
-    procedure GetCallStack(ThData: PThreadData; var Stack: TStackPointList);
+    procedure GetCallStack(ThData: PThreadData; var Stack: TDbgInfoStack);
 
     function GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
     function CurThreadId: TThreadId;
@@ -1220,46 +1221,51 @@ begin
   Result := -1;
 end;
 
-procedure TDebuger.GetCallStack(ThData: PThreadData; var Stack: TStackPointList);
+procedure TDebuger.GetCallStack(ThData: PThreadData; var Stack: TDbgInfoStack);
+const
+  _MAX_STACK_CNT = 64;
+var
+  Cnt: Integer;
 
-    Function AddStackEntry(Const Addr, EBP: Pointer) : PStackPoint;
-    Begin
-        Result := Nil;
+  function AddStackEntry(Const Addr: Pointer): Boolean;
+  begin
+    Result := False;
 
-        if Length(Stack) > 0 then
-          if Stack[High(Stack)].EBP = EBP then
-              Exit;
+    if (Cnt < _MAX_STACK_CNT) and IsValidAddr(Addr) then
+    begin
+      Stack[Cnt] := Addr;
+      Inc(Cnt);
 
-        If not IsBadCodePtr(Addr) Then
-        Begin
-            SetLength(Stack, Length(Stack) + 1);
-            Result := @Stack[High(Stack)];
-
-            Result.EIP := Addr;
-            Result.EBP := EBP;
-        End
-    End;
+      Result := True;
+    end;
+  end;
 
 Var
-    EIP : Pointer;
-    EBP : Pointer;
+  EIP : Pointer;
+  EBP : Pointer;
 Begin
-    EIP := Pointer(ThData^.Context.Eip);
-    EBP := Pointer(ThData^.Context.Ebp);
+  EIP := Pointer(ThData^.Context^.Eip);
+  EBP := Pointer(ThData^.Context^.Ebp);
 
-    AddStackEntry(EIP, EBP);
+  SetLength(Stack, _MAX_STACK_CNT);
+  Cnt := 0;
 
-    While IsValidAddr(EBP) Do
-    Begin
-        if not ReadData(IncPointer(EBP, SizeOf(Pointer)), @EIP, SizeOf(Pointer)) then
-            Break;
+  if AddStackEntry(EIP) then
+  begin
+    while IsValidAddr(EBP) Do
+    begin
+      if not ReadData(IncPointer(EBP, SizeOf(Pointer)), @EIP, SizeOf(Pointer)) then
+        Break;
 
-        if not ReadData(EBP, @EBP, SizeOf(Pointer)) then
-            Break;
+      if not ReadData(EBP, @EBP, SizeOf(Pointer)) then
+        Break;
 
-        If AddStackEntry(EIP, EBP) = Nil Then
-            Break;
-    End;
+      if not AddStackEntry(EIP) then
+        Break;
+    end;
+  end;
+
+  SetLength(Stack, Cnt);
 end;
 
 function GetMappedFileNameA(hProcess: THandle; lpv: Pointer; lpFilename: LPSTR; nSize: DWORD): DWORD; stdcall; external 'psapi.dll';
@@ -1461,6 +1467,9 @@ begin
     end;
 end;
 
+threadvar
+  _mbi: TMemoryBasicInformation;
+
 function TDebuger.IsValidAddr(const Addr: Pointer): Boolean;
 Var
   mbi: PMemoryBasicInformation;
@@ -1469,28 +1478,23 @@ Begin
 
   if (Addr = nil) or (Addr = Pointer(-1)) then Exit;
 
-  mbi := GetMemory(SizeOf(TMemoryBasicInformation));
-  try
-    Result := (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0);
-  finally
-    FreeMemory(mbi);
-  end;
+  mbi := @_mbi;
+
+  Result := (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0);
 end;
 
 function TDebuger.IsValidCodeAddr(const Addr: Pointer): Boolean;
 Const
-  _PAGE_CODE: Cardinal = PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY;
+  _PAGE_CODE = DWORD(PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
 Var
   mbi: PMemoryBasicInformation;
 Begin
   Result := False;
-  mbi := GetMemory(SizeOf(TMemoryBasicInformation));
-  try
-    if (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0) then
-      Result := ((mbi^.Protect And _PAGE_CODE) <> 0);
-  finally
-    FreeMemory(mbi);
-  end;
+
+  mbi := @_mbi;
+
+  if (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0) then
+    Result := ((mbi^.Protect And _PAGE_CODE) <> 0);
 end;
 
 function TDebuger.IsValidProcessCodeAddr(const Addr: Pointer): Boolean;
@@ -2211,6 +2215,11 @@ begin
   end;
 end;
 
+procedure TDebuger.ProcessDbgSampling(DebugEvent: PDebugEvent);
+begin
+  //
+end;
+
 procedure TDebuger.ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
 var
   ER: PExceptionRecord;
@@ -2392,6 +2401,8 @@ begin
       ProcessDbgMemoryInfo(DebugEvent);
     dstSyncObjsInfo:
       ProcessDbgSyncObjsInfo(DebugEvent);
+    dstSampling:
+      ProcessDbgSampling(DebugEvent);
   end;
 end;
 

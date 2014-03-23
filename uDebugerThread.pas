@@ -30,7 +30,7 @@ type
     procedure OnProgress(const Action: String; const Progress: Integer);
 
     procedure InitDebuger;
-    procedure InitDebugInfo;
+    procedure InitDebugInfo(const DbgExt: String = '');
     procedure LoadDebugInfo;
     function GetAppName: String;
     function GetProjectSourceDirs: String;
@@ -56,7 +56,7 @@ var
 
 implementation
 
-uses Debuger, DebugInfo, DelphiDebugInfo;
+uses Debuger, DebugInfo, DelphiDebugInfo, MapDebugInfo;
 
 { TDebugerThread }
 
@@ -202,10 +202,15 @@ begin
   gvDebuger.OnDbgLog := OnDbgLog;
 end;
 
-procedure TDebugerThread.InitDebugInfo;
+procedure TDebugerThread.InitDebugInfo(const DbgExt: String = '');
 begin
-  if gvDebugInfo = nil then
-    gvDebugInfo := TDelphiDebugInfo.Create;
+  FreeAndNil(gvDebugInfo);
+
+  if DbgExt = '' then
+    gvDebugInfo := TDelphiDebugInfo.Create
+  else
+  if SameText(DbgExt, '.map') then
+    gvDebugInfo := TMapDebugInfo.Create;
 
   gvDebugInfo.DebugInfoProgressCallback := OnProgress;
 end;
@@ -218,15 +223,21 @@ begin
 
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
-    _AC.Log(dltInfo, 'Scan source dirs');
-    gvDebugInfo.UpdateSourceDirs(utSystem, DelphiSourceDirs);
-    gvDebugInfo.UpdateSourceDirs(utProject, ProjectSourceDirs);
-
     _AC.Log(dltInfo, 'Load debug info for "%s"', [AppName]);
     FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName);
 
+    if not FDbgInfoLoaded then
+    begin
+      InitDebugInfo('.map');
+      FDbgInfoLoaded := gvDebugInfo.ReadDebugInfo(AppName);
+    end;
+
     if FDbgInfoLoaded then
     begin
+      _AC.Log(dltInfo, 'Scan source dirs');
+      gvDebugInfo.UpdateSourceDirs(utSystem, DelphiSourceDirs);
+      gvDebugInfo.UpdateSourceDirs(utProject, ProjectSourceDirs);
+
       _AC.Log(dltInfo, 'Loaded %s debug info for "%s"', [gvDebugInfo.DebugInfoType, AppName]);
       _AC.ViewDebugInfo(gvDebugInfo);
 
@@ -236,7 +247,10 @@ begin
         _AC.Log(dltError, 'Debug info for unit "system.pas" not found. Please, set "Use debug .dcus" to "False" in project options.');
     end
     else
+    begin
       _AC.Log(dltWarning, 'No debug info for "%s"', [AppName]);
+      FreeAndNil(gvDebugInfo);
+    end;
 
     _AC.DoAction(acUpdateInfo, []);
   finally
