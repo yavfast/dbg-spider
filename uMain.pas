@@ -3799,7 +3799,7 @@ begin
       vstTrackFuncParent.Invalidate;
       vstTrackFuncChilds.Invalidate;
 
-      UpdateTrackHistoryList;
+      // UpdateTrackHistoryList; ???
     end;
     6: begin
       vstLockThreads.Invalidate;
