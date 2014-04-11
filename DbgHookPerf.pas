@@ -7,7 +7,8 @@ procedure ResetPerfomance; stdcall;
 
 implementation
 
-uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory, DbgHookSyncObjs, DbgHookUtils;
+uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory, DbgHookSyncObjs, DbgHookUtils,
+  DbgHookCS;
 
 type
   TPerfThread = class(TThread)
@@ -29,69 +30,80 @@ var
   _IsSetOutDbgInfoThreadName: Boolean = False;
   _DbgInfoPerfomance: NativeUInt = NativeUInt(dstPerfomance);
 
+var
+  _DbgInfoSampling: NativeUInt = NativeUInt(dstSampling);
+  _DbgSamplingLock: TDbgCriticalSection = Nil;
+
 procedure _OutDbgInfo(Context: Pointer; Success: Boolean); stdcall;
+const
+  _DBG_THREAD_NAME = '### DbgInfo control thread';
 begin
-  if not _IsSetOutDbgInfoThreadName then
-  begin
-    _IsSetOutDbgInfoThreadName := True;
-    TThread.NameThreadForDebugging('### DbgInfo profiler thread', GetCurrentThreadId);
-  end;
-
+  _DbgSamplingLock.Enter;
   try
-    // —брос буфера по пам€ти
-    if not _OutMemInfoBuf(dstPerfomanceAndInfo) then
-      RaiseException(DBG_EXCEPTION, 0, 1, @_DbgInfoPerfomance);
+    if not _IsSetOutDbgInfoThreadName then
+    begin
+      _IsSetOutDbgInfoThreadName := True;
+      TThread.NameThreadForDebugging(_DBG_THREAD_NAME, GetCurrentThreadId);
+    end;
 
-    // —брос буфера по локам
-    if SyncObjsHooked then
-      _OutSyncObjsInfo;
-  except
-    on E: Exception do
-      _Log(Format('Fail perfomance timer proc: [%s] %s', [E.ClassName, E.Message]));
+    //try
+      // —брос буфера по пам€ти
+      if not _OutMemInfoBuf(dstPerfomanceAndInfo) then
+        RaiseException(DBG_EXCEPTION, 0, 1, @_DbgInfoPerfomance);
+
+      // —брос буфера по локам
+      if SyncObjsHooked then
+        _OutSyncObjsInfo;
+    //except
+    //  on E: Exception do
+    //    _Log(Format('Fail perfomance timer proc: [%s] %s', [E.ClassName, E.Message]));
+    //end;
+  finally
+    _DbgSamplingLock.Leave;
   end;
 end;
 
-var
-  _IsSetOutSamplingInfoThreadName: Boolean = False;
-  _DbgInfoSampling: NativeUInt = NativeUInt(dstSampling);
-
 procedure _OutSamplingInfo(Context: Pointer; Success: Boolean); stdcall;
 begin
-  if not _IsSetOutSamplingInfoThreadName then
+  if _DbgSamplingLock.TryEnter then // »гнорим событи€, если не успеваем их отрабатывать
   begin
-    _IsSetOutSamplingInfoThreadName := True;
-    TThread.NameThreadForDebugging('### DbgInfo sampling thread', GetCurrentThreadId);
-  end;
+    //try
+      RaiseException(DBG_EXCEPTION, 0, 1, @_DbgInfoSampling);
+    //except
+    //  on E: Exception do
+    //    _Log(Format('Fail sampling timer proc: [%s] %s', [E.ClassName, E.Message]));
+    //end;
 
-  try
-    RaiseException(DBG_EXCEPTION, 0, 1, @_DbgInfoSampling);
-  except
-    on E: Exception do
-      _Log(Format('Fail sampling timer proc: [%s] %s', [E.ClassName, E.Message]));
+    _DbgSamplingLock.Leave;
   end;
 end;
 
 procedure InitPerfomance(Delta: Cardinal); stdcall;
+const
+  _SAMPLING_DELTA = 2;
 begin
   _Delta := Delta;
+
+  _DbgSamplingLock := TDbgCriticalSection.Create;
 
   _TimerQueue := CreateTimerQueue;
   if _TimerQueue <> 0 then
   begin
     (*
-    if CreateTimerQueueTimer(_SamplingTimer, _TimerQueue, @_OutSamplingInfo, nil, 100, 1, WT_EXECUTEDEFAULT) then
-      _Log(Format('Init sampling timer (%d msec) - ok', [1]))
+    if CreateTimerQueueTimer(_SamplingTimer, _TimerQueue, @_OutSamplingInfo, nil, _SAMPLING_DELTA, _SAMPLING_DELTA, WT_EXECUTEINTIMERTHREAD or WT_EXECUTEINPERSISTENTTHREAD)
+    then
+      _Log(Format('Init sampling timer (%d msec) - ok', [_SAMPLING_DELTA]))
     else
-      _Log(Format('Init sampling timer (%d msec) - fail', [1]));
+      _Log(Format('Init sampling timer (%d msec) - fail', [_SAMPLING_DELTA]));
     *)
 
-    if CreateTimerQueueTimer(_OutDbgInfoTimer, _TimerQueue, @_OutDbgInfo, nil, _Delta, _Delta, WT_EXECUTEDEFAULT) then
+    if CreateTimerQueueTimer(_OutDbgInfoTimer, _TimerQueue, @_OutDbgInfo, nil, _Delta, _Delta, WT_EXECUTEINTIMERTHREAD or WT_EXECUTEINPERSISTENTTHREAD) then
       _Log(Format('Init perfomance timer (%d msec) - ok', [_Delta]))
     else
       _Log(Format('Init perfomance timer (%d msec) - fail', [_Delta]));
   end
   else
-    _Log(Format('Init timer queue - fail', [_Delta]))
+    _Log('Init timer queue - fail');
 
   //_PerfThread := TPerfThread.Create;
   //_Log(Format('Init perfomance thread (%d msec) - ok', [_Delta]));
@@ -101,9 +113,11 @@ procedure ResetPerfomance; stdcall;
 begin
   try
     if DeleteTimerQueue(_TimerQueue) then
-      _Log('Reset timer queue - ok')
+      _Log('Reset sampling timer queue - ok')
     else
-      _Log('Reset timer queue - fail');
+      _Log('Reset sampling timer queue - fail');
+
+    FreeAndNil(_DbgSamplingLock);
 
     (*
     if _PerfThread = nil then Exit;

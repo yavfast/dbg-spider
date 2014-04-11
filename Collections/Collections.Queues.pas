@@ -84,6 +84,9 @@ type
     FLength: NativeInt;
     FArray: TArray<T>;
 
+    FLock: TMREWSync;
+    FThreadSafe: Boolean;
+
     procedure SetCapacity(const ANewCapacity : NativeInt);
   protected
     ///  <summary>Returns the number of elements in the queue.</summary>
@@ -100,16 +103,26 @@ type
     ///  <summary>Creates a new <c>queue</c> collection.</summary>
     ///  <remarks>This constructor requests the default rule set. Call the overloaded constructor if
     ///  specific a set of rules need to be passed.</remarks>
-    constructor Create(); overload;
+    constructor Create(const AThreadSafe: Boolean = False); overload;
+
+    constructor Create(const AInitialCapacity: NativeInt; const AThreadSafe: Boolean = False); overload;
 
     ///  <summary>Creates a new <c>queue</c> collection.</summary>
     ///  <param name="ARules">A rule set describing the elements in the queue.</param>
-    constructor Create(const ARules: TRules<T>); overload;
+    constructor Create(const ARules: TRules<T>; const AThreadSafe: Boolean = False); overload;
 
     ///  <summary>Creates a new <c>queue</c> collection.</summary>
     ///  <param name="AInitialCapacity">The set's initial capacity.</param>
     ///  <param name="ARules">A rule set describing the elements in the queue.</param>
-    constructor Create(const ARules: TRules<T>; const AInitialCapacity: NativeInt); overload;
+    constructor Create(const ARules: TRules<T>; const AInitialCapacity: NativeInt; const AThreadSafe: Boolean = False); overload;
+
+    destructor Destroy; override;
+
+    procedure LockForRead; inline;
+    procedure UnLockForRead; inline;
+
+    procedure LockForWrite; inline;
+    procedure UnLockForWrite; inline;
 
     ///  <summary>Clears the contents of the queue.</summary>
     procedure Clear(); override;
@@ -744,6 +757,8 @@ begin
   if FLength = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
 
+  LockForRead;
+
   { Select the first element as comparison base }
   Result := FArray[FHead];
 
@@ -757,6 +772,8 @@ begin
     { Circulate Head }
     LH := (LH + 1) mod Length(FArray);
   end;
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.AggregateOrDefault(const AAggregator: TFunc<T, T, T>; const ADefault: T): T;
@@ -770,6 +787,8 @@ begin
   if FLength = 0 then
     Exit(ADefault);
 
+  LockForRead;
+
   { Select the first element as comparison base }
   Result := FArray[FHead];
 
@@ -783,6 +802,8 @@ begin
     { Circulate Head }
     LH := (LH + 1) mod Length(FArray);
   end;
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.All(const APredicate: TPredicate<T>): Boolean;
@@ -792,18 +813,25 @@ begin
   if not Assigned(APredicate) then
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
+  LockForRead;
+
   if FLength > 0 then
   begin
     LH := FHead;
     for I := 0 to FLength - 1 do
     begin
       if not APredicate(FArray[LH]) then
+      begin
+        UnLockForRead;
         Exit(false);
+      end;
 
       { Circulate Head }
       LH := (LH + 1) mod Length(FArray);
     end;
   end;
+
+  UnLockForRead;
 
   Result := true;
 end;
@@ -815,18 +843,25 @@ begin
   if not Assigned(APredicate) then
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
+  LockForRead;
+
   if FLength > 0 then
   begin
     LH := FHead;
     for I := 0 to FLength - 1 do
     begin
       if APredicate(FArray[LH]) then
+      begin
+        UnLockForRead;
         Exit(true);
+      end;
 
       { Circulate Head }
       LH := (LH + 1) mod Length(FArray);
     end;
   end;
+
+  UnLockForRead;
 
   Result := false;
 end;
@@ -842,12 +877,16 @@ begin
     NotifyElementRemoved(LElement);
   end;
 
+  LockForWrite;
+
   { Clear all internals }
   FTail := 0;
   FHead := 0;
   FLength := 0;
 
   NotifyCollectionChanged();
+
+  UnLockForWrite;
 end;
 
 function TQueue<T>.Contains(const AValue: T): Boolean;
@@ -857,6 +896,8 @@ var
 begin
   { Do a look-up in all the queue }
   Result := False;
+
+  LockForRead;
 
   I := FHead;
   LCapacity := Length(FArray);
@@ -872,6 +913,8 @@ begin
     { Next + wrap over }
     I := (I + 1) mod LCapacity;
   end;
+
+  UnLockForRead;
 end;
                  
 procedure TQueue<T>.CopyTo(var AArray: array of T; const AStartIndex: NativeInt);
@@ -886,9 +929,13 @@ begin
   if (Length(AArray) - AStartIndex) < Count then
      ExceptionHelper.Throw_ArgumentOutOfSpaceError('AArray');
 
+  LockForRead;
+
   X := AStartIndex;
   I := FHead;
   LCapacity := Length(FArray);
+
+  LockForWrite;
 
   while FTail <> I do
   begin
@@ -899,26 +946,42 @@ begin
     I := (I + 1) mod LCapacity;
     Inc(X);
   end;
+
+  UnLockForWrite;
+
+  UnLockForRead;
 end;
 
-constructor TQueue<T>.Create;
+constructor TQueue<T>.Create(const AThreadSafe: Boolean = False);
 begin
-  Create(TRules<T>.Default, CDefaultSize);
+  Create(TRules<T>.Default, CDefaultSize, AThreadSafe);
 end;
 
-constructor TQueue<T>.Create(const ARules: TRules<T>; const AInitialCapacity: NativeInt);
+constructor TQueue<T>.Create(const ARules: TRules<T>; const AInitialCapacity: NativeInt; const AThreadSafe: Boolean = False);
 begin
   inherited Create(ARules);
+
+  FLock := TMREWSync.Create;
+  FThreadSafe := AThreadSafe;
+
+  LockForWrite;
 
   if AInitialCapacity <= 0 then
     SetLength(FArray, 0)
   else
    SetLength(FArray, AInitialCapacity);
+
+  UnLockForWrite;
 end;
 
-constructor TQueue<T>.Create(const ARules: TRules<T>);
+constructor TQueue<T>.Create(const AInitialCapacity: NativeInt; const AThreadSafe: Boolean = False);
 begin
-  Create(ARules, CDefaultSize);
+  Create(TRules<T>.Default, AInitialCapacity, AThreadSafe);
+end;
+
+constructor TQueue<T>.Create(const ARules: TRules<T>; const AThreadSafe: Boolean = False);
+begin
+  Create(ARules, CDefaultSize, AThreadSafe);
 end;
 
 function TQueue<T>.ElementAt(const AIndex: NativeInt): T;
@@ -928,8 +991,12 @@ begin
   if (AIndex >= FLength) or (AIndex < 0) then
     ExceptionHelper.Throw_ArgumentOutOfRangeError('AIndex');
 
+  LockForRead;
+
   LH := (FHead + AIndex) mod Length(FArray);
   Result := FArray[LH];
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.ElementAtOrDefault(const AIndex: NativeInt; const ADefault: T): T;
@@ -939,8 +1006,12 @@ begin
   if (AIndex >= FLength) or (AIndex < 0) then
     Exit(ADefault);
 
+  LockForRead;
+
   LH := (FHead + AIndex) mod Length(FArray);
   Result := FArray[LH];
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.Empty: Boolean;
@@ -952,6 +1023,8 @@ procedure TQueue<T>.Add(const AValue: T);
 var
   LNewCapacity: NativeInt;
 begin
+  LockForWrite;
+
   { Ensure Capacity }
   if FLength = Length(FArray) then
   begin
@@ -964,11 +1037,14 @@ begin
   end;
 
   { Place the element to the end of the list }
-  FArray[FTail] := AValue;  
+  FArray[FTail] := AValue;
   FTail := (FTail + 1) mod Length(FArray);
-  
+
   Inc(FLength);
+
   NotifyCollectionChanged();
+
+  UnLockForWrite;
 end;
 
 function TQueue<T>.EqualsTo(const ACollection: IEnumerable<T>): Boolean;
@@ -976,23 +1052,36 @@ var
   LValue: T;
   I, LH: NativeInt;
 begin
+  LockForRead;
+
   I := 0;
   LH := FHead;
 
   for LValue in ACollection do
   begin
     if I >= FLength then
+    begin
+      UnLockForRead;
       Exit(false);
+    end;
 
     if not ElementsAreEqual(FArray[LH], LValue) then
+    begin
+      UnLockForRead;
       Exit(false);
+    end;
 
     LH := (LH + 1) mod Length(FArray);
     Inc(I);
   end;
 
   if I < FLength then
+  begin
+    UnLockForRead;
     Exit(false);
+  end;
+
+  UnLockForRead;
 
   Result := true;
 end;
@@ -1003,16 +1092,24 @@ begin
   if FLength = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
 
+  LockForRead;
+
   Result := FArray[FHead];
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.FirstOrDefault(const ADefault: T): T;
 begin
+  LockForRead;
+
   { Check length }
   if FLength = 0 then
     Result := ADefault
   else
     Result := FArray[FHead];
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.Dequeue: T;
@@ -1020,14 +1117,31 @@ begin
   if FLength = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
 
+  LockForRead;
+
   { Get the head }
   Result := FArray[FHead];
+
+  LockForWrite;
 
   { Circulate Head }
   FHead := (FHead + 1) mod Length(FArray);
 
   Dec(FLength);
   NotifyCollectionChanged();
+
+  UnLockForWrite;
+
+  UnLockForRead;
+end;
+
+destructor TQueue<T>.Destroy;
+begin
+  LockForWrite;
+  inherited Destroy;
+  UnLockForWrite;
+
+  FreeAndNil(FLock);
 end;
 
 function TQueue<T>.GetCapacity: NativeInt;
@@ -1053,6 +1167,8 @@ procedure TQueue<T>.Grow;
 var
   LNewCapacity: NativeInt;
 begin
+  LockForRead;
+
   { Ensure Capacity }
   if FLength = Length(FArray) then
   begin
@@ -1063,6 +1179,8 @@ begin
 
     SetCapacity(LNewCapacity);
   end;
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.Last: T;
@@ -1073,14 +1191,20 @@ begin
   if FLength = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
 
+  LockForRead;
+
   LT := (FTail - 1) mod Length(FArray);
   Result := FArray[LT];
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.LastOrDefault(const ADefault: T): T;
 var
   LT: NativeInt;
 begin
+  LockForRead;
+
   { Check length }
   if FLength = 0 then
     Result := ADefault
@@ -1089,6 +1213,20 @@ begin
     LT := (FTail - 1) mod Length(FArray);
     Result := FArray[LT];
   end;
+
+  UnLockForRead;
+end;
+
+procedure TQueue<T>.LockForRead;
+begin
+  if FThreadSafe then
+    FLock.BeginRead;
+end;
+
+procedure TQueue<T>.LockForWrite;
+begin
+  if FThreadSafe then
+    FLock.BeginWrite;
 end;
 
 function TQueue<T>.Max: T;
@@ -1098,6 +1236,8 @@ begin
   { Check length }
   if FLength = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
+
+  LockForRead;
 
   { Default one }
   LH := FHead;
@@ -1113,6 +1253,8 @@ begin
     { Circulate Head }
     LH := (LH + 1) mod Length(FArray);
   end;
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.Min: T;
@@ -1122,6 +1264,8 @@ begin
   { Check length }
   if FLength = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
+
+  LockForRead;
 
   { Default one }
   LH := FHead;
@@ -1137,12 +1281,15 @@ begin
     { Circulate Head }
     LH := (LH + 1) mod Length(FArray);
   end;
+
+  UnLockForRead;
 end;
 
 procedure TQueue<T>.SetCapacity(const ANewCapacity: NativeInt);
 var
   LNewArray: TArray<T>;
 begin
+  LockForWrite;
   { Create new array }
   SetLength(LNewArray, ANewCapacity);
 
@@ -1161,14 +1308,21 @@ begin
   FArray := LNewArray;
   FTail := FLength;
   FHead := 0;
+
   NotifyCollectionChanged();
+
+  UnLockForWrite;
 end;
 
 procedure TQueue<T>.Shrink;
 begin
+  LockForRead;
+
   { Ensure Capacity }
   if FLength < Capacity then
     SetCapacity(FLength);
+
+  UnLockForRead;
 end;
 
 function TQueue<T>.Single: T;
@@ -1176,10 +1330,15 @@ begin
   { Check length }
   if FLength = 0 then
     ExceptionHelper.Throw_CollectionEmptyError()
-  else if FLength > 1 then
+  else
+  if FLength > 1 then
     ExceptionHelper.Throw_CollectionHasMoreThanOneElement()
   else
+  begin
+    LockForRead;
     Result := FArray[FHead];
+    UnLockForRead;
+  end;
 end;
 
 function TQueue<T>.SingleOrDefault(const ADefault: T): T;
@@ -1187,10 +1346,27 @@ begin
   { Check length }
   if FLength = 0 then
     Result := ADefault
-  else if FLength > 1 then
+  else
+  if FLength > 1 then
     ExceptionHelper.Throw_CollectionHasMoreThanOneElement()
   else
+  begin
+    LockForRead;
     Result := FArray[FHead];
+    UnLockForRead;
+  end;
+end;
+
+procedure TQueue<T>.UnLockForRead;
+begin
+  if FThreadSafe then
+    FLock.EndRead;
+end;
+
+procedure TQueue<T>.UnLockForWrite;
+begin
+  if FThreadSafe then
+    FLock.EndWrite;
 end;
 
 { TQueue<T>.TEnumerator }

@@ -3,13 +3,17 @@ unit DebugerTypes;
 interface
 
 uses SysUtils, Windows, Classes, JclPeImage, SyncObjs, ClassUtils, DbgHookTypes, Contnrs,
-  Generics.Collections, Collections.Dictionaries, CollectList;
+  Generics.Collections, Collections.Dictionaries, CollectList,
+  Collections.Queues;
 
 type
   TSysUInt = NativeUInt;
 
 const
   EXCEPTION_SET_THREAD_NAME = $406D1388;
+
+const
+  _SERVICE_THREAD_PREFIX = '###';
 
 // Флаги процессора
 const
@@ -296,6 +300,8 @@ type
       );
   end;
 
+  TThreadAdvType = (tatUnknown = 0, tatService, tatNormal);
+
   PThreadAdvInfo = ^TThreadAdvInfo;
   TThreadAdvInfo = record
     ThreadId: TThreadId;
@@ -303,6 +309,7 @@ type
     ThreadData: PThreadData;
     ThreadClassName: String;
     ThreadName: String;
+    ThreadAdvType: TThreadAdvType;
 
     function AsString: String;
   end;
@@ -544,6 +551,10 @@ type
     CPUElapsed: UInt64;     // циклы CPU
     CPUTime: UInt64;        // время использования CPU
 
+    SamplingCPUTime: UInt64;
+    SamplingCount: Cardinal;
+    SamplingQueue: TQueue<TDbgInfoStack>;
+
     WaitTime: Int64;        // Время блокировок
 
     DbgPoints: TThreadPointList;
@@ -575,6 +586,7 @@ type
 
     procedure UpdateGetMemUnitList;
 
+    procedure Init;
     procedure Clear;
   end;
 
@@ -619,6 +631,9 @@ type
     Elapsed: Int64;
     CPUTime: UInt64;
     CPUElapsed: UInt64; // время использования CPU
+
+    SamplingCPUTime: UInt64;
+    SamplingCount: Cardinal;
 
     DbgPoints: TProcessPointList;
 
@@ -665,6 +680,7 @@ type
     dltBreakPointEvent, dltDLLEvent);
 
   TDbgLogItem = Class
+  public
     LogType: TDbgLogType;
     DateTime: TDateTime;
     LogMessage: String;
@@ -796,6 +812,8 @@ begin
   FreeAndNil(DbgTrackFuncList);
   FreeAndNil(DbgTrackStack);
 
+  FreeAndNil(SamplingQueue);
+
   FreeMemory(Context);
 
   ThreadAdvInfo := Nil;
@@ -854,6 +872,44 @@ begin
   Result := DbgSyncObjsInfo.Count;
 end;
 
+procedure TThreadData.Init;
+begin
+  ThreadID := 0;
+  State := tsNone;
+  ThreadHandle := 0;
+
+  ThreadAdvInfo := Nil;
+
+  Context := GetMemory(SizeOf(TContext));
+  Breakpoint := GetMemory(SizeOf(THardwareBreakpoint));
+
+  Started := 0;
+  Elapsed := 0;
+  CPUElapsed := 0;
+
+  SamplingCPUTime := 0;
+  SamplingCount := 0;
+  SamplingQueue := TQueue<TDbgInfoStack>.Create(1024, True);
+
+  DbgPoints := TCollectList<TThreadPoint>.Create;
+
+  DbgGetMemInfo := TGetMemInfoList.Create(1024, True);
+  DbgGetMemInfo.OwnsValues := True;
+
+  DbgGetMemUnitList := TMemInfoTrackUnitInfoList.Create(512, True);
+
+  DbgSyncObjsUnitList := TSyncObjsTrackUnitInfoList.Create(512, True);
+
+  DbgExceptions := TThreadList.Create;
+
+  DbgSyncObjsInfo := TCollectList<RSyncObjsInfo>.Create;
+
+  DbgTrackEventCount := 0;
+  DbgTrackUnitList := TCodeTrackUnitInfoList.Create(512, True);
+  DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096, True);
+  DbgTrackStack := TTrackStack.Create;
+end;
+
 procedure TThreadData.UpdateGetMemUnitList;
 var
   GetMemInfoItem: TGetMemInfoItem;
@@ -884,6 +940,8 @@ end;
 { TThreadAdvInfo }
 
 function TThreadAdvInfo.AsString: String;
+const
+  _UNKNOWN = 'unknown';
 begin
   if ThreadName <> '' then
     Result := ThreadName
@@ -891,7 +949,7 @@ begin
     if ThreadClassName <> '' then
       Result := ThreadClassName
     else
-      Result := 'unknown';
+      Result := _UNKNOWN;
 end;
 
 { RGetMemInfo }

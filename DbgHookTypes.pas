@@ -11,6 +11,8 @@ const
   _EHOOK_GetCallStack = 1;
   _EHOOK_GetObjClassType = 2;
 
+  DBG_STACK_LENGTH = 32;
+
 type
   TDbgInfoType = (
     dstUnknown = 0,
@@ -28,9 +30,9 @@ type
   TDbgMemInfoType = (miGetMem = 0, miFreeMem);
 
   PDbgHookInfoStack = ^TDbgHookInfoStack;
-  TDbgHookInfoStack = array[0..31] of Pointer;
+  TDbgHookInfoStack = array[0..(DBG_STACK_LENGTH - 1)] of Pointer;
 
-  TObjClassTypeName = array[0..SizeOf(TDbgHookInfoStack) - 1] of AnsiChar;
+  TObjClassTypeName = array[0..(SizeOf(TDbgHookInfoStack) - 1)] of AnsiChar;
 
   PDbgMemInfo = ^TDbgMemInfo;
   TDbgMemInfo = packed record
