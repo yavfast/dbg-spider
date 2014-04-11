@@ -32,6 +32,11 @@ type
     FTraceEvent: TEvent;
     FTraceCounter: Cardinal;
 
+    // Timers
+    FTimerQueue: THandle;
+    FSamplingTimer: THandle;
+    FSamplingLock: TCriticalSection;
+
     // Debug options
     FPerfomanceMode: Boolean;
 
@@ -53,7 +58,7 @@ type
     FPerfomanceCheckPtr: Pointer;
     //FPerfomanceThreadId: TThreadId;
 
-    FDbgShareMem: THandle;
+    //FDbgShareMem: THandle;
 
     DbgTrackBreakpoints: TTrackBreakpointList;
     DbgTrackRETBreakpoints: TTrackRETBreakpointList;
@@ -164,7 +169,7 @@ type
     procedure ProcessDbgPerfomance(DebugEvent: PDebugEvent);
     procedure ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
     procedure ProcessDbgTraceInfo(DebugEvent: PDebugEvent);
-    procedure ProcessDbgSampling(DebugEvent: PDebugEvent);
+    procedure ProcessDbgSamplingInfo(DebugEvent: PDebugEvent);
 
     function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
 
@@ -187,6 +192,10 @@ type
 
     function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): Boolean;
     function AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
+
+    procedure AddThreadSamplingInfo(ThreadData: PThreadData);
+    procedure ProcessThreadSamplingInfo(ThreadData: PThreadData);
+    procedure ProcessSamplingInfo;
   public
     constructor Create();
     destructor Destroy; override;
@@ -206,6 +215,10 @@ type
 
     // Основной цикл обработки дебажных событий
     procedure ProcessDebugEvents;
+
+    procedure InitSamplingTimer;
+    procedure ResetSamplingTimer;
+    procedure DoSamplingEvent;
 
     // чтение запись данных
     Function ProcAllocMem(const Size: Cardinal): Pointer;
@@ -242,6 +255,7 @@ type
     Function IsValidProcessCodeAddr(Const Addr: Pointer): Boolean;
 
     procedure GetCallStack(ThData: PThreadData; var Stack: TDbgInfoStack);
+    procedure GetCallStackEx(ThData: PThreadData; var Stack: TDbgInfoStack);
 
     function GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
     function CurThreadId: TThreadId;
@@ -343,8 +357,25 @@ var
 implementation
 
 uses
-  RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes, WinAPIUtils,
-  System.Contnrs, System.AnsiStrings, CollectList;
+  RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes, WinAPIUtils, Winapi.TlHelp32, Winapi.ImageHlp,
+  System.Contnrs, System.AnsiStrings, CollectList, Collections.Queues;
+
+type
+  TDbgSamplingThread = class(TThread)
+  private
+    FStartEvent: TEvent;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure Start;
+    procedure Stop;
+  end;
+
+var
+  gvDbgSamplingThread: TDbgSamplingThread = Nil;
 
 function _DbgPerfomanceHook(pvParam: Pointer): DWORD; stdcall;
 begin
@@ -499,6 +530,31 @@ begin
   end;
 end;
 
+procedure TDebuger.AddThreadSamplingInfo(ThreadData: PThreadData);
+var
+  ThCPU: UInt64;
+  Stack: TDbgInfoStack;
+begin
+  if Assigned(ThreadData^.ThreadAdvInfo) and (ThreadData^.ThreadAdvInfo.ThreadAdvType = tatNormal) then
+  begin
+    ThCPU := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
+    if ThCPU > ThreadData^.SamplingCPUTime then
+    begin
+      ThreadData^.SamplingCPUTime := ThCPU;
+      Inc(ThreadData^.SamplingCount);
+
+      if UpdateThreadContext(ThreadData, CONTEXT_CONTROL) then
+      begin
+        GetCallStackEx(ThreadData, Stack);
+
+        //ThreadData^.SamplingQueue.Add(Stack);
+
+        //gvDbgSamplingThread.Start;
+      end;
+    end;
+  end;
+end;
+
 function TDebuger.AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
 var
   ProcPoint: PProcessPoint;
@@ -585,37 +641,14 @@ begin
   try
     Result := FThreadList.Add;
 
+    Result^.Init;
+
     Result^.ThreadID := ThreadID;
     Result^.State := tsActive;
     Result^.ThreadHandle := ThreadHandle;
 
     Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
     Result^.ThreadAdvInfo^.ThreadData := Result;
-
-    Result^.Context := GetMemory(SizeOf(TContext));
-    Result^.Breakpoint := GetMemory(SizeOf(THardwareBreakpoint));
-
-    Result^.Started := 0;
-    Result^.Elapsed := 0;
-    Result^.CPUElapsed := 0;
-
-    Result^.DbgPoints := TCollectList<TThreadPoint>.Create;
-
-    Result^.DbgGetMemInfo := TGetMemInfoList.Create(1024, True);
-    Result^.DbgGetMemInfo.OwnsValues := True;
-
-    Result^.DbgGetMemUnitList := TMemInfoTrackUnitInfoList.Create(512, True);
-
-    Result^.DbgSyncObjsUnitList := TSyncObjsTrackUnitInfoList.Create(512, True);
-
-    Result^.DbgExceptions := TThreadList.Create;
-
-    Result^.DbgSyncObjsInfo := TCollectList<RSyncObjsInfo>.Create;
-
-    Result^.DbgTrackEventCount := 0;
-    Result^.DbgTrackUnitList := TCodeTrackUnitInfoList.Create(512, True);
-    Result^.DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096, True);
-    Result^.DbgTrackStack := TTrackStack.Create;
 
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(Result, ptStart);
@@ -744,6 +777,12 @@ begin
 
   DbgState := dsNone;
   FTraceCounter := 0;
+
+  if Assigned(gvDbgSamplingThread) then
+  begin
+    gvDbgSamplingThread.Stop;
+    FreeAndNil(gvDbgSamplingThread);
+  end;
 end;
 
 procedure TDebuger.ClearDbgTracking;
@@ -824,8 +863,12 @@ begin
   FPerfomanceMode := False;
   FPerfomanceCheckPtr := Nil; //Pointer($76FED315);
 
-  FDbgShareMem :=
-    CreateFileMapping($FFFFFFFF, nil, PAGE_READWRITE, 0, 4 * 1024, 'DBG_SHARE_MEM');
+  FTimerQueue := 0;
+  FSamplingTimer := 0;
+  FSamplingLock := TCriticalSection.Create;
+
+  //FDbgShareMem :=
+  //  CreateFileMapping($FFFFFFFF, nil, PAGE_READWRITE, 0, 4 * 1024, 'DBG_SHARE_MEM');
 end;
 
 function TDebuger.CurThreadData: PThreadData;
@@ -906,14 +949,16 @@ begin
   FreeAndNil(FThreadList);
   FreeAndNil(FThreadAdvInfoList);
 
-  CloseHandle(FDbgShareMem);
-  FDbgShareMem := 0;
+  //CloseHandle(FDbgShareMem);
+  //FDbgShareMem := 0;
 
   FreeAndNil(FProcessData.DbgExceptions);
   FreeMemory(FProcessData);
   FProcessData := nil;
 
   FreeAndNil(FTraceEvent);
+
+  FreeAndNil(FSamplingLock);
 
   inherited;
 end;
@@ -957,6 +1002,11 @@ begin
 
   // Инициализация хуков
   //LoadLibrary('DbgHook32.dll'); // ??? Блокировка от преждевременной выгрузки
+
+  // Запуск потока по обработке стеков
+  if gvDbgSamplingThread = Nil then
+    gvDbgSamplingThread := TDbgSamplingThread.Create;
+
   if Assigned(gvDebugInfo) then
     gvDebugInfo.InitDebugHook;
 
@@ -1268,6 +1318,60 @@ Begin
   SetLength(Stack, Cnt);
 end;
 
+procedure TDebuger.GetCallStackEx(ThData: PThreadData; var Stack: TDbgInfoStack);
+const
+  _MAX_STACK_CNT = 64;
+var
+  {$IFDEF WIN32}
+  StackFrame: TStackFrame;
+  {$ELSE}
+  StackFrame: TStackFrame64;
+  {$ENDIF}
+  ThreadContext: PContext;
+  MachineType: DWORD;
+  Cnt: Integer;
+begin
+  ZeroMemory(@StackFrame, SizeOf(TStackFrame));
+
+  StackFrame.AddrPC.Mode := AddrModeFlat;
+  StackFrame.AddrStack.Mode := AddrModeFlat;
+  StackFrame.AddrFrame.Mode := AddrModeFlat;
+
+  ThreadContext := ThData^.Context;
+
+  {$IFDEF WIN32}
+  StackFrame.AddrPC.Offset := ThreadContext.Eip;
+  StackFrame.AddrStack.Offset := ThreadContext.Esp;
+  StackFrame.AddrFrame.Offset := ThreadContext.Ebp;
+  MachineType := IMAGE_FILE_MACHINE_I386;
+  {$ELSE}
+  StackFrame.AddrPC.Offset := ThreadContext.Rip;
+  StackFrame.AddrStack.Offset := ThreadContext.Rsp;
+  StackFrame.AddrFrame.Offset := ThreadContext.Rbp;
+  MachineType := IMAGE_FILE_MACHINE_AMD64;
+  {$ENDIF}
+
+  SetLength(Stack, _MAX_STACK_CNT);
+
+  Cnt := 0;
+  while Cnt < Length(Stack) do
+  begin
+    {$IFDEF WIN32}
+    if not StackWalk(MachineType, ProcessData^.AttachedProcessHandle, ThData^.ThreadHandle, @StackFrame, ThreadContext, nil, nil, nil, nil) then
+      Break;
+    {$ELSE}
+    if not StackWalk64(MachineType, hProcess, hThread, StackFrame, ThreadContext, nil, nil, nil, nil) then
+      Break;
+    {$ENDIF}
+
+    Stack[Cnt] := Pointer(StackFrame.AddrPC.Offset);
+
+    Inc(Cnt);
+  end;
+
+  SetLength(Stack, Cnt);
+end;
+
 function GetMappedFileNameA(hProcess: THandle; lpv: Pointer; lpFilename: LPSTR; nSize: DWORD): DWORD; stdcall; external 'psapi.dll';
 
 function TDebuger.GetDllName(lpImageName, lpBaseOfDll: Pointer; var Unicode: Boolean): AnsiString;
@@ -1524,6 +1628,49 @@ begin
 
   DbgTrackRETBreakpoints := TTrackRETBreakpointList.Create(Capacity * 2);
   DbgTrackRETBreakpoints.OwnsValues := True;
+end;
+
+procedure _DbgSamplingEvent(Context: Pointer; Success: Boolean); stdcall;
+begin
+  if Assigned(gvDebuger) then
+    gvDebuger.DoSamplingEvent;
+end;
+
+procedure TDebuger.DoSamplingEvent;
+begin
+  // Игнорим обработку, если не успели за отведенное время
+  if FSamplingLock.TryEnter then
+  begin
+    ProcessDbgSamplingInfo(Nil);
+
+    FSamplingLock.Leave;
+  end;
+end;
+
+procedure TDebuger.InitSamplingTimer;
+begin
+//  FTimerQueue := CreateTimerQueue;
+//  if FTimerQueue <> 0 then
+//  begin
+//    if CreateTimerQueueTimer(FSamplingTimer, FTimerQueue, @_DbgSamplingEvent, nil, 100, 1, WT_EXECUTELONGFUNCTION) then
+//    begin
+//      Log('Init sampling timer - ok');
+//      Exit;
+//    end;
+//  end;
+//
+//  Log('Init sampling timer - fail');
+end;
+
+procedure TDebuger.ResetSamplingTimer;
+begin
+//  if DeleteTimerQueue(FTimerQueue) then
+//    Log('Reset timer queue - ok')
+//  else
+//    Log('Reset timer queue - fail');
+
+  FSamplingTimer := 0;
+  FTimerQueue := 0;
 end;
 
 function TDebuger.InjectFunc(Func: Pointer; const CodeSize: Cardinal): Pointer;
@@ -1812,6 +1959,41 @@ begin
 
     FRestoredHWBPIndex := Index;
     FRestoredThread := DebugEvent^.dwThreadId;
+  end;
+end;
+
+procedure TDebuger.ProcessSamplingInfo;
+var
+  I: Integer;
+  ThData: PThreadData;
+begin
+  FThreadList.BeginRead;
+  I := FThreadList.Count - 1;
+  FThreadList.EndRead;
+
+  while I >= 0 do
+  begin
+    FThreadList.BeginRead;
+    ThData := FThreadList[I];
+    FThreadList.EndRead;
+
+    ProcessThreadSamplingInfo(ThData);
+
+    Dec(I);
+  end;
+end;
+
+procedure TDebuger.ProcessThreadSamplingInfo(ThreadData: PThreadData);
+var
+  Stack: TDbgInfoStack;
+begin
+  while ThreadData.SamplingQueue.Count > 0 do
+  begin
+    Stack := ThreadData.SamplingQueue.Dequeue;
+
+    //
+
+    SetLength(Stack, 0);
   end;
 end;
 
@@ -2215,9 +2397,33 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessDbgSampling(DebugEvent: PDebugEvent);
+procedure TDebuger.ProcessDbgSamplingInfo(DebugEvent: PDebugEvent);
+var
+  CPUTime: UInt64;
+  ThData: PThreadData;
+  I: Integer;
 begin
-  //
+  Exit;
+
+  CPUTime := _QueryProcessCycleTime(ProcessData^.AttachedProcessHandle);
+  // TODO: Контроль загрузки CPU
+  if CPUTime > ProcessData^.SamplingCPUTime then
+  begin
+    ProcessData^.SamplingCPUTime := CPUTime;
+    Inc(ProcessData^.SamplingCount);
+
+    FThreadList.BeginRead;
+    try
+      for I := 0 to FThreadList.Count - 1 do
+      begin
+        ThData := FThreadList[I];
+        if ThData^.State = tsActive then
+          AddThreadSamplingInfo(ThData);
+      end;
+    finally
+      FThreadList.EndRead;
+    end;
+  end;
 end;
 
 procedure TDebuger.ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
@@ -2402,7 +2608,7 @@ begin
     dstSyncObjsInfo:
       ProcessDbgSyncObjsInfo(DebugEvent);
     dstSampling:
-      ProcessDbgSampling(DebugEvent);
+      ProcessDbgSamplingInfo(DebugEvent);
   end;
 end;
 
@@ -2703,7 +2909,10 @@ begin
     begin
       Str := ReadStringP(StrAddr, 0);
       if Str <> '' then
+      begin
         ThInfo^.ThreadClassName := String(Str);
+        ThInfo^.ThreadAdvType := tatNormal;
+      end;
     end;
   end;
 end;
@@ -2735,6 +2944,8 @@ var
   ExceptionCode: DWORD;
   CallNextLoopIteration: Boolean;
 begin
+  InitSamplingTimer;
+
   DebugEvent := AllocMem(SizeOf(TDebugEvent));
   try
     repeat
@@ -2809,6 +3020,7 @@ begin
 
     until not(CallNextLoopIteration) or (DebugEvent^.dwDebugEventCode = EXIT_PROCESS_DEBUG_EVENT);
   finally
+    ResetSamplingTimer;
     FreeMemory(DebugEvent);
   end;
 
@@ -3074,11 +3286,24 @@ procedure TDebuger.SetThreadName(DebugEvent: PDebugEvent);
 var
   StrAddr: Pointer;
   Str: AnsiString;
+  ThreadAdvInfo: PThreadAdvInfo;
 begin
   StrAddr := Pointer(DebugEvent^.Exception.ExceptionRecord.ExceptionInformation[1]);
   Str := ReadStringA(StrAddr, -1);
   if Str <> '' then
-    SetThreadInfo(DebugEvent^.dwThreadId)^.ThreadName := String(Str);
+  begin
+    ThreadAdvInfo := SetThreadInfo(DebugEvent^.dwThreadId);
+
+    ThreadAdvInfo^.ThreadName := String(Str);
+
+    if ThreadAdvInfo^.ThreadName <> '' then
+    begin
+      if Copy(ThreadAdvInfo^.ThreadName, 1, 3) = _SERVICE_THREAD_PREFIX then
+        ThreadAdvInfo^.ThreadAdvType := tatService
+      else
+        ThreadAdvInfo^.ThreadAdvType := tatNormal;
+    end;
+  end;
 end;
 
 procedure TDebuger.SetTrackBreakpoint(const Address: Pointer; FuncInfo: TObject; const BPType: TTrackBreakpointType = tbTrackFunc);
@@ -3479,6 +3704,53 @@ begin
 
   if Result then
     Result := FlushInstructionCache(FProcessData.AttachedProcessHandle, AddrPrt, DataSize);
+end;
+
+{ TDbgSamplingThread }
+
+constructor TDbgSamplingThread.Create;
+begin
+  inherited Create(True);
+  FreeOnTerminate := False;
+  Priority := tpLowest;
+
+  FStartEvent := TEvent.Create;
+
+  Suspended := False;
+end;
+
+destructor TDbgSamplingThread.Destroy;
+begin
+  FreeAndNil(FStartEvent);
+
+  inherited;
+end;
+
+procedure TDbgSamplingThread.Execute;
+begin
+  while not Terminated do
+  begin
+    Sleep(500);
+
+    //FStartEvent.WaitFor;
+    //FStartEvent.ResetEvent;
+
+    if Assigned(gvDebuger) then
+      gvDebuger.ProcessSamplingInfo;
+  end;
+end;
+
+procedure TDbgSamplingThread.Start;
+begin
+  FStartEvent.SetEvent;
+end;
+
+procedure TDbgSamplingThread.Stop;
+begin
+  Terminate;
+  FStartEvent.SetEvent;
+
+  WaitFor;
 end;
 
 initialization

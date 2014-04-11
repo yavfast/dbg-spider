@@ -103,7 +103,8 @@ begin
     miGetMem:
     begin
       DbgMemInfo.Size := _Size;
-      GetCallStack(DbgMemInfo.Stack, -2);
+      //GetCallStack(DbgMemInfo.Stack, -2);
+      GetCallStackOS(DbgMemInfo.Stack, 3);
     end;
     miFreeMem:
     begin

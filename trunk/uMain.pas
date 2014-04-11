@@ -584,7 +584,7 @@ type
     function ProcessIDToStr(const ProcessID: TProcessId): String;
 
     function FindThreadNode(vTree: TBaseVirtualTree; ThData: PThreadData): PVirtualNode;
-    function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
+    //function FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
     function FindTrackUnitNode(vTree: TBaseVirtualTree; const UnitInfo: TUnitInfo): PVirtualNode;
     function FindTrackFuncNode(vTree: TBaseVirtualTree; const FuncInfo: TFuncInfo): PVirtualNode;
 
@@ -1142,6 +1142,7 @@ begin
   Result := FindNode(vTree, vTree.RootNode, @_Cmp, ThData);
 end;
 
+(*
 function TMainForm.FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: TThreadId): PVirtualNode;
 
   function _Cmp(LinkData: PLinkData; CmpData: Pointer): Boolean;
@@ -1152,6 +1153,7 @@ function TMainForm.FindThreadNodeById(vTree: TBaseVirtualTree; const ThreadId: T
 begin
   Result := FindNode(vTree, vTree.RootNode, @_Cmp, Pointer(ThreadId));
 end;
+*)
 
 function TMainForm.FindTrackFuncNode(vTree: TBaseVirtualTree; const FuncInfo: TFuncInfo): PVirtualNode;
 
@@ -1351,6 +1353,9 @@ begin
     while gvDebuger.Active do
       Application.ProcessMessages;
   end;
+
+  // Выключаем таймер
+  tmrThreadsUpdate.Enabled := False;
 
   ClearTrees;
 
@@ -2667,6 +2672,8 @@ end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
+  tmrThreadsUpdate.Enabled := False;
+
   FreeAndNil(FSpiderOptions);
   FreeAndNil(FTrackHistory);
 

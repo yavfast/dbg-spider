@@ -221,7 +221,10 @@ begin
     end;
 
     if (DbgSyncObjsStateType = sosEnter) or (SyncObjsInfo^.SyncObjsType = soInCriticalSection) then
-      GetCallStack(SyncObjsInfo^.Stack, -2);
+    begin
+      //GetCallStack(SyncObjsInfo^.Stack, -2);
+      GetCallStackOS(SyncObjsInfo^.Stack, 3);
+    end;
 
     _AddSyncObjsAdvInfo(SyncObjsInfo);
 

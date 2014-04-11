@@ -26,6 +26,7 @@ function GetFramePointer: Pointer; assembler;
 function GetStackTop: TJclAddr; assembler;
 
 procedure GetCallStack(var Stack: TDbgHookInfoStack; Level: Integer); stdcall;
+procedure GetCallStackOS(var Stack: TDbgHookInfoStack; FramesToSkip: Integer); stdcall;
 
 implementation
 
@@ -162,6 +163,16 @@ begin
     on E: Exception do
       _LogException(E, _EHOOK_GetCallStack);
   end;
+end;
+
+function RtlCaptureStackBackTrace(FramesToSkip: ULONG; FramesToCapture: ULONG; BackTrace: Pointer; BackTraceHash: PULONG): USHORT; stdcall;
+  external 'kernel32.dll' name 'RtlCaptureStackBackTrace';
+
+procedure GetCallStackOS(var Stack: TDbgHookInfoStack; FramesToSkip: Integer); stdcall;
+begin
+  //ZeroMemory(@Stack[0], SizeOf(TDbgHookInfoStack));
+
+  RtlCaptureStackBackTrace(FramesToSkip, DBG_STACK_LENGTH, @Stack[0], Nil);
 end;
 
 end.

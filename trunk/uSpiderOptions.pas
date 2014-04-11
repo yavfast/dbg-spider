@@ -303,7 +303,14 @@ end;
 procedure TSpiderOptions.Save;
 begin
   if Assigned(FXML) then
-    FXML.SaveToFile(FXMLFileName);
+  begin
+    try
+      // Пробуем сохранить рядом с приложением
+      FXML.SaveToFile(FXMLFileName);
+    except
+      // TODO: Сохранять в профиль пользователя
+    end;
+  end;
 end;
 
 { TColorOptions }
