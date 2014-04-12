@@ -79,6 +79,7 @@ const
   _RECENT_ITEM = 'item';
 
   _DefLogColors: array[Low(TDbgLogType) .. High(TDbgLogType)] of TColor = (
+    clBlack, // dltUnknown
     clBlack, // dltInfo
     clPurple, //dltWarning
     clRed, // dltError
@@ -91,6 +92,7 @@ const
   );
 
   _LogColorNames: array[Low(TDbgLogType) .. High(TDbgLogType)] of String = (
+    '', // dltUnknown
     'info', // dltInfo
     'warning', //dltWarning
     'error', // dltError

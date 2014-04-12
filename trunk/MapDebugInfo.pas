@@ -190,45 +190,52 @@ begin
 end;
 
 function TMapDebugInfo.DoReadDebugInfo(const FileName: String; ALoadDebugInfo: Boolean): Boolean;
+var
+  MapFileName: String;
 begin
-  Result := FileExists(FileName);
+  Result := False;
+
+  if FileExists(FileName) then
+  begin
+    DoProgress('Prepare', 4);
+    if Assigned(FImage) then
+      FreeAndNil(FImage);
+
+    DoProgress('Init image', 5);
+    FImage := TJclPeBorTD32Image.Create(True);
+    DoProgress('Load image', 5);
+
+    FImage.FileName := GetDBGFileName(FileName);
+
+    DoProgress('Load debug info', 10);
+  end;
+
   try
-    if Result then
-    begin
-      DoProgress('Prepare', 4);
-      if Assigned(FImage) then
-        FreeAndNil(FImage);
-
-      DoProgress('Init image', 5);
-      FImage := TJclPeBorTD32Image.Create(True);
-      DoProgress('Load image', 5);
-
-      FImage.FileName := GetDBGFileName(FileName);
-
-      DoProgress('Load debug info', 10);
-    end;
-
     if ALoadDebugInfo then
     begin
-      FMapScanner := TMapScanner.Create(ChangeFileExt(FileName, '.map'));
+      MapFileName := ChangeFileExt(FileName, '.map');
 
-      FDebugInfoType := 'External(MAP)';
+      Result := FileExists(MapFileName);
+      if Result then
+      begin
+        FMapScanner := TMapScanner.Create(MapFileName);
 
-      LoadSegmentClasses;
+        FDebugInfoType := 'External(MAP)';
 
-      DoProgress('Load units info', 20);
-      LoadSegments;
+        LoadSegmentClasses;
 
-      DoProgress('Load methods info', 40);
-      LoadProcs;
+        DoProgress('Load units info', 20);
+        LoadSegments;
 
-      DoProgress('Load lines info', 70);
-      LoadLines;
+        DoProgress('Load methods info', 40);
+        LoadProcs;
+
+        DoProgress('Load lines info', 70);
+        LoadLines;
+
+        DoProgress('Debug info loaded', 99);
+      end;
     end;
-
-    DoProgress('Debug info loaded', 99);
-
-    Result := True;
   except
     on E: Exception do
     begin

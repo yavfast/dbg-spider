@@ -254,7 +254,7 @@ begin
     else
     begin
       _AC.Log(dltWarning, 'No debug info for "%s"', [AppName]);
-      FreeAndNil(gvDebugInfo);
+      // FreeAndNil(gvDebugInfo); Надо для вывода логов
     end;
 
     _AC.DoAction(acUpdateInfo, []);

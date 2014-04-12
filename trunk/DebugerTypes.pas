@@ -676,7 +676,7 @@ type
 
   TDbgTraceState = (dtsContinue, dtsPause, dtsStepIn, dtsStepOver, dtsStepOut);
 
-  TDbgLogType = (dltInfo, dltWarning, dltError, dltDebugOutput, dltProcessEvent, dltThreadEvent, dltExceptionEvent,
+  TDbgLogType = (dltUnknown = 0, dltInfo, dltWarning, dltError, dltDebugOutput, dltProcessEvent, dltThreadEvent, dltExceptionEvent,
     dltBreakPointEvent, dltDLLEvent);
 
   TDbgLogItem = Class
@@ -684,6 +684,8 @@ type
     LogType: TDbgLogType;
     DateTime: TDateTime;
     LogMessage: String;
+
+    destructor Destroy; override;
   End;
 
   TDbgLog = class(TList)
@@ -1714,6 +1716,15 @@ begin
 
     Inc(I);
   end;
+end;
+
+{ TDbgLogItem }
+
+destructor TDbgLogItem.Destroy;
+begin
+  LogType := dltUnknown;
+
+  inherited;
 end;
 
 end.
