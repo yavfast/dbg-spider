@@ -389,6 +389,13 @@ begin
         Break;
 
       Result := ExtractFileDir(Result);
+
+      // Если в рутовом каталоге, то выходим
+      if Result = IncludeTrailingPathDelimiter(ExtractFileDrive(Result)) then
+      begin
+        Result := '';
+        Break;
+      end;
     end;
 
     if Result <> '' then
