@@ -1939,6 +1939,7 @@ begin
   gvDebuger.InitDbgTracking(FuncCount);
 
   if SetBP then
+  begin
     for I := 0 to Units.Count - 1 do
     begin
       UnitInfo := TUnitInfo(Units.Objects[I]);
@@ -1963,6 +1964,7 @@ begin
         gvDebuger.SetTrackBreakpoint(FuncInfo.Address, FuncInfo);
       end;
     end;
+  end;
 end;
 
 Procedure TDelphiDebugInfo.InitDebugHook;
@@ -1973,7 +1975,7 @@ Begin
 
     gvDebuger.ProcessData.SetPEImage(FImage);
 
-    InitCodeTracking(gvDebuger.CodeTracking);
+    InitCodeTracking(gvDebuger.CodeTracking and not gvDebuger.SamplingMethod);
 
     MemoryManagerInfo.VarInfo := GetMemoryManager;
 

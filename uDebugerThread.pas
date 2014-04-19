@@ -138,6 +138,7 @@ begin
 
       gvDebuger.CodeTracking := (doCodeTracking in FDbgOptions);
       gvDebuger.TrackSystemUnits := gvDebuger.CodeTracking and (doTrackSystemUnits in FDbgOptions);
+      gvDebuger.SamplingMethod := gvDebuger.CodeTracking and (doSamplingMethod in FDbgOptions);
 
       gvDebuger.SyncObjsTracking := (doSyncObjsTracking in FDbgOptions);
 

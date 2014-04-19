@@ -49,6 +49,7 @@ type
 
     FCodeTracking: Boolean;
     FTrackSystemUnits: Boolean;
+    FSamplingMethod: Boolean;
 
     FSyncObjsTracking: Boolean;
     // ---
@@ -115,6 +116,7 @@ type
     procedure SetDbgState(const Value: TDbgState);
     function GetActive: Boolean;
     procedure SetSyncObjsTracking(const Value: Boolean);
+    procedure SetSamplingMethod(const Value: Boolean);
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -345,6 +347,7 @@ type
 
     property CodeTracking: Boolean read FCodeTracking write SetCodeTracking;
     property TrackSystemUnits: Boolean read FTrackSystemUnits write SetTrackSystemUnits;
+    property SamplingMethod: Boolean read FSamplingMethod write SetSamplingMethod;
 
     property SyncObjsTracking: Boolean read FSyncObjsTracking write SetSyncObjsTracking;
 
@@ -534,6 +537,7 @@ procedure TDebuger.AddThreadSamplingInfo(ThreadData: PThreadData);
 var
   ThCPU: UInt64;
   Stack: TDbgInfoStack;
+  Res: DWORD;
 begin
   if Assigned(ThreadData^.ThreadAdvInfo) and (ThreadData^.ThreadAdvInfo.ThreadAdvType = tatNormal) then
   begin
@@ -543,13 +547,22 @@ begin
       ThreadData^.SamplingCPUTime := ThCPU;
       Inc(ThreadData^.SamplingCount);
 
-      if UpdateThreadContext(ThreadData, CONTEXT_CONTROL) then
+      SetLength(Stack, 0);
+
+      Res := SuspendThread(ThreadData^.ThreadHandle);
+      if Res = 0 then
       begin
-        GetCallStackEx(ThreadData, Stack);
+        if UpdateThreadContext(ThreadData, CONTEXT_CONTROL) then
+          GetCallStackEx(ThreadData, Stack);
+      end;
 
-        //ThreadData^.SamplingQueue.Add(Stack);
+      ResumeThread(ThreadData^.ThreadHandle);
 
-        //gvDbgSamplingThread.Start;
+      if Length(Stack) > 0 then
+      begin
+        ThreadData^.SamplingQueue.Add(Stack);
+
+        gvDbgSamplingThread.Start;
       end;
     end;
   end;
@@ -777,12 +790,6 @@ begin
 
   DbgState := dsNone;
   FTraceCounter := 0;
-
-  if Assigned(gvDbgSamplingThread) then
-  begin
-    gvDbgSamplingThread.Stop;
-    FreeAndNil(gvDbgSamplingThread);
-  end;
 end;
 
 procedure TDebuger.ClearDbgTracking;
@@ -1003,10 +1010,6 @@ begin
   // Инициализация хуков
   //LoadLibrary('DbgHook32.dll'); // ??? Блокировка от преждевременной выгрузки
 
-  // Запуск потока по обработке стеков
-  if gvDbgSamplingThread = Nil then
-    gvDbgSamplingThread := TDbgSamplingThread.Create;
-
   if Assigned(gvDebugInfo) then
     gvDebugInfo.InitDebugHook;
 
@@ -1018,7 +1021,12 @@ begin
     FCreateProcess(Self, DebugEvent^.dwProcessId, @DebugEvent^.CreateProcessInfo);
 
   AddThread(DebugEvent^.dwThreadId, FProcessData.AttachedThreadHandle);
-  SetThreadInfo(DebugEvent^.dwThreadId)^.ThreadName := 'Main thread';
+
+  with SetThreadInfo(DebugEvent^.dwThreadId)^ do
+  begin
+    ThreadName := 'Main thread';
+    ThreadAdvType := tatNormal;
+  end;
 
   if Assigned(FCreateThread) then
   begin
@@ -1030,6 +1038,9 @@ begin
       FreeMemory(CreateThreadInfo);
     end;
   end;
+
+  // Запуск потока по обработке стеков
+  InitSamplingTimer;
 
   DoResumeAction(DebugEvent^.dwThreadId);
 end;
@@ -1065,6 +1076,8 @@ end;
 
 procedure TDebuger.DoExitProcess(DebugEvent: PDebugEvent);
 begin
+  ResetSamplingTimer;
+
   DbgState := dsStoping;
   FProcessData.State := psFinished;
 
@@ -1351,7 +1364,7 @@ begin
   MachineType := IMAGE_FILE_MACHINE_AMD64;
   {$ENDIF}
 
-  SetLength(Stack, _MAX_STACK_CNT);
+  SetLength(Stack, _MAX_STACK_CNT); // TODO: Переделать на статический массив
 
   Cnt := 0;
   while Cnt < Length(Stack) do
@@ -1638,6 +1651,8 @@ end;
 
 procedure TDebuger.DoSamplingEvent;
 begin
+  if DbgState <> dsWait then Exit;
+
   // Игнорим обработку, если не успели за отведенное время
   if FSamplingLock.TryEnter then
   begin
@@ -1649,28 +1664,43 @@ end;
 
 procedure TDebuger.InitSamplingTimer;
 begin
-//  FTimerQueue := CreateTimerQueue;
-//  if FTimerQueue <> 0 then
-//  begin
-//    if CreateTimerQueueTimer(FSamplingTimer, FTimerQueue, @_DbgSamplingEvent, nil, 100, 1, WT_EXECUTELONGFUNCTION) then
-//    begin
-//      Log('Init sampling timer - ok');
-//      Exit;
-//    end;
-//  end;
-//
-//  Log('Init sampling timer - fail');
+  if CodeTracking and SamplingMethod then
+  begin
+    FTimerQueue := CreateTimerQueue;
+    if FTimerQueue <> 0 then
+    begin
+      if gvDbgSamplingThread = Nil then
+        gvDbgSamplingThread := TDbgSamplingThread.Create;
+
+      if CreateTimerQueueTimer(FSamplingTimer, FTimerQueue, @_DbgSamplingEvent, nil, 100, 1, WT_EXECUTEINPERSISTENTTHREAD) then
+      begin
+        Log('Init sampling timer - ok');
+        Exit;
+      end;
+    end;
+
+    Log('Init sampling timer - fail');
+  end;
 end;
 
 procedure TDebuger.ResetSamplingTimer;
 begin
-//  if DeleteTimerQueue(FTimerQueue) then
-//    Log('Reset timer queue - ok')
-//  else
-//    Log('Reset timer queue - fail');
+  if FTimerQueue <> 0 then
+  begin
+    if DeleteTimerQueue(FTimerQueue) then
+      Log('Reset timer queue - ok')
+    else
+      Log('Reset timer queue - fail');
 
-  FSamplingTimer := 0;
-  FTimerQueue := 0;
+    FSamplingTimer := 0;
+    FTimerQueue := 0;
+  end;
+
+  if Assigned(gvDbgSamplingThread) then
+  begin
+    gvDbgSamplingThread.Stop;
+    FreeAndNil(gvDbgSamplingThread);
+  end;
 end;
 
 function TDebuger.InjectFunc(Func: Pointer; const CodeSize: Cardinal): Pointer;
@@ -2403,8 +2433,6 @@ var
   ThData: PThreadData;
   I: Integer;
 begin
-  Exit;
-
   CPUTime := _QueryProcessCycleTime(ProcessData^.AttachedProcessHandle);
   // TODO: Контроль загрузки CPU
   if CPUTime > ProcessData^.SamplingCPUTime then
@@ -2944,8 +2972,6 @@ var
   ExceptionCode: DWORD;
   CallNextLoopIteration: Boolean;
 begin
-  InitSamplingTimer;
-
   DebugEvent := AllocMem(SizeOf(TDebugEvent));
   try
     repeat
@@ -3020,7 +3046,6 @@ begin
 
     until not(CallNextLoopIteration) or (DebugEvent^.dwDebugEventCode = EXIT_PROCESS_DEBUG_EVENT);
   finally
-    ResetSamplingTimer;
     FreeMemory(DebugEvent);
   end;
 
@@ -3238,6 +3263,11 @@ begin
     Context.ContextFlags := CONTEXT_FULL;
     Check(SetThreadContext(ThData^.ThreadHandle, Context));
   end;
+end;
+
+procedure TDebuger.SetSamplingMethod(const Value: Boolean);
+begin
+  FSamplingMethod := Value;
 end;
 
 procedure TDebuger.SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: Boolean);

@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1212
     Height = 545
-    ActivePage = tsMemInfo
+    ActivePage = tsExceptions
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -3401,6 +3401,12 @@ object MainForm: TMainForm
       Caption = 'Recent projects'
       ImageIndex = 1
     end
+    object acSampling: TAction
+      Category = 'Options'
+      Caption = 'Sampling method'
+      Enabled = False
+      OnExecute = acSamplingExecute
+    end
     object acMemoryInfo: TAction
       Category = 'Options'
       AutoCheck = True
@@ -4031,6 +4037,11 @@ object MainForm: TMainForm
           item
             Action = acCodeTracking
             Caption = '&Code tracking'
+            CommandStyle = csCheckBox
+            CommandProperties.Width = -1
+          end
+          item
+            Action = acSampling
             CommandStyle = csCheckBox
             CommandProperties.Width = -1
           end

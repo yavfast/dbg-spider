@@ -24,21 +24,81 @@ function DebugBreakProcess(Process: THandle): BOOL; stdcall;
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall;
 function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall;
 
+function SuspendProcess(const PID: DWORD): Boolean;
+function ResumeProcess(const PID: DWORD): Boolean;
+
 function GetFileVersion(const AFileName: string): string;
 
 function GetGUID: String;
 
 implementation
 
-//uses ActiveX;
+type
+  NTSTATUS = LongInt;
+  TProcFunction = function(ProcHandle: THandle): NTSTATUS; stdcall;
+
+const
+  STATUS_SUCCESS = $00000000;
+  PROCESS_SUSPEND_RESUME = $0800;
 
 function QueryThreadCycleTime(ThreadHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryThreadCycleTime';
 function QueryProcessCycleTime(ProcessHandle: THandle; CycleTime: PUInt64): BOOL; stdcall; external kernel32 name 'QueryProcessCycleTime';
+//function SuspendProcess(ProcessHandle: THandle): NTSTATUS; stdcall; external kernel32 name 'NtSuspendProcess';
+//function ResumeProcess(ProcessHandle: THandle): NTSTATUS; stdcall; external kernel32 name 'NtResumeProcess';
 function DebugBreakProcess(Process: THandle): BOOL; stdcall; external kernel32 name 'DebugBreakProcess';
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall; external kernel32;
 function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall; external kernel32;
 function GetThreadId(ThreadHandle: THandle): DWORD; stdcall; external kernel32 name 'GetThreadId';
 function CoCreateGuid(out guid: TGUID): HResult; stdcall; external 'ole32.dll' name 'CoCreateGuid';
+
+var
+  _KernelLibHandle: THandle = 0;
+  NtSuspendProcess: TProcFunction = Nil;
+  NtResumeProcess: TProcFunction = Nil;
+
+procedure _LoadKernelProcs;
+begin
+  _KernelLibHandle := SafeLoadLibrary('ntdll.dll');
+  if _KernelLibHandle <> 0 then
+  begin
+    @NtSuspendProcess := GetProcAddress(_KernelLibHandle, 'NtSuspendProcess');
+    @NtResumeProcess := GetProcAddress(_KernelLibHandle, 'NtResumeProcess');
+  end;
+end;
+
+function SuspendProcess(const PID: DWORD): Boolean;
+var
+  ProcHandle: THandle;
+begin
+  Result := False;
+
+  if @NtSuspendProcess <> nil then
+  begin
+    ProcHandle := OpenProcess(PROCESS_SUSPEND_RESUME, False, PID);
+    if ProcHandle <> 0 then
+    begin
+      Result := NtSuspendProcess(ProcHandle) = STATUS_SUCCESS;
+      CloseHandle(ProcHandle);
+    end;
+  end;
+end;
+
+function ResumeProcess(const PID: DWORD): Boolean;
+var
+  ProcHandle: THandle;
+begin
+  Result := False;
+
+  if @NtResumeProcess <> nil then
+  begin
+    ProcHandle := OpenProcess(PROCESS_SUSPEND_RESUME, False, PID);
+    if ProcHandle <> 0 then
+    begin
+      Result := NtResumeProcess(ProcHandle) = STATUS_SUCCESS;
+      CloseHandle(ProcHandle);
+    end;
+  end;
+end;
 
 function GetGUID: String;
 var
@@ -196,5 +256,7 @@ begin
   Result := GetThreadId(ThreadHandle);
 end;
 
+initialization
+  _LoadKernelProcs;
 
 end.

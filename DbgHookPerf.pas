@@ -80,7 +80,7 @@ end;
 
 procedure InitPerfomance(Delta: Cardinal); stdcall;
 const
-  _SAMPLING_DELTA = 2;
+  _SAMPLING_DELTA = 3;
 begin
   _Delta := Delta;
 
@@ -113,9 +113,9 @@ procedure ResetPerfomance; stdcall;
 begin
   try
     if DeleteTimerQueue(_TimerQueue) then
-      _Log('Reset sampling timer queue - ok')
+      _Log('Reset perfomance timer queue - ok')
     else
-      _Log('Reset sampling timer queue - fail');
+      _Log('Reset perfomance timer queue - fail');
 
     FreeAndNil(_DbgSamplingLock);
 

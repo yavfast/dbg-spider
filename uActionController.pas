@@ -14,7 +14,7 @@ type
     doProfiler,
     doMemProfiler, doMemCallStack, doMemCheckDoubleFree,
     doExceptions, doExceptionCallStack,
-    doCodeTracking, doTrackSystemUnits,
+    doCodeTracking, doTrackSystemUnits, doSamplingMethod,
     doSyncObjsTracking
   );
 
@@ -135,7 +135,7 @@ var
 implementation
 
 uses SysUtils, uMain, Debuger, uDebugerThread, ClassUtils, JclIDEUtils,
-  System.IOUtils, System.Types;
+  System.IOUtils, System.Types, Vcl.Dialogs;
 
 var
   gvActionThread: TActionThread = nil;
@@ -331,7 +331,12 @@ end;
 procedure TProjectOptions.Save;
 begin
   if Assigned(FProjectXML) and (ExtractFileName(FProjectName) <> _DEFAULT_PROJECT) then
+  try
     FProjectXML.SaveToFile(FProjectName);
+  except
+    on E: Exception do
+      ShowMessageFmt('Save to "%s" fail: %s', [FProjectName, E.Message]);
+  end;
 end;
 
 function TProjectOptions.GetApplicationName: String;
