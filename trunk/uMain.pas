@@ -301,6 +301,7 @@ type
     rbnpgOptions: TRibbonPage;
     acDebugOptions: TAction;
     rbngrpProfilers: TRibbonGroup;
+    acSampling: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -487,6 +488,7 @@ type
     procedure acLockTrackingExecute(Sender: TObject);
     procedure acViewSyncObjsOnTimeLineExecute(Sender: TObject);
     procedure acDebugOptionsExecute(Sender: TObject);
+    procedure acSamplingExecute(Sender: TObject);
 
   private
     FSpiderOptions: TSpiderOptions;
@@ -715,6 +717,8 @@ begin
   if Assigned(gvDebuger) then
   begin
     gvDebuger.CodeTracking := acCodeTracking.Checked;
+
+    acSampling.Enabled := gvDebuger.CodeTracking;
     acTrackSystemUnits.Enabled := gvDebuger.CodeTracking;
   end;
 end;
@@ -891,6 +895,9 @@ begin
 
     if acTrackSystemUnits.Checked then
       Include(Result, doTrackSystemUnits);
+
+    if acSampling.Checked then
+      Include(Result, doSamplingMethod);
   end;
 
   if acLockTracking.Checked then
@@ -916,6 +923,14 @@ begin
   UpdateMainActions;
 
   _AC.RunDebug([doRun, doDebugInfo] + GetDebugOptions, FPID);
+end;
+
+procedure TMainForm.acSamplingExecute(Sender: TObject);
+begin
+  if Assigned(gvDebuger) then
+  begin
+    gvDebuger.SamplingMethod := acSampling.Checked;
+  end;
 end;
 
 procedure TMainForm.acSaveCopyExecute(Sender: TObject);
@@ -954,7 +969,7 @@ procedure TMainForm.acTrackSystemUnitsExecute(Sender: TObject);
 begin
   if Assigned(gvDebuger) then
   begin
-    gvDebuger.CodeTracking := acTrackSystemUnits.Checked;
+    gvDebuger.TrackSystemUnits := acTrackSystemUnits.Checked;
   end;
 end;
 
@@ -3712,8 +3727,8 @@ begin
       dsStoping: Msg := 'Stoping';
       dsStoped: Msg := 'Stoped';
       dsDbgFail: Msg := 'Debug Fail';
-      else
-        Msg := '';
+    else
+      Msg := '';
     end;
     lbStatusDbgStateValue.Caption := Msg;
 
@@ -3722,7 +3737,10 @@ begin
     else
       lbStatusEventsCntValue.Caption := '0';
 
-    lbStatusTrackEventCntValue.Caption := IntToStr(gvDebuger.ProcessData.DbgTrackEventCount);
+    if gvDebuger.SamplingMethod then
+      lbStatusTrackEventCntValue.Caption := IntToStr(gvDebuger.ProcessData.SamplingCount)
+    else
+      lbStatusTrackEventCntValue.Caption := IntToStr(gvDebuger.ProcessData.DbgTrackEventCount);
   end
   else
   begin
