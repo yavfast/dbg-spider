@@ -5,12 +5,8 @@ interface
 uses
   System.Classes, System.SyncObjs, System.SysUtils;
 
-const
-  NS_READER = 0;
-  NS_WRITER = 1;
-
 type
-  TRWNodeState = type Integer;
+  TRWNodeState = (nsReader, nsWriter);
 
   {$IFDEF DEBUG}
   TRWLock = class;
@@ -105,6 +101,7 @@ type
     destructor Destroy; override;
 
     procedure Lock(const AState: TRWNodeState);
+    function TryLock(const AState: TRWNodeState): Boolean;
     procedure UnLock;
 
     {$IFDEF DEBUG}
@@ -117,6 +114,14 @@ type
   end;
 
 implementation
+
+type
+  TWaitersList = class(TList)
+  protected
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
+    constructor Create;
+  end;
 
 { TRWNode }
 
@@ -136,15 +141,15 @@ begin
   FThreadID := AThreadID;
   FReaderAcquires := 0;
   FWriterAcquires := 0;
-  FState := NS_READER;
+  FState := nsReader;
 end;
 
 procedure TRWThreadNode.IncAcquires;
 begin
   case FState of
-    NS_READER:
+    nsReader:
       Inc(FReaderAcquires);
-    NS_WRITER:
+    nsWriter:
       Inc(FWriterAcquires);
   end;
 end;
@@ -152,13 +157,13 @@ end;
 procedure TRWThreadNode.DecAcquires;
 begin
   case FState of
-    NS_READER:
+    nsReader:
       Dec(FReaderAcquires);
-    NS_WRITER:
+    nsWriter:
       begin
         Dec(FWriterAcquires);
         if FWriterAcquires = 0 then
-          FState := NS_READER;
+          FState := nsReader;
       end;
   end;
 end;
@@ -175,8 +180,7 @@ begin
   inherited Create;
 
   FLock := TCriticalSection.Create;
-  FWaiters := TList.Create;
-  FWaiters.Capacity := 8;
+  FWaiters := TWaitersList.Create;
 
   {$IFDEF DEBUG}
   FLockInfoList := TLockInfoList.Create;
@@ -210,7 +214,7 @@ begin
   begin
     Node := RWNode[Result];
 
-    if (Node.State = NS_WRITER) and (Node.WriterAcquires > 0) then
+    if (Node.State = nsWriter) and (Node.WriterAcquires > 0) then
       Exit;
 
     Inc(Result);
@@ -348,6 +352,47 @@ begin
 end;
 {$ENDIF}
 
+function TRWLock.TryLock(const AState: TRWNodeState): Boolean;
+var
+  CurThread: TThreadID;
+  Node: TRWThreadNode;
+begin
+  Result := False;
+
+  CurThread := TThread.CurrentThread.ThreadID;
+
+  FLock.Enter;
+
+  Node := GetRWThreadNode(CurThread);
+
+  case AState of
+    nsReader:
+      Result := (GetWaitIndex(CurThread) <= GetFirstWriter);
+    nsWriter:
+      begin
+        Result := (GetNodeIndex(CurThread) = 0);
+        if Result then
+          Node.State := nsWriter;
+      end;
+  end;
+
+  if Result then
+  begin
+    Node.IncAcquires;
+
+    {$IFDEF DEBUG}
+    AddLockInfo(CurThread);
+    {$ENDIF}
+  end
+  else
+  begin
+    if Node.Acquires = 0 then
+      FWaiters.Remove(Node);
+  end;
+
+  FLock.Leave;
+end;
+
 procedure TRWLock.Lock(const AState: TRWNodeState);
 var
   CurThread: TThreadID;
@@ -360,11 +405,11 @@ begin
   Node := GetRWThreadNode(CurThread);
 
   case AState of
-    NS_READER:
+    nsReader:
       WaitForReader(CurThread);
-    NS_WRITER:
+    nsWriter:
       begin
-        Node.State := NS_WRITER;
+        Node.State := nsWriter;
         WaitForWriter(CurThread);
       end;
   end;
@@ -386,7 +431,7 @@ end;
 
 procedure TRWLock.WaitForWriter(const Thread: TThreadID);
 begin
-  while GetWaitIndex(Thread) <> 0 do
+  while GetNodeIndex(Thread) <> 0 do
     Wait;
 end;
 
@@ -421,10 +466,7 @@ begin
     Node.DecAcquires;
 
     if Node.Acquires = 0 then
-    begin
       FWaiters.Delete(Idx);
-      FreeAndNil(Node);
-    end;
   end;
 
   {$IFDEF DEBUG}
@@ -502,5 +544,20 @@ begin
   end;
 end;
 {$ENDIF}
+
+{ TWaitersList }
+
+constructor TWaitersList.Create;
+begin
+  inherited;
+
+  Capacity := 8;
+end;
+
+procedure TWaitersList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if Action = lnDeleted then
+    TObject(Ptr).Free;
+end;
 
 end.
