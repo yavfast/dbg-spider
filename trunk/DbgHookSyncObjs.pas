@@ -7,6 +7,8 @@ uses Windows;
 type
   TKernel32_Sleep =
     procedure (milliseconds: Cardinal); stdcall;
+  TKernel32_SleepEx =
+    function (dwMilliseconds: DWORD; bAlertable: BOOL): DWORD; stdcall;
 
   TKernel32_EnterCriticalSection =
     procedure (var lpCriticalSection: TRTLCriticalSection); stdcall;
@@ -15,8 +17,12 @@ type
 
   TKernel32_WaitForSingleObject =
     function (hHandle: THandle; dwMilliseconds: DWORD): DWORD; stdcall;
+  TKernel32_WaitForSingleObjectEx =
+    function (hHandle: THandle; dwMilliseconds: DWORD; bAlertable: BOOL): DWORD; stdcall;
   TKernel32_WaitForMultipleObjects =
     function (nCount: DWORD; lpHandles: PWOHandleArray; bWaitAll: BOOL; dwMilliseconds: DWORD): DWORD; stdcall;
+  TKernel32_WaitForMultipleObjectsEx =
+    function (nCount: DWORD; lpHandles: PWOHandleArray; bWaitAll: BOOL; dwMilliseconds: DWORD; bAlertable: BOOL): DWORD; stdcall;
 
   TKernel32_SendMessageA =
     function (hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
@@ -32,12 +38,15 @@ var
   SyncObjsHooked: Boolean = False;
 
   Kernel32_Sleep: TKernel32_Sleep = nil;
+  Kernel32_SleepEx: TKernel32_SleepEx = nil;
 
   Kernel32_EnterCriticalSection: TKernel32_EnterCriticalSection = nil;
   Kernel32_LeaveCriticalSection: TKernel32_LeaveCriticalSection = nil;
 
   Kernel32_WaitForSingleObject: TKernel32_WaitForSingleObject = nil;
+  Kernel32_WaitForSingleObjectEx: TKernel32_WaitForSingleObjectEx = nil;
   Kernel32_WaitForMultipleObjects: TKernel32_WaitForMultipleObjects = nil;
+  Kernel32_WaitForMultipleObjectsEx: TKernel32_WaitForMultipleObjectsEx = nil;
 
   Kernel32_SendMessageA: TKernel32_SendMessageA = Nil;
   Kernel32_SendMessageW: TKernel32_SendMessageW = Nil;
@@ -249,6 +258,19 @@ begin
   _AddSyncObjsInfo(soSleep, sosLeave, Id, milliseconds);
 end;
 
+function _HookSleepEx(dwMilliseconds: DWORD; bAlertable: BOOL): DWORD; stdcall;
+var
+  Id: NativeUInt;
+begin
+  Id := NativeUInt(InterlockedIncrement(SyncObjsId));
+
+  _AddSyncObjsInfo(soSleep, sosEnter, Id, dwMilliseconds);
+
+  Result := Kernel32_SleepEx(dwMilliseconds, bAlertable);
+
+  _AddSyncObjsInfo(soSleep, sosLeave, Id, dwMilliseconds);
+end;
+
 procedure _HookEnterCriticalSection(var lpCriticalSection: TRTLCriticalSection); stdcall;
 var
   Id: NativeUInt;
@@ -295,6 +317,19 @@ begin
   _AddSyncObjsInfo(soWaitForSingleObject, sosLeave, Id, NativeUInt(hHandle));
 end;
 
+function _HookWaitForSingleObjectEx(hHandle: THandle; dwMilliseconds: DWORD; bAlertable: BOOL): DWORD; stdcall;
+var
+  Id: NativeUInt;
+begin
+  Id := NativeUInt(InterlockedIncrement(SyncObjsId));
+
+  _AddSyncObjsInfo(soWaitForSingleObject, sosEnter, Id, NativeUInt(hHandle));
+
+  Result := Kernel32_WaitForSingleObjectEx(hHandle, dwMilliseconds, bAlertable);
+
+  _AddSyncObjsInfo(soWaitForSingleObject, sosLeave, Id, NativeUInt(hHandle));
+end;
+
 function _HookWaitForMultipleObjects(nCount: DWORD; lpHandles: PWOHandleArray; bWaitAll: BOOL; dwMilliseconds: DWORD): DWORD; stdcall;
 var
   Id: NativeUInt;
@@ -304,6 +339,19 @@ begin
   _AddSyncObjsInfo(soWaitForMultipleObjects, sosEnter, Id, NativeUInt(Pointer(lpHandles)));
 
   Result := Kernel32_WaitForMultipleObjects(nCount, lpHandles, bWaitAll, dwMilliseconds);
+
+  _AddSyncObjsInfo(soWaitForMultipleObjects, sosLeave, Id, NativeUInt(Pointer(lpHandles)));
+end;
+
+function _HookWaitForMultipleObjectsEx(nCount: DWORD; lpHandles: PWOHandleArray; bWaitAll: BOOL; dwMilliseconds: DWORD; bAlertable: BOOL): DWORD; stdcall;
+var
+  Id: NativeUInt;
+begin
+  Id := NativeUInt(InterlockedIncrement(SyncObjsId));
+
+  _AddSyncObjsInfo(soWaitForMultipleObjects, sosEnter, Id, NativeUInt(Pointer(lpHandles)));
+
+  Result := Kernel32_WaitForMultipleObjectsEx(nCount, lpHandles, bWaitAll, dwMilliseconds, bAlertable);
 
   _AddSyncObjsInfo(soWaitForMultipleObjects, sosLeave, Id, NativeUInt(Pointer(lpHandles)));
 end;
@@ -404,8 +452,6 @@ function _HookSyncObjs(ImageBase: Pointer): Boolean;
 begin
   if not SyncObjsHooked then
   begin
-    Result := False;
-
     SyncObjsLock := TDbgCriticalSection.Create;
 
     _PeMapImgHooks := TJclPeMapImgHooks.Create;
@@ -415,12 +461,15 @@ begin
     SyncObjsLock.Enter;
     try
       _ReplaceImport(kernel32, 'Sleep', @_HookSleep, @Kernel32_Sleep);
+      _ReplaceImport(kernel32, 'SleepEx', @_HookSleepEx, @Kernel32_SleepEx);
 
       _ReplaceImport(kernel32, 'EnterCriticalSection', @_HookEnterCriticalSection, @Kernel32_EnterCriticalSection);
       _ReplaceImport(kernel32, 'LeaveCriticalSection', @_HookLeaveCriticalSection, @Kernel32_LeaveCriticalSection);
 
       _ReplaceImport(kernel32, 'WaitForSingleObject', @_HookWaitForSingleObject, @Kernel32_WaitForSingleObject);
+      _ReplaceImport(kernel32, 'WaitForSingleObjectEx', @_HookWaitForSingleObjectEx, @Kernel32_WaitForSingleObjectEx);
       _ReplaceImport(kernel32, 'WaitForMultipleObjects', @_HookWaitForMultipleObjects, @Kernel32_WaitForMultipleObjects);
+      _ReplaceImport(kernel32, 'WaitForMultipleObjectsEx', @_HookWaitForMultipleObjectsEx, @Kernel32_WaitForMultipleObjectsEx);
 
       _ReplaceImport(user32, 'SendMessageA', @_HookSendMessageA, @Kernel32_SendMessageA);
       _ReplaceImport(user32, 'SendMessageW', @_HookSendMessageW, @Kernel32_SendMessageW);
@@ -443,6 +492,8 @@ begin
   begin
     if Assigned(@Kernel32_Sleep) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_Sleep);
+    if Assigned(@Kernel32_SleepEx) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_SleepEx);
 
     if Assigned(@Kernel32_EnterCriticalSection) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_EnterCriticalSection);
@@ -451,8 +502,12 @@ begin
 
     if Assigned(@Kernel32_WaitForSingleObject) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForSingleObject);
+    if Assigned(@Kernel32_WaitForSingleObjectEx) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForSingleObjectEx);
     if Assigned(@Kernel32_WaitForMultipleObjects) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForMultipleObjects);
+    if Assigned(@Kernel32_WaitForMultipleObjectsEx) then
+      _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_WaitForMultipleObjectsEx);
 
     if Assigned(@Kernel32_SendMessageA) then
       _PeMapImgHooks.UnhookByBaseAddress(@Kernel32_SendMessageA);
