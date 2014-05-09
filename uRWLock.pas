@@ -3,7 +3,7 @@ unit uRWLock;
 interface
 
 uses
-  System.Classes, System.SyncObjs, System.SysUtils;
+  System.Classes, System.SyncObjs, System.SysUtils, System.Types;
 
 type
   TRWNodeState = (nsReader, nsWriter);
@@ -44,7 +44,9 @@ type
     FThreadID: TThreadID;
     FReaderAcquires: Integer;
     FWriterAcquires: Integer;
+    FWakeUpEvent: TEvent;
     FState: TRWNodeState;
+    FIsWait: Boolean;
 
     function GetAcquires: Integer; inline;
   protected
@@ -54,12 +56,17 @@ type
     procedure DecAcquires;
   public
     constructor Create(const AThreadID: TThreadID);
+    destructor Destroy; override;
+
+    procedure WakeUp; inline;
+    procedure Wait; inline;
 
     property ThreadID: TThreadID read FThreadID;
     property ReaderAcquires: Integer read FReaderAcquires;
     property WriterAcquires: Integer read FWriterAcquires;
     property Acquires: Integer read GetAcquires;
     property State: TRWNodeState read FState write FState;
+    property IsWait: Boolean read FIsWait write FIsWait;
   end;
 
   ERWLockError = class(Exception);
@@ -81,16 +88,18 @@ type
     function GetRWNode(const Index: Integer): TRWThreadNode; inline;
     function GetRWNodeCount: Integer; inline;
 
-    function GetFirstWriter: Integer;
-    function GetWaitIndex(const ThreadID: TThreadID): Integer;
     function GetNodeIndex(const ThreadID: TThreadID): Integer;
+
+    function HasActiveWriter(CurThreadNode: TRWThreadNode): Boolean;
+    function HasActiveNode(CurThreadNode: TRWThreadNode): Boolean;
 
     function AddRWNode(const AThreadID: TThreadID): TRWThreadNode;
     function GetRWThreadNode(const AThreadID: TThreadID): TRWThreadNode;
 
-    procedure Wait;
-    procedure WaitForReader(const Thread: TThreadID);
-    procedure WaitForWriter(const Thread: TThreadID);
+    procedure WakeUpWaiters;
+    procedure Wait(ThreadNode: TRWThreadNode);
+    procedure WaitForReader(ThreadNode: TRWThreadNode);
+    procedure WaitForWriter(ThreadNode: TRWThreadNode);
 
     property RWNode[const Index: Integer]: TRWThreadNode read GetRWNode;
     property RWNodeCount: Integer read GetRWNodeCount;
@@ -132,6 +141,7 @@ begin
   Result.FReaderAcquires := FReaderAcquires;
   Result.FWriterAcquires := FWriterAcquires;
   Result.FState := FState;
+  Result.FIsWait := FIsWait;
 end;
 
 constructor TRWThreadNode.Create(const AThreadID: TThreadID);
@@ -141,7 +151,9 @@ begin
   FThreadID := AThreadID;
   FReaderAcquires := 0;
   FWriterAcquires := 0;
+  FWakeUpEvent := TEvent.Create(nil, False, True, '');
   FState := nsReader;
+  FIsWait := True;
 end;
 
 procedure TRWThreadNode.IncAcquires;
@@ -152,6 +164,16 @@ begin
     nsWriter:
       Inc(FWriterAcquires);
   end;
+end;
+
+procedure TRWThreadNode.Wait; // inline;
+begin
+  FWakeUpEvent.WaitFor(INFINITE);
+end;
+
+procedure TRWThreadNode.WakeUp; // inline;
+begin
+  FWakeUpEvent.SetEvent;
 end;
 
 procedure TRWThreadNode.DecAcquires;
@@ -166,6 +188,13 @@ begin
           FState := nsReader;
       end;
   end;
+end;
+
+destructor TRWThreadNode.Destroy;
+begin
+  FreeAndNil(FWakeUpEvent);
+
+  inherited;
 end;
 
 function TRWThreadNode.GetAcquires: Integer; // inline
@@ -204,48 +233,48 @@ begin
   inherited;
 end;
 
-function TRWLock.GetFirstWriter: Integer;
-var
-  Node: TRWThreadNode;
-begin
-  Result := 0;
-
-  while Result < RWNodeCount do
-  begin
-    Node := RWNode[Result];
-
-    if (Node.State = nsWriter) and (Node.WriterAcquires > 0) then
-      Exit;
-
-    Inc(Result);
-  end;
-
-  Result := MaxInt;
-end;
-
-function TRWLock.GetWaitIndex(const ThreadID: TThreadID): Integer;
+function TRWLock.HasActiveNode(CurThreadNode: TRWThreadNode): Boolean;
 var
   Idx: Integer;
   Node: TRWThreadNode;
 begin
-  Result := 0;
+  Result := True;
   Idx := 0;
 
   while Idx < RWNodeCount do
   begin
     Node := RWNode[Idx];
 
-    if (Node.ThreadID = ThreadID) then
-      Exit
-    else
-      if Node.Acquires <> 0 then
-      begin
-        Inc(Result);
+    if Node <> CurThreadNode then
+      if (Node.WriterAcquires > 0) or ((Node.ReaderAcquires > 0) and not(Node.IsWait)) then
         Exit;
-      end;
 
     Inc(Idx);
   end;
+
+  Result := False;
+end;
+
+function TRWLock.HasActiveWriter(CurThreadNode: TRWThreadNode): Boolean;
+var
+  Idx: Integer;
+  Node: TRWThreadNode;
+begin
+  Result := True;
+  Idx := 0;
+
+  while Idx < RWNodeCount do
+  begin
+    Node := RWNode[Idx];
+
+    if Node <> CurThreadNode then
+      if (Node.State = nsWriter) and (Node.WriterAcquires > 0) then
+        Exit;
+
+    Inc(Idx);
+  end;
+
+  Result := False;
 end;
 
 function TRWLock.GetNodeIndex(const ThreadID: TThreadID): Integer;
@@ -354,40 +383,37 @@ end;
 
 function TRWLock.TryLock(const AState: TRWNodeState): Boolean;
 var
-  CurThread: TThreadID;
-  Node: TRWThreadNode;
+  ThreadNode: TRWThreadNode;
 begin
   Result := False;
 
-  CurThread := TThread.CurrentThread.ThreadID;
-
   FLock.Enter;
 
-  Node := GetRWThreadNode(CurThread);
+  ThreadNode := GetRWThreadNode(TThread.CurrentThread.ThreadID);
 
   case AState of
     nsReader:
-      Result := (GetWaitIndex(CurThread) <= GetFirstWriter);
+      Result := not(HasActiveWriter(ThreadNode));
     nsWriter:
       begin
-        Result := (GetNodeIndex(CurThread) = 0);
+        Result := not(HasActiveNode(ThreadNode));
         if Result then
-          Node.State := nsWriter;
+          ThreadNode.State := nsWriter;
       end;
   end;
 
   if Result then
   begin
-    Node.IncAcquires;
+    ThreadNode.IncAcquires;
 
     {$IFDEF DEBUG}
-    AddLockInfo(CurThread);
+    AddLockInfo(ThreadNode.ThreadID);
     {$ENDIF}
   end
   else
   begin
-    if Node.Acquires = 0 then
-      FWaiters.Remove(Node);
+    if ThreadNode.Acquires = 0 then
+      FWaiters.Remove(ThreadNode);
   end;
 
   FLock.Leave;
@@ -395,47 +421,58 @@ end;
 
 procedure TRWLock.Lock(const AState: TRWNodeState);
 var
-  CurThread: TThreadID;
-  Node: TRWThreadNode;
+  ThreadNode: TRWThreadNode;
 begin
-  CurThread := TThread.CurrentThread.ThreadID;
-
   FLock.Enter;
 
-  Node := GetRWThreadNode(CurThread);
+  ThreadNode := GetRWThreadNode(TThread.CurrentThread.ThreadID);
+  ThreadNode.IsWait := True;
 
   case AState of
     nsReader:
-      WaitForReader(CurThread);
+      begin
+        WaitForReader(ThreadNode);
+      end;
     nsWriter:
       begin
-        Node.State := nsWriter;
-        WaitForWriter(CurThread);
+        ThreadNode.State := nsWriter;
+        WaitForWriter(ThreadNode);
       end;
   end;
 
-  Node.IncAcquires;
+  ThreadNode.IncAcquires;
+  ThreadNode.IsWait := False;
 
   {$IFDEF DEBUG}
-  AddLockInfo(CurThread);
+  AddLockInfo(ThreadNode.ThreadID);
   {$ENDIF}
 
   FLock.Leave;
 end;
 
-procedure TRWLock.WaitForReader(const Thread: TThreadID);
+procedure TRWLock.WaitForReader(ThreadNode: TRWThreadNode);
 begin
-  while GetWaitIndex(Thread) > GetFirstWriter do
-    Wait;
+  // Ќе должно быть активных писателей
+  while HasActiveWriter(ThreadNode) do
+    Wait(ThreadNode);
 end;
 
-procedure TRWLock.WaitForWriter(const Thread: TThreadID);
+procedure TRWLock.WaitForWriter(ThreadNode: TRWThreadNode);
 begin
-  while GetNodeIndex(Thread) <> 0 do
-    Wait;
+  // Ќе должно быть активных читателей или писателей
+  while HasActiveNode(ThreadNode) do
+    Wait(ThreadNode);
 end;
 
-procedure TRWLock.Wait;
+procedure TRWLock.WakeUpWaiters;
+var
+  Idx: Integer;
+begin
+  for Idx := 0 to RWNodeCount - 1 do
+    RWNode[Idx].WakeUp;
+End;
+
+procedure TRWLock.Wait(ThreadNode: TRWThreadNode);
 begin
   {$IFDEF DEBUG}
   if Assigned(FLockWaitEvent) then
@@ -443,29 +480,28 @@ begin
   {$ENDIF}
 
   FLock.Leave;
-  Sleep(1); // Switch thread
+
+  ThreadNode.Wait;
+
   FLock.Enter;
 end;
 
 procedure TRWLock.UnLock;
 var
-  CurThread: TThreadID;
   Idx: Integer;
-  Node: TRWThreadNode;
+  ThreadNode: TRWThreadNode;
 begin
-  CurThread := TThread.CurrentThread.ThreadID;
-
   FLock.Enter;
 
-  Idx := GetNodeIndex(CurThread);
+  Idx := GetNodeIndex(TThread.CurrentThread.ThreadID);
 
   if Idx >= 0 then
   begin
-    Node := RWNode[Idx];
+    ThreadNode := RWNode[Idx];
 
-    Node.DecAcquires;
+    ThreadNode.DecAcquires;
 
-    if Node.Acquires = 0 then
+    if ThreadNode.Acquires = 0 then
       FWaiters.Delete(Idx);
   end;
 
@@ -473,8 +509,10 @@ begin
   if Idx < 0 then
     RaiseRWLockException('lock already released');
 
-  DelLockInfo(CurThread);
+  DelLockInfo(TThread.CurrentThread.ThreadID);
   {$ENDIF}
+
+  WakeUpWaiters;
 
   FLock.Leave;
 end;

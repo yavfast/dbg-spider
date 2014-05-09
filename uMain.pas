@@ -58,7 +58,7 @@ type
       ltDbgFuncParamInfo:
         (DbgFuncParamInfo: TVarInfo);
       ltDbgLogItem:
-        (DbgLogItem: TDbgLogItem);
+        (DbgLogItemIdx: Integer);
       ltTrackFuncInfo:
         (TrackFuncInfo: TTrackFuncInfo);
       ltTrackUnitInfo:
@@ -3691,7 +3691,7 @@ begin
           Node := vstLog.AddChild(vstLog.RootNode.FirstChild);
           Data := vstLog.GetNodeData(Node);
 
-          Data^.DbgLogItem := gvDebugInfo.DbgLog[I];
+          Data^.DbgLogItemIdx := I;
           Data^.LinkType := ltDbgLogItem;
         end;
 
@@ -4905,8 +4905,9 @@ begin
   case Data^.LinkType of
     ltDbgLogItem:
       begin
-        Item := Data^.DbgLogItem;
-        TargetCanvas.Font.Color := FSpiderOptions.LogColors[Item.LogType];
+        Item := gvDebugInfo.DbgLog[Data^.DbgLogItemIdx];
+        if Assigned(Item) then
+          TargetCanvas.Font.Color := FSpiderOptions.LogColors[Item.LogType];
       end;
   end;
 end;
@@ -4928,10 +4929,13 @@ begin
       end;
     ltDbgLogItem:
       begin
-        Item := Data^.DbgLogItem;
-        case Column of
-          0: CellText := FormatDateTime('yyyy.dd.mm hh:nn:ss.zzz', Item.DateTime);
-          1: CellText := Item.LogMessage;
+        Item := gvDebugInfo.DbgLog[Data^.DbgLogItemIdx];
+        if Assigned(Item) then
+        begin
+          case Column of
+            0: CellText := FormatDateTime('yyyy.dd.mm hh:nn:ss.zzz', Item.DateTime);
+            1: CellText := Item.LogMessage;
+          end;
         end;
       end;
   end;

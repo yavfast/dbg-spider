@@ -1098,9 +1098,12 @@ end;
 
 function TDbgLog.GetItem(const Index: Integer): TDbgLogItem;
 begin
+  Result := Nil;
+
   FLock.BeginRead;
   try
-    Result := TDbgLogItem(List[Index]);
+    if (Index >= 0) and (Index < Count) then
+      Result := TDbgLogItem(List[Index]);
   finally
     FLock.EndRead;
   end;
@@ -1124,9 +1127,9 @@ begin
 
   FFuncInfo := AFuncInfo;
   FTrackUnitInfo := nil;
-  FParentFuncs := TCallFuncCounter.Create(256);
+  FParentFuncs := TCallFuncCounter.Create(128);
   FParentFuncs.OwnsValues := True;
-  FChildFuncs := TCallFuncCounter.Create(256);
+  FChildFuncs := TCallFuncCounter.Create(128);
   FChildFuncs.OwnsValues := True;
 end;
 
