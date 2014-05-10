@@ -8,6 +8,9 @@ uses SysUtils, Windows, Classes, JclPeImage, SyncObjs, ClassUtils, DbgHookTypes,
 
 type
   TSysUInt = NativeUInt;
+  PReal48 = ^Real48;
+  PReal = ^Real;
+
 
 const
   EXCEPTION_SET_THREAD_NAME = $406D1388;

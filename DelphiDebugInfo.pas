@@ -111,20 +111,8 @@ Function HasDelphiDebugInfo(Const AFileName: String): Boolean;
 Implementation
 
 Uses
-  JclDebug,
-  JclPeImage,
-  // ApiConsts,
-  // DebugInfoUtils,
-  EvaluateProcs,
-  EvaluateTypes,
-  // ExpressionEvaluator,
-  Math,
-  Variants,
-  // Morfik.dcSystem,
-  ClassUtils,
-  DebugHook,
-  StrUtils,
-  System.Contnrs, Vcl.Forms, JclWin32;
+  JclDebug, JclPeImage, JclWin32,
+  Math, Variants, ClassUtils, DebugHook, System.StrUtils, System.Contnrs, Vcl.Forms;
 
 Const
   cContinuable = 0;
@@ -171,20 +159,24 @@ Begin
 End;
 
 function TDelphiDebugInfo.CustomVariantAsString(const Value: Variant): String;
-var
-  CustomVariantData: ICustomVariantData;
-  ToStringData: TToStringData;
+//var
+//  CustomVariantData: ICustomVariantData;
+//  ToStringData: TToStringData;
 begin
-  If Supports(IUnknown(TVarData(Value).VUnknown), ICustomVariantData, CustomVariantData) Then
-  begin
-    ToStringData.DebugInfo := Self;
-    ToStringData.Mode := tsmBrief;
-    ToStringData.RecursionLevel := 0;
+  Result := '#VALUE#';
 
-    Result := CustomVariantData.AsString(ToStringData);
-  end
-  Else
-    Result := 'Unsupported data type';
+  //TODO:
+
+//  If Supports(IUnknown(TVarData(Value).VUnknown), ICustomVariantData, CustomVariantData) Then
+//  begin
+//    ToStringData.DebugInfo := Self;
+//    ToStringData.Mode := tsmBrief;
+//    ToStringData.RecursionLevel := 0;
+//
+//    Result := CustomVariantData.AsString(ToStringData);
+//  end
+//  Else
+//    Result := 'Unsupported data type';
 end;
 
 Destructor TDelphiDebugInfo.Destroy;
@@ -934,7 +926,7 @@ Var
     ExtValue: Extended;
   begin
     ExtValue := PExtended(ConstSymbol.Value)^;
-    ConstInfo.Value := IUnknown(TExtendedConstantValue.Create(ExtValue));
+    //TODO: ConstInfo.Value := IUnknown(TExtendedConstantValue.Create(ExtValue));
   end;
 
   procedure LoadSet;
@@ -944,13 +936,13 @@ Var
     SetLength(SetValue, 32);
     Move(ConstSymbol.Value^, SetValue[TypeInfo.MinValue], ConstSymbol.Size);
     LoadType(ConstInfo.UnitInfo, ConstSymbol.TypeIndex, ConstInfo.TypeInfo);
-    ConstInfo.Value := IUnknown(TSetVariantValue.Create(ConstInfo.TypeInfo, SetValue));
+    //TODO: ConstInfo.Value := IUnknown(TSetVariantValue.Create(ConstInfo.TypeInfo, SetValue));
   end;
 
   procedure LoadSubRange;
   begin
     LoadType(ConstInfo.UnitInfo, ConstSymbol.TypeIndex, ConstInfo.TypeInfo);
-    ConstInfo.Value := GetValueNonRef(Nil, ConstInfo.TypeInfo, TUIntPtr(ConstSymbol.Value^), False);
+    //TODO: ConstInfo.Value := GetValueNonRef(Nil, ConstInfo.TypeInfo, TUIntPtr(ConstSymbol.Value^), False);
   end;
 
 Begin
@@ -959,7 +951,7 @@ Begin
   If TypeInfo <> Nil Then
     try
       ConstInfo := TConstInfo.Create;
-      ConstInfo.OwnerInfo := OwnerInfo;
+      ConstInfo.Owner := OwnerInfo;
       ConstInfo.NameId := ConstSymbol.NameIndex;
       ConstInfo.SymbolInfo := ConstSymbol;
       LoadType(ConstInfo.UnitInfo, ConstSymbol.TypeIndex, ConstInfo.TypeInfo);
@@ -998,7 +990,8 @@ Begin
         stkCurrency:
           ConstInfo.Value := PCurrency(ConstSymbol.Value)^;
         stkPointer:
-          ConstInfo.Value := IUnknown(TPointerConstantValue.Create(PPointer(ConstSymbol.Value)^));
+          //TODO: ConstInfo.Value := IUnknown(TPointerConstantValue.Create(PPointer(ConstSymbol.Value)^));
+          ConstInfo.Value := '#PTR_CONST#';
         stkLString, stkWString:
           ConstInfo.Value := '#STR_CONST#';
         stkSet:
@@ -1012,14 +1005,14 @@ Begin
       on E: Exception do
       begin
         ConstName := String(ImageNames(ConstSymbol.NameIndex));
-        RaiseInternalError(Format('%s.%s', [ConstInfo.UnitInfo.Name, ConstName]));
+        RaiseDebugCoreException(Format('%s.%s', [ConstInfo.UnitInfo.Name, ConstName]));
       end;
     end;
 
   If ConstInfo <> Nil Then
   Begin
-    If ConstInfo.OwnerInfo is TFuncInfo Then
-      TFuncInfo(ConstInfo.OwnerInfo).Consts.Add(ConstInfo)
+    If ConstInfo.Owner is TFuncInfo Then
+      TFuncInfo(ConstInfo.Owner).Consts.Add(ConstInfo)
     Else
       ConstInfo.UnitInfo.Consts.Add(ConstInfo);
   End;
@@ -1443,7 +1436,7 @@ begin
   FSystemUnits.Sorted := True;
 end;
 
-Function TDelphiDebugInfo.FindFuncByAddr(const UnitInfo: TUnitInfo; const Addr: TPointer): TFuncInfo;
+Function TDelphiDebugInfo.FindFuncByAddr(const UnitInfo: TUnitInfo; const Addr: Pointer): TFuncInfo;
 Var
   I: Integer;
 Begin
@@ -1554,7 +1547,7 @@ Begin
   End;
 End;
 
-Function TDelphiDebugInfo.CheckAddr(Const Addr: TPointer): Boolean;
+Function TDelphiDebugInfo.CheckAddr(Const Addr: Pointer): Boolean;
 Begin
   Result := FindUnitByAddr(Addr) <> Nil;
 End;
@@ -1699,26 +1692,26 @@ begin
       Result := FileName;
 end;
 
-Function TDelphiDebugInfo.GetExceptionAddress(ExceptionRecord: PExceptionRecord): TPointer;
+Function TDelphiDebugInfo.GetExceptionAddress(ExceptionRecord: PExceptionRecord): Pointer;
 Begin
   If IsDelphiException(ExceptionRecord) And (ExceptionRecord^.NumberParameters > 0) Then
-    Result := TPointer(ExceptionRecord^.ExceptionInformation[0])
+    Result := Pointer(ExceptionRecord^.ExceptionInformation[0])
   Else
     Result := Inherited GetExceptionAddress(ExceptionRecord);
 End;
 
-Function TDelphiDebugInfo.GetExceptionFrame(ExceptionRecord: PExceptionRecord): TPointer;
+Function TDelphiDebugInfo.GetExceptionFrame(ExceptionRecord: PExceptionRecord): Pointer;
 Begin
   If ExceptionRecord^.ExceptionCode = cDelphiException Then
-    Result := TPointer(ExceptionRecord^.ExceptionInformation[5])
+    Result := Pointer(ExceptionRecord^.ExceptionInformation[5])
   Else
     Result := Inherited GetExceptionFrame(ExceptionRecord);
 End;
 
 Function TDelphiDebugInfo.GetExceptionMessage(ExceptionRecord: PExceptionRecord; const ThreadId: TThreadId): String;
 Var
-  ExceptTypeAddr: TPointer;
-  ExceptMsgPtr: TPointer;
+  ExceptTypeAddr: Pointer;
+  ExceptMsgPtr: Pointer;
   //ExceptMsg: String;
 Begin
   Result := '';
@@ -1740,7 +1733,7 @@ End;
 
 Function TDelphiDebugInfo.GetExceptionName(ExceptionRecord: PExceptionRecord): String;
 Var
-  ExceptTypeAddr: TPointer;
+  ExceptTypeAddr: Pointer;
 Begin
   If ExceptionRecord^.ExceptionCode = cDelphiException Then
   Begin
@@ -1751,7 +1744,7 @@ Begin
     Result := Inherited GetExceptionName(ExceptionRecord);
 End;
 
-Function TDelphiDebugInfo.GetLineInfo(const Addr: TPointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
+Function TDelphiDebugInfo.GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
   GetPrevLine: Boolean): TFindResult;
 var
   AddressInfo: PAddressInfo;
@@ -1897,14 +1890,12 @@ function TDelphiDebugInfo.EvaluateVariable(VarInfo: TVarInfo): Variant;
 var
   EBP: Pointer;
   Value: Variant;
-  CalculateData : TCalculateData;
 begin
   EBP := Pointer(gvDebuger.GetRegisters(gvDebuger.CurThreadId).Ebp);
-  Value := EvaluateProcs.EvaluateVariable(gvDebuger, VarInfo, EBP, True);
+  //TODO: Value := EvaluateProcs.EvaluateVariable(gvDebuger, VarInfo, EBP, True);
 
-  CalculateData.DebugInfo := Self;
-  CalculateData.BriefMode := True;
-  Result := EvaluateProcs.CalculateValue(Value, CalculateData);
+  //TODO: Result := EvaluateProcs.CalculateValue(Value, CalculateData);
+  Result := Unassigned;
 end;
 
 function TDelphiDebugInfo.ImageBase: Cardinal;

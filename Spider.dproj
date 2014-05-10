@@ -68,7 +68,6 @@
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DCC_MapFile>3</DCC_MapFile>
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
         <Icon_MainIcon>..\dbg-spider_\Spider_Icon.ico</Icon_MainIcon>
     </PropertyGroup>
@@ -83,10 +82,6 @@
         <DCCReference Include="DebugInfo.pas"/>
         <DCCReference Include="ClassUtils.pas"/>
         <DCCReference Include="DelphiDebugInfo.pas"/>
-        <DCCReference Include="EvaluateTypes.pas"/>
-        <DCCReference Include="EvaluateProcs.pas"/>
-        <DCCReference Include="EvaluateConsts.pas"/>
-        <DCCReference Include="Evaluator.pas"/>
         <DCCReference Include="uProcessList.pas">
             <Form>frmProcessList</Form>
         </DCCReference>
@@ -170,7 +165,7 @@
                     <VersionInfo Name="MajorVer">0</VersionInfo>
                     <VersionInfo Name="MinorVer">1</VersionInfo>
                     <VersionInfo Name="Release">1</VersionInfo>
-                    <VersionInfo Name="Build">322</VersionInfo>
+                    <VersionInfo Name="Build">325</VersionInfo>
                     <VersionInfo Name="Debug">False</VersionInfo>
                     <VersionInfo Name="PreRelease">False</VersionInfo>
                     <VersionInfo Name="Special">False</VersionInfo>
@@ -182,7 +177,7 @@
                 <VersionInfoKeys>
                     <VersionInfoKeys Name="CompanyName"/>
                     <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="FileVersion">0.1.1.322</VersionInfoKeys>
+                    <VersionInfoKeys Name="FileVersion">0.1.1.325</VersionInfoKeys>
                     <VersionInfoKeys Name="InternalName"/>
                     <VersionInfoKeys Name="LegalCopyright"/>
                     <VersionInfoKeys Name="LegalTrademarks"/>
