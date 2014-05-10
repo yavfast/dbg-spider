@@ -2,13 +2,15 @@ unit uRWLock;
 
 interface
 
+{.$DEFINE RWLOCK_DEBUG}
+
 uses
   System.Classes, System.SyncObjs, System.SysUtils, System.Types;
 
 type
   TRWNodeState = (nsReader, nsWriter);
 
-  {$IFDEF DEBUG}
+  {$IFDEF RWLOCK_DEBUG}
   TRWLock = class;
   TRWThreadNode = class;
 
@@ -76,7 +78,7 @@ type
     FLock: TCriticalSection;
     FWaiters: TList;
 
-    {$IFDEF DEBUG}
+    {$IFDEF RWLOCK_DEBUG}
     FLockInfoList: TLockInfoList;
     FLockEvent: TLockEvent;
     FLockWaitEvent: TLockWaitEvent;
@@ -113,7 +115,7 @@ type
     function TryLock(const AState: TRWNodeState): Boolean;
     procedure UnLock;
 
-    {$IFDEF DEBUG}
+    {$IFDEF RWLOCK_DEBUG}
     function GetStatus: TRWThreadLockInfoList;
     function GetLockStack: TLockInfoList;
 
@@ -211,7 +213,7 @@ begin
   FLock := TCriticalSection.Create;
   FWaiters := TWaitersList.Create;
 
-  {$IFDEF DEBUG}
+  {$IFDEF RWLOCK_DEBUG}
   FLockInfoList := TLockInfoList.Create;
   FLockEvent := Nil;
   FLockWaitEvent := Nil;
@@ -220,7 +222,7 @@ end;
 
 destructor TRWLock.Destroy;
 begin
-  {$IFDEF DEBUG}
+  {$IFDEF RWLOCK_DEBUG}
   if FWaiters.Count > 0 then
     RaiseRWLockException('lock in use');
 
@@ -325,7 +327,7 @@ begin
     Result := AddRWNode(AThreadID);
 end;
 
-{$IFDEF DEBUG}
+{$IFDEF RWLOCK_DEBUG}
 procedure TRWLock.AddLockInfo(const ThreadID: TThreadID);
 var
   LockInfo: TLockInfo;
@@ -406,7 +408,7 @@ begin
   begin
     ThreadNode.IncAcquires;
 
-    {$IFDEF DEBUG}
+    {$IFDEF RWLOCK_DEBUG}
     AddLockInfo(ThreadNode.ThreadID);
     {$ENDIF}
   end
@@ -443,7 +445,7 @@ begin
   ThreadNode.IncAcquires;
   ThreadNode.IsWait := False;
 
-  {$IFDEF DEBUG}
+  {$IFDEF RWLOCK_DEBUG}
   AddLockInfo(ThreadNode.ThreadID);
   {$ENDIF}
 
@@ -452,14 +454,12 @@ end;
 
 procedure TRWLock.WaitForReader(ThreadNode: TRWThreadNode);
 begin
-  // Ќе должно быть активных писателей
   while HasActiveWriter(ThreadNode) do
     Wait(ThreadNode);
 end;
 
 procedure TRWLock.WaitForWriter(ThreadNode: TRWThreadNode);
 begin
-  // Ќе должно быть активных читателей или писателей
   while HasActiveNode(ThreadNode) do
     Wait(ThreadNode);
 end;
@@ -468,13 +468,17 @@ procedure TRWLock.WakeUpWaiters;
 var
   Idx: Integer;
 begin
+  FLock.Enter;
+
   for Idx := 0 to RWNodeCount - 1 do
     RWNode[Idx].WakeUp;
+
+  FLock.Leave;
 End;
 
 procedure TRWLock.Wait(ThreadNode: TRWThreadNode);
 begin
-  {$IFDEF DEBUG}
+  {$IFDEF RWLOCK_DEBUG}
   if Assigned(FLockWaitEvent) then
     FLockWaitEvent(Self);
   {$ENDIF}
@@ -505,16 +509,16 @@ begin
       FWaiters.Delete(Idx);
   end;
 
-  {$IFDEF DEBUG}
+  {$IFDEF RWLOCK_DEBUG}
   if Idx < 0 then
     RaiseRWLockException('lock already released');
 
   DelLockInfo(TThread.CurrentThread.ThreadID);
   {$ENDIF}
 
-  WakeUpWaiters;
-
   FLock.Leave;
+
+  WakeUpWaiters;
 end;
 
 procedure TRWLock.RaiseRWLockException(const Msg: String);
@@ -524,7 +528,7 @@ begin
   raise ERWLockError.Create(Msg);
 end;
 
-{$IFDEF DEBUG}
+{$IFDEF RWLOCK_DEBUG}
 
 { TRWThreadLockInfoList }
 
