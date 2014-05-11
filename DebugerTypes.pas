@@ -577,6 +577,7 @@ type
     DbgTrackUnitList: TCodeTrackUnitInfoList;
     DbgTrackFuncList: TCodeTrackFuncInfoList;
     DbgTrackStack: TTrackStack;
+    DbgTrackUsedUnitList: TTrackUnitInfoList; // Временный список используемых юнитов при обработке стека
 
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
@@ -651,6 +652,7 @@ type
     DbgTrackEventCount: UInt64;
     DbgTrackUnitList: TCodeTrackUnitInfoList;
     DbgTrackFuncList: TCodeTrackFuncInfoList;
+    DbgTrackUsedUnitList: TTrackUnitInfoList; // Временный список используемых юнитов при обработке стека
 
     CreatedProcessHandle: THandle;
     CreatedThreadHandle: THandle;
@@ -732,6 +734,7 @@ begin
 
   FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackFuncList);
+  FreeAndNil(DbgTrackUsedUnitList);
 end;
 
 function TProcessData.CurDbgPointIdx: Cardinal;
@@ -818,6 +821,7 @@ begin
   FreeAndNil(DbgTrackStack);
 
   FreeAndNil(SamplingQueue);
+  FreeAndNil(DbgTrackUsedUnitList);
 
   FreeMemory(Context);
 
@@ -895,6 +899,9 @@ begin
   SamplingCPUTime := 0;
   SamplingCount := 0;
   SamplingQueue := TQueue<TDbgInfoStack>.Create(1024, True);
+  DbgTrackUsedUnitList := TTrackUnitInfoList.Create(64);
+  DbgTrackUsedUnitList.OwnsKeys := False;
+  DbgTrackUsedUnitList.OwnsValues := False;
 
   DbgPoints := TCollectList<TThreadPoint>.Create;
 
@@ -1147,7 +1154,10 @@ end;
 procedure TTrackFuncInfo.IncCallCount;
 begin
   Inc(FCallCount);
-  FTrackUnitInfo.IncCallCount;
+
+  // В стеке может быть несколько функций из одного модуля
+  // Инкрементить можно только один раз на стек
+  //FTrackUnitInfo.IncCallCount;
 end;
 
 { TCodeTrackFuncInfo }

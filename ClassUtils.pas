@@ -65,9 +65,24 @@ function Compare(var Value1, Value2: NativeUInt): Integer; overload; inline;
 function Compare(var Value1, Value2: String; const EmptyRes: Integer): Integer; overload;
 function CompareNumberStr(const Value1, Value2: String): Integer;
 
+function PercentStr(const Count, All: UInt64): String;
+
 implementation
 
 uses Math;
+
+function PercentStr(const Count, All: UInt64): String;
+var
+  Res: Integer;
+begin
+  if All > 0 then
+    Res := Round(100 * Count / All)
+  else
+    Res := 0;
+
+  Result := '(' + IntToStr(Res) + '%)';
+end;
+
 
 { TGradientInfo }
 

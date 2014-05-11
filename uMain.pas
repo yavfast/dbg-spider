@@ -301,7 +301,8 @@ type
     rbnpgOptions: TRibbonPage;
     acDebugOptions: TAction;
     rbngrpProfilers: TRibbonGroup;
-    acSampling: TAction;
+    acSamplingMethod: TAction;
+    acCALLMethod: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -488,7 +489,7 @@ type
     procedure acLockTrackingExecute(Sender: TObject);
     procedure acViewSyncObjsOnTimeLineExecute(Sender: TObject);
     procedure acDebugOptionsExecute(Sender: TObject);
-    procedure acSamplingExecute(Sender: TObject);
+    procedure acSamplingMethodExecute(Sender: TObject);
 
   private
     FSpiderOptions: TSpiderOptions;
@@ -611,7 +612,7 @@ implementation
 
 {$R *.dfm}
 
-uses Math, {EvaluateTypes, }ClassUtils, uProcessList, uDebugerThread,
+uses Math, ClassUtils, uProcessList, uDebugerThread,
   uProjectOptions, WinAPIUtils, System.UITypes, System.Types,
   uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI, uFeedback,
   DbgHookTypes, Collections.Dictionaries;
@@ -718,7 +719,8 @@ begin
   begin
     gvDebuger.CodeTracking := acCodeTracking.Checked;
 
-    acSampling.Enabled := gvDebuger.CodeTracking;
+    acSamplingMethod.Enabled := gvDebuger.CodeTracking;
+    acCALLMethod.Enabled := gvDebuger.CodeTracking;
     acTrackSystemUnits.Enabled := gvDebuger.CodeTracking;
   end;
 end;
@@ -896,7 +898,7 @@ begin
     if acTrackSystemUnits.Checked then
       Include(Result, doTrackSystemUnits);
 
-    if acSampling.Checked then
+    if acSamplingMethod.Checked then
       Include(Result, doSamplingMethod);
   end;
 
@@ -925,11 +927,11 @@ begin
   _AC.RunDebug([doRun, doDebugInfo] + GetDebugOptions, FPID);
 end;
 
-procedure TMainForm.acSamplingExecute(Sender: TObject);
+procedure TMainForm.acSamplingMethodExecute(Sender: TObject);
 begin
   if Assigned(gvDebuger) then
   begin
-    gvDebuger.SamplingMethod := acSampling.Checked;
+    gvDebuger.SamplingMethod := acSamplingMethod.Checked;
   end;
 end;
 
@@ -5814,7 +5816,19 @@ begin
         case Column of
           0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
           1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
-          2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+          2:
+            begin
+              CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+              if gvDebuger.SamplingMethod then
+              begin
+                Data := vstTrackFuncs.GetNodeData(Data^.SyncNode);
+                if Data^.LinkType = ltTrackFuncInfo then
+                begin
+                  TrackFuncInfo := TCodeTrackFuncInfo(Data^.TrackFuncInfo);
+                  CellText := CellText + PercentStr(TrackCallFuncInfo^.CallCount, TrackFuncInfo.CallCount);
+                end;
+              end;
+            end;
           3: CellText := ElapsedTimeToStr(vstTrackFuncChilds, Data, TrackCallFuncInfo.Elapsed);
         end;
       end;
@@ -6115,7 +6129,12 @@ begin
         ThData := Data^.ThreadData;
         case Column of
           0: CellText := ThData^.ThreadAdvInfo^.AsString;
-          1: CellText := IntToStr(ThData^.DbgTrackEventCount);
+          1:
+            begin
+              CellText := IntToStr(ThData^.DbgTrackEventCount);
+              if gvDebuger.SamplingMethod then
+                CellText := CellText + PercentStr(ThData^.DbgTrackEventCount, gvDebuger.ProcessData^.DbgTrackEventCount);
+            end;
           2: CellText := ElapsedToTime(ThData^.CPUTime);
         end;
       end;
@@ -6124,7 +6143,27 @@ begin
         TrackFuncInfo := TCodeTrackFuncInfo(Data^.TrackFuncInfo);
         case Column of
           0: CellText := TFuncInfo(TrackFuncInfo.FuncInfo).ShortName;
-          1: CellText := IntToStr(TrackFuncInfo.CallCount);
+          1:
+            begin
+              CellText := IntToStr(TrackFuncInfo.CallCount);
+
+              if gvDebuger.SamplingMethod then
+              begin
+                SyncData := vstTrackFuncs.GetNodeData(Data^.SyncNode);
+                case SyncData^.LinkType of
+                  ltThread:
+                    begin
+                      ThData := SyncData^.ThreadData;
+                      CellText := CellText + PercentStr(TrackFuncInfo.CallCount, ThData^.DbgTrackEventCount);
+                    end;
+                  ltProcess:
+                    begin
+                      ProcData := SyncData^.ProcessData;
+                      CellText := CellText + PercentStr(TrackFuncInfo.CallCount, ProcData^.DbgTrackEventCount);
+                    end;
+                end;
+              end;
+            end;
           2:
             begin
               SyncData := vstTrackFuncs.GetNodeData(Data^.SyncNode);
@@ -6219,7 +6258,12 @@ begin
           case Column of
             0: CellText := ThData^.ThreadAdvInfo^.AsString;
             1: CellText := ThreadIDToStr(ThData^.ThreadID);
-            2: CellText := IntToStr(ThData^.DbgTrackEventCount);
+            2:
+              begin
+                CellText := IntToStr(ThData^.DbgTrackEventCount);
+                if gvDebuger.SamplingMethod then
+                  CellText := CellText + PercentStr(ThData^.DbgTrackEventCount, gvDebuger.ProcessData^.DbgTrackEventCount);
+              end;
             3: CellText := ElapsedToTime(ThData^.CPUTime);
           end;
       end;
