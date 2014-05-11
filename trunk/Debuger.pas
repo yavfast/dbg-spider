@@ -197,6 +197,8 @@ type
 
     procedure AddThreadSamplingInfo(ThreadData: PThreadData);
     procedure ProcessThreadSamplingInfo(ThreadData: PThreadData);
+    procedure ProcessThreadSamplingStack(ThreadData: PThreadData; const Stack: TDbgInfoStack);
+    procedure ProcessThreadSamplingAddress(ThData: PThreadData; FuncAddr, ParentFuncAddr: Pointer);
     procedure ProcessSamplingInfo;
   public
     constructor Create();
@@ -361,7 +363,7 @@ implementation
 
 uses
   RTLConsts, Math, DebugHook, DebugInfo, DbgHookTypes, WinAPIUtils, Winapi.TlHelp32, Winapi.ImageHlp,
-  System.Contnrs, System.AnsiStrings, CollectList, Collections.Queues;
+  System.Contnrs, System.AnsiStrings, CollectList, Collections.Queues, Collections.Dictionaries;
 
 type
   TDbgSamplingThread = class(TThread)
@@ -1000,6 +1002,9 @@ begin
   FProcessData.DbgTrackEventCount := 0;
   FProcessData.DbgTrackUnitList := TCodeTrackUnitInfoList.Create(4096);
   FProcessData.DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096);
+  FProcessData.DbgTrackUsedUnitList := TTrackUnitInfoList.Create(64);
+  FProcessData.DbgTrackUsedUnitList.OwnsKeys := False;
+  FProcessData.DbgTrackUsedUnitList.OwnsValues := False;
 
   DbgTrackBreakpoints := nil;
   DbgTrackRETBreakpoints := nil;
@@ -2021,9 +2026,91 @@ begin
   begin
     Stack := ThreadData.SamplingQueue.Dequeue;
 
-    //
+    ProcessThreadSamplingStack(ThreadData, Stack);
 
     SetLength(Stack, 0);
+  end;
+end;
+
+procedure TDebuger.ProcessThreadSamplingAddress(ThData: PThreadData; FuncAddr, ParentFuncAddr: Pointer);
+var
+  UnitInfo: TUnitInfo;
+  FuncInfo: TFuncInfo;
+  LineInfo: TLineInfo;
+
+  TrackFuncInfo: TCodeTrackFuncInfo;
+  ParentCallFuncInfo: PCallFuncInfo;
+  ParentFuncInfo: TFuncInfo;
+  ParentTrackFuncInfo: TCodeTrackFuncInfo;
+begin
+  // --- Регистрируем вызываемую функцию в текущем потоке --- //
+  if gvDebugInfo.GetLineInfo(FuncAddr, UnitInfo, FuncInfo, LineInfo, False) = slNotFound then
+    Exit;
+
+  TrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(FuncInfo));
+  ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
+
+  TrackFuncInfo.IncCallCount;
+
+  // Добавление в список активных юнитов
+  ThData.DbgTrackUsedUnitList.AddOrSetValue(UnitInfo, TrackFuncInfo.TrackUnitInfo);
+
+  // Добавляем линк с текущей функции на родительскую
+  ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
+
+  // Добавляем линк с родительской функции на текущую
+  ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+  if Assigned(ParentFuncInfo) then
+  begin
+    ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+    ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+
+    ParentTrackFuncInfo.AddChildCall(FuncAddr);
+  end;
+
+  // --- Регистрируем вызываемую функцию в процессе --- //
+  TrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(FuncInfo));
+  FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
+
+  TrackFuncInfo.IncCallCount;
+
+  // Добавление в список активных юнитов
+  FProcessData^.DbgTrackUsedUnitList.AddOrSetValue(UnitInfo, TrackFuncInfo.TrackUnitInfo);
+
+  // Добавляем линк с текущей функции на родительскую
+  ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
+
+  // Добавляем линк с родительской функции на текущую
+  ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+  if Assigned(ParentFuncInfo) then
+  begin
+    ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+    FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+
+    ParentTrackFuncInfo.AddChildCall(FuncAddr);
+  end;
+end;
+
+procedure TDebuger.ProcessThreadSamplingStack(ThreadData: PThreadData; const Stack: TDbgInfoStack);
+var
+  Idx: Integer;
+  TrackUnitInfoPair: TTrackUnitInfoPair;
+begin
+  Inc(FProcessData.DbgTrackEventCount);
+  Inc(ThreadData^.DbgTrackEventCount);
+
+  try
+    for Idx := 0 to High(Stack) - 1 do
+      ProcessThreadSamplingAddress(ThreadData, Stack[Idx], Stack[Idx + 1]);
+
+    for TrackUnitInfoPair in ThreadData.DbgTrackUsedUnitList do
+      TrackUnitInfoPair.Value.IncCallCount;
+
+    for TrackUnitInfoPair in FProcessData.DbgTrackUsedUnitList do
+      TrackUnitInfoPair.Value.IncCallCount;
+  finally
+    ThreadData.DbgTrackUsedUnitList.Clear;
+    FProcessData.DbgTrackUsedUnitList.Clear;
   end;
 end;
 
@@ -2076,6 +2163,7 @@ var
     ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 
     TrackFuncInfo.IncCallCount;
+    TrackFuncInfo.TrackUnitInfo.IncCallCount;
 
     // Добавляем линк с текущей функции на родительскую
     ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
@@ -2111,6 +2199,7 @@ var
     FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 
     TrackFuncInfo.IncCallCount;
+    TrackFuncInfo.TrackUnitInfo.IncCallCount;
 
     // Добавляем линк с текущей функции на родительскую
     ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
@@ -3761,9 +3850,6 @@ begin
   while not Terminated do
   begin
     Sleep(500);
-
-    //FStartEvent.WaitFor;
-    //FStartEvent.ResetEvent;
 
     if Assigned(gvDebuger) then
       gvDebuger.ProcessSamplingInfo;

@@ -922,10 +922,10 @@ Var
   ConstName: String;
 
   procedure LoadExtended;
-  var
-    ExtValue: Extended;
+  //var
+  //  ExtValue: Extended;
   begin
-    ExtValue := PExtended(ConstSymbol.Value)^;
+    //ExtValue := PExtended(ConstSymbol.Value)^;
     //TODO: ConstInfo.Value := IUnknown(TExtendedConstantValue.Create(ExtValue));
   end;
 
@@ -1887,11 +1887,11 @@ Begin
 End;
 
 function TDelphiDebugInfo.EvaluateVariable(VarInfo: TVarInfo): Variant;
-var
-  EBP: Pointer;
-  Value: Variant;
+//var
+//  EBP: Pointer;
+//  Value: Variant;
 begin
-  EBP := Pointer(gvDebuger.GetRegisters(gvDebuger.CurThreadId).Ebp);
+  //EBP := Pointer(gvDebuger.GetRegisters(gvDebuger.CurThreadId).Ebp);
   //TODO: Value := EvaluateProcs.EvaluateVariable(gvDebuger, VarInfo, EBP, True);
 
   //TODO: Result := EvaluateProcs.CalculateValue(Value, CalculateData);
