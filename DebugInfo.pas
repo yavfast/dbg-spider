@@ -475,7 +475,9 @@ Type
   End;
 
 const
-  SegmentTypeNames: array [TSegmentType] of String = ('', '.text', '.itext', '.data', '.bss', '.tls', '.pdata', '.idata', '.didata', '.rdata', '.reloc', '.rsrc');
+  // TODO: for MACOS '_text'
+  SegmentTypeNames: array [TSegmentType] of String =
+    ('', '.text', '.itext', '.data', '.bss', '.tls', '.pdata', '.idata', '.didata', '.rdata', '.reloc', '.rsrc');
 
 var
   gvDebugInfo: TDebugInfo = nil;
