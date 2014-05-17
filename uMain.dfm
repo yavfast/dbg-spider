@@ -429,7 +429,6 @@ object MainForm: TMainForm
                 Height = 3
                 Cursor = crVSplit
                 Align = alTop
-                ExplicitWidth = 257
               end
               object vstDbgInfoFuncVars: TVirtualStringTree
                 Left = 0
@@ -490,20 +489,11 @@ object MainForm: TMainForm
                 Height = 293
                 Align = alClient
                 TabOrder = 1
-                ExplicitTop = 196
-                ExplicitWidth = 287
-                ExplicitHeight = 293
                 inherited synmSourceView: TSynMemo
                   Width = 287
-                  Height = 272
-                  ExplicitLeft = 0
-                  ExplicitTop = 21
-                  ExplicitWidth = 287
-                  ExplicitHeight = 272
                 end
                 inherited eSrcFileName: TEdit
                   Width = 287
-                  ExplicitWidth = 287
                 end
               end
             end
@@ -518,19 +508,12 @@ object MainForm: TMainForm
               Height = 489
               Align = alClient
               TabOrder = 0
-              ExplicitWidth = 834
-              ExplicitHeight = 489
               inherited synmSourceView: TSynMemo
                 Width = 834
                 Height = 468
-                ExplicitLeft = 0
-                ExplicitTop = 21
-                ExplicitWidth = 834
-                ExplicitHeight = 468
               end
               inherited eSrcFileName: TEdit
                 Width = 834
-                ExplicitWidth = 834
               end
             end
           end
@@ -805,7 +788,6 @@ object MainForm: TMainForm
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
-                  ExplicitWidth = 427
                 end
                 object vstMemStack: TVirtualStringTree
                   Left = 0
@@ -872,20 +854,12 @@ object MainForm: TMainForm
                   Height = 237
                   Align = alClient
                   TabOrder = 1
-                  ExplicitTop = 228
-                  ExplicitWidth = 405
-                  ExplicitHeight = 237
                   inherited synmSourceView: TSynMemo
                     Width = 405
                     Height = 216
-                    ExplicitLeft = 0
-                    ExplicitTop = 21
-                    ExplicitWidth = 405
-                    ExplicitHeight = 216
                   end
                   inherited eSrcFileName: TEdit
                     Width = 405
-                    ExplicitWidth = 405
                   end
                 end
               end
@@ -961,7 +935,6 @@ object MainForm: TMainForm
               Height = 3
               Cursor = crVSplit
               Align = alBottom
-              ExplicitWidth = 732
             end
             object pMemInfoTreeLeft: TPanel
               Left = 0
@@ -1066,7 +1039,6 @@ object MainForm: TMainForm
                       Height = 3
                       Cursor = crVSplit
                       Align = alTop
-                      ExplicitWidth = 268
                     end
                     object vstMemInfoFuncParents: TVirtualStringTree
                       Left = 0
@@ -1210,19 +1182,12 @@ object MainForm: TMainForm
                     Height = 185
                     Align = alClient
                     TabOrder = 0
-                    ExplicitWidth = 246
-                    ExplicitHeight = 185
                     inherited synmSourceView: TSynMemo
                       Width = 246
                       Height = 164
-                      ExplicitLeft = 0
-                      ExplicitTop = 21
-                      ExplicitWidth = 246
-                      ExplicitHeight = 164
                     end
                     inherited eSrcFileName: TEdit
                       Width = 246
-                      ExplicitWidth = 246
                     end
                   end
                 end
@@ -1515,7 +1480,6 @@ object MainForm: TMainForm
               Height = 3
               Cursor = crVSplit
               Align = alTop
-              ExplicitWidth = 303
             end
             object vstExceptionCallStack: TVirtualStringTree
               Left = 0
@@ -1582,20 +1546,12 @@ object MainForm: TMainForm
               Height = 273
               Align = alClient
               TabOrder = 1
-              ExplicitTop = 220
-              ExplicitWidth = 282
-              ExplicitHeight = 273
               inherited synmSourceView: TSynMemo
                 Width = 282
                 Height = 252
-                ExplicitLeft = 0
-                ExplicitTop = 21
-                ExplicitWidth = 282
-                ExplicitHeight = 252
               end
               inherited eSrcFileName: TEdit
                 Width = 282
-                ExplicitWidth = 282
               end
             end
           end
@@ -1829,7 +1785,6 @@ object MainForm: TMainForm
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
-                  ExplicitWidth = 218
                 end
                 object vstTrackFuncParent: TVirtualStringTree
                   Left = 0
@@ -1974,19 +1929,12 @@ object MainForm: TMainForm
                 Height = 463
                 Align = alClient
                 TabOrder = 0
-                ExplicitWidth = 197
-                ExplicitHeight = 463
                 inherited synmSourceView: TSynMemo
                   Width = 197
                   Height = 442
-                  ExplicitLeft = 0
-                  ExplicitTop = 21
-                  ExplicitWidth = 197
-                  ExplicitHeight = 442
                 end
                 inherited eSrcFileName: TEdit
                   Width = 197
-                  ExplicitWidth = 197
                 end
               end
             end
@@ -2108,8 +2056,6 @@ object MainForm: TMainForm
           Height = 3
           Cursor = crVSplit
           Align = alBottom
-          ExplicitTop = 185
-          ExplicitWidth = 83
         end
         object cbLockTracking: TCoolBar
           Left = 0
@@ -2242,7 +2188,6 @@ object MainForm: TMainForm
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
-                  ExplicitWidth = 268
                 end
                 object vstLockTrackingParents: TVirtualStringTree
                   Left = 0
@@ -2386,18 +2331,12 @@ object MainForm: TMainForm
                 Height = 193
                 Align = alClient
                 TabOrder = 0
-                ExplicitWidth = 262
-                ExplicitHeight = 193
                 inherited synmSourceView: TSynMemo
                   Width = 262
                   Height = 172
-                  ExplicitLeft = 0
-                  ExplicitTop = 21
-                  ExplicitHeight = 172
                 end
                 inherited eSrcFileName: TEdit
                   Width = 262
-                  ExplicitWidth = 262
                 end
               end
             end
@@ -3084,7 +3023,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg info:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
       end
       object pStatusDbgState: TPanel
@@ -3109,7 +3047,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg state:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
         object lbStatusDbgStateValue: TLabel
           AlignWithMargins = True
@@ -3149,7 +3086,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Dbg events:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
         object lbStatusEventsCntValue: TLabel
           AlignWithMargins = True
@@ -3190,7 +3126,6 @@ object MainForm: TMainForm
           Align = alLeft
           Caption = 'Track events:'
           Layout = tlCenter
-          ExplicitHeight = 13
         end
         object lbStatusTrackEventCntValue: TLabel
           AlignWithMargins = True
@@ -4057,6 +3992,7 @@ object MainForm: TMainForm
           end
           item
             Action = acCALLMethod
+            Caption = 'C&ALL method'
             CommandStyle = csRadioButton
             CommandProperties.Width = -1
           end

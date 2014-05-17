@@ -114,9 +114,10 @@ type
 
     procedure SetDbgTraceState(const Value: TDbgTraceState);
     procedure SetDbgState(const Value: TDbgState);
-    function GetActive: Boolean;
     procedure SetSyncObjsTracking(const Value: Boolean);
     procedure SetSamplingMethod(const Value: Boolean);
+
+    function GetActive: Boolean;
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -432,7 +433,7 @@ end;
 function TDebuger.AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): Boolean;
 var
   Cur: UInt64;
-  Prev: UInt64;
+  //Prev: UInt64;
   PrevTime: UInt64;
   Delta: UInt64;
   ThPoint: PThreadPoint;
@@ -441,9 +442,9 @@ begin
 
   if ThreadData = Nil then Exit;
 
-  Delta := 0;
-  Prev := 0;
-  Cur := 0;
+  //Delta := 0;
+  //Prev := 0;
+  //Cur := 0;
 
   case PointType of
     ptStart:
@@ -464,7 +465,7 @@ begin
 
         // Счетчик таймера CPU
         Cur := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
-        Prev := ThreadData^.CPUElapsed;
+        //Prev := ThreadData^.CPUElapsed;
         ThreadData^.CPUElapsed := Cur;
 
         // Добавляем инфу, когда поток активен
@@ -509,8 +510,12 @@ begin
           end;
         ptPerfomance:
           begin
-            ThPoint^.DeltaTickCPU := Cur - Prev;
-            ThPoint^.DeltaTime := Delta;
+            ThPoint^.PerfInfo := Nil;
+            (* TODO:
+            ThPoint^.PerfInfo := TPerfInfo.Create;
+            ThPoint^.PerfInfo.DeltaTickCPU := Cur - Prev;
+            ThPoint^.PerfInfo.DeltaTime := Delta;
+            *)
           end;
         ptSyncObjsInfo:
           begin
@@ -573,9 +578,9 @@ end;
 function TDebuger.AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
 var
   ProcPoint: PProcessPoint;
-  Prev: UInt64;
+  //Prev: UInt64;
   Cur: UInt64;
-  PPrev: Int64;
+  //PPrev: Int64;
   PCur: Int64;
   PrevTime: UInt64;
   CurTime: UInt64;
@@ -588,9 +593,9 @@ begin
   CurTime := GetProcessCPUTime(FProcessData.AttachedProcessHandle);
 
   Delta := 0;
-  PPrev := 0;
-  Prev := 0;
-  Cur := 0;
+  //PPrev := 0;
+  //Prev := 0;
+  //Cur := 0;
 
   case PointType of
     ptStart, ptException, ptThreadInfo, ptTraceInfo {, ptMemoryInfo}:
@@ -608,12 +613,12 @@ begin
     ptPerfomance:
       begin
         // дельта абсолютного времени
-        PPrev := FProcessData.Elapsed;
+        //PPrev := FProcessData.Elapsed;
         FProcessData.Elapsed := PCur;
 
         // дельта счетчика таймера CPU
         Cur := _QueryProcessCycleTime(FProcessData.AttachedProcessHandle);
-        Prev := FProcessData.CPUElapsed;
+        //Prev := FProcessData.CPUElapsed;
         FProcessData.CPUElapsed := Cur;
 
         // Время CPU процесса
@@ -622,7 +627,7 @@ begin
         Delta := CurTime - PrevTime;
 
         // Добавляем только если процесс активен
-        Result := (Delta > 0);
+        Result := (Delta > 0); // TODO: Определить минимальное время
       end;
   end;
 
@@ -639,8 +644,8 @@ begin
       case PointType of
         ptPerfomance:
           begin
-            ProcPoint^.DeltaTick := PCur - PPrev;
-            ProcPoint^.DeltaTickCPU := Cur - Prev;
+            //ProcPoint^.DeltaTick := PCur - PPrev;
+            //ProcPoint^.DeltaTickCPU := Cur - Prev;
             ProcPoint^.DeltaTime := Delta;
           end;
       end;
@@ -2059,13 +2064,16 @@ begin
   ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
 
   // Добавляем линк с родительской функции на текущую
-  ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
-  if Assigned(ParentFuncInfo) then
+  if Assigned(ParentCallFuncInfo) then
   begin
-    ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-    ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+    if Assigned(ParentFuncInfo) then
+    begin
+      ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+      ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
 
-    ParentTrackFuncInfo.AddChildCall(FuncAddr);
+      ParentTrackFuncInfo.AddChildCall(FuncAddr);
+    end;
   end;
 
   // --- Регистрируем вызываемую функцию в процессе --- //
@@ -2081,13 +2089,16 @@ begin
   ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
 
   // Добавляем линк с родительской функции на текущую
-  ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
-  if Assigned(ParentFuncInfo) then
+  if Assigned(ParentCallFuncInfo) then
   begin
-    ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-    FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+    if Assigned(ParentFuncInfo) then
+    begin
+      ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+      FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
 
-    ParentTrackFuncInfo.AddChildCall(FuncAddr);
+      ParentTrackFuncInfo.AddChildCall(FuncAddr);
+    end;
   end;
 end;
 
@@ -2169,16 +2180,19 @@ var
     ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
 
     // Добавляем линк с родительской функции на текущую
-    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
-    if Assigned(ParentFuncInfo) then
-    begin
-      ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-      ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+    ParentTrackFuncInfo := nil;
 
-      ParentTrackFuncInfo.AddChildCall(Address);
-    end
-    else
-      ParentTrackFuncInfo := nil;
+    if Assigned(ParentCallFuncInfo) then
+    begin
+      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+      if Assigned(ParentFuncInfo) then
+      begin
+        ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+        ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+
+        ParentTrackFuncInfo.AddChildCall(Address);
+      end;
+    end;
 
     // Создание новой записи для Track Stack
     TrackStackPoint := AllocMem(SizeOf(TTrackStackPoint));
@@ -2205,16 +2219,19 @@ var
     ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
 
     // Добавляем линк с родительской функции на текущую
-    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
-    if Assigned(ParentFuncInfo) then
-    begin
-      ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-      FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+    ParentTrackFuncInfo := nil;
 
-      ParentTrackFuncInfo.AddChildCall(Address);
-    end
-    else
-      ParentTrackFuncInfo := nil;
+    if Assigned(ParentCallFuncInfo) then
+    begin
+      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+      if Assigned(ParentFuncInfo) then
+      begin
+        ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+        FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+
+        ParentTrackFuncInfo.AddChildCall(Address);
+      end;
+    end;
 
     // Записываем инфу для процесса
     TrackStackPoint^.ProcTrackFuncInfo := TrackFuncInfo;

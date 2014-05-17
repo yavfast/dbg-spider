@@ -1749,8 +1749,11 @@ Function TDelphiDebugInfo.GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitIn
 var
   AddressInfo: PAddressInfo;
 Begin
-  FuncInfo := Nil;
   Result := slNotFound;
+
+  UnitInfo := Nil;
+  FuncInfo := Nil;
+  LineInfo := Nil;
 
   FAddressInfoList.Lock.BeginRead;
   try
