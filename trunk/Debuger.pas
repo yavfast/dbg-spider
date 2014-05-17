@@ -206,7 +206,7 @@ type
 
     procedure AddThreadSamplingInfo(ThreadData: PThreadData);
     procedure ProcessThreadSamplingInfo(ThreadData: PThreadData);
-    procedure ProcessThreadSamplingStack(ThreadData: PThreadData; const Stack: TDbgInfoStack);
+    procedure ProcessThreadSamplingStack(ThreadData: PThreadData; var Stack: TDbgInfoStack);
     procedure ProcessThreadSamplingAddress(ThData: PThreadData; FuncAddr, ParentFuncAddr: Pointer);
     procedure ProcessSamplingInfo;
   public
@@ -549,6 +549,7 @@ procedure TDebuger.AddThreadSamplingInfo(ThreadData: PThreadData);
 var
   ThCPU: UInt64;
   Stack: TDbgInfoStack;
+  StackInfo: PDbgInfoStackRec;
   Res: DWORD;
 begin
   if Assigned(ThreadData^.ThreadAdvInfo) and (ThreadData^.ThreadAdvInfo.ThreadAdvType = tatNormal) then
@@ -571,7 +572,12 @@ begin
       ResumeThread(ThreadData^.ThreadHandle);
 
       if Length(Stack) > 0 then
-        ThreadData^.SamplingQueue.Add(Stack);
+      begin
+        New(StackInfo);
+        StackInfo^.Stack := Stack;
+
+        ThreadData^.SamplingQueue.Add(StackInfo);
+      end;
     end;
   end;
 end;
@@ -2018,84 +2024,79 @@ var
   MemInfo: TGetMemInfo;
   NewMemInfo: TGetMemInfo;
 begin
-  try
-    ThData := Nil;
+  ThData := Nil;
 
-    for Idx := 0 to Buf^.Count - 1 do
-    begin
-      DbgMemInfo := @Buf^.DbgMemInfoList^[Idx];
-      if (ThData = Nil) or (ThData^.ThreadID <> DbgMemInfo^.ThreadId) then
-        ThData := GetThreadData(DbgMemInfo^.ThreadId, True);
+  for Idx := 0 to Buf^.Count - 1 do
+  begin
+    DbgMemInfo := @Buf^.DbgMemInfoList^[Idx];
+    if (ThData = Nil) or (ThData^.ThreadID <> DbgMemInfo^.ThreadId) then
+      ThData := GetThreadData(DbgMemInfo^.ThreadId, True);
 
-      if ThData = Nil then
-        RaiseDebugCoreException();
+    if ThData = Nil then
+      RaiseDebugCoreException();
 
-      case DbgMemInfo^.MemInfoType of
-        miGetMem:
+    case DbgMemInfo^.MemInfoType of
+      miGetMem:
+      begin
+        //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+
+        // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
+        // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
+        (*
+        FoundThData := ThData;
+        if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
         begin
-          //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+          //DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
 
-          // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
-          // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
-          (*
-          FoundThData := ThData;
-          if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
-          begin
-            //DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
+          Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
 
-            Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
+          Dec(FProcessData.ProcessGetMemCount);
+          Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
 
-            Dec(FProcessData.ProcessGetMemCount);
-            Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
-
-            FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-          end;
-          *)
-
-          // Добавляем инфу про новый объект
-          NewMemInfo := TGetMemInfo.Create;
-
-          NewMemInfo.PerfIdx := Buf^.DbgPointIdx;
-          NewMemInfo.ObjAddr := DbgMemInfo^.Ptr;
-          NewMemInfo.Size := DbgMemInfo^.Size;
-          NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
-
-          NewMemInfo.LoadStack(@DbgMemInfo^.Stack);
-
-          ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
-          TInterlocked.Add(ThData^.DbgGetMemInfoSize, NewMemInfo.Size);
-
-          TInterlocked.Add(FProcessData.ProcessGetMemCount, 1);
-          TInterlocked.Add(FProcessData.ProcessGetMemSize, NewMemInfo.Size);
+          FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
         end;
-        miFreeMem:
+        *)
+
+        // Добавляем инфу про новый объект
+        NewMemInfo := TGetMemInfo.Create;
+
+        NewMemInfo.PerfIdx := Buf^.DbgPointIdx;
+        NewMemInfo.ObjAddr := DbgMemInfo^.Ptr;
+        NewMemInfo.Size := DbgMemInfo^.Size;
+        NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
+
+        NewMemInfo.LoadStack(@DbgMemInfo^.Stack);
+
+        ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
+        TInterlocked.Add(ThData^.DbgGetMemInfoSize, NewMemInfo.Size);
+
+        TInterlocked.Add(FProcessData.ProcessGetMemCount, 1);
+        TInterlocked.Add(FProcessData.ProcessGetMemSize, NewMemInfo.Size);
+      end;
+      miFreeMem:
+      begin
+        //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+
+        FoundThData := ThData;
+        if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
         begin
-          //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
+          TInterlocked.Add(FoundThData^.DbgGetMemInfoSize, -MemInfo.Size);
 
-          FoundThData := ThData;
-          if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
-          begin
-            TInterlocked.Add(FoundThData^.DbgGetMemInfoSize, -MemInfo.Size);
+          TInterlocked.Add(FProcessData.ProcessGetMemCount, -1);
+          TInterlocked.Add(FProcessData.ProcessGetMemSize, -MemInfo.Size);
 
-            TInterlocked.Add(FProcessData.ProcessGetMemCount, -1);
-            TInterlocked.Add(FProcessData.ProcessGetMemSize, -MemInfo.Size);
+          FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
+        end
+        else
+        begin
+          // Сюда может зайти, если объект создался раньше установки хука на менеджер памяти
+          //RaiseDebugCoreException();
+          //DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
 
-            FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-          end
-          else
-          begin
-            // Сюда может зайти, если объект создался раньше установки хука на менеджер памяти
-            //RaiseDebugCoreException();
-            //DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
-
-            // TODO: Double free ???
-          end;
+          // TODO: Double free ???
         end;
       end;
     end;
-  finally
-    FreeMemory(Buf^.DbgMemInfoList);
-    FreeMemory(Buf);
   end;
 end;
 
@@ -2103,10 +2104,19 @@ procedure TDebuger.ProcessMemoryInfoQueue;
 var
   Buf: PDbgMemInfoListBuf;
 begin
-  while FProcessMemoryQueue.Count > 0 do
-  begin
-    Buf := FProcessMemoryQueue.Dequeue;
-    ProcessMemoryInfoBuf(Buf);
+  try
+    while FProcessMemoryQueue.Count > 0 do
+    begin
+      Buf := FProcessMemoryQueue.Dequeue;
+      try
+        ProcessMemoryInfoBuf(Buf);
+      finally
+        FreeMemory(Buf^.DbgMemInfoList);
+        FreeMemory(Buf);
+      end;
+    end;
+  except
+    on E: Exception do ; // TODO:
   end;
 end;
 
@@ -2115,19 +2125,23 @@ var
   I: Integer;
   ThData: PThreadData;
 begin
-  FThreadList.BeginRead;
-  I := FThreadList.Count - 1;
-  FThreadList.EndRead;
-
-  while I >= 0 do
-  begin
+  try
     FThreadList.BeginRead;
-    ThData := FThreadList[I];
+    I := FThreadList.Count - 1;
     FThreadList.EndRead;
 
-    ProcessThreadSamplingInfo(ThData);
+    while I >= 0 do
+    begin
+      FThreadList.BeginRead;
+      ThData := FThreadList[I];
+      FThreadList.EndRead;
 
-    Dec(I);
+      ProcessThreadSamplingInfo(ThData);
+
+      Dec(I);
+    end;
+  except
+    on E: Exception do ; // TODO:
   end;
 end;
 
@@ -2180,69 +2194,64 @@ var
   ThSyncObjsInfo: PSyncObjsInfo;
   SyncObjsLink: PSyncObjsInfo;
 begin
-  try
-    ThData := Nil;
+  ThData := Nil;
 
-    for Idx := 0 to Buf^.Count - 1 do
-    begin
-      SyncObjsInfo := @Buf^.DbgSyncObjsInfoList^[Idx];
-      if (ThData = Nil) or (ThData^.ThreadID <> SyncObjsInfo^.ThreadId) then
-        ThData := GetThreadData(SyncObjsInfo^.ThreadId, True);
+  for Idx := 0 to Buf^.Count - 1 do
+  begin
+    SyncObjsInfo := @Buf^.DbgSyncObjsInfoList^[Idx];
+    if (ThData = Nil) or (ThData^.ThreadID <> SyncObjsInfo^.ThreadId) then
+      ThData := GetThreadData(SyncObjsInfo^.ThreadId, True);
 
-      if ThData = Nil then
-        RaiseDebugCoreException();
+    if ThData = Nil then
+      RaiseDebugCoreException();
 
-      case SyncObjsInfo^.SyncObjsType of
-        soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection, soSendMessage:
-          begin
-            ThData^.DbgSyncObjsInfo.BeginRead;
-            try
-              SyncObjsLink := nil;
+    case SyncObjsInfo^.SyncObjsType of
+      soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection, soSendMessage:
+        begin
+          ThData^.DbgSyncObjsInfo.BeginRead;
+          try
+            SyncObjsLink := nil;
 
-              if SyncObjsInfo^.SyncObjsStateType = sosLeave then
-              begin
-                // Поиск sosEnter вызова
-                if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
-                  SyncObjsLink := FindCSLink(SyncObjsInfo^.CS)
-                else
-                  SyncObjsLink := FindLink(SyncObjsInfo^.Id);
-              end;
-
-              ThData^.DbgSyncObjsInfo.BeginWrite;
-              try
-                // Добавляем инфу про новый элемент
-                ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
-
-                if ThData^.State = tsFinished then
-                  ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
-                else
-                  ThSyncObjsInfo^.PerfIdx := Buf^.DbgPointIdx;
-
-                ThSyncObjsInfo^.Link := SyncObjsLink;
-                if SyncObjsLink <> nil then
-                  SyncObjsLink^.Link := ThSyncObjsInfo;
-
-                ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
-              finally
-                ThData^.DbgSyncObjsInfo.EndWrite;
-              end;
-
-              // Формируем стек вызова
-              if SyncObjsInfo^.SyncObjsType in [soEnterCriticalSection, soSendMessage] then
-                ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
-            finally
-              ThData^.DbgSyncObjsInfo.EndRead;
+            if SyncObjsInfo^.SyncObjsStateType = sosLeave then
+            begin
+              // Поиск sosEnter вызова
+              if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
+                SyncObjsLink := FindCSLink(SyncObjsInfo^.CS)
+              else
+                SyncObjsLink := FindLink(SyncObjsInfo^.Id);
             end;
+
+            ThData^.DbgSyncObjsInfo.BeginWrite;
+            try
+              // Добавляем инфу про новый элемент
+              ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
+
+              if ThData^.State = tsFinished then
+                ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
+              else
+                ThSyncObjsInfo^.PerfIdx := Buf^.DbgPointIdx;
+
+              ThSyncObjsInfo^.Link := SyncObjsLink;
+              if SyncObjsLink <> nil then
+                SyncObjsLink^.Link := ThSyncObjsInfo;
+
+              ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
+            finally
+              ThData^.DbgSyncObjsInfo.EndWrite;
+            end;
+
+            // Формируем стек вызова
+            if SyncObjsInfo^.SyncObjsType in [soEnterCriticalSection, soSendMessage] then
+              ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
+          finally
+            ThData^.DbgSyncObjsInfo.EndRead;
           end;
-        soLeaveCriticalSection:
-          begin
-            // TODO:
-          end;
-      end;
+        end;
+      soLeaveCriticalSection:
+        begin
+          // TODO:
+        end;
     end;
-  finally
-    FreeMemory(Buf^.DbgSyncObjsInfoList);
-    FreeMemory(Buf);
   end;
 end;
 
@@ -2250,24 +2259,42 @@ procedure TDebuger.ProcessSyncObjsInfoQueue;
 var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
-  while FProcessSyncObjsInfoQueue.Count > 0 do
-  begin
-    Buf := FProcessSyncObjsInfoQueue.Dequeue;
-    ProcessSyncObjsInfoBuf(Buf);
+  try
+    while FProcessSyncObjsInfoQueue.Count > 0 do
+    begin
+      Buf := FProcessSyncObjsInfoQueue.Dequeue;
+      try
+        ProcessSyncObjsInfoBuf(Buf);
+      finally
+        FreeMemory(Buf^.DbgSyncObjsInfoList);
+        FreeMemory(Buf);
+      end;
+    end;
+  except
+    on E: Exception do ; // TODO:
   end;
 end;
 
 procedure TDebuger.ProcessThreadSamplingInfo(ThreadData: PThreadData);
 var
-  Stack: TDbgInfoStack;
+  StackInfo: PDbgInfoStackRec;
 begin
-  while ThreadData.SamplingQueue.Count > 0 do
-  begin
-    Stack := ThreadData.SamplingQueue.Dequeue;
-
-    ProcessThreadSamplingStack(ThreadData, Stack);
-
-    SetLength(Stack, 0);
+  try
+    while ThreadData.SamplingQueue.Count > 0 do
+    begin
+      StackInfo := ThreadData.SamplingQueue.Dequeue;
+      try
+        if Length(StackInfo^.Stack) > 0 then
+        begin
+          ProcessThreadSamplingStack(ThreadData, StackInfo^.Stack);
+        end;
+      finally
+        SetLength(StackInfo^.Stack, 0);
+        Dispose(StackInfo);
+      end;
+    end;
+  except
+    on E: Exception do ;
   end;
 end;
 
@@ -2336,13 +2363,13 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessThreadSamplingStack(ThreadData: PThreadData; const Stack: TDbgInfoStack);
+procedure TDebuger.ProcessThreadSamplingStack(ThreadData: PThreadData; var Stack: TDbgInfoStack);
 var
   Idx: Integer;
   TrackUnitInfoPair: TTrackUnitInfoPair;
 begin
-  Inc(FProcessData.DbgTrackEventCount);
-  Inc(ThreadData^.DbgTrackEventCount);
+  TInterlocked.Add(FProcessData.DbgTrackEventCount, 1);
+  TInterlocked.Add(ThreadData^.DbgTrackEventCount, 1);
 
   try
     for Idx := 0 to High(Stack) - 1 do
@@ -3897,7 +3924,7 @@ constructor TDbgWorkerThread.Create;
 begin
   inherited Create(True);
   FreeOnTerminate := False;
-  Priority := tpLowest;
+  Priority := tpHigher;
 
   Suspended := False;
 end;
@@ -3913,7 +3940,7 @@ begin
 
   while not Terminated do
   begin
-    Sleep(500);
+    Sleep(200);
 
     if Assigned(gvDebuger) then
     begin

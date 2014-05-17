@@ -154,6 +154,11 @@ type
 
   TDbgInfoStack = array of Pointer;
 
+  PDbgInfoStackRec = ^TDbgInfoStackRec;
+  TDbgInfoStackRec = record
+    Stack: TDbgInfoStack;
+  end;
+
   TMemAction = (maGetMem = 0, maFreeMem);
 
   PMemInfo = ^TMemInfo;
@@ -354,7 +359,7 @@ type
     FUnitInfo: TObject;
     FFuncInfoList: TTrackFuncInfoBaseList;
 
-    FCallCount: UInt64;
+    FCallCount: Int64;
   public
     constructor Create(AUnitInfo: TObject);
     destructor Destroy; override;
@@ -365,14 +370,14 @@ type
 
     property FuncInfoList: TTrackFuncInfoBaseList read FFuncInfoList;
 
-    property CallCount: UInt64 read FCallCount;
+    property CallCount: Int64 read FCallCount;
   end;
 
   TCodeTrackUnitInfo = class(TTrackUnitInfo)
   private
-    FElapsed: UInt64;
+    FElapsed: Int64;
   public
-    procedure GrowElapsed(const Value: UInt64); inline;
+    procedure GrowElapsed(const Value: Int64); inline;
 
     // TODO: высчитать общее время выполнения функций юнита с учетом вложенности
     // property Elapsed: UInt64 read FElapsed;
@@ -562,7 +567,7 @@ type
 
     SamplingCPUTime: UInt64;
     SamplingCount: Cardinal;
-    SamplingQueue: TQueue<TDbgInfoStack>;
+    SamplingQueue: TQueue<PDbgInfoStackRec>;
 
     WaitTime: Int64;        // Время блокировок
 
@@ -579,7 +584,7 @@ type
 
     DbgExceptions: TThreadList;
 
-    DbgTrackEventCount: UInt64;
+    DbgTrackEventCount: Int64;
     DbgTrackUnitList: TCodeTrackUnitInfoList;
     DbgTrackFuncList: TCodeTrackFuncInfoList;
     DbgTrackStack: TTrackStack;
@@ -655,7 +660,7 @@ type
 
     DbgExceptions: TThreadList;
 
-    DbgTrackEventCount: UInt64;
+    DbgTrackEventCount: Int64;
     DbgTrackUnitList: TCodeTrackUnitInfoList;
     DbgTrackFuncList: TCodeTrackFuncInfoList;
     DbgTrackUsedUnitList: TTrackUnitInfoList; // Временный список используемых юнитов при обработке стека
@@ -904,7 +909,7 @@ begin
 
   SamplingCPUTime := 0;
   SamplingCount := 0;
-  SamplingQueue := TQueue<TDbgInfoStack>.Create(1024, True);
+  SamplingQueue := TQueue<PDbgInfoStackRec>.Create(4096, True);
   DbgTrackUsedUnitList := TTrackUnitInfoList.Create(64);
   DbgTrackUsedUnitList.OwnsKeys := False;
   DbgTrackUsedUnitList.OwnsValues := False;
@@ -1402,12 +1407,12 @@ end;
 
 procedure TTrackUnitInfo.IncCallCount;
 begin
-  Inc(FCallCount);
+  TInterlocked.Add(FCallCount, 1);
 end;
 
-procedure TCodeTrackUnitInfo.GrowElapsed(const Value: UInt64);
+procedure TCodeTrackUnitInfo.GrowElapsed(const Value: Int64);
 begin
-  Inc(FElapsed, Value);
+  TInterlocked.Add(FElapsed, Value);
 end;
 
 { TTrackStackPoint }
