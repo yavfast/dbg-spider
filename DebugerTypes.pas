@@ -569,7 +569,7 @@ type
     DbgPoints: TThreadPointList;
 
     DbgGetMemInfo: TGetMemInfoList;
-    DbgGetMemInfoSize: Cardinal;
+    DbgGetMemInfoSize: Int64;
 
     DbgSyncObjsInfo: TSyncObjsInfoList;
 
@@ -650,8 +650,8 @@ type
     DbgGetMemInfo: TGetMemInfoList; // ”казатели с коллизи€ми
     DbgGetMemInfoSize: Cardinal;
 
-    ProcessGetMemCount: Cardinal;
-    ProcessGetMemSize: Cardinal;
+    ProcessGetMemCount: Int64;
+    ProcessGetMemSize: Int64;
 
     DbgExceptions: TThreadList;
 
