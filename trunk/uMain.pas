@@ -3928,16 +3928,17 @@ begin
   begin
     StackEntry := TStackEntry.Create;
     try
-      StackEntry.UpdateInfo(Data^.SyncObjStackPtr);
-
-      if Assigned(StackEntry.FuncInfo) then
+      if StackEntry.UpdateInfo(Data^.SyncObjStackPtr) <> slNotFound then
       begin
-        if Assigned(StackEntry.LineInfo) then
-          LoadFunctionSource(svfLockTrackingSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
-        else
-          LoadFunctionSource(svfLockTrackingSource, StackEntry.FuncInfo);
+        if Assigned(StackEntry.FuncInfo) then
+        begin
+          if Assigned(StackEntry.LineInfo) then
+            LoadFunctionSource(svfLockTrackingSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+          else
+            LoadFunctionSource(svfLockTrackingSource, StackEntry.FuncInfo);
 
-        pcLockTrackingLinks.ActivePageIndex := 1;
+          pcLockTrackingLinks.ActivePageIndex := 1;
+        end;
       end;
     finally
       FreeAndNil(StackEntry);
@@ -3950,31 +3951,37 @@ procedure TMainForm.vstLockTrackingSyncObjStackGetText(Sender: TBaseVirtualTree;
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
+  FindResult: TFindResult;
 begin
   CellText := ' ';
 
   Data := Sender.GetNodeData(Node);
   if Data^.LinkType = ltSyncObjStack then
   begin
-    StackEntry := TStackEntry.Create;
-    StackEntry.UpdateInfo(Data^.SyncObjStackPtr);
-    try
       case Column of
         0: CellText := Format('%p', [Data^.SyncObjStackPtr]);
-        1: if Assigned(StackEntry.UnitInfo) then
-             CellText := StackEntry.UnitInfo.ShortName
-           else
-             CellText := 'unknown';
-        2: if Assigned(StackEntry.LineInfo) then
-             CellText := IntToStr(StackEntry.LineInfo.LineNo);
-        3: if Assigned(StackEntry.FuncInfo) then
-             CellText := StackEntry.FuncInfo.ShortName
-           else
-             CellText := 'unknown';
+      else
+        begin
+          StackEntry := TStackEntry.Create;
+          try
+            FindResult := StackEntry.UpdateInfo(Data^.SyncObjStackPtr);
+            case Column of
+              1: if (FindResult <> slNotFound) and Assigned(StackEntry.UnitInfo) then
+                   CellText := StackEntry.UnitInfo.ShortName
+                 else
+                   CellText := 'unknown';
+              2: if (FindResult in [slFoundExact, slFoundNotExact]) and Assigned(StackEntry.LineInfo) then
+                   CellText := IntToStr(StackEntry.LineInfo.LineNo);
+              3: if (FindResult <> slNotFound) and Assigned(StackEntry.FuncInfo) then
+                   CellText := StackEntry.FuncInfo.ShortName
+                 else
+                   CellText := 'unknown';
+            end;
+          finally
+            FreeAndNil(StackEntry);
+          end;
+        end;
       end;
-    finally
-      FreeAndNil(StackEntry);
-    end;
   end;
 end;
 
@@ -5416,16 +5423,17 @@ begin
   begin
     StackEntry := TStackEntry.Create;
     try
-      StackEntry.UpdateInfo(Data^.MemStackPtr);
-
-      if Assigned(StackEntry.FuncInfo) then
+      if StackEntry.UpdateInfo(Data^.MemStackPtr) <> slNotFound then
       begin
-        if Assigned(StackEntry.LineInfo) then
-          LoadFunctionSource(svfMemInfoFuncSrc, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
-        else
-          LoadFunctionSource(svfMemInfoFuncSrc, StackEntry.FuncInfo);
+        if Assigned(StackEntry.FuncInfo) then
+        begin
+          if Assigned(StackEntry.LineInfo) then
+            LoadFunctionSource(svfMemInfoFuncSrc, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+          else
+            LoadFunctionSource(svfMemInfoFuncSrc, StackEntry.FuncInfo);
 
-        pcMemInfoFuncInfo.ActivePageIndex := 1;
+          pcMemInfoFuncInfo.ActivePageIndex := 1;
+        end;
       end;
     finally
       FreeAndNil(StackEntry);
@@ -5637,14 +5645,16 @@ begin
   if Data^.LinkType = ltMemStack then
   begin
     StackEntry := TStackEntry.Create;
-    StackEntry.UpdateInfo(Data^.MemStackPtr);
     try
-      if Assigned(StackEntry.FuncInfo) then
+      if StackEntry.UpdateInfo(Data^.MemStackPtr) <> slNotFound then
       begin
-        if Assigned(StackEntry.LineInfo) then
-          LoadFunctionSource(svfMemInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
-        else
-          LoadFunctionSource(svfMemInfoSource, StackEntry.FuncInfo);
+        if Assigned(StackEntry.FuncInfo) then
+        begin
+          if Assigned(StackEntry.LineInfo) then
+            LoadFunctionSource(svfMemInfoSource, StackEntry.FuncInfo, StackEntry.LineInfo.LineNo)
+          else
+            LoadFunctionSource(svfMemInfoSource, StackEntry.FuncInfo);
+        end;
       end;
     finally
       FreeAndNil(StackEntry);
@@ -5656,31 +5666,38 @@ procedure TMainForm.vstMemStackGetText(Sender: TBaseVirtualTree; Node: PVirtualN
 var
   Data: PLinkData;
   StackEntry: TStackEntry;
+  FindResult: TFindResult;
 begin
   CellText := ' ';
 
   Data := Sender.GetNodeData(Node);
   if Data^.LinkType = ltMemStack then
   begin
-    StackEntry := TStackEntry.Create;
-    StackEntry.UpdateInfo(Data^.MemStackPtr);
-    try
       case Column of
         0: CellText := Format('%p', [Data^.MemStackPtr]);
-        1: if Assigned(StackEntry.UnitInfo) then
-             CellText := StackEntry.UnitInfo.ShortName
-           else
-             CellText := 'unknown';
-        2: if Assigned(StackEntry.LineInfo) then
-             CellText := IntToStr(StackEntry.LineInfo.LineNo);
-        3: if Assigned(StackEntry.FuncInfo) then
-             CellText := StackEntry.FuncInfo.ShortName
-           else
-             CellText := 'unknown';
+      else
+        begin
+          StackEntry := TStackEntry.Create;
+          try
+            FindResult := StackEntry.UpdateInfo(Data^.MemStackPtr);
+
+            case Column of
+              1: if (FindResult <> slNotFound) and Assigned(StackEntry.UnitInfo) then
+                   CellText := StackEntry.UnitInfo.ShortName
+                 else
+                   CellText := 'unknown';
+              2: if (FindResult in [slFoundExact, slFoundNotExact]) and Assigned(StackEntry.LineInfo) then
+                   CellText := IntToStr(StackEntry.LineInfo.LineNo);
+              3: if (FindResult <> slNotFound) and Assigned(StackEntry.FuncInfo) then
+                   CellText := StackEntry.FuncInfo.ShortName
+                 else
+                   CellText := 'unknown';
+            end;
+          finally
+            FreeAndNil(StackEntry);
+          end;
+        end;
       end;
-    finally
-      FreeAndNil(StackEntry);
-    end;
   end;
 end;
 

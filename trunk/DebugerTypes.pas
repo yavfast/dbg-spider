@@ -263,6 +263,7 @@ type
   end;
 
   TSyncObjsInfo = class
+  public
     SyncObjsType: TDbgSyncObjsType;
     SyncObjsStateType: TDbgSyncObjsStateType;
     PerfIdx: Cardinal;
@@ -274,6 +275,13 @@ type
     destructor Destroy; override;
 
     function FindLink(const ThreadData: PThreadData): TSyncObjsInfo;
+  end;
+
+  TPerfInfo = class
+  public
+    DeltaTickCPU: UInt64;   // загрузка CPU
+    DeltaTime: UInt64;
+    //StackPoint: TStackPointList;
   end;
 
   TDbgPointType = (ptNone = 0, ptWait, ptStart, ptStop, ptException, ptPerfomance, ptThreadInfo, ptMemoryInfo,
@@ -292,9 +300,7 @@ type
         ExceptInfo: TExceptInfo;
       );
       ptPerfomance: (
-        DeltaTickCPU: UInt64;   // загрузка CPU
-        DeltaTime: UInt64;
-        //StackPoint: TStackPointList;
+        PerfInfo: TPerfInfo;
       );
       ptMemoryInfo: (
       );
@@ -605,8 +611,8 @@ type
       ptStop: ();
       ptException: ();
       ptPerfomance: (
-        DeltaTick: Int64;
-        DeltaTickCPU: UInt64;
+        //DeltaTick: Int64;
+        //DeltaTickCPU: UInt64;
         DeltaTime: UInt64;
       );
       ptMemoryInfo: ();
@@ -944,6 +950,8 @@ begin
   case PointType of
     ptException:
       FreeAndNil(ExceptInfo);
+    ptPerfomance:
+      FreeAndNil(PerfInfo);
     ptSyncObjsInfo:
       FreeAndNil(SyncObjsInfo);
   end;
