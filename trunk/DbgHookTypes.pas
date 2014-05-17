@@ -103,8 +103,22 @@ type
   PDbgMemInfoList = ^TDbgMemInfoList;
   TDbgMemInfoList = array[0.._DbgMemListLength - 1] of TDbgMemInfo;
 
+  PDbgMemInfoListBuf = ^TDbgMemInfoListBuf;
+  TDbgMemInfoListBuf = record
+    Count: Integer;
+    DbgMemInfoList: PDbgMemInfoList;
+    DbgPointIdx: Cardinal;
+  end;
+
   PDbgSyncObjsInfoList = ^TDbgSyncObjsInfoList;
   TDbgSyncObjsInfoList = array[0.._DbgSyncObjsListLength - 1] of TDbgSyncObjsInfo;
+
+  PDbgSyncObjsInfoListBuf = ^TDbgSyncObjsInfoListBuf;
+  TDbgSyncObjsInfoListBuf = record
+    Count: Integer;
+    DbgSyncObjsInfoList: PDbgSyncObjsInfoList;
+    DbgPointIdx: Cardinal;
+  end;
 
 implementation
 
