@@ -2,7 +2,7 @@ unit uActionController;
 
 interface
 
-uses Classes, DebugInfo, DebugerTypes, XMLDoc, XMLIntf, System.Generics.Collections,
+uses Classes, DebugInfo, DebugerTypes, XMLDoc, XMLIntf, Collections.Queues,
   System.SyncObjs;
 
 type
@@ -34,15 +34,10 @@ type
   end;
 
   TActionQueue = class(TQueue<TActionItem>)
-  private
-    FLock: TCriticalSection;
-    procedure Lock;
-    procedure UnLock;
   public
     constructor Create;
-    destructor Destroy; override;
 
-    procedure Clear;
+    procedure Clear; override;
 
     function GetAction: TActionItem;
     procedure AddAction(const Action: TacAction; const Args: TArgsList);
@@ -483,63 +478,31 @@ procedure TActionQueue.AddAction(const Action: TacAction; const Args: TArgsList)
 var
   ActionItem: TActionItem;
 begin
-  Lock;
-  try
-    ActionItem := TActionItem.Create(Action, Args);
-    Enqueue(ActionItem);
-  finally
-    UnLock;
-  end;
+  ActionItem := TActionItem.Create(Action, Args);
+  Enqueue(ActionItem);
 end;
 
 procedure TActionQueue.Clear;
 var
   Action: TActionItem;
 begin
-  Lock;
-  try
-    while Count > 0 do
-    begin
-      Action := GetAction;
-      FreeAndNil(Action);
-    end;
-  finally
-    UnLock;
+  while Count > 0 do
+  begin
+    Action := GetAction;
+    FreeAndNil(Action);
   end;
+
+  inherited Clear;
 end;
 
 constructor TActionQueue.Create;
 begin
-  inherited;
-
-  FLock := TCriticalSection.Create;
-end;
-
-destructor TActionQueue.Destroy;
-begin
-  FreeAndNil(FLock);
-
-  inherited;
+  inherited Create(1024, True);
 end;
 
 function TActionQueue.GetAction: TActionItem;
 begin
-  Lock;
-  try
-    Result := Dequeue;
-  finally
-    UnLock;
-  end;
-end;
-
-procedure TActionQueue.Lock;
-begin
-  FLock.Enter;
-end;
-
-procedure TActionQueue.UnLock;
-begin
-  FLock.Leave;
+  Result := Dequeue;
 end;
 
 { TActionThread }

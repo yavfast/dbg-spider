@@ -64,7 +64,7 @@ type
       ltTrackUnitInfo:
         (TrackUnitInfo: TTrackUnitInfo);
       ltTrackCallFuncInfo:
-        (TrackCallFuncInfo: PCallFuncInfo);
+        (TrackCallFuncInfo: TCallFuncInfo);
       ltSpiderInfo:
         ();
       ltVersionInfo:
@@ -999,7 +999,7 @@ begin
   begin
     Data := vstTrackFuncParent.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
-      if LoadFunctionSource(svfTrackFuncAdvSource, TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo), Data^.TrackCallFuncInfo^.LineNo) then
+      if LoadFunctionSource(svfTrackFuncAdvSource, TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo), Data^.TrackCallFuncInfo.LineNo) then
         pcTrackFuncAdv.ActivePage := tsTrackFuncAdvSrc;
   end;
 end;
@@ -2433,7 +2433,7 @@ begin
     try
       for CallFuncCounterPair in TrackFuncInfo.ChildFuncs do
       begin
-        FuncInfo := TFuncInfo(CallFuncCounterPair.Value^.FuncInfo);
+        FuncInfo := TFuncInfo(CallFuncCounterPair.Value.FuncInfo);
         if FuncInfo = nil then Continue;
 
         UnitNode := FindTrackUnitNode(Tree, FuncInfo.UnitInfo);
@@ -2550,7 +2550,7 @@ begin
     try
       for CallFuncCounterPair in TrackFuncInfo.ParentFuncs do
       begin
-        FuncInfo := TFuncInfo(CallFuncCounterPair.Value^.FuncInfo);
+        FuncInfo := TFuncInfo(CallFuncCounterPair.Value.FuncInfo);
         if FuncInfo = nil then Continue;
 
         UnitNode := FindTrackUnitNode(Tree, FuncInfo.UnitInfo);
@@ -2951,7 +2951,7 @@ begin
 
     for CallFuncCounterPair in TrackFuncInfo.ChildFuncs do
     begin
-      FuncInfo := TFuncInfo(CallFuncCounterPair.Value^.FuncInfo);
+      FuncInfo := TFuncInfo(CallFuncCounterPair.Value.FuncInfo);
       if FuncInfo = nil then Continue;
 
       UnitNode := FindTrackUnitNode(vstTrackFuncChilds, FuncInfo.UnitInfo);
@@ -3005,7 +3005,7 @@ begin
 
     for CallFuncCounterPair in TrackFuncInfo.ParentFuncs do
     begin
-      FuncInfo := TFuncInfo(CallFuncCounterPair.Value^.FuncInfo);
+      FuncInfo := TFuncInfo(CallFuncCounterPair.Value.FuncInfo);
       if FuncInfo = nil then Continue;
 
       UnitNode := FindTrackUnitNode(vstTrackFuncParent, FuncInfo.UnitInfo);
@@ -4703,10 +4703,10 @@ begin
     Data := vstLockTrackingParents.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
     begin
-      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo);
       if Assigned(FuncInfo) then
       begin
-        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+        LineNo := Data^.TrackCallFuncInfo.LineNo;
 
         FuncNode := FindTrackFuncNode(vstLockTrackingList, FuncInfo);
         if Assigned(FuncNode) then
@@ -4839,10 +4839,10 @@ begin
     Data := vstLockTrackingChilds.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
     begin
-      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo);
       if Assigned(FuncInfo) then
       begin
-        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+        LineNo := Data^.TrackCallFuncInfo.LineNo;
 
         FuncNode := FindTrackFuncNode(vstLockTrackingList, FuncInfo);
         if Assigned(FuncNode) then
@@ -4863,7 +4863,7 @@ procedure TMainForm.vstLockTrackingLinksGetText(Sender: TBaseVirtualTree; Node: 
   var CellText: string);
 var
   Data: PLinkData;
-  TrackCallFuncInfo: PCallFuncInfo;
+  TrackCallFuncInfo: TCallFuncInfo;
   TrackFuncInfo: TSyncObjsTrackFuncInfo;
 begin
   CellText := ' ';
@@ -4889,11 +4889,11 @@ begin
       begin
         TrackCallFuncInfo := Data^.TrackCallFuncInfo;
         case Column of
-          0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
-          1: if TrackCallFuncInfo^.LineNo > 0 then
-            CellText := IntToStr(TrackCallFuncInfo^.LineNo);
-          2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
-          3: CellText := ElapsedToTime(TrackCallFuncInfo^.Data);
+          0: CellText := TFuncInfo(TrackCallFuncInfo.FuncInfo).ShortName;
+          1: if TrackCallFuncInfo.LineNo > 0 then
+            CellText := IntToStr(TrackCallFuncInfo.LineNo);
+          2: CellText := IntToStr(TrackCallFuncInfo.CallCount);
+          3: CellText := ElapsedToTime(TrackCallFuncInfo.Data);
         end;
       end;
   end;
@@ -4969,10 +4969,10 @@ begin
     Data := vstMemInfoFuncChilds.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
     begin
-      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo);
       if Assigned(FuncInfo) then
       begin
-        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+        LineNo := Data^.TrackCallFuncInfo.LineNo;
 
         FuncNode := FindTrackFuncNode(vstMemInfoFuncTree, FuncInfo);
         if Assigned(FuncNode) then
@@ -5003,10 +5003,10 @@ begin
     Data := vstMemInfoFuncParents.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
     begin
-      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo);
       if Assigned(FuncInfo) then
       begin
-        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+        LineNo := Data^.TrackCallFuncInfo.LineNo;
 
         FuncNode := FindTrackFuncNode(vstMemInfoFuncTree, FuncInfo);
         if Assigned(FuncNode) then
@@ -5027,7 +5027,7 @@ procedure TMainForm.vstMemInfoFuncLinksGetText(Sender: TBaseVirtualTree; Node: P
   var CellText: string);
 var
   Data: PLinkData;
-  TrackCallFuncInfo: PCallFuncInfo;
+  TrackCallFuncInfo: TCallFuncInfo;
   TrackFuncInfo: TMemInfoTrackFuncInfo;
 begin
   CellText := ' ';
@@ -5053,11 +5053,11 @@ begin
       begin
         TrackCallFuncInfo := Data^.TrackCallFuncInfo;
         case Column of
-          0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
-          1: if TrackCallFuncInfo^.LineNo > 0 then
-            CellText := IntToStr(TrackCallFuncInfo^.LineNo);
-          2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
-          3: CellText := IntToStr(TrackCallFuncInfo^.Size);
+          0: CellText := TFuncInfo(TrackCallFuncInfo.FuncInfo).ShortName;
+          1: if TrackCallFuncInfo.LineNo > 0 then
+            CellText := IntToStr(TrackCallFuncInfo.LineNo);
+          2: CellText := IntToStr(TrackCallFuncInfo.CallCount);
+          3: CellText := IntToStr(TrackCallFuncInfo.Size);
         end;
       end;
   end;
@@ -5805,7 +5805,7 @@ procedure TMainForm.vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PV
   var CellText: string);
 var
   Data: PLinkData;
-  TrackCallFuncInfo: PCallFuncInfo;
+  TrackCallFuncInfo: TCallFuncInfo;
   TrackFuncInfo: TCodeTrackFuncInfo;
 begin
   CellText := ' ';
@@ -5831,18 +5831,18 @@ begin
       begin
         TrackCallFuncInfo := Data^.TrackCallFuncInfo;
         case Column of
-          0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
-          1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
+          0: CellText := TFuncInfo(TrackCallFuncInfo.FuncInfo).ShortName;
+          1: CellText := IntToStr(TrackCallFuncInfo.LineNo);
           2:
             begin
-              CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+              CellText := IntToStr(TrackCallFuncInfo.CallCount);
               if gvDebuger.SamplingMethod then
               begin
                 Data := vstTrackFuncs.GetNodeData(Data^.SyncNode);
                 if Data^.LinkType = ltTrackFuncInfo then
                 begin
                   TrackFuncInfo := TCodeTrackFuncInfo(Data^.TrackFuncInfo);
-                  CellText := CellText + PercentStr(TrackCallFuncInfo^.CallCount, TrackFuncInfo.CallCount);
+                  CellText := CellText + PercentStr(TrackCallFuncInfo.CallCount, TrackFuncInfo.CallCount);
                 end;
               end;
             end;
@@ -5866,10 +5866,10 @@ begin
     Data := vstTrackFuncParent.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
     begin
-      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo);
       if Assigned(FuncInfo) then
       begin
-        LineNo := Data^.TrackCallFuncInfo^.LineNo;
+        LineNo := Data^.TrackCallFuncInfo.LineNo;
 
         FuncNode := FindTrackFuncNode(vstTrackFuncs, FuncInfo);
         if Assigned(FuncNode) then
@@ -5911,7 +5911,7 @@ begin
     Data := vstTrackFuncChilds.GetNodeData(Node);
     if Data^.LinkType = ltTrackCallFuncInfo then
     begin
-      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo^.FuncInfo);
+      FuncInfo := TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo);
       if Assigned(FuncInfo) then
       begin
         FuncNode := FindTrackFuncNode(vstTrackFuncs, FuncInfo);
@@ -5963,7 +5963,7 @@ procedure TMainForm.vstTrackFuncParentGetText(Sender: TBaseVirtualTree; Node: PV
   var CellText: string);
 var
   Data: PLinkData;
-  TrackCallFuncInfo: PCallFuncInfo;
+  TrackCallFuncInfo: TCallFuncInfo;
   TrackFuncInfo: TCodeTrackFuncInfo;
 begin
   CellText := ' ';
@@ -5989,9 +5989,9 @@ begin
       begin
         TrackCallFuncInfo := Data^.TrackCallFuncInfo;
         case Column of
-          0: CellText := TFuncInfo(TrackCallFuncInfo^.FuncInfo).ShortName;
-          1: CellText := IntToStr(TrackCallFuncInfo^.LineNo);
-          2: CellText := IntToStr(TrackCallFuncInfo^.CallCount);
+          0: CellText := TFuncInfo(TrackCallFuncInfo.FuncInfo).ShortName;
+          1: CellText := IntToStr(TrackCallFuncInfo.LineNo);
+          2: CellText := IntToStr(TrackCallFuncInfo.CallCount);
           3: CellText := ElapsedTimeToStr(vstTrackFuncParent, Data, TrackCallFuncInfo.Elapsed);
         end;
       end;

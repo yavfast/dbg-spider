@@ -246,6 +246,9 @@ type
     SyncObjsInfo: PSyncObjsInfo;
   end;
 
+  TSyncObjsInfoListByID = TDictionary<NativeUInt, PSyncObjsInfo>;
+  TSyncObjsInfoListByCS = TDictionary<Pointer, PSyncObjsInfo>;
+
   // Список SyncObjs, которые вызываются из текущей функции или вложенных
   TFuncSyncObjsInfoList = TCollectList<RPSyncObjsInfo>;
 
@@ -328,8 +331,7 @@ type
     function AsString: String;
   end;
 
-  PCallFuncInfo = ^TCallFuncInfo;
-  TCallFuncInfo = record
+  TCallFuncInfo = class
     FuncInfo: TObject;
     LineNo: Cardinal;
     CallCount: UInt64;
@@ -339,14 +341,14 @@ type
     property Size: UInt64 read Data write Data;
   end;
 
-  TCallFuncCounter = class(TObjectDictionary<Pointer,PCallFuncInfo>)
+  TCallFuncCounter = class(TObjectDictionary<Pointer,TCallFuncInfo>)
   private
-    function AddNewCallFunc(const Addr: Pointer): PCallFuncInfo;
+    function AddNewCallFunc(const Addr: Pointer): TCallFuncInfo;
   public
-    function AddCallFunc(const Addr: Pointer): PCallFuncInfo;
-    function GetCallFunc(const Addr: Pointer): PCallFuncInfo;
+    function AddCallFunc(const Addr: Pointer): TCallFuncInfo;
+    function GetCallFunc(const Addr: Pointer): TCallFuncInfo;
   end;
-  TCallFuncCounterPair = TPair<Pointer,PCallFuncInfo>;
+  TCallFuncCounterPair = TPair<Pointer,TCallFuncInfo>;
 
   TTrackUnitInfo = class;
   TTrackFuncInfo = class;
@@ -440,8 +442,8 @@ type
     constructor Create(AFuncInfo: TObject);
     destructor Destroy; override;
 
-    function AddParentCall(const Addr: Pointer): PCallFuncInfo; inline;
-    function AddChildCall(const Addr: Pointer): PCallFuncInfo; inline;
+    function AddParentCall(const Addr: Pointer): TCallFuncInfo; inline;
+    function AddChildCall(const Addr: Pointer): TCallFuncInfo; inline;
 
     procedure IncCallCount; inline;
 
@@ -577,6 +579,8 @@ type
     DbgGetMemInfoSize: Int64;
 
     DbgSyncObjsInfo: TSyncObjsInfoList;
+    DbgSyncObjsInfoByID: TSyncObjsInfoListByID;
+    DbgSyncObjsInfoByCS: TSyncObjsInfoListByCS;
 
     DbgGetMemUnitList: TMemInfoTrackUnitInfoList;
     DbgSyncObjsUnitList: TSyncObjsTrackUnitInfoList;
@@ -743,8 +747,8 @@ begin
   FreeAndNil(DbgGetMemInfo);
   DbgExceptions.Clear;
 
-  FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackFuncList);
+  FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackUsedUnitList);
 end;
 
@@ -826,7 +830,10 @@ begin
   FreeAndNil(DbgSyncObjsUnitList);
   //FreeAndNil(DbgGetMemFuncList);
   FreeAndNil(DbgSyncObjsInfo);
+  FreeAndNil(DbgSyncObjsInfoByID);
+  FreeAndNil(DbgSyncObjsInfoByCS);
   FreeAndNil(DbgExceptions);
+
   FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackFuncList);
   FreeAndNil(DbgTrackStack);
@@ -920,16 +927,25 @@ begin
   DbgGetMemInfo.OwnsValues := True;
 
   DbgGetMemUnitList := TMemInfoTrackUnitInfoList.Create(512, True);
+  DbgGetMemUnitList.OwnsValues := True;
 
   DbgSyncObjsUnitList := TSyncObjsTrackUnitInfoList.Create(512, True);
+  DbgSyncObjsUnitList.OwnsValues := True;
 
   DbgExceptions := TThreadList.Create;
 
   DbgSyncObjsInfo := TCollectList<RSyncObjsInfo>.Create;
 
+  DbgSyncObjsInfoByID := TSyncObjsInfoListByID.Create(4096, True);
+  DbgSyncObjsInfoByCS := TSyncObjsInfoListByCS.Create(4096, True);
+
   DbgTrackEventCount := 0;
   DbgTrackUnitList := TCodeTrackUnitInfoList.Create(512, True);
+  DbgTrackUnitList.OwnsValues := True;
+
   DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096, True);
+  DbgTrackFuncList.OwnsValues := True;
+
   DbgTrackStack := TTrackStack.Create;
 end;
 
@@ -1134,12 +1150,12 @@ end;
 
 { TTrackFuncInfo }
 
-function TTrackFuncInfo.AddChildCall(const Addr: Pointer): PCallFuncInfo;
+function TTrackFuncInfo.AddChildCall(const Addr: Pointer): TCallFuncInfo;
 begin
   Result := FChildFuncs.AddCallFunc(Addr);
 end;
 
-function TTrackFuncInfo.AddParentCall(const Addr: Pointer): PCallFuncInfo;
+function TTrackFuncInfo.AddParentCall(const Addr: Pointer): TCallFuncInfo;
 begin
   Result := FParentFuncs.AddCallFunc(Addr)
 end;
@@ -1246,7 +1262,7 @@ end;
 
 { TCallCounter }
 
-function TCallFuncCounter.AddCallFunc(const Addr: Pointer): PCallFuncInfo;
+function TCallFuncCounter.AddCallFunc(const Addr: Pointer): TCallFuncInfo;
 begin
   Result := Nil;
 
@@ -1254,35 +1270,35 @@ begin
     Exit;
 
   if TryGetValue(Addr, Result) then
-    Inc(Result^.CallCount)
+    Inc(Result.CallCount)
   else
   begin
     Result := AddNewCallFunc(Addr);
-    Result^.CallCount := 1;
+    Result.CallCount := 1;
 
     Add(Addr, Result);
   end;
 end;
 
-function TCallFuncCounter.AddNewCallFunc(const Addr: Pointer): PCallFuncInfo;
+function TCallFuncCounter.AddNewCallFunc(const Addr: Pointer): TCallFuncInfo;
 var
   UnitInfo: TUnitInfo;
   FuncInfo: TFuncInfo;
   LineInfo: TLineInfo;
 begin
-  Result := AllocMem(SizeOf(TCallFuncInfo));
+  Result := TCallFuncInfo.Create;
 
   FuncInfo := nil;
   LineInfo := nil;
   if gvDebugInfo.GetLineInfo(Addr, UnitInfo, FuncInfo, LineInfo, False) <> slNotFound then
   begin
-    Result^.FuncInfo := FuncInfo;
+    Result.FuncInfo := FuncInfo;
     if Assigned(LineInfo) then
-      Result^.LineNo := LineInfo.LineNo;
+      Result.LineNo := LineInfo.LineNo;
   end;
 end;
 
-function TCallFuncCounter.GetCallFunc(const Addr: Pointer): PCallFuncInfo;
+function TCallFuncCounter.GetCallFunc(const Addr: Pointer): TCallFuncInfo;
 begin
   if not TryGetValue(Addr, Result) then
     Result := Nil;
@@ -1325,6 +1341,7 @@ end;
 function TMemInfoTrackUnitInfoList.CreateTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo;
 begin
   Result := TMemInfoTrackUnitInfo.Create(UnitInfo);
+  Result.FuncInfoList.OwnsValues := True;
 end;
 
 procedure TMemInfoTrackUnitInfoList.LoadStack(const GetMemInfo: TGetMemInfo);
@@ -1334,7 +1351,7 @@ var
   Addr: Pointer;
   TrackUnitInfo: TMemInfoTrackUnitInfo;
   TrackFuncInfo: TTrackFuncInfo;
-  CallFuncInfo: PCallFuncInfo;
+  CallFuncInfo: TCallFuncInfo;
 begin
   StackEntry := TStackEntry.Create;
   try
@@ -1367,7 +1384,7 @@ begin
           Addr := GetMemInfo.Stack[I - 1];
           CallFuncInfo := TrackFuncInfo.AddChildCall(Addr);
           if Assigned(CallFuncInfo) then
-            Inc(CallFuncInfo^.Data, GetMemInfo.Size);
+            Inc(CallFuncInfo.Data, GetMemInfo.Size);
         end;
 
         // TODO: Искать функцию с валидным Addr
@@ -1376,7 +1393,7 @@ begin
           Addr := GetMemInfo.Stack[I + 1];
           CallFuncInfo := TrackFuncInfo.AddParentCall(Addr);
           if Assigned(CallFuncInfo) then
-            Inc(CallFuncInfo^.Data, GetMemInfo.Size);
+            Inc(CallFuncInfo.Data, GetMemInfo.Size);
         end;
       end;
     end;
@@ -1392,6 +1409,8 @@ begin
   inherited Create;
 
   FFuncInfoList := TTrackFuncInfoBaseList.Create(128);
+  FFuncInfoList.OwnsValues := False;
+  FFuncInfoList.OwnsKeys := False;
 
   FUnitInfo := AUnitInfo;
   FCallCount := 0;
@@ -1524,6 +1543,7 @@ end;
 function TSyncObjsTrackUnitInfoList.CreateTrackUnitInfo(const UnitInfo: TObject): TTrackUnitInfo;
 begin
   Result := TSyncObjsTrackUnitInfo.Create(UnitInfo);
+  Result.FuncInfoList.OwnsValues := True;
 end;
 
 procedure TSyncObjsTrackUnitInfoList.LoadStack(const SyncObjsInfo: PSyncObjsInfo);
@@ -1533,7 +1553,7 @@ var
   Addr: Pointer;
   TrackUnitInfo: TSyncObjsTrackUnitInfo;
   TrackFuncInfo: TTrackFuncInfo;
-  CallFuncInfo: PCallFuncInfo;
+  CallFuncInfo: TCallFuncInfo;
   DbgSyncObjsInfo: PDbgSyncObjsInfoEx;
   WaitTime: Int64;
   ThData: PThreadData;
@@ -1636,7 +1656,7 @@ begin
                   Addr := DbgSyncObjsInfo^.Stack[I - 1];
                   CallFuncInfo := TrackFuncInfo.ChildFuncs.GetCallFunc(Addr);
                   if Assigned(CallFuncInfo) then
-                    Inc(CallFuncInfo^.Data, WaitTime);
+                    Inc(CallFuncInfo.Data, WaitTime);
                 end;
 
                 // TODO: Искать функцию с валидным Addr
@@ -1645,7 +1665,7 @@ begin
                   Addr := DbgSyncObjsInfo^.Stack[I + 1];
                   CallFuncInfo := TrackFuncInfo.ParentFuncs.GetCallFunc(Addr);
                   if Assigned(CallFuncInfo) then
-                    Inc(CallFuncInfo^.Data, WaitTime);
+                    Inc(CallFuncInfo.Data, WaitTime);
                 end;
               end;
             end;
@@ -1738,7 +1758,8 @@ begin
     if (Ptr = nil) or (Ptr = Pointer(-1)) then
     begin
       SetLength(Stack, I);
-      Move(DbgStack^[0], Stack[0], I * SizeOf(Pointer));
+      if I > 0 then
+        Move(DbgStack^[0], Stack[0], I * SizeOf(Pointer));
 
       Exit;
     end;

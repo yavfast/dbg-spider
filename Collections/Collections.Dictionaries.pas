@@ -304,6 +304,12 @@ type
     ///  <exception cref="Collections.Base|EDuplicateKeyException">The dictionary already contains a pair with the given key.</exception>
     procedure Add(const AKey: TKey; const AValue: TValue); override;
 
+    ///  <summary>Removes a key-value pair using a given key.</summary>
+    ///  <param name="AKey">The key of the pair to remove.</param>
+    ///  <remarks>If the specified key was not found in the dictionary, nothing happens.</remarks>
+    ///  <exception cref="Generics.Collections|ENotSupportedException">If <c>TryExtract</c> method is not overridden.</exception>
+    procedure Remove(const AKey: TKey); override;
+
     ///  <summary>Checks whether the dictionary contains a key-value pair that contains a given value.</summary>
     ///  <param name="AValue">The value to check for.</param>
     ///  <returns><c>True</c> if the dictionary contains a pair containing the given value; <c>False</c> otherwise.</returns>
@@ -1249,6 +1255,16 @@ begin
     FLock.BeginWrite;
 end;
 
+procedure TDictionary<TKey, TValue>.Remove(const AKey: TKey);
+begin
+  LockForWrite;
+  try
+    inherited Remove(AKey);
+  finally
+    UnLockForWrite;
+  end;
+end;
+
 procedure TDictionary<TKey, TValue>.ReplaceValue(var ACurrent: TValue; const ANew: TValue);
 begin
   LockForWrite;
@@ -1285,7 +1301,12 @@ end;
 procedure TDictionary<TKey, TValue>.SetValue(const AKey: TKey; const Value: TValue);
 begin
   { Simply call insert }
-  Insert(AKey, Value, false);
+  LockForWrite;
+  try
+    Insert(AKey, Value, false);
+  finally
+    UnLockForWrite;
+  end;
 end;
 
 function TDictionary<TKey, TValue>.TryExtract(const AKey: TKey; out AValue: TValue): Boolean;
