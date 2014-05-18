@@ -125,7 +125,7 @@ type
     procedure SetSyncObjsTracking(const Value: Boolean);
     procedure SetSamplingMethod(const Value: Boolean);
 
-    function GetActive: Boolean;
+    function GetActive: Boolean; inline;
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
@@ -676,12 +676,12 @@ begin
 
     Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
     Result^.ThreadAdvInfo^.ThreadData := Result;
-
-    if AddProcessPointInfo(ptThreadInfo) then
-      AddThreadPointInfo(Result, ptStart);
   finally
     FThreadList.EndWrite;
   end;
+
+  if AddProcessPointInfo(ptThreadInfo) then
+    AddThreadPointInfo(Result, ptStart);
 end;
 
 function TDebuger.AddThreadInfo(const ThreadId: TThreadId): PThreadAdvInfo;
@@ -789,21 +789,29 @@ var
   I: Integer;
   ThData: PThreadData;
 begin
+  DbgState := dsNone;
+
   FProcessData.Clear;
 
-  for I := 0 to FThreadList.Count - 1 do
-  begin
-    ThData := FThreadList[I];
-    ThData.Clear;
+  try
+    FThreadList.BeginWrite;
+    try
+      for I := 0 to FThreadList.Count - 1 do
+      begin
+        ThData := FThreadList[I];
+        ThData.Clear;
+      end;
+    finally
+      FThreadList.Clear;
+      FThreadList.EndWrite;
+    end;
+  finally
+    FThreadAdvInfoList.Clear;
+
+    ClearDbgTracking;
+
+    FTraceCounter := 0;
   end;
-
-  FThreadList.Clear;
-  FThreadAdvInfoList.Clear;
-
-  ClearDbgTracking;
-
-  DbgState := dsNone;
-  FTraceCounter := 0;
 end;
 
 procedure TDebuger.ClearDbgTracking;
@@ -1019,7 +1027,9 @@ begin
 
   FProcessData.DbgTrackEventCount := 0;
   FProcessData.DbgTrackUnitList := TCodeTrackUnitInfoList.Create(4096);
+  FProcessData.DbgTrackUnitList.OwnsValues := True;
   FProcessData.DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096);
+  FProcessData.DbgTrackFuncList.OwnsValues := True;
   FProcessData.DbgTrackUsedUnitList := TTrackUnitInfoList.Create(64);
   FProcessData.DbgTrackUsedUnitList.OwnsKeys := False;
   FProcessData.DbgTrackUsedUnitList.OwnsValues := False;
@@ -1286,8 +1296,10 @@ begin
 end;
 
 function TDebuger.GetActive: Boolean;
+const
+  DBG_STOPED_STATE = [dsNone, dsStoped, dsDbgFail];
 begin
-  Result := not(FDbgState in [dsNone, dsStoped, dsDbgFail]);
+  Result := not(FDbgState in DBG_STOPED_STATE);
 end;
 
 function TDebuger.GetBPIndex(BreakPointAddr: Pointer; const ThreadID: TThreadId = 0): Integer;
@@ -1504,16 +1516,11 @@ function TDebuger.GetThreadIndex(const ThreadID: TThreadId; const UseFinished: B
 var
   ThData: PThreadData;
 begin
-  FThreadList.BeginRead;
-  try
-    for Result := FThreadList.Count - 1 downto 0 do
-    begin
-      ThData := FThreadList[Result];
-      if (ThData^.ThreadID = ThreadID) and ((ThData^.State <> tsFinished) or UseFinished) then
-        Exit;
-    end;
-  finally
-    FThreadList.EndRead;
+  for Result := FThreadList.Count - 1 downto 0 do
+  begin
+    ThData := FThreadList[Result];
+    if (ThData^.ThreadID = ThreadID) and ((ThData^.State <> tsFinished) or UseFinished) then
+      Exit;
   end;
 
   Result := -1;
@@ -1575,13 +1582,9 @@ end;
 function TDebuger.GetThreadDataByIdx(const Idx: Cardinal): PThreadData;
 begin
   Result := Nil;
-  FThreadList.BeginRead;
-  try
-    if Idx < FThreadList.Count then
-      Result := FThreadList[Idx];
-  finally
-    FThreadList.EndRead;
-  end;
+
+  if Idx < FThreadList.Count then
+    Result := FThreadList[Idx];
 end;
 
 function TDebuger.IsBreakpointPresent(const Value: TBreakpoint): Boolean;
@@ -2105,7 +2108,7 @@ var
   Buf: PDbgMemInfoListBuf;
 begin
   try
-    while FProcessMemoryQueue.Count > 0 do
+    if FProcessMemoryQueue.Count > 0 then
     begin
       Buf := FProcessMemoryQueue.Dequeue;
       try
@@ -2126,18 +2129,12 @@ var
   ThData: PThreadData;
 begin
   try
-    FThreadList.BeginRead;
     I := FThreadList.Count - 1;
-    FThreadList.EndRead;
 
     while I >= 0 do
     begin
-      FThreadList.BeginRead;
       ThData := FThreadList[I];
-      FThreadList.EndRead;
-
       ProcessThreadSamplingInfo(ThData);
-
       Dec(I);
     end;
   except
@@ -2149,6 +2146,7 @@ procedure TDebuger.ProcessSyncObjsInfoBuf(const Buf: PDbgSyncObjsInfoListBuf);
 var
   ThData: PThreadData;
 
+  (*
   function FindLink(const Id: NativeUInt): PSyncObjsInfo;
   var
     Idx: Integer;
@@ -2166,7 +2164,9 @@ var
 
     Result := nil;
   end;
+  *)
 
+  (*
   function FindCSLink(const CSData: PRTLCriticalSection): PSyncObjsInfo;
   var
     Idx: Integer;
@@ -2187,6 +2187,7 @@ var
 
     Result := nil;
   end;
+  *)
 
 var
   Idx: Integer;
@@ -2216,9 +2217,19 @@ begin
             begin
               // Поиск sosEnter вызова
               if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
-                SyncObjsLink := FindCSLink(SyncObjsInfo^.CS)
+              begin
+                //SyncObjsLink := FindCSLink(SyncObjsInfo^.CS);
+                //if Assigned(SyncObjsLink) then
+                if ThData^.DbgSyncObjsInfoByCS.TryGetValue(SyncObjsInfo^.CS, SyncObjsLink) then
+                  ThData^.DbgSyncObjsInfoByCS.Remove(SyncObjsInfo^.CS);
+              end
               else
-                SyncObjsLink := FindLink(SyncObjsInfo^.Id);
+              begin
+                //SyncObjsLink := FindLink(SyncObjsInfo^.Id);
+                //if Assigned(SyncObjsLink) then
+                if ThData^.DbgSyncObjsInfoByID.TryGetValue(SyncObjsInfo^.Id, SyncObjsLink) then
+                  ThData^.DbgSyncObjsInfoByID.Remove(SyncObjsInfo^.Id);
+              end;
             end;
 
             ThData^.DbgSyncObjsInfo.BeginWrite;
@@ -2238,6 +2249,15 @@ begin
               ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
             finally
               ThData^.DbgSyncObjsInfo.EndWrite;
+            end;
+
+            // Добавляем инфу про sosEnter вызовы
+            if SyncObjsInfo^.SyncObjsStateType = sosEnter then
+            begin
+              if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
+                ThData^.DbgSyncObjsInfoByCS.AddOrSetValue(SyncObjsInfo^.CS, ThSyncObjsInfo)
+              else
+                ThData^.DbgSyncObjsInfoByID.AddOrSetValue(SyncObjsInfo^.Id, ThSyncObjsInfo);
             end;
 
             // Формируем стек вызова
@@ -2260,7 +2280,7 @@ var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
   try
-    while FProcessSyncObjsInfoQueue.Count > 0 do
+    if FProcessSyncObjsInfoQueue.Count > 0 then
     begin
       Buf := FProcessSyncObjsInfoQueue.Dequeue;
       try
@@ -2305,7 +2325,7 @@ var
   LineInfo: TLineInfo;
 
   TrackFuncInfo: TCodeTrackFuncInfo;
-  ParentCallFuncInfo: PCallFuncInfo;
+  ParentCallFuncInfo: TCallFuncInfo;
   ParentFuncInfo: TFuncInfo;
   ParentTrackFuncInfo: TCodeTrackFuncInfo;
 begin
@@ -2327,7 +2347,7 @@ begin
   // Добавляем линк с родительской функции на текущую
   if Assigned(ParentCallFuncInfo) then
   begin
-    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
     if Assigned(ParentFuncInfo) then
     begin
       ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
@@ -2352,7 +2372,7 @@ begin
   // Добавляем линк с родительской функции на текущую
   if Assigned(ParentCallFuncInfo) then
   begin
-    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
     if Assigned(ParentFuncInfo) then
     begin
       ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
@@ -2418,7 +2438,7 @@ var
   procedure _RegisterTrackPoint;
   var
     TrackFuncInfo: TCodeTrackFuncInfo;
-    ParentCallFuncInfo: PCallFuncInfo;
+    ParentCallFuncInfo: TCallFuncInfo;
     ParentFuncInfo: TFuncInfo;
     ParentTrackFuncInfo: TCodeTrackFuncInfo;
 
@@ -2445,7 +2465,7 @@ var
 
     if Assigned(ParentCallFuncInfo) then
     begin
-      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
       if Assigned(ParentFuncInfo) then
       begin
         ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
@@ -2484,7 +2504,7 @@ var
 
     if Assigned(ParentCallFuncInfo) then
     begin
-      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo^.FuncInfo);
+      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
       if Assigned(ParentFuncInfo) then
       begin
         ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
@@ -2576,7 +2596,7 @@ var
     TrackStackPoint: PTrackStackPoint;
     CurTime: UInt64;
     FuncAddress: Pointer;
-    CallFuncInfo: PCallFuncInfo;
+    CallFuncInfo: TCallFuncInfo;
   begin
     CurTime := _QueryThreadCycleTime(ThData^.ThreadHandle);
 
@@ -2595,11 +2615,11 @@ var
       // Увеличиваем счетчик родителя
       // Thread
       if TrackStackPoint^.TrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-        Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
+        Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
 
       // Proc
       if TrackStackPoint^.ProcTrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-        Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
+        Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
 
       // Увеличиваем свой счетчик у родителя
       // Thread
@@ -2607,7 +2627,7 @@ var
       begin
         FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
         if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-          Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
+          Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
       end;
 
       // Proc
@@ -2615,7 +2635,7 @@ var
       begin
         FuncAddress := TFuncInfo(TrackStackPoint^.ProcTrackFuncInfo.FuncInfo).Address;
         if TrackStackPoint^.ProcParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-          Inc(CallFuncInfo^.Data, TrackStackPoint^.Elapsed);
+          Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
       end;
 
       // Если это вершина стека - выходим
@@ -2780,16 +2800,11 @@ begin
   if AddProcessPointInfo(ptPerfomance) then
   begin
     // Если процесс активен, то добавляем инфу про активные потоки
-    FThreadList.BeginRead;
-    try
-      for I := 0 to FThreadList.Count - 1 do
-      begin
-        ThData := FThreadList[I];
-        if ThData^.State = tsActive then
-          AddThreadPointInfo(ThData, ptPerfomance);
-      end;
-    finally
-      FThreadList.EndRead;
+    for I := 0 to FThreadList.Count - 1 do
+    begin
+      ThData := FThreadList[I];
+      if ThData^.State = tsActive then
+        AddThreadPointInfo(ThData, ptPerfomance);
     end;
   end;
 end;
@@ -2807,16 +2822,11 @@ begin
     ProcessData^.SamplingCPUTime := CPUTime;
     Inc(ProcessData^.SamplingCount);
 
-    FThreadList.BeginRead;
-    try
-      for I := 0 to FThreadList.Count - 1 do
-      begin
-        ThData := FThreadList[I];
-        if ThData^.State = tsActive then
-          AddThreadSamplingInfo(ThData);
-      end;
-    finally
-      FThreadList.EndRead;
+    for I := 0 to FThreadList.Count - 1 do
+    begin
+      ThData := FThreadList[I];
+      if ThData^.State = tsActive then
+        AddThreadSamplingInfo(ThData);
     end;
   end;
 end;
@@ -2940,26 +2950,21 @@ procedure TDebuger.RemoveThread(const ThreadID: TThreadId);
 var
   ThData: PThreadData;
 begin
-  FThreadList.BeginWrite;
-  try
-    ThData := GetThreadData(ThreadID);
-    if ThData <> nil then
+  ThData := GetThreadData(ThreadID);
+  if ThData <> nil then
+  begin
+    if ThData^.Breakpoint <> nil then
     begin
-      if ThData^.Breakpoint <> nil then
-      begin
-        FreeMemory(ThData^.Breakpoint);
-        ThData^.Breakpoint := nil;
-      end;
-
-      ThData^.State := tsFinished;
-
-      if AddProcessPointInfo(ptThreadInfo) then
-        AddThreadPointInfo(ThData, ptStop);
-
-      UpdateMemoryInfoObjectTypes;
+      FreeMemory(ThData^.Breakpoint);
+      ThData^.Breakpoint := nil;
     end;
-  finally
-    FThreadList.EndWrite;
+
+    ThData^.State := tsFinished;
+
+    if AddProcessPointInfo(ptThreadInfo) then
+      AddThreadPointInfo(ThData, ptStop);
+
+    UpdateMemoryInfoObjectTypes;
   end;
 end;
 
@@ -3034,9 +3039,14 @@ begin
 end;
 
 procedure TDebuger.LoadMemoryInfoPackEx(const MemInfoPack: Pointer; const Count: Cardinal);
+const
+  MAX_BUF_COUNT = 64;
 var
   Buf: PDbgMemInfoListBuf;
 begin
+  while FProcessMemoryQueue.Count > MAX_BUF_COUNT do
+    SwitchToThread;
+
   Buf := AllocMem(SizeOf(TDbgMemInfoListBuf));
   Buf^.Count := Count;
   Buf^.DbgMemInfoList := AllocMem(Count * SizeOf(TDbgMemInfo));
@@ -3049,9 +3059,14 @@ begin
 end;
 
 procedure TDebuger.LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
+const
+  MAX_BUF_COUNT = 64;
 var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
+  while FProcessSyncObjsInfoQueue.Count > MAX_BUF_COUNT do
+    SwitchToThread;
+
   Buf := AllocMem(SizeOf(TDbgSyncObjsInfoListBuf));
   Buf^.Count := Count;
   Buf^.DbgSyncObjsInfoList := AllocMem(Count * SizeOf(TDbgSyncObjsInfo));
@@ -3134,16 +3149,11 @@ var
 begin
   if AddProcessPointInfo(ptTraceInfo) then
   begin
-    FThreadList.BeginRead;
-    try
-      for I := 0 to FThreadList.Count - 1 do
-      begin
-        ThData := FThreadList[I];
-        if ThData^.State = tsActive then
-          AddThreadPointInfo(ThData, ptTraceInfo);
-      end;
-    finally
-      FThreadList.EndRead;
+    for I := 0 to FThreadList.Count - 1 do
+    begin
+      ThData := FThreadList[I];
+      if ThData^.State = tsActive then
+        AddThreadPointInfo(ThData, ptTraceInfo);
     end;
   end;
 end;
@@ -3867,8 +3877,13 @@ begin
       GetMemInfo := ThData^.DbgGetMemInfo;
       if GetMemInfo.Count > 0 then
       begin
-        for GetMemInfoItem in GetMemInfo do
-          GetMemInfoItem.Value.CheckObjectType;
+        GetMemInfo.LockForRead;
+        try
+          for GetMemInfoItem in GetMemInfo do
+            GetMemInfoItem.Value.CheckObjectType;
+        finally
+          GetMemInfo.UnLockForRead;
+        end;
       end;
 
       Inc(Idx);
@@ -3924,7 +3939,6 @@ constructor TDbgWorkerThread.Create;
 begin
   inherited Create(True);
   FreeOnTerminate := False;
-  Priority := tpHigher;
 
   Suspended := False;
 end;
@@ -3940,8 +3954,6 @@ begin
 
   while not Terminated do
   begin
-    Sleep(200);
-
     if Assigned(gvDebuger) then
     begin
       gvDebuger.ProcessSamplingInfo;

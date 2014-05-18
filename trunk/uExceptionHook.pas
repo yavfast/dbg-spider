@@ -76,8 +76,8 @@ begin
     while (Level < MAX_STACK_LENGTH) and (
         (Cardinal(BaseOfStack) < Cardinal(StackFrame)) and
         (Cardinal(StackFrame) < Cardinal(TopOfStack)) and
-        (StackFrame <> StackFrame^.CallerFrame) and
         IsValidAddr(StackFrame) and
+        (StackFrame <> StackFrame^.CallerFrame) and
         IsValidCodeAddr(StackFrame^.CallerAddr)
       )
     do begin
