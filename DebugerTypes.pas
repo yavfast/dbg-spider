@@ -2,9 +2,9 @@ unit DebugerTypes;
 
 interface
 
-uses SysUtils, Windows, Classes, JclPeImage, SyncObjs, ClassUtils, DbgHookTypes, Contnrs,
-  Generics.Collections, Collections.Dictionaries, CollectList,
-  Collections.Queues;
+uses System.SysUtils, WinApi.Windows, System.Classes, JclPeImage, System.SyncObjs, ClassUtils, DbgHookTypes, System.Contnrs,
+  System.Generics.Collections, Collections.Dictionaries, Collections.Queues, CollectList,
+  uSharedObject;
 
 type
   TSysUInt = NativeUInt;
@@ -177,7 +177,7 @@ type
   end;
 
   //PGetMemInfo = ^TGetMemInfo;
-  TGetMemInfo = class
+  TGetMemInfo = class(TSharedObject)
   public
     PerfIdx: Cardinal;
     ObjAddr: Pointer;
@@ -610,6 +610,8 @@ type
   end;
 
   TDbgThreadList = TBaseCollectList; //TCollectList<TThreadData>;
+  TDbgActiveThreadList = TDictionary<TThreadId, PThreadData>;
+  TDbgActiveThreads = array of PThreadData;
 
   PProcessPoint = ^TProcessPoint;
   TProcessPoint = packed record

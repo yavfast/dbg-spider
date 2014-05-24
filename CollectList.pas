@@ -127,14 +127,13 @@ end;
 
 function TCollectList<T>.Add: PData;
 var
-  Idx: Cardinal;
   Seg, Offset: Integer;
 begin
   BeginWrite;
 
-  Idx := Count;
-  IndexToSegment(Idx, Seg, Offset);
+  IndexToSegment(Count, Seg, Offset);
   CheckSeg(Seg);
+
   inherited Add;
 
   Result := @FSegList[Seg][Offset];
@@ -147,22 +146,18 @@ end;
 
 procedure TCollectList<T>.CheckSeg(const Seg: Integer);
 begin
-  BeginRead;
   if Length(FSegList) <= Seg then
   begin
-    BeginWrite;
     SetLength(FSegList, Seg + 1);
     SetLength(FSegList[Seg], FSegLength);
-    EndWrite;
   end;
-  EndRead;
 end;
 
 procedure TCollectList<T>.Clear;
 begin
   BeginWrite;
-  SetLength(FSegList, 0);
   inherited Clear;
+  SetLength(FSegList, 0);
   EndWrite;
 end;
 
