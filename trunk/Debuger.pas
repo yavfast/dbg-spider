@@ -3,14 +3,18 @@ unit Debuger;
 interface
 
 uses
-  Windows, Classes, SysUtils, ClassUtils, SyncObjs, JclPeImage, JclDebug, DebugerTypes, DbgHookTypes, Collections.Queues;
+  WinApi.Windows, System.Classes, System.SysUtils, System.SyncObjs,
+  ClassUtils, JclPeImage, JclDebug, DebugerTypes, DbgHookTypes,
+  Collections.Queues, Collections.Dictionaries;
 
 type
   TDebuger = class
   private
     FProcessData: PProcessData;          // Служебная информация об отлаживаемом процессе
-    FThreadList: TDbgThreadList;            // Данные о потоках отлаживаемого процесса
-    FThreadAdvInfoList: TThreadAdvInfoList; // Дополнительная информация о потоках
+
+    FThreadList: TDbgThreadList;              // Данные о всех потоках отлаживаемого процесса
+    FThreadAdvInfoList: TThreadAdvInfoList;   // Дополнительная информация о потоках
+    FActiveThreadList: TDbgActiveThreadList;  // Список активных потоков
 
     FSetEntryPointBreakPoint: Boolean;   // Флаг указывающий отладчику, необходимо ли ставить ВР на ЕР
     //FMainLoopWaitPeriod: Cardinal;       // Время ожидания отладочного события
@@ -132,6 +136,7 @@ type
     procedure RemoveThread(const ThreadID: TThreadId);
 
     function GetThreadIndex(const ThreadID: TThreadId; const UseFinished: Boolean = False): Integer;
+    procedure GetActiveThreads(var Res: TDbgActiveThreads);
 
     function GetThreadInfoIndex(const ThreadId: TThreadId): Integer;
     function AddThreadInfo(const ThreadId: TThreadId): PThreadAdvInfo;
@@ -372,7 +377,7 @@ implementation
 
 uses
   RTLConsts, Math, DebugHook, DebugInfo, WinAPIUtils, Winapi.TlHelp32, Winapi.ImageHlp,
-  System.Contnrs, System.AnsiStrings, CollectList, Collections.Dictionaries;
+  System.Contnrs, System.AnsiStrings, CollectList, Collections.Base;
 
 type
   TDbgWorkerThread = class(TThread)
@@ -548,6 +553,7 @@ end;
 procedure TDebuger.AddThreadSamplingInfo(ThreadData: PThreadData);
 var
   ThCPU: UInt64;
+  FreqCPU: Int64;
   Stack: TDbgInfoStack;
   StackInfo: PDbgInfoStackRec;
   Res: DWORD;
@@ -555,7 +561,11 @@ begin
   if Assigned(ThreadData^.ThreadAdvInfo) and (ThreadData^.ThreadAdvInfo.ThreadAdvType = tatNormal) then
   begin
     ThCPU := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
-    if ThCPU > ThreadData^.SamplingCPUTime then
+    FreqCPU := _QueryPerformanceFrequency;
+
+    // FreqCPU - количество циклов CPU за 1 сек
+    // Обрабатываем только те потоки, которые получили более 10% циклов за 1 мсек
+    if (ThCPU - ThreadData^.SamplingCPUTime) > (FreqCPU div 10000) then
     begin
       ThreadData^.SamplingCPUTime := ThCPU;
       Inc(ThreadData^.SamplingCount);
@@ -578,7 +588,9 @@ begin
 
         ThreadData^.SamplingQueue.Add(StackInfo);
       end;
-    end;
+    end
+    else
+      ThreadData^.SamplingCPUTime := ThCPU;
   end;
 end;
 
@@ -673,6 +685,8 @@ begin
     Result^.ThreadID := ThreadID;
     Result^.State := tsActive;
     Result^.ThreadHandle := ThreadHandle;
+
+    FActiveThreadList.AddOrSetValue(ThreadId, Result);
 
     Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
     Result^.ThreadAdvInfo^.ThreadData := Result;
@@ -794,6 +808,8 @@ begin
   FProcessData.Clear;
 
   try
+    FActiveThreadList.Clear;
+
     FThreadList.BeginWrite;
     try
       for I := 0 to FThreadList.Count - 1 do
@@ -883,6 +899,7 @@ begin
 
   FThreadList := TCollectList<TThreadData>.Create;
   FThreadAdvInfoList := TCollectList<TThreadAdvInfo>.Create;
+  FActiveThreadList := TDbgActiveThreadList.Create(512, True);
 
   FProcessData := AllocMem(SizeOf(TProcessData));
   FProcessData.State := psNone;
@@ -978,6 +995,8 @@ begin
   StopDebug;
 
   ClearDbgInfo;
+
+  FreeAndNil(FActiveThreadList);
   FreeAndNil(FThreadList);
   FreeAndNil(FThreadAdvInfoList);
 
@@ -1302,6 +1321,16 @@ begin
   Result := not(FDbgState in DBG_STOPED_STATE);
 end;
 
+procedure TDebuger.GetActiveThreads(var Res: TDbgActiveThreads);
+begin
+  FActiveThreadList.LockForRead;
+
+  SetLength(Res, FActiveThreadList.Count);
+  FActiveThreadList.Values.CopyTo(Res);
+
+  FActiveThreadList.UnLockForRead;
+end;
+
 function TDebuger.GetBPIndex(BreakPointAddr: Pointer; const ThreadID: TThreadId = 0): Integer;
 var
   BP: PBreakpoint;
@@ -1572,11 +1601,17 @@ function TDebuger.GetThreadData(const ThreadID: TThreadId; const UseFinished: Bo
 var
   Index: Integer;
 begin
-  Index := GetThreadIndex(ThreadId, UseFinished);
-  if Index >= 0 then
-    Result := FThreadList[Index]
-  else
-    Result := nil;
+  Result := nil;
+
+  if not FActiveThreadList.TryGetValue(ThreadID, Result) then
+  begin
+    if UseFinished then
+    begin
+      Index := GetThreadIndex(ThreadId, UseFinished);
+      if Index >= 0 then
+        Result := FThreadList[Index];
+    end;
+  end;
 end;
 
 function TDebuger.GetThreadDataByIdx(const Idx: Cardinal): PThreadData;
@@ -2129,13 +2164,10 @@ var
   ThData: PThreadData;
 begin
   try
-    I := FThreadList.Count - 1;
-
-    while I >= 0 do
+    for I := FThreadList.Count - 1 downto 0 do
     begin
       ThData := FThreadList[I];
       ProcessThreadSamplingInfo(ThData);
-      Dec(I);
     end;
   except
     on E: Exception do ; // TODO:
@@ -2279,9 +2311,9 @@ procedure TDebuger.ProcessSyncObjsInfoQueue;
 var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
-  try
-    if FProcessSyncObjsInfoQueue.Count > 0 then
-    begin
+  if FProcessSyncObjsInfoQueue.Count > 0 then
+  begin
+    try
       Buf := FProcessSyncObjsInfoQueue.Dequeue;
       try
         ProcessSyncObjsInfoBuf(Buf);
@@ -2289,9 +2321,9 @@ begin
         FreeMemory(Buf^.DbgSyncObjsInfoList);
         FreeMemory(Buf);
       end;
+    except
+      on E: Exception do ; // TODO:
     end;
-  except
-    on E: Exception do ; // TODO:
   end;
 end;
 
@@ -2299,22 +2331,22 @@ procedure TDebuger.ProcessThreadSamplingInfo(ThreadData: PThreadData);
 var
   StackInfo: PDbgInfoStackRec;
 begin
-  try
-    while ThreadData.SamplingQueue.Count > 0 do
-    begin
-      StackInfo := ThreadData.SamplingQueue.Dequeue;
-      try
-        if Length(StackInfo^.Stack) > 0 then
-        begin
-          ProcessThreadSamplingStack(ThreadData, StackInfo^.Stack);
+  if ThreadData.SamplingQueue.Count > 0 then
+  begin
+    try
+      while ThreadData.SamplingQueue.Count > 0 do
+      begin
+        StackInfo := ThreadData.SamplingQueue.Dequeue;
+        try
+          if Length(StackInfo^.Stack) > 0 then
+            ProcessThreadSamplingStack(ThreadData, StackInfo^.Stack);
+        finally
+          Dispose(StackInfo);
         end;
-      finally
-        SetLength(StackInfo^.Stack, 0);
-        Dispose(StackInfo);
       end;
+    except
+      on E: Exception do ;
     end;
-  except
-    on E: Exception do ;
   end;
 end;
 
@@ -2401,6 +2433,7 @@ begin
     for TrackUnitInfoPair in FProcessData.DbgTrackUsedUnitList do
       TrackUnitInfoPair.Value.IncCallCount;
   finally
+    SetLength(Stack, 0);
     ThreadData.DbgTrackUsedUnitList.Clear;
     FProcessData.DbgTrackUsedUnitList.Clear;
   end;
@@ -2814,6 +2847,7 @@ var
   CPUTime: UInt64;
   ThData: PThreadData;
   I: Integer;
+  Threads: TDbgActiveThreads;
 begin
   CPUTime := _QueryProcessCycleTime(ProcessData^.AttachedProcessHandle);
   // TODO: Контроль загрузки CPU
@@ -2822,12 +2856,23 @@ begin
     ProcessData^.SamplingCPUTime := CPUTime;
     Inc(ProcessData^.SamplingCount);
 
+    GetActiveThreads(Threads);
+
+    for I := 0 to High(Threads) do
+    begin
+      ThData := Threads[I];
+      if ThData^.State = tsActive then
+        AddThreadSamplingInfo(ThData);
+    end;
+
+    (*
     for I := 0 to FThreadList.Count - 1 do
     begin
       ThData := FThreadList[I];
       if ThData^.State = tsActive then
         AddThreadSamplingInfo(ThData);
     end;
+    *)
   end;
 end;
 
@@ -2953,6 +2998,8 @@ begin
   ThData := GetThreadData(ThreadID);
   if ThData <> nil then
   begin
+    FActiveThreadList.Remove(ThreadId);
+
     if ThData^.Breakpoint <> nil then
     begin
       FreeMemory(ThData^.Breakpoint);
@@ -3959,6 +4006,8 @@ begin
       gvDebuger.ProcessSamplingInfo;
       gvDebuger.ProcessMemoryInfoQueue;
       gvDebuger.ProcessSyncObjsInfoQueue;
+
+      Sleep(10);
     end;
   end;
 end;

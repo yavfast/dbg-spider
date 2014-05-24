@@ -43,7 +43,8 @@ uses
   uSourceViewFrame in 'uSourceViewFrame.pas' {SourceViewFrame: TFrame},
   CollectList in 'CollectList.pas',
   MapDebugInfo in 'MapDebugInfo.pas',
-  JclPeImage in 'JclPeImage.pas';
+  JclPeImage in 'JclPeImage.pas',
+  uSharedObject in 'uSharedObject.pas';
 
 {$R *.res}
 
