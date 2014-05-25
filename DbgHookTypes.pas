@@ -107,7 +107,7 @@ type
   TDbgMemInfoListBuf = record
     Count: Integer;
     DbgMemInfoList: PDbgMemInfoList;
-    DbgPointIdx: Cardinal;
+    DbgPointIdx: Integer;
   end;
 
   PDbgSyncObjsInfoList = ^TDbgSyncObjsInfoList;
@@ -117,7 +117,7 @@ type
   TDbgSyncObjsInfoListBuf = record
     Count: Integer;
     DbgSyncObjsInfoList: PDbgSyncObjsInfoList;
-    DbgPointIdx: Cardinal;
+    DbgPointIdx: Integer;
   end;
 
 implementation

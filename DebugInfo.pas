@@ -225,6 +225,9 @@ Type
     Constructor Create;
     Destructor Destroy; Override;
 
+    function Name: AnsiString; override;
+    function ShortName: String; override;
+
     Procedure Clear; Virtual;
 
     function FindTypeByName(const TypeName: AnsiString; const SubStr: Boolean = False): TTypeInfo;
@@ -271,7 +274,6 @@ Type
     Constructor Create;
     Destructor Destroy; Override;
 
-    function Name: AnsiString; Override;
     function ShortName: String; override;
 
     function ParamsAsString: String;
@@ -293,7 +295,6 @@ Type
 
     Procedure Clear; Override;
 
-    function Name: AnsiString; Override;
     function ShortName: String; Override;
 
     function FullUnitName: String;
@@ -1188,11 +1189,6 @@ Begin
   Inherited;
 End;
 
-function TFuncInfo.Name: AnsiString;
-begin
-  Result := gvDebugInfo.GetNameById(NameId);
-end;
-
 function TFuncInfo.ParamsAsString: String;
 // const
 // _Self = 'Self';
@@ -1557,11 +1553,6 @@ begin
   Result := gvDebugInfo.FullUnitName(String(Name));
 end;
 
-function TUnitInfo.Name: AnsiString;
-begin
-  Result := gvDebugInfo.GetNameById(NameId);
-end;
-
 function TUnitInfo.ShortName: String;
 begin
   Result := gvDebugInfo.ParseUnitName(Self);
@@ -1715,6 +1706,16 @@ end;
 function TSegmentCodeInfo.FindVarByName(const VarName: AnsiString; const SubStr: Boolean = False): TVarInfo;
 begin
   Result := TVarInfo(Vars.FindByName(VarName, SubStr));
+end;
+
+function TSegmentCodeInfo.Name: AnsiString;
+begin
+  Result := gvDebugInfo.GetNameById(NameId);
+end;
+
+function TSegmentCodeInfo.ShortName: String;
+begin
+  Result := String(Name);
 end;
 
 { TNameList }

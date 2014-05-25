@@ -119,9 +119,9 @@ type
 
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
     procedure DoSetBreakpointF(const Address: Pointer; var SaveByte: Byte);
-    procedure DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
+    //procedure DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
     procedure DoRemoveBreakpointF(const Address: Pointer; const SaveByte: Byte);
-    procedure DoRestoreBreakpoint(const Address: Pointer);
+    //procedure DoRestoreBreakpoint(const Address: Pointer);
     procedure DoRestoreBreakpointF(const Address: Pointer);
 
     procedure SetDbgTraceState(const Value: TDbgTraceState);
@@ -279,7 +279,7 @@ type
     function CurThreadId: TThreadId;
     function CurThreadData: PThreadData;
     function GetThreadCount: Integer;
-    function GetThreadDataByIdx(const Idx: Cardinal): PThreadData;
+    function GetThreadDataByIdx(const Idx: Integer): PThreadData;
 
     // выполнение кода
     Procedure ExecuteCode(AddrPtr: Pointer; const TimeOut: Cardinal);
@@ -378,6 +378,10 @@ implementation
 uses
   RTLConsts, Math, DebugHook, DebugInfo, WinAPIUtils, Winapi.TlHelp32, Winapi.ImageHlp,
   System.Contnrs, System.AnsiStrings, CollectList, Collections.Base;
+
+const
+  _MAX_SYNC_OBJS_INFO_BUF_COUNT = 128;
+  _MAX_MEM_INFO_BUF_COUNT = 64;
 
 type
   TDbgWorkerThread = class(TThread)
@@ -489,7 +493,7 @@ begin
 
   if Result then
   begin
-    ThreadData^.DbgPoints.BeginRead;
+    //ThreadData^.DbgPoints.BeginRead;
     try
       ThPoint := PThreadPoint(ThreadData^.DbgPoints.Add);
 
@@ -545,7 +549,8 @@ begin
           end;
       end;
     finally
-      ThreadData^.DbgPoints.EndRead;
+      ThreadData^.DbgPoints.Commit;
+      //ThreadData^.DbgPoints.EndRead;
     end;
   end;
 end;
@@ -652,47 +657,41 @@ begin
 
   if Result then
   begin
-    FProcessData.DbgPoints.BeginRead;
-    try
-      ProcPoint := FProcessData.DbgPoints.Add;
+    ProcPoint := FProcessData.DbgPoints.Add;
 
-      ProcPoint^.FromStart := PCur - FProcessData.Started;
-      ProcPoint^.CPUTime := CurTime;
+    ProcPoint^.FromStart := PCur - FProcessData.Started;
+    ProcPoint^.CPUTime := CurTime;
 
-      ProcPoint^.PointType := PointType;
-      case PointType of
-        ptPerfomance:
-          begin
-            //ProcPoint^.DeltaTick := PCur - PPrev;
-            //ProcPoint^.DeltaTickCPU := Cur - Prev;
-            ProcPoint^.DeltaTime := Delta;
-          end;
-      end;
-    finally
-      FProcessData.DbgPoints.EndRead;
+    ProcPoint^.PointType := PointType;
+    case PointType of
+      ptPerfomance:
+        begin
+          //ProcPoint^.DeltaTick := PCur - PPrev;
+          //ProcPoint^.DeltaTickCPU := Cur - Prev;
+          ProcPoint^.DeltaTime := Delta;
+        end;
     end;
+
+    FProcessData.DbgPoints.Commit;
   end;
 end;
 
 function TDebuger.AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
 begin
-  FThreadList.BeginWrite;
-  try
-    Result := FThreadList.Add;
+  Result := FThreadList.Add;
 
-    Result^.Init;
+  Result^.Init;
 
-    Result^.ThreadID := ThreadID;
-    Result^.State := tsActive;
-    Result^.ThreadHandle := ThreadHandle;
+  Result^.ThreadID := ThreadID;
+  Result^.State := tsActive;
+  Result^.ThreadHandle := ThreadHandle;
 
-    FActiveThreadList.AddOrSetValue(ThreadId, Result);
+  FActiveThreadList.AddOrSetValue(ThreadId, Result);
 
-    Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
-    Result^.ThreadAdvInfo^.ThreadData := Result;
-  finally
-    FThreadList.EndWrite;
-  end;
+  Result^.ThreadAdvInfo := SetThreadInfo(ThreadId);
+  Result^.ThreadAdvInfo^.ThreadData := Result;
+
+  FThreadList.Commit;
 
   if AddProcessPointInfo(ptThreadInfo) then
     AddThreadPointInfo(Result, ptStart);
@@ -700,14 +699,12 @@ end;
 
 function TDebuger.AddThreadInfo(const ThreadId: TThreadId): PThreadAdvInfo;
 begin
-  FThreadAdvInfoList.BeginWrite;
-  try
-    Result := FThreadAdvInfoList.Add;
-    Result^.ThreadId := ThreadId;
-    Result^.ThreadData := Nil;
-  finally
-    FThreadAdvInfoList.EndWrite;
-  end;
+  Result := FThreadAdvInfoList.Add;
+
+  Result^.ThreadId := ThreadId;
+  Result^.ThreadData := Nil;
+
+  FThreadAdvInfoList.Commit;
 end;
 
 function TDebuger.ProcAllocMem(const Size: Cardinal): Pointer;
@@ -1102,28 +1099,13 @@ begin
   AddThread(DebugEvent^.dwThreadId, DebugEvent^.CreateThread.hThread);
 
   if Assigned(FCreateThread) then
-  begin
     FCreateThread(Self, DebugEvent^.dwThreadId, @DebugEvent^.CreateThread);
-    //DoResumeAction(DebugEvent^.dwThreadId);
-  end;
 end;
 
 procedure TDebuger.DoDebugString(DebugEvent: PDebugEvent);
-//var
-//  Data: POutputDebugStringInfo;
-//  DbgStr: String;
 begin
-//  Data := @DebugEvent^.DebugString;
-//  if Data^.fUnicode = 1 then
-//    DbgStr := String(PWideChar(gvDebuger.ReadStringW(Data^.lpDebugStringData, Data^.nDebugStringLength)))
-//  else
-//    DbgStr := String(PAnsiChar(gvDebuger.ReadStringA(Data^.lpDebugStringData, Data^.nDebugStringLength)));
-
   if Assigned(FDebugString) then
-  begin
     FDebugString(Self, DebugEvent.dwThreadId, @DebugEvent^.DebugString);
-    //DoResumeAction(DebugEvent.dwThreadId);
-  end;
 end;
 
 procedure TDebuger.DoExitProcess(DebugEvent: PDebugEvent);
@@ -1203,6 +1185,7 @@ begin
     FMainLoopFailed(Self);
 end;
 
+(*
 procedure TDebuger.DoRestoreBreakpoint(const Address: Pointer);
 var
   OldProtect: DWORD;
@@ -1215,6 +1198,7 @@ begin
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
   end;
 end;
+*)
 
 procedure TDebuger.DoRestoreBreakpointF(const Address: Pointer);
 var
@@ -1614,7 +1598,7 @@ begin
   end;
 end;
 
-function TDebuger.GetThreadDataByIdx(const Idx: Cardinal): PThreadData;
+function TDebuger.GetThreadDataByIdx(const Idx: Integer): PThreadData;
 begin
   Result := Nil;
 
@@ -2178,27 +2162,6 @@ procedure TDebuger.ProcessSyncObjsInfoBuf(const Buf: PDbgSyncObjsInfoListBuf);
 var
   ThData: PThreadData;
 
-  (*
-  function FindLink(const Id: NativeUInt): PSyncObjsInfo;
-  var
-    Idx: Integer;
-  begin
-    // TODO: По идее, последний элемент должен быть искомым
-    Idx := ThData^.DbgSyncObjsInfo.Count - 1;
-    while Idx >= 0 do
-    begin
-      Result := ThData^.DbgSyncObjsInfo[Idx];
-      if (Result^.SyncObjsInfo.Id = Id) and (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter) then
-        Exit;
-
-      Dec(Idx);
-    end;
-
-    Result := nil;
-  end;
-  *)
-
-  (*
   function FindCSLink(const CSData: PRTLCriticalSection): PSyncObjsInfo;
   var
     Idx: Integer;
@@ -2219,7 +2182,6 @@ var
 
     Result := nil;
   end;
-  *)
 
 var
   Idx: Integer;
@@ -2250,51 +2212,56 @@ begin
               // Поиск sosEnter вызова
               if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
               begin
-                //SyncObjsLink := FindCSLink(SyncObjsInfo^.CS);
-                //if Assigned(SyncObjsLink) then
-                if ThData^.DbgSyncObjsInfoByCS.TryGetValue(SyncObjsInfo^.CS, SyncObjsLink) then
-                  ThData^.DbgSyncObjsInfoByCS.Remove(SyncObjsInfo^.CS);
+                // Так как Id события выхода не совпадает с Id входа, то ищем по указателю CS
+                // Необходимо найти последнее событие по CS с SyncObjsStateType = sosEnter
+
+                SyncObjsLink := FindCSLink(SyncObjsInfo^.CS);
+
+                // По словарику искать бесполезно, так как нам важен порядок
+                //if ThData^.DbgSyncObjsInfoByCS.TryGetValue(SyncObjsInfo^.CS, SyncObjsLink) then
+                //  ThData^.DbgSyncObjsInfoByCS.Remove(SyncObjsInfo^.CS);
               end
               else
               begin
-                //SyncObjsLink := FindLink(SyncObjsInfo^.Id);
-                //if Assigned(SyncObjsLink) then
+                // У остальных типов Id события входа и выхода будут совпадать
+
                 if ThData^.DbgSyncObjsInfoByID.TryGetValue(SyncObjsInfo^.Id, SyncObjsLink) then
                   ThData^.DbgSyncObjsInfoByID.Remove(SyncObjsInfo^.Id);
               end;
             end;
 
-            ThData^.DbgSyncObjsInfo.BeginWrite;
-            try
-              // Добавляем инфу про новый элемент
-              ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
+            // Добавляем инфу про новый элемент
+            ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
 
-              if ThData^.State = tsFinished then
-                ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
-              else
-                ThSyncObjsInfo^.PerfIdx := Buf^.DbgPointIdx;
+            if ThData^.State = tsFinished then
+              ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
+            else
+              ThSyncObjsInfo^.PerfIdx := Buf^.DbgPointIdx;
 
-              ThSyncObjsInfo^.Link := SyncObjsLink;
-              if SyncObjsLink <> nil then
-                SyncObjsLink^.Link := ThSyncObjsInfo;
+            ThSyncObjsInfo^.Link := SyncObjsLink;
+            if SyncObjsLink <> nil then
+              SyncObjsLink^.Link := ThSyncObjsInfo;
 
-              ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
-            finally
-              ThData^.DbgSyncObjsInfo.EndWrite;
-            end;
+            ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
+
+            ThData^.DbgSyncObjsInfo.Commit;
 
             // Добавляем инфу про sosEnter вызовы
             if SyncObjsInfo^.SyncObjsStateType = sosEnter then
             begin
-              if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
-                ThData^.DbgSyncObjsInfoByCS.AddOrSetValue(SyncObjsInfo^.CS, ThSyncObjsInfo)
-              else
+              if SyncObjsInfo^.SyncObjsType <> soInCriticalSection then
                 ThData^.DbgSyncObjsInfoByID.AddOrSetValue(SyncObjsInfo^.Id, ThSyncObjsInfo);
             end;
 
             // Формируем стек вызова
-            if SyncObjsInfo^.SyncObjsType in [soEnterCriticalSection, soSendMessage] then
-              ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
+            case SyncObjsInfo^.SyncObjsType of
+              soEnterCriticalSection, soInCriticalSection,
+              soSendMessage,
+              soWaitForSingleObject, soWaitForMultipleObjects:
+                begin
+                  ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
+                end;
+            end;
           finally
             ThData^.DbgSyncObjsInfo.EndRead;
           end;
@@ -2314,6 +2281,14 @@ begin
   if FProcessSyncObjsInfoQueue.Count > 0 then
   begin
     try
+      // Пропускаем недавние события для корректной обработки коротких критических секций
+      if FProcessSyncObjsInfoQueue.Count < _MAX_SYNC_OBJS_INFO_BUF_COUNT then
+      begin
+        Buf := FProcessSyncObjsInfoQueue.First;
+        if (ProcessData^.CurDbgPointIdx - Buf^.DbgPointIdx) <= 2 then
+          Exit;
+      end;
+
       Buf := FProcessSyncObjsInfoQueue.Dequeue;
       try
         ProcessSyncObjsInfoBuf(Buf);
@@ -3086,12 +3061,10 @@ begin
 end;
 
 procedure TDebuger.LoadMemoryInfoPackEx(const MemInfoPack: Pointer; const Count: Cardinal);
-const
-  MAX_BUF_COUNT = 64;
 var
   Buf: PDbgMemInfoListBuf;
 begin
-  while FProcessMemoryQueue.Count > MAX_BUF_COUNT do
+  while FProcessMemoryQueue.Count > _MAX_MEM_INFO_BUF_COUNT do
     SwitchToThread;
 
   Buf := AllocMem(SizeOf(TDbgMemInfoListBuf));
@@ -3106,12 +3079,10 @@ begin
 end;
 
 procedure TDebuger.LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
-const
-  MAX_BUF_COUNT = 64;
 var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
-  while FProcessSyncObjsInfoQueue.Count > MAX_BUF_COUNT do
+  while FProcessSyncObjsInfoQueue.Count > _MAX_SYNC_OBJS_INFO_BUF_COUNT do
     SwitchToThread;
 
   Buf := AllocMem(SizeOf(TDbgSyncObjsInfoListBuf));
@@ -3689,6 +3660,7 @@ begin
   end;
 end;
 
+(*
 procedure TDebuger.DoRemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
 var
   Dummy: TSysUInt;
@@ -3701,6 +3673,7 @@ begin
     Check(VirtualProtectEx(FProcessData.AttachedProcessHandle, Address, 1, OldProtect, OldProtect));
   end;
 end;
+*)
 
 procedure TDebuger.DoRemoveBreakpointF(const Address: Pointer; const SaveByte: Byte);
 var
@@ -4007,7 +3980,7 @@ begin
       gvDebuger.ProcessMemoryInfoQueue;
       gvDebuger.ProcessSyncObjsInfoQueue;
 
-      Sleep(10);
+      Sleep(1); // Perf timer (10 msec) * 3;
     end;
   end;
 end;
