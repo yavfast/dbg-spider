@@ -19,7 +19,7 @@ type
   TLinkType = (ltNone = 0, ltProject, ltProcess, ltThread, ltMemInfo, ltMemStack, ltExceptInfo, ltExceptStack,
     ltDbgUnitGroup, ltDbgUnitInfo, ltDbgConstInfo, ltDbgTypeInfo, ltDbgVarInfo, ltDbgFuncInfo, ltDbgStructMemberInfo,
     ltDbgFuncParamInfo, ltDbgLogItem, ltTrackFuncInfo, ltTrackUnitInfo, ltTrackCallFuncInfo,
-    ltSpiderInfo, ltVersionInfo, ltChangeLogItemInfo, ltSyncObjInfo, ltSyncObjStack);
+    ltSpiderInfo, ltVersionInfo, ltChangeLogItemInfo, ltSyncObjInfo, ltSyncObjChildInfo, ltSyncObjStack);
 
   PLinkData = ^TLinkData;
   TLinkData = record
@@ -71,7 +71,7 @@ type
         (VersionInfo: TChangeLogVersionInfo);
       ltChangeLogItemInfo:
         (ChangeLogItem: TChangeLogItem);
-      ltSyncObjInfo:
+      ltSyncObjInfo, ltSyncObjChildInfo:
         (SyncObjItem: PSyncObjsInfo);
       ltSyncObjStack:
         (SyncObjStackPtr: Pointer);
@@ -1671,12 +1671,12 @@ procedure TMainForm.DrawThreadCPUTimeLine(GP: IGPGraphics; const R: TRect; ThDat
 var
   X1, X2, X3, Y1, Y2: Integer;
   T1, T2, T3: Int64;
-  I: Cardinal;
+  I: Integer;
 
-  IdxL, IdxR, Idx: Cardinal;
+  IdxL, IdxR, Idx: Integer;
   ThPoint: PThreadPoint;
 
-  IdxL1, IdxR1: Cardinal;
+  IdxL1, IdxR1: Integer;
   SyncObjsInfo: PSyncObjsInfo;
 
   procedure _DrawSyncObjs(SyncObjsInfo: PSyncObjsInfo);
@@ -2279,7 +2279,9 @@ procedure TMainForm.LoadSyncObjsInfoObjects(Tree: TBaseVirtualTree; SyncObjsInfo
 var
   SyncObjsItem: PSyncObjsInfo;
   SyncObjsNode: PVirtualNode;
+  SyncObjsChildNode: PVirtualNode;
   Data: PLinkData;
+  ChildData: PLinkData;
   I: Integer;
 begin
   if SyncObjsInfo = Nil then Exit;
@@ -2288,22 +2290,49 @@ begin
   try
     Tree.Clear;
 
-    SyncObjsInfo.Lock.BeginRead;
+    //SyncObjsInfo.Lock.BeginRead;
     try
       for I := 0 to SyncObjsInfo.Count - 1 do
       begin
         SyncObjsItem := PRPSyncObjsInfo(SyncObjsInfo[I])^.SyncObjsInfo;
 
+        if SyncObjsItem.IsShortLock then
+          Continue;
+
         SyncObjsNode := Tree.AddChild(nil);
 
         Data := Tree.GetNodeData(SyncObjsNode);
-
         Data^.SyncNode := SyncNode;
-        Data^.SyncObjItem := SyncObjsItem; // Адрес в стеке
+        Data^.SyncObjItem := SyncObjsItem.Enter; // Адрес в стеке
         Data^.LinkType := ltSyncObjInfo;
+
+        if SyncObjsItem^.SyncObjsInfo.SyncObjsType = soInCriticalSection then
+        begin
+          // Enter
+          if SyncObjsItem.Enter <> Nil then
+          begin
+            SyncObjsChildNode := Tree.AddChild(SyncObjsNode);
+            ChildData := Tree.GetNodeData(SyncObjsChildNode);
+            ChildData^.SyncNode := SyncNode;
+            ChildData^.SyncObjItem := SyncObjsItem.Enter;
+            ChildData^.LinkType := ltSyncObjChildInfo;
+          end;
+
+          // Leave
+          if SyncObjsItem.Leave <> Nil then
+          begin
+            SyncObjsChildNode := Tree.AddChild(SyncObjsNode);
+            ChildData := Tree.GetNodeData(SyncObjsChildNode);
+            ChildData^.SyncNode := SyncNode;
+            ChildData^.SyncObjItem := SyncObjsItem.Leave;
+            ChildData^.LinkType := ltSyncObjChildInfo;
+          end;
+
+          Tree.Expanded[SyncObjsNode] := True;
+        end;
       end;
     finally
-      SyncObjsInfo.Lock.EndRead;
+      //SyncObjsInfo.Lock.EndRead;
     end;
   finally
     Tree.EndUpdate;
@@ -2321,17 +2350,20 @@ begin
   try
     Tree.Clear;
 
-    for Idx := 0 to High(SyncObjInfo^.SyncObjsInfo.Stack) do
+    if Assigned(SyncObjInfo) then
     begin
-      Ptr := SyncObjInfo^.SyncObjsInfo.Stack[Idx];
-      if Ptr = nil then Break;
+      for Idx := 0 to High(SyncObjInfo^.SyncObjsInfo.Stack) do
+      begin
+        Ptr := SyncObjInfo^.SyncObjsInfo.Stack[Idx];
+        if Ptr = nil then Break;
 
-      StackNode := Tree.AddChild(nil);
-      StackData := Tree.GetNodeData(StackNode);
+        StackNode := Tree.AddChild(nil);
+        StackData := Tree.GetNodeData(StackNode);
 
-      StackData^.SyncObjStackPtr := Ptr;
-      StackData^.SyncNode := SyncNode;
-      StackData^.LinkType := ltSyncObjStack;
+        StackData^.SyncObjStackPtr := Ptr;
+        StackData^.SyncNode := SyncNode;
+        StackData^.LinkType := ltSyncObjStack;
+      end;
     end;
   finally
     Tree.EndUpdate;
@@ -4785,7 +4817,7 @@ var
 begin
   Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
-    ltSyncObjInfo:
+    ltSyncObjInfo, ltSyncObjChildInfo:
       LoadSyncObjsInfoStack(vstLockTrackingSyncObjStack, Data^.SyncObjItem, Node);
   end;
 end;
@@ -4803,8 +4835,14 @@ begin
       case Column of
         0: begin
           case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
+            soWaitForSingleObject:
+              CellText := 'WaitForSingleObject';
+            soWaitForMultipleObjects:
+              CellText := 'WaitForMultipleObjects';
             soEnterCriticalSection:
               CellText := 'EnterCriticalSection';
+            soInCriticalSection:
+              CellText := 'CriticalSection';
             soSendMessage:
               CellText := 'SendMessage';
           end;
@@ -4817,8 +4855,19 @@ begin
         end;
         2: begin
           case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
-            soEnterCriticalSection, soSendMessage:
+            soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection, soSendMessage:
               CellText := ElapsedToTime(Data^.SyncObjItem^.WaitTime);
+          end;
+        end;
+      end;
+    ltSyncObjChildInfo:
+      case Column of
+        0: begin
+          case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsStateType of
+            sosEnter:
+              CellText := 'Enter';
+            sosLeave:
+              CellText := 'Leave';
           end;
         end;
       end;

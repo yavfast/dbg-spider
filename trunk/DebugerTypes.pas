@@ -179,9 +179,9 @@ type
   //PGetMemInfo = ^TGetMemInfo;
   TGetMemInfo = class(TSharedObject)
   public
-    PerfIdx: Cardinal;
+    PerfIdx: Integer;
     ObjAddr: Pointer;
-    Size: Cardinal;
+    Size: Integer;
     Stack: TDbgInfoStack;
     ObjectType: String;
 
@@ -232,11 +232,14 @@ type
 
   PSyncObjsInfo = ^RSyncObjsInfo;
   RSyncObjsInfo = record
-    PerfIdx: Cardinal;
+    PerfIdx: Integer;
     Link: PSyncObjsInfo;
     SyncObjsInfo: TDbgSyncObjsInfoEx;
   public
     function WaitTime: Int64;
+    function IsShortLock: Boolean;
+    function Enter: PSyncObjsInfo; inline;
+    function Leave: PSyncObjsInfo; inline;
   end;
 
   TSyncObjsInfoList = TBaseCollectList; // TCollectList<RSyncObjsInfo>;
@@ -580,7 +583,6 @@ type
 
     DbgSyncObjsInfo: TSyncObjsInfoList;
     DbgSyncObjsInfoByID: TSyncObjsInfoListByID;
-    DbgSyncObjsInfoByCS: TSyncObjsInfoListByCS;
 
     DbgGetMemUnitList: TMemInfoTrackUnitInfoList;
     DbgSyncObjsUnitList: TSyncObjsTrackUnitInfoList;
@@ -595,13 +597,13 @@ type
     DbgTrackUsedUnitList: TTrackUnitInfoList; // Временный список используемых юнитов при обработке стека
 
     function DbgPointsCount: Cardinal;
-    function DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
+    function DbgPointByIdx(const Idx: Integer): PThreadPoint;
 
     function DbgExceptionsCount: Cardinal;
     function DbgExceptionsByIdx(const Idx: Cardinal): TExceptInfo;
 
     function DbgSyncObjsCount: Cardinal;
-    function DbgSyncObjsByIdx(const Idx: Cardinal): PSyncObjsInfo;
+    function DbgSyncObjsByIdx(const Idx: Integer): PSyncObjsInfo;
 
     procedure UpdateGetMemUnitList;
 
@@ -682,7 +684,7 @@ type
     function Elapsed_MSec: Cardinal; // msec
     function DbgPointsCount: Cardinal;
     function DbgPointByIdx(const Idx: Cardinal): PProcessPoint;
-    function CurDbgPointIdx: Cardinal;
+    function CurDbgPointIdx: Integer;
 
     function DbgExceptionsCount: Cardinal;
 
@@ -754,13 +756,15 @@ begin
   FreeAndNil(DbgTrackUsedUnitList);
 end;
 
-function TProcessData.CurDbgPointIdx: Cardinal;
+function TProcessData.CurDbgPointIdx: Integer;
 begin
-  Result := 0;
   if Assigned(DbgPoints) and (DbgPoints.Count > 0) then
     Result := DbgPoints.Count - 1
   else
+  begin
+    Result := 0;
     RaiseDebugCoreException();
+  end;
 end;
 
 function TProcessData.DbgExceptionsCount: Cardinal;
@@ -833,7 +837,6 @@ begin
   //FreeAndNil(DbgGetMemFuncList);
   FreeAndNil(DbgSyncObjsInfo);
   FreeAndNil(DbgSyncObjsInfoByID);
-  FreeAndNil(DbgSyncObjsInfoByCS);
   FreeAndNil(DbgExceptions);
 
   FreeAndNil(DbgTrackUnitList);
@@ -875,7 +878,7 @@ begin
   end;
 end;
 
-function TThreadData.DbgPointByIdx(const Idx: Cardinal): PThreadPoint;
+function TThreadData.DbgPointByIdx(const Idx: Integer): PThreadPoint;
 begin
   if Idx < DbgPoints.Count then
     Result := DbgPoints[Idx]
@@ -888,7 +891,7 @@ begin
   Result := DbgPoints.Count;
 end;
 
-function TThreadData.DbgSyncObjsByIdx(const Idx: Cardinal): PSyncObjsInfo;
+function TThreadData.DbgSyncObjsByIdx(const Idx: Integer): PSyncObjsInfo;
 begin
   if Idx < DbgSyncObjsInfo.Count then
     Result := DbgSyncObjsInfo[Idx]
@@ -939,7 +942,6 @@ begin
   DbgSyncObjsInfo := TCollectList<RSyncObjsInfo>.Create;
 
   DbgSyncObjsInfoByID := TSyncObjsInfoListByID.Create(4096, True);
-  DbgSyncObjsInfoByCS := TSyncObjsInfoListByCS.Create(4096, True);
 
   DbgTrackEventCount := 0;
   DbgTrackUnitList := TCodeTrackUnitInfoList.Create(512, True);
@@ -1572,6 +1574,13 @@ begin
 
   // TODO: Добавить опцию дебагера
   // Проверка на игноры
+
+  // Не логируем короткие критические секции
+  // Для Enter ещё нет информации. Такое будет фильтроваться уже только при выводе на форму
+  // TODO: Определить для этого отдельную опцию
+  if SyncObjsInfo^.IsShortLock then
+    Exit;
+
   case DbgSyncObjsInfo^.SyncObjsType of
     soEnterCriticalSection:
       begin
@@ -1583,6 +1592,10 @@ begin
         if (DbgSyncObjsInfo^.ThreadId = DbgSyncObjsInfo^.OwningThreadId) then
           Exit;
       end;
+    soInCriticalSection:
+      begin
+        //
+      end;
     soSendMessage:
       begin
         // Игнорим SendMessage в главном потоке
@@ -1593,84 +1606,124 @@ begin
 
   StackEntry := TStackEntry.Create;
   try
-    // Проход по стеку
-    for I := 0 to High(DbgSyncObjsInfo^.Stack) do
+    if DbgSyncObjsInfo^.SyncObjsType = soInCriticalSection then
     begin
-      Addr := DbgSyncObjsInfo^.Stack[I];
+      // Регистрируем только сам факт использования критической секции, без WaitTime
+      // WaitTime будет отображаться в списке объектов
 
-      //if (Addr = nil) or (Addr = Pointer(-1)) then Break;
+      // Так как вход и выход из критической секции могут быть в разных функциях,
+      // то регистрировать надо оба случая
 
-      if StackEntry.UpdateInfo(Addr) <> slNotFound then
+      for I := 0 to High(DbgSyncObjsInfo^.Stack) do
       begin
-        TrackUnitInfo := TSyncObjsTrackUnitInfo(GetTrackUnitInfo(StackEntry.UnitInfo));
+        Addr := DbgSyncObjsInfo^.Stack[I];
 
-        // TrackFuncInfo
-        if not TrackUnitInfo.FuncInfoList.TryGetValue(StackEntry.FuncInfo, TrackFuncInfo) then
+        if StackEntry.UpdateInfo(Addr) <> slNotFound then
         begin
-          TrackFuncInfo := TSyncObjsTrackFuncInfo.Create(StackEntry.FuncInfo);
-          TrackFuncInfo.TrackUnitInfo := TrackUnitInfo;
+          TrackUnitInfo := TSyncObjsTrackUnitInfo(GetTrackUnitInfo(StackEntry.UnitInfo));
 
-          TrackUnitInfo.FuncInfoList.AddOrSetValue(StackEntry.FuncInfo, TrackFuncInfo);
+          // TrackFuncInfo
+          if not TrackUnitInfo.FuncInfoList.TryGetValue(StackEntry.FuncInfo, TrackFuncInfo) then
+          begin
+            TrackFuncInfo := TSyncObjsTrackFuncInfo.Create(StackEntry.FuncInfo);
+            TrackFuncInfo.TrackUnitInfo := TrackUnitInfo;
+
+            TrackUnitInfo.FuncInfoList.AddOrSetValue(StackEntry.FuncInfo, TrackFuncInfo);
+          end;
+
+          // Регистрируем вход в SyncObj
+          //TSyncObjsTrackFuncInfo(TrackFuncInfo).IncCallCount;
+
+          // Добавляем SyncObj в список текущей функции
+          SyncObjsListItem := TSyncObjsTrackFuncInfo(TrackFuncInfo).SyncObjsList.Add;
+          SyncObjsListItem^.SyncObjsInfo := SyncObjsInfo;
+          TSyncObjsTrackFuncInfo(TrackFuncInfo).SyncObjsList.Commit;
+
+          // Отрабатываем только первую функцию по которой есть инфа
+          Break;
         end;
+      end;
+    end
+    else
+    begin
+      // Проход по стеку
+      for I := 0 to High(DbgSyncObjsInfo^.Stack) do
+      begin
+        Addr := DbgSyncObjsInfo^.Stack[I];
 
-        case SyncObjsInfo^.SyncObjsInfo.SyncObjsStateType of
-          sosEnter:
-            begin
-              // Регистрируем вход в SyncObj
-              TSyncObjsTrackFuncInfo(TrackFuncInfo).IncCallCount;
+        if StackEntry.UpdateInfo(Addr) <> slNotFound then
+        begin
+          TrackUnitInfo := TSyncObjsTrackUnitInfo(GetTrackUnitInfo(StackEntry.UnitInfo));
 
-              // Добавляем SyncObj в список текущей функции
-              SyncObjsListItem := TSyncObjsTrackFuncInfo(TrackFuncInfo).SyncObjsList.Add;
-              SyncObjsListItem^.SyncObjsInfo := SyncObjsInfo;
+          // TrackFuncInfo
+          if not TrackUnitInfo.FuncInfoList.TryGetValue(StackEntry.FuncInfo, TrackFuncInfo) then
+          begin
+            TrackFuncInfo := TSyncObjsTrackFuncInfo.Create(StackEntry.FuncInfo);
+            TrackFuncInfo.TrackUnitInfo := TrackUnitInfo;
 
-              // TODO: Искать функцию с валидным Addr
-              if I > 0 then
+            TrackUnitInfo.FuncInfoList.AddOrSetValue(StackEntry.FuncInfo, TrackFuncInfo);
+          end;
+
+          case SyncObjsInfo^.SyncObjsInfo.SyncObjsStateType of
+            sosEnter:
               begin
-                Addr := DbgSyncObjsInfo^.Stack[I - 1];
-                TrackFuncInfo.AddChildCall(Addr);
-              end;
+                // Регистрируем вход в SyncObj
+                TSyncObjsTrackFuncInfo(TrackFuncInfo).IncCallCount;
 
-              // TODO: Искать функцию с валидным Addr
-              if I < High(DbgSyncObjsInfo^.Stack) then
-              begin
-                Addr := DbgSyncObjsInfo^.Stack[I + 1];
-                TrackFuncInfo.AddParentCall(Addr);
-              end;
-            end;
-          sosLeave:
-            begin
-              // Регистрируем выход из SyncObj
-              if Assigned(SyncObjsInfo^.Link) then
-              begin
-                WaitTime := SyncObjsInfo^.WaitTime;
-                TSyncObjsTrackFuncInfo(TrackFuncInfo).GrowWaitTime(WaitTime);
-
-                // Увеличиваем счетчик потока
-                if I = 0 then
-                begin
-                  ThData := gvDebuger.GetThreadData(SyncObjsInfo^.SyncObjsInfo.ThreadId, True);
-                  TInterlocked.Add(ThData^.WaitTime, WaitTime);
-                end;
+                // Добавляем SyncObj в список текущей функции
+                SyncObjsListItem := TSyncObjsTrackFuncInfo(TrackFuncInfo).SyncObjsList.Add;
+                SyncObjsListItem^.SyncObjsInfo := SyncObjsInfo;
+                TSyncObjsTrackFuncInfo(TrackFuncInfo).SyncObjsList.Commit;
 
                 // TODO: Искать функцию с валидным Addr
                 if I > 0 then
                 begin
                   Addr := DbgSyncObjsInfo^.Stack[I - 1];
-                  CallFuncInfo := TrackFuncInfo.ChildFuncs.GetCallFunc(Addr);
-                  if Assigned(CallFuncInfo) then
-                    Inc(CallFuncInfo.Data, WaitTime);
+                  TrackFuncInfo.AddChildCall(Addr);
                 end;
 
                 // TODO: Искать функцию с валидным Addr
                 if I < High(DbgSyncObjsInfo^.Stack) then
                 begin
                   Addr := DbgSyncObjsInfo^.Stack[I + 1];
-                  CallFuncInfo := TrackFuncInfo.ParentFuncs.GetCallFunc(Addr);
-                  if Assigned(CallFuncInfo) then
-                    Inc(CallFuncInfo.Data, WaitTime);
+                  TrackFuncInfo.AddParentCall(Addr);
                 end;
               end;
-            end;
+            sosLeave:
+              begin
+                // Регистрируем выход из SyncObj
+                if Assigned(SyncObjsInfo^.Link) then
+                begin
+                  WaitTime := SyncObjsInfo^.WaitTime;
+                  TSyncObjsTrackFuncInfo(TrackFuncInfo).GrowWaitTime(WaitTime);
+
+                  // Увеличиваем счетчик потока
+                  if I = 0 then
+                  begin
+                    ThData := gvDebuger.GetThreadData(SyncObjsInfo^.SyncObjsInfo.ThreadId, True);
+                    TInterlocked.Add(ThData^.WaitTime, WaitTime);
+                  end;
+
+                  // TODO: Искать функцию с валидным Addr
+                  if I > 0 then
+                  begin
+                    Addr := DbgSyncObjsInfo^.Stack[I - 1];
+                    CallFuncInfo := TrackFuncInfo.ChildFuncs.GetCallFunc(Addr);
+                    if Assigned(CallFuncInfo) then
+                      Inc(CallFuncInfo.Data, WaitTime);
+                  end;
+
+                  // TODO: Искать функцию с валидным Addr
+                  if I < High(DbgSyncObjsInfo^.Stack) then
+                  begin
+                    Addr := DbgSyncObjsInfo^.Stack[I + 1];
+                    CallFuncInfo := TrackFuncInfo.ParentFuncs.GetCallFunc(Addr);
+                    if Assigned(CallFuncInfo) then
+                      Inc(CallFuncInfo.Data, WaitTime);
+                  end;
+                end;
+              end;
+          end;
         end;
       end;
     end;
@@ -1709,12 +1762,57 @@ end;
 
 { RSyncObjsInfo }
 
+function RSyncObjsInfo.Enter: PSyncObjsInfo;
+begin
+  if SyncObjsInfo.SyncObjsStateType = sosEnter then
+    Result := @Self
+  else
+    Result := Link;
+end;
+
+function RSyncObjsInfo.IsShortLock: Boolean;
+var
+  _Leave: PSyncObjsInfo;
+  _Enter: PSyncObjsInfo;
+begin
+  Result := False;
+
+  _Leave := Leave;
+  if Assigned(_Leave) then
+  begin
+    _Enter := Enter;
+    if Assigned(_Enter) then
+      Result := ((_Leave^.PerfIdx - _Enter^.PerfIdx) <= 1);
+  end;
+end;
+
+function RSyncObjsInfo.Leave: PSyncObjsInfo;
+begin
+  if SyncObjsInfo.SyncObjsStateType = sosLeave then
+    Result := @Self
+  else
+    Result := Link;
+end;
+
 function RSyncObjsInfo.WaitTime: Int64;
+var
+  _Leave: PSyncObjsInfo;
+  _Enter: PSyncObjsInfo;
+  _LeaveTime: Int64;
 begin
   Result := 0;
 
-  if Assigned(Link) then
-    Result := Abs(SyncObjsInfo.CurTime - Link^.SyncObjsInfo.CurTime);
+  _Leave := Leave;
+  if Assigned(_Leave) then
+    _LeaveTime := _Leave.SyncObjsInfo.CurTime
+  else
+    _LeaveTime := _QueryPerformanceCounter;
+
+  _Enter := Enter;
+  begin
+    if Assigned(_Enter) then
+      Result := _LeaveTime - _Enter.SyncObjsInfo.CurTime;
+  end;
 end;
 
 { TDbgSyncObjsInfoEx }

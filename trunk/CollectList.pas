@@ -6,6 +6,7 @@ uses Classes, SysUtils, SyncObjs, ClassUtils;
 
 const
   _DEF_SEGMENT_SIZE = 16 * 1024;
+  _SEG_LIST_GROW = 16;
 
 type
   TSegment<T> = Array of T;
@@ -18,21 +19,23 @@ type
 
   TBaseCollectList = class
   private
-    FCount: Cardinal;
+    FCount: Integer;
+    FAddCount: Integer;
     FLock: TMREWSync;
   protected
-    FSegLength: Cardinal;
+    FSegLength: Integer;
 
-    function GetItem(const Index: Cardinal): PData; virtual; abstract;
+    function GetItem(const Index: Integer): PData; virtual; abstract;
     procedure CheckSeg(const Seg: Integer); virtual; abstract;
 
-    function IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
+    function IndexToSegment(const Index: Integer; var Seg, Offset: Integer): Boolean;
     procedure RaiseError(Msg: PString; const Args: Array of const);
   public
     constructor Create;
     destructor Destroy; override;
 
     function Add: PData; virtual;
+    procedure Commit; virtual;
     procedure Clear; virtual;
 
     procedure BeginRead; inline;
@@ -40,8 +43,8 @@ type
     procedure BeginWrite; inline;
     procedure EndWrite; inline;
 
-    property Count: Cardinal read FCount;
-    property Items[const Index: Cardinal]: PData read GetItem; default;
+    property Count: Integer read FCount;
+    property Items[const Index: Integer]: PData read GetItem; default;
     property Lock: TMREWSync read FLock;
   end;
 
@@ -49,10 +52,10 @@ type
   private
     FSegList: TSegList<T>;
   protected
-    function GetItem(const Index: Cardinal): PData; override;
+    function GetItem(const Index: Integer): PData; override;
     procedure CheckSeg(const Seg: Integer); override;
   public
-    constructor Create(const SegSize: Cardinal = _DEF_SEGMENT_SIZE);
+    constructor Create(const SegSize: Integer = _DEF_SEGMENT_SIZE);
     destructor Destroy; override;
 
     function Add: PData; override;
@@ -66,12 +69,20 @@ implementation
 function TBaseCollectList.Add: PData;
 begin
   Result := Nil;
-  Inc(FCount);
+  AtomicIncrement(FAddCount);
 end;
 
 procedure TBaseCollectList.Clear;
 begin
   FCount := 0;
+end;
+
+procedure TBaseCollectList.Commit;
+begin
+  BeginWrite;
+  AtomicIncrement(FCount, FAddCount);
+  AtomicExchange(FAddCount, 0);
+  EndWrite;
 end;
 
 constructor TBaseCollectList.Create;
@@ -115,9 +126,9 @@ begin
   FLock.EndWrite;
 end;
 
-function TBaseCollectList.IndexToSegment(const Index: Cardinal; var Seg, Offset: Integer): Boolean;
+function TBaseCollectList.IndexToSegment(const Index: Integer; var Seg, Offset: Integer): Boolean;
 begin
-  Result := Index < Count;
+  Result := (Index < FCount) and (Index >= 0);
 
   Seg := Index div FSegLength;
   Offset := Index mod FSegLength;
@@ -128,29 +139,46 @@ end;
 function TCollectList<T>.Add: PData;
 var
   Seg, Offset: Integer;
+  NextIdx: Integer;
 begin
-  BeginWrite;
+  BeginRead;
 
-  IndexToSegment(Count, Seg, Offset);
+  // Резервируем следующий элемент
+  NextIdx := FCount + AtomicIncrement(FAddCount) - 1;
+
+  // Проверяем доступность сегмента
+  IndexToSegment(NextIdx, Seg, Offset);
   CheckSeg(Seg);
 
-  inherited Add;
-
+  // Получаем указатель на новый элемент
   Result := @FSegList[Seg][Offset];
+
+  EndRead;
 
   FillChar(Result^, SizeOf(T), 0);
   //Initialize(T(Result^));
-
-  EndWrite;
 end;
 
 procedure TCollectList<T>.CheckSeg(const Seg: Integer);
 begin
+  //BeginRead;
+
   if Length(FSegList) <= Seg then
   begin
-    SetLength(FSegList, Seg + 1);
+    BeginWrite;
+    SetLength(FSegList, Seg + _SEG_LIST_GROW);
     SetLength(FSegList[Seg], FSegLength);
+    EndWrite;
   end;
+
+  if Length(FSegList[Seg]) = 0 then
+  begin
+    BeginWrite;
+    SetLength(FSegList[Seg], FSegLength);
+    EndWrite;
+  end;
+
+  //EndRead;
 end;
 
 procedure TCollectList<T>.Clear;
@@ -161,7 +189,7 @@ begin
   EndWrite;
 end;
 
-constructor TCollectList<T>.Create(const SegSize: Cardinal = _DEF_SEGMENT_SIZE);
+constructor TCollectList<T>.Create(const SegSize: Integer = _DEF_SEGMENT_SIZE);
 begin
   inherited Create;
 
@@ -176,7 +204,7 @@ begin
   inherited;
 end;
 
-function TCollectList<T>.GetItem(const Index: Cardinal): PData;
+function TCollectList<T>.GetItem(const Index: Integer): PData;
 var
   Seg, Offset: Integer;
 begin
