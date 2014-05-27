@@ -392,6 +392,9 @@ type
     destructor Destroy; override;
 
     procedure Stop;
+
+    class procedure Init; static;
+    class procedure Reset; static;
   end;
 
 var
@@ -1091,6 +1094,8 @@ begin
   // Запуск потока по обработке стеков
   InitSamplingTimer;
 
+  TDbgWorkerThread.Init;
+
   DoResumeAction(DebugEvent^.dwThreadId);
 end;
 
@@ -1111,6 +1116,8 @@ end;
 procedure TDebuger.DoExitProcess(DebugEvent: PDebugEvent);
 begin
   ResetSamplingTimer;
+
+  TDbgWorkerThread.Reset;
 
   DbgState := dsStoping;
   FProcessData.State := psFinished;
@@ -1714,9 +1721,6 @@ begin
     FTimerQueue := CreateTimerQueue;
     if FTimerQueue <> 0 then
     begin
-      if gvDbgWorkerThread = Nil then
-        gvDbgWorkerThread := TDbgWorkerThread.Create;
-
       if CreateTimerQueueTimer(FSamplingTimer, FTimerQueue, @_DbgSamplingEvent, nil, 100, 1, WT_EXECUTEINPERSISTENTTHREAD) then
       begin
         Log('Init sampling timer - ok');
@@ -1739,12 +1743,6 @@ begin
 
     FSamplingTimer := 0;
     FTimerQueue := 0;
-  end;
-
-  if Assigned(gvDbgWorkerThread) then
-  begin
-    gvDbgWorkerThread.Stop;
-    FreeAndNil(gvDbgWorkerThread);
   end;
 end;
 
@@ -2126,6 +2124,9 @@ procedure TDebuger.ProcessMemoryInfoQueue;
 var
   Buf: PDbgMemInfoListBuf;
 begin
+  if not MemoryCheckMode then
+    Exit;
+
   try
     if FProcessMemoryQueue.Count > 0 then
     begin
@@ -2147,6 +2148,9 @@ var
   I: Integer;
   ThData: PThreadData;
 begin
+  if not(CodeTracking and SamplingMethod) then
+    Exit;
+
   try
     for I := FThreadList.Count - 1 downto 0 do
     begin
@@ -2295,6 +2299,9 @@ procedure TDebuger.ProcessSyncObjsInfoQueue;
 var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
+  if not SyncObjsTracking then
+    Exit;
+
   if FProcessSyncObjsInfoQueue.Count > 0 then
   begin
     try
@@ -3081,6 +3088,9 @@ procedure TDebuger.LoadMemoryInfoPackEx(const MemInfoPack: Pointer; const Count:
 var
   Buf: PDbgMemInfoListBuf;
 begin
+  if not MemoryCheckMode then
+    Exit;
+
   while FProcessMemoryQueue.Count > _MAX_MEM_INFO_BUF_COUNT do
     SwitchToThread;
 
@@ -3099,6 +3109,9 @@ procedure TDebuger.LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const
 var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
+  if not SyncObjsTracking then
+    Exit;
+
   while FProcessSyncObjsInfoQueue.Count > _MAX_SYNC_OBJS_INFO_BUF_COUNT do
     SwitchToThread;
 
@@ -3197,7 +3210,7 @@ procedure TDebuger.ProcessDebugEvents;
 var
   DebugEvent: PDebugEvent;
   ExceptionCode: DWORD;
-  CallNextLoopIteration: Boolean;
+  CallNextLoopIteration: LongBool;
 begin
   DebugEvent := AllocMem(SizeOf(TDebugEvent));
   try
@@ -3997,8 +4010,26 @@ begin
       gvDebuger.ProcessMemoryInfoQueue;
       gvDebuger.ProcessSyncObjsInfoQueue;
 
-      Sleep(1); // Perf timer (10 msec) * 3;
+      Sleep(1);
     end;
+  end;
+end;
+
+class procedure TDbgWorkerThread.Init;
+begin
+  if gvDebuger.CodeTracking or gvDebuger.MemoryCheckMode or gvDebuger.SyncObjsTracking then
+  begin
+    if gvDbgWorkerThread = Nil then
+      gvDbgWorkerThread := TDbgWorkerThread.Create;
+  end;
+end;
+
+class procedure TDbgWorkerThread.Reset;
+begin
+  if Assigned(gvDbgWorkerThread) then
+  begin
+    gvDbgWorkerThread.Stop;
+    FreeAndNil(gvDbgWorkerThread);
   end;
 end;
 
