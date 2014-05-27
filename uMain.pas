@@ -2296,6 +2296,9 @@ begin
       begin
         SyncObjsItem := PRPSyncObjsInfo(SyncObjsInfo[I])^.SyncObjsInfo;
 
+        if SyncObjsItem^.SyncObjsInfo.SyncObjsType = soInCriticalSection then
+          Continue;
+
         if SyncObjsItem.IsShortLock then
           Continue;
 
@@ -2306,29 +2309,22 @@ begin
         Data^.SyncObjItem := SyncObjsItem.Enter; // Адрес в стеке
         Data^.LinkType := ltSyncObjInfo;
 
-        if SyncObjsItem^.SyncObjsInfo.SyncObjsType = soInCriticalSection then
+        if SyncObjsItem^.SyncObjsInfo.SyncObjsType = soEnterCriticalSection then
         begin
-          // Enter
-          if SyncObjsItem.Enter <> Nil then
+          if Assigned(SyncObjsItem.LinkExt) then
           begin
-            SyncObjsChildNode := Tree.AddChild(SyncObjsNode);
-            ChildData := Tree.GetNodeData(SyncObjsChildNode);
-            ChildData^.SyncNode := SyncNode;
-            ChildData^.SyncObjItem := SyncObjsItem.Enter;
-            ChildData^.LinkType := ltSyncObjChildInfo;
-          end;
+            // Leave
+            if SyncObjsItem.Leave <> Nil then
+            begin
+              SyncObjsChildNode := Tree.AddChild(SyncObjsNode);
+              ChildData := Tree.GetNodeData(SyncObjsChildNode);
+              ChildData^.SyncNode := SyncNode;
+              ChildData^.SyncObjItem := SyncObjsItem.LinkExt.Leave;
+              ChildData^.LinkType := ltSyncObjChildInfo;
 
-          // Leave
-          if SyncObjsItem.Leave <> Nil then
-          begin
-            SyncObjsChildNode := Tree.AddChild(SyncObjsNode);
-            ChildData := Tree.GetNodeData(SyncObjsChildNode);
-            ChildData^.SyncNode := SyncNode;
-            ChildData^.SyncObjItem := SyncObjsItem.Leave;
-            ChildData^.LinkType := ltSyncObjChildInfo;
+              Tree.Expanded[SyncObjsNode] := True;
+            end;
           end;
-
-          Tree.Expanded[SyncObjsNode] := True;
         end;
       end;
     finally
@@ -4850,12 +4846,13 @@ begin
         1: begin
           case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
             soEnterCriticalSection:
-              CellText := ThreadIDToStr(Data^.SyncObjItem^.SyncObjsInfo.OwningThreadId);
+              if Data^.SyncObjItem^.SyncObjsInfo.OwningThreadId <> 0 then
+                CellText := ThreadIDToStr(Data^.SyncObjItem^.SyncObjsInfo.OwningThreadId);
           end;
         end;
         2: begin
           case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
-            soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection, soSendMessage:
+            soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soSendMessage:
               CellText := ElapsedToTime(Data^.SyncObjItem^.WaitTime);
           end;
         end;
@@ -4863,11 +4860,18 @@ begin
     ltSyncObjChildInfo:
       case Column of
         0: begin
-          case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsStateType of
-            sosEnter:
-              CellText := 'Enter';
-            sosLeave:
-              CellText := 'Leave';
+          case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
+            soInCriticalSection:
+              case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsStateType of
+                sosLeave:
+                  CellText := 'Leave';
+              end;
+          end;
+        end;
+        2: begin
+          case Data^.SyncObjItem^.SyncObjsInfo.SyncObjsType of
+            soInCriticalSection:
+              CellText := ElapsedToTime(Data^.SyncObjItem^.WaitTime);
           end;
         end;
       end;

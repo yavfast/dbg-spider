@@ -229,7 +229,10 @@ begin
         SyncObjsInfo^.Msg := UINT(Data);
     end;
 
-    if (DbgSyncObjsStateType = sosEnter) or (SyncObjsInfo^.SyncObjsType = soInCriticalSection) then
+    if (DbgSyncObjsStateType = sosEnter) or
+      // Вход для soInCriticalSection будет эквивалентен soEnterCriticalSection.sosEnter
+      ((SyncObjsInfo^.SyncObjsType = soInCriticalSection) and (DbgSyncObjsStateType = sosLeave))
+    then
     begin
       //GetCallStack(SyncObjsInfo^.Stack, -2);
       GetCallStackOS(SyncObjsInfo^.Stack, 3);
@@ -286,13 +289,14 @@ begin
 
   _AddSyncObjsInfo(soEnterCriticalSection, sosLeave, Id, NativeUInt(@lpCriticalSection));
 
-  _AddSyncObjsInfo(soInCriticalSection, sosEnter, 0, NativeUInt(@lpCriticalSection));
+  _AddSyncObjsInfo(soInCriticalSection, sosEnter, Id, NativeUInt(@lpCriticalSection));
 end;
 
 procedure _HookLeaveCriticalSection(var lpCriticalSection: TRTLCriticalSection); stdcall;
 var
   Id: NativeUInt;
 begin
+  // Связь с sosEnter по @lpCriticalSection
   _AddSyncObjsInfo(soInCriticalSection, sosLeave, 0, NativeUInt(@lpCriticalSection));
 
   Id := NativeUInt(InterlockedIncrement(SyncObjsId));

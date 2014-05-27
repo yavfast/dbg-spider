@@ -2166,8 +2166,7 @@ var
   var
     Idx: Integer;
   begin
-    Idx := ThData^.DbgSyncObjsInfo.Count - 1;
-    while Idx >= 0 do
+    for Idx := ThData^.DbgSyncObjsInfo.Count - 1 downto 0 do
     begin
       Result := ThData^.DbgSyncObjsInfo[Idx];
       if (Result^.SyncObjsInfo.SyncObjsType = soInCriticalSection) and
@@ -2176,8 +2175,6 @@ var
         (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter)
       then
         Exit;
-
-      Dec(Idx);
     end;
 
     Result := nil;
@@ -2188,6 +2185,7 @@ var
   SyncObjsInfo: PDbgSyncObjsInfo;
   ThSyncObjsInfo: PSyncObjsInfo;
   SyncObjsLink: PSyncObjsInfo;
+  SyncObjsLinkExt: PSyncObjsInfo;
 begin
   ThData := Nil;
 
@@ -2206,6 +2204,7 @@ begin
           ThData^.DbgSyncObjsInfo.BeginRead;
           try
             SyncObjsLink := nil;
+            SyncObjsLinkExt := nil;
 
             if SyncObjsInfo^.SyncObjsStateType = sosLeave then
             begin
@@ -2216,16 +2215,27 @@ begin
                 // Необходимо найти последнее событие по CS с SyncObjsStateType = sosEnter
 
                 SyncObjsLink := FindCSLink(SyncObjsInfo^.CS);
-
-                // По словарику искать бесполезно, так как нам важен порядок
-                //if ThData^.DbgSyncObjsInfoByCS.TryGetValue(SyncObjsInfo^.CS, SyncObjsLink) then
-                //  ThData^.DbgSyncObjsInfoByCS.Remove(SyncObjsInfo^.CS);
               end
               else
               begin
                 // У остальных типов Id события входа и выхода будут совпадать
 
                 if ThData^.DbgSyncObjsInfoByID.TryGetValue(SyncObjsInfo^.Id, SyncObjsLink) then
+                begin
+                  // Удаляем отработанный Id из словаря, кроме EnterCriticalSection,
+                  // который ещё нужен для soInCriticalSection
+
+                  if SyncObjsInfo^.SyncObjsType <> soEnterCriticalSection then
+                    ThData^.DbgSyncObjsInfoByID.Remove(SyncObjsInfo^.Id);
+                end;
+              end;
+            end
+            else // sosEnter
+            begin
+              if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
+              begin
+                // Ищем линк на soEnterCriticalSection
+                if ThData^.DbgSyncObjsInfoByID.TryGetValue(SyncObjsInfo^.Id, SyncObjsLinkExt) then
                   ThData^.DbgSyncObjsInfoByID.Remove(SyncObjsInfo^.Id);
               end;
             end;
@@ -2238,10 +2248,17 @@ begin
             else
               ThSyncObjsInfo^.PerfIdx := Buf^.DbgPointIdx;
 
+            // Линк на пару
             ThSyncObjsInfo^.Link := SyncObjsLink;
             if SyncObjsLink <> nil then
               SyncObjsLink^.Link := ThSyncObjsInfo;
 
+            // Внешний линк
+            ThSyncObjsInfo^.LinkExt := SyncObjsLinkExt;
+            if SyncObjsLinkExt <> nil then
+              SyncObjsLinkExt^.LinkExt := ThSyncObjsInfo;
+
+            // Копируем инфу из буфера, так как он потом будет уничтожен
             ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
 
             ThData^.DbgSyncObjsInfo.Commit;
