@@ -200,7 +200,7 @@ type
     procedure Init(const SyncObjsInfo: PDbgSyncObjsInfo);
   public
     Id: NativeUInt;
-    ThreadId: Cardinal;
+    ThreadId: TThreadId;
     CurTime: Int64;
     Stack: TDbgInfoStack;
     SyncObjsStateType: TDbgSyncObjsStateType;
@@ -224,7 +224,7 @@ type
       soInCriticalSection:
       (
         CS: PRTLCriticalSection;
-        OwningThreadId: Cardinal;
+        OwningThreadId: TThreadId;
       );
       soSendMessage:
       ();
@@ -233,13 +233,18 @@ type
   PSyncObjsInfo = ^RSyncObjsInfo;
   RSyncObjsInfo = record
     PerfIdx: Integer;
-    Link: PSyncObjsInfo;
+    Link: PSyncObjsInfo; // Линк на пару
+    LinkExt: PSyncObjsInfo; // Внешний линк на другую пару
     SyncObjsInfo: TDbgSyncObjsInfoEx;
   public
     function WaitTime: Int64;
     function IsShortLock: Boolean;
+
     function Enter: PSyncObjsInfo; inline;
     function Leave: PSyncObjsInfo; inline;
+
+    function EnterExt: PSyncObjsInfo;
+    function LeaveExt: PSyncObjsInfo;
   end;
 
   TSyncObjsInfoList = TBaseCollectList; // TCollectList<RSyncObjsInfo>;
@@ -1770,6 +1775,14 @@ begin
     Result := Link;
 end;
 
+function RSyncObjsInfo.EnterExt: PSyncObjsInfo;
+begin
+  if (LinkExt <> Nil) and (SyncObjsInfo.SyncObjsType = soInCriticalSection) then
+    Result := LinkExt.Enter
+  else
+    Result := Enter;
+end;
+
 function RSyncObjsInfo.IsShortLock: Boolean;
 var
   _Leave: PSyncObjsInfo;
@@ -1777,10 +1790,10 @@ var
 begin
   Result := False;
 
-  _Leave := Leave;
+  _Leave := LeaveExt;
   if Assigned(_Leave) then
   begin
-    _Enter := Enter;
+    _Enter := EnterExt;
     if Assigned(_Enter) then
       Result := ((_Leave^.PerfIdx - _Enter^.PerfIdx) <= 1);
   end;
@@ -1792,6 +1805,14 @@ begin
     Result := @Self
   else
     Result := Link;
+end;
+
+function RSyncObjsInfo.LeaveExt: PSyncObjsInfo;
+begin
+  if (LinkExt <> Nil) and (SyncObjsInfo.SyncObjsType = soEnterCriticalSection) then
+    Result := LinkExt.Leave
+  else
+    Result := Leave;
 end;
 
 function RSyncObjsInfo.WaitTime: Int64;
@@ -1850,8 +1871,7 @@ var
   I: Integer;
   Ptr: Pointer;
 begin
-  I := 0;
-  while I < Length(DbgStack^) do
+  for I := 0 to High(DbgStack^) do
   begin
     Ptr := DbgStack^[I];
 
@@ -1863,8 +1883,6 @@ begin
 
       Exit;
     end;
-
-    Inc(I);
   end;
 end;
 
