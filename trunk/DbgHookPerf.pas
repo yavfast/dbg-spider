@@ -7,8 +7,12 @@ procedure ResetPerfomance; stdcall;
 
 implementation
 
-uses Windows, Classes, SysUtils, DbgHookTypes, DbgHookMemory, DbgHookSyncObjs, DbgHookUtils,
+uses WinApi.Windows, System.Classes, System.SysUtils, DbgHookTypes, DbgHookMemory, DbgHookSyncObjs, DbgHookUtils,
   DbgHookCS;
+
+type
+  POutDbgInfo = ^TOutDbgInfo;
+  TOutDbgInfo = array[0..4] of NativeUInt;
 
 var
   _Delta: Cardinal = 0;
@@ -17,11 +21,13 @@ var
   _OutDbgInfoTimer: THandle = 0;
   _SamplingTimer: THandle = 0;
 
-  _IsSetOutDbgInfoThreadName: Boolean = False;
+  _IsSetOutDbgInfoThreadName: LongBool = False;
   _DbgInfoPerfomance: NativeUInt = NativeUInt(dstPerfomance);
   _DbgOutLock: TDbgCriticalSection = Nil;
 
-procedure _OutDbgInfo(Context: Pointer; Success: Boolean); stdcall;
+  _OutDbgInfoRec: TOutDbgInfo;
+
+procedure _OutDbgInfo(Context: Pointer; Success: LongBool); stdcall;
 const
   _DBG_THREAD_NAME = '### DbgInfo control thread';
 begin
@@ -33,14 +39,33 @@ begin
         TThread.NameThreadForDebugging(_DBG_THREAD_NAME, GetCurrentThreadId);
       end;
 
-      // —брос буфера по пам€ти
-      if not _OutMemInfoBuf(dstPerfomanceAndInfo) then
-        RaiseException(DBG_EXCEPTION, 0, 1, @_DbgInfoPerfomance);
+      ZeroMemory(@_OutDbgInfoRec[0], SizeOf(TOutDbgInfo));
 
-      // —брос буфера по локам
-      // TODO: —оединить с предыдущей операцией
-      if SyncObjsHooked then
-        _OutSyncObjsInfo;
+      MemInfoLock.Enter;
+      SyncObjsInfoLock.Enter;
+      try
+        _OutDbgInfoRec[0] := NativeUInt(dstPerfomanceAndInfo);
+
+        if (MemInfoListCnt > 0) and (MemInfoList <> Nil) then
+        begin
+          _OutDbgInfoRec[1] := NativeUInt(@MemInfoList^[0]);
+          _OutDbgInfoRec[2] := NativeUInt(MemInfoListCnt);
+        end;
+
+        if (SyncObjsInfoListCnt > 0) and (SyncObjsInfoList <> Nil) then
+        begin
+          _OutDbgInfoRec[3] := NativeUInt(@SyncObjsInfoList^[0]);
+          _OutDbgInfoRec[4] := NativeUInt(SyncObjsInfoListCnt);
+        end;
+
+        RaiseException(DBG_EXCEPTION, 0, 5, @_OutDbgInfoRec[0]);
+
+        MemInfoListCnt := 0;
+        SyncObjsInfoListCnt := 0;
+      finally
+        SyncObjsInfoLock.Leave;
+        MemInfoLock.Leave;
+      end;
     finally
       _DbgOutLock.Leave;
     end;

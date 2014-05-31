@@ -2,12 +2,12 @@ unit DbgHookThread;
 
 interface
 
-function InitThreadHook(ImageBase: Pointer): Boolean; stdcall;
+function InitThreadHook(ImageBase: Pointer): LongBool; stdcall;
 procedure ResetThreadHook; stdcall;
 
 implementation
 
-uses Windows, SysUtils, Classes, DbgHookTypes, DbgHookCS, DbgHookUtils, JclPEImage{TODO: Remove JCL};
+uses WinApi.Windows, System.SysUtils, System.Classes, DbgHookTypes, DbgHookCS, DbgHookUtils, JclPEImage{TODO: Remove JCL};
 
 type
   TKernel32_CreateThread = function(SecurityAttributes: Pointer; StackSize: LongWord;
@@ -22,7 +22,7 @@ type
 
 var
   ThreadsLock: TDbgCriticalSection = nil;
-  ThreadsHooked: Boolean = False;
+  ThreadsHooked: LongBool = False;
   Kernel32_CreateThread: TKernel32_CreateThread = nil;
 
 procedure _OutCreateThreadInfo(const ParentThreadId, ThreadId: Cardinal; ThName: PShortString);
@@ -44,7 +44,7 @@ var
   ThRec: PThreadRec;
   Th: TObject;
   ParentId: Cardinal;
-  //Ptr: Pointer;
+  Ptr: Pointer;
   ThName: ShortString;
 begin
   Th := Nil;
@@ -58,9 +58,17 @@ begin
     begin
       ThRec := PThreadRec(Parameter);
       try
-        // TODO: Validate Ptr
-        Th := TObject(ThRec^.Parameter);
-        ThName := PShortString(PPointer(Integer(Th.ClassType) + vmtClassName)^)^;
+        if IsValidAddr(ThRec) then
+        begin
+          Th := TObject(ThRec^.Parameter);
+          Ptr := Pointer(Integer(Th.ClassType) + vmtClassName);
+          if IsValidAddr(Ptr) then
+          begin
+            Ptr := PPointer(Ptr)^;
+            if IsValidAddr(Ptr) then
+              ThName := PShortString(Ptr)^;
+          end;
+        end;
       except
         Th := Nil;
       end;
@@ -79,7 +87,7 @@ end;
 var
   _PeMapImgHooks: TJclPeMapImgHooks = Nil;
 
-function _HookThreads(ImageBase: Pointer): Boolean;
+function _HookThreads(ImageBase: Pointer): LongBool;
 var
   ProcAddr: Pointer;
 begin
@@ -130,7 +138,7 @@ begin
   FreeAndNil(ThreadsLock);
 end;
 
-function InitThreadHook(ImageBase: Pointer): Boolean; stdcall;
+function InitThreadHook(ImageBase: Pointer): LongBool; stdcall;
 begin
   _Log('Init debug hooks...');
 

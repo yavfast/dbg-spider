@@ -24,8 +24,8 @@ function DebugBreakProcess(Process: THandle): BOOL; stdcall;
 function DebugSetProcessKillOnExit(KillOnExit: BOOL): BOOL; stdcall;
 function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall;
 
-function SuspendProcess(const PID: DWORD): Boolean;
-function ResumeProcess(const PID: DWORD): Boolean;
+function SuspendProcess(const PID: DWORD): LongBool;
+function ResumeProcess(const PID: DWORD): LongBool;
 
 function GetFileVersion(const AFileName: string): string;
 
@@ -66,7 +66,7 @@ begin
   end;
 end;
 
-function SuspendProcess(const PID: DWORD): Boolean;
+function SuspendProcess(const PID: DWORD): LongBool;
 var
   ProcHandle: THandle;
 begin
@@ -83,7 +83,7 @@ begin
   end;
 end;
 
-function ResumeProcess(const PID: DWORD): Boolean;
+function ResumeProcess(const PID: DWORD): LongBool;
 var
   ProcHandle: THandle;
 begin

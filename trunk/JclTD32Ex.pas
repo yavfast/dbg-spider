@@ -766,7 +766,7 @@ type
     constructor Create(pSrcFile: PSourceFileEntry; const Base: DWORD);
   public
     destructor Destroy; override;
-    function FindLine(const AAddr: DWORD; var ALine: TJclTD32LineInfo): Boolean;
+    function FindLine(const AAddr: DWORD; var ALine: TJclTD32LineInfo): LongBool;
     property NameIndex: DWORD read FNameIndex;
     property LineCount: Integer read GetLineCount;
     property Line[const Idx: Integer]: TJclTD32LineInfo read GetLine; default;
@@ -1368,8 +1368,8 @@ type
     FSymbols: TObjectList;
     FProcSymbols: TList;
     FSymbolTypes: TList;
-    FValidData: Boolean;
-    FIsVarTypesExist: Boolean;
+    FValidData: LongBool;
+    FIsVarTypesExist: LongBool;
     function GetName(const Idx: Integer): AnsiString;
     function GetNameCount: Integer;
     function GetSymbol(const Idx: Integer): TJclTD32SymbolInfo;
@@ -1401,13 +1401,13 @@ type
   public
     constructor Create(const ATD32Data: TCustomMemoryStream); // Data mustn't be freed before the class is destroyed
     destructor Destroy; override;
-    function FindModule(const AAddr: DWORD; var AMod: TJclTD32ModuleInfo): Boolean; overload;
+    function FindModule(const AAddr: DWORD; var AMod: TJclTD32ModuleInfo): LongBool; overload;
     function FindModule(const Section: Word; const Offset: DWORD): TJclTD32ModuleInfo; overload;
     function ModuleByNameIndex(const NameIndex: Cardinal): TJclTD32ModuleInfo; //virtual;
-    function FindSourceModule(const AAddr: DWORD; var ASrcMod: TJclTD32SourceModuleInfo): Boolean;
-    function FindProc(const AAddr: DWORD; var AProc: TJclTD32ProcSymbolInfo): Boolean;
-    class function IsTD32Sign(const Sign: TJclTD32FileSignature): Boolean;
-    class function IsTD32DebugInfoValid(const DebugData: Pointer; const DebugDataSize: LongWord): Boolean;
+    function FindSourceModule(const AAddr: DWORD; var ASrcMod: TJclTD32SourceModuleInfo): LongBool;
+    function FindProc(const AAddr: DWORD; var AProc: TJclTD32ProcSymbolInfo): LongBool;
+    class function IsTD32Sign(const Sign: TJclTD32FileSignature): LongBool;
+    class function IsTD32DebugInfoValid(const DebugData: Pointer; const DebugDataSize: LongWord): LongBool;
     property Data: TCustomMemoryStream read FData;
     property Names[const Idx: Integer]: AnsiString read GetName;
     property NameCount: Integer read GetNameCount;
@@ -1422,7 +1422,7 @@ type
     property ModuleCount: Integer read GetModuleCount;
     property SourceModules[const Idx: Integer]: TJclTD32SourceModuleInfo read GetSourceModule;
     property SourceModuleCount: Integer read GetSourceModuleCount;
-    property ValidData: Boolean read FValidData;
+    property ValidData: LongBool read FValidData;
   end;
 
   // TD32 scanner with source location methods
@@ -1441,7 +1441,7 @@ type
   // PE Image with TD32 information and source location support
   TJclPeBorTD32Image = class(TJclPeBorImage)
   private
-    FIsTD32DebugPresent: Boolean;
+    FIsTD32DebugPresent: LongBool;
     FTD32DebugDataType: TTD32DebugDataType;
     FTD32DebugData: TCustomMemoryStream;
     FTD32Scanner: TJclTD32InfoScanner;
@@ -1450,10 +1450,10 @@ type
     procedure Clear; override;
     procedure ClearDebugData;
     procedure CheckDebugData;
-    function IsDebugInfoInImage(var DataStream: TCustomMemoryStream): Boolean;
-    function IsDebugInfoInTds(var DataStream: TCustomMemoryStream): Boolean;
+    function IsDebugInfoInImage(var DataStream: TCustomMemoryStream): LongBool;
+    function IsDebugInfoInTds(var DataStream: TCustomMemoryStream): LongBool;
   public
-    property IsTD32DebugPresent: Boolean read FIsTD32DebugPresent;
+    property IsTD32DebugPresent: LongBool read FIsTD32DebugPresent;
     property TD32DebugDataType: TTD32DebugDataType read FTD32DebugDataType;
     property TD32DebugData: TCustomMemoryStream read FTD32DebugData;
     property TD32Scanner: TJclTD32InfoScanner read FTD32Scanner;
@@ -1632,7 +1632,7 @@ begin
   Result := FSegments[Idx];
 end;
 
-function TJclTD32SourceModuleInfo.FindLine(const AAddr: DWORD; var ALine: TJclTD32LineInfo): Boolean;
+function TJclTD32SourceModuleInfo.FindLine(const AAddr: DWORD; var ALine: TJclTD32LineInfo): LongBool;
 var
   I: Integer;
 begin
@@ -2388,7 +2388,7 @@ begin
   Result := FProcSymbols.Count;
 end;
 
-function TJclTD32InfoParser.FindModule(const AAddr: DWORD; var AMod: TJclTD32ModuleInfo): Boolean;
+function TJclTD32InfoParser.FindModule(const AAddr: DWORD; var AMod: TJclTD32ModuleInfo): LongBool;
 var
   I, J: Integer;
   ModuleInfo: TJclTD32ModuleInfo;
@@ -2445,7 +2445,7 @@ begin
   Result := nil;
 end;
 
-function TJclTD32InfoParser.FindSourceModule(const AAddr: DWORD; var ASrcMod: TJclTD32SourceModuleInfo): Boolean;
+function TJclTD32InfoParser.FindSourceModule(const AAddr: DWORD; var ASrcMod: TJclTD32SourceModuleInfo): LongBool;
 var
   I, J: Integer;
 begin
@@ -2464,7 +2464,7 @@ begin
   Result := False;
 end;
 
-function TJclTD32InfoParser.FindProc(const AAddr: DWORD; var AProc: TJclTD32ProcSymbolInfo): Boolean;
+function TJclTD32InfoParser.FindProc(const AAddr: DWORD; var AProc: TJclTD32ProcSymbolInfo): LongBool;
 var
   I: Integer;
 begin
@@ -2484,7 +2484,7 @@ begin
 end;
 
 class function TJclTD32InfoParser.IsTD32DebugInfoValid(
-  const DebugData: Pointer; const DebugDataSize: LongWord): Boolean;
+  const DebugData: Pointer; const DebugDataSize: LongWord): LongBool;
 var
   Sign: PJclTD32FileSignature;
   EndOfDebugData: LongWord;
@@ -2503,7 +2503,7 @@ begin
   end;
 end;
 
-class function TJclTD32InfoParser.IsTD32Sign(const Sign: TJclTD32FileSignature): Boolean;
+class function TJclTD32InfoParser.IsTD32Sign(const Sign: TJclTD32FileSignature): LongBool;
 begin
   Result := (Sign.Signature = Borland32BitSymbolFileSignatureForDelphi) or
     (Sign.Signature = Borland32BitSymbolFileSignatureForBCB);
@@ -2923,7 +2923,7 @@ begin
   FreeAndNil(FTD32DebugData);
 end;
 
-function TJclPeBorTD32Image.IsDebugInfoInImage(var DataStream: TCustomMemoryStream): Boolean;
+function TJclPeBorTD32Image.IsDebugInfoInImage(var DataStream: TCustomMemoryStream): LongBool;
 var
   DebugDir: TImageDebugDirectory;
   BugDataStart: Pointer;
@@ -2945,7 +2945,7 @@ begin
   end;
 end;
 
-function TJclPeBorTD32Image.IsDebugInfoInTds(var DataStream: TCustomMemoryStream): Boolean;
+function TJclPeBorTD32Image.IsDebugInfoInTds(var DataStream: TCustomMemoryStream): LongBool;
 var
   TdsFileName: TFileName;
   TempStream: TCustomMemoryStream;

@@ -2,7 +2,7 @@ unit DbgHookSyncObjs;
 
 interface
 
-uses Windows;
+uses WinApi.Windows, DbgHookCS, DbgHookTypes;
 
 type
   TKernel32_Sleep =
@@ -35,7 +35,7 @@ type
 
 
 var
-  SyncObjsHooked: Boolean = False;
+  SyncObjsHooked: LongBool = False;
 
   Kernel32_Sleep: TKernel32_Sleep = nil;
   Kernel32_SleepEx: TKernel32_SleepEx = nil;
@@ -53,20 +53,22 @@ var
   Kernel32_SendMessageTimeoutA: TKernel32_SendMessageTimeoutA = Nil;
   Kernel32_SendMessageTimeoutW: TKernel32_SendMessageTimeoutW = Nil;
 
-function InitSyncObjsHook(ImageBase: Pointer): Boolean; stdcall;
+function InitSyncObjsHook(ImageBase: Pointer): LongBool; stdcall;
 procedure ResetSyncObjsHook; stdcall;
 
 procedure _OutSyncObjsInfo;
 
+var
+  SyncObjsInfoList: PDbgSyncObjsInfoList = nil;
+  SyncObjsInfoListCnt: Integer = 0;
+
+  SyncObjsInfoLock: TDbgCriticalSection = nil;
+
 implementation
 
-uses DbgHookCS, SysUtils, Classes, DbgHookTypes, WinAPIUtils, JclPEImage{TODO: Remove JCL}, DBGHookUtils;
+uses System.SysUtils, System.Classes, WinAPIUtils, JclPEImage{TODO: Remove JCL}, DBGHookUtils;
 
 var
-  _SyncObjsInfoList: PDbgSyncObjsInfoList = nil;
-  _SyncObjsInfoListCnt: Integer = 0;
-
-  SyncObjsLock: TDbgCriticalSection = nil;
   SyncObjsId: Integer = 0;
 
 type
@@ -91,20 +93,20 @@ end;
 
 procedure _OutSyncObjsInfo;
 begin
-  if _SyncObjsInfoList = Nil then Exit;
-  if SyncObjsLock = Nil then Exit;
+  if SyncObjsInfoList = Nil then Exit;
+  if SyncObjsInfoLock = Nil then Exit;
 
-  SyncObjsLock.Enter;
+  SyncObjsInfoLock.Enter;
   try
-    if _SyncObjsInfoListCnt > 0 then
+    if SyncObjsInfoListCnt > 0 then
     begin
-      _SyncObjsOutInfo(dstSyncObjsInfo, @_SyncObjsInfoList^[0], _SyncObjsInfoListCnt);
+      _SyncObjsOutInfo(dstSyncObjsInfo, @SyncObjsInfoList^[0], SyncObjsInfoListCnt);
 
       // сброс указателей на нулевой элемент
-      _SyncObjsInfoListCnt := 0;
+      SyncObjsInfoListCnt := 0;
     end;
   finally
-    SyncObjsLock.Leave;
+    SyncObjsInfoLock.Leave;
   end;
 end;
 
@@ -199,10 +201,10 @@ var
 begin
   CurTime := _QueryPerformanceCounter;
 
-  SyncObjsLock.Enter;
-  if _SyncObjsInfoList <> Nil then
+  SyncObjsInfoLock.Enter;
+  if SyncObjsInfoList <> Nil then
   begin
-    SyncObjsInfo := @_SyncObjsInfoList^[_SyncObjsInfoListCnt];
+    SyncObjsInfo := @SyncObjsInfoList^[SyncObjsInfoListCnt];
     ZeroMemory(SyncObjsInfo, SizeOf(TDbgSyncObjsInfo));
 
     SyncObjsInfo^.Id := Id;
@@ -240,12 +242,12 @@ begin
 
     _AddSyncObjsAdvInfo(SyncObjsInfo);
 
-    Inc(_SyncObjsInfoListCnt);
+    Inc(SyncObjsInfoListCnt);
 
-    if (_SyncObjsInfoListCnt = _DbgSyncObjsListLength) then
+    if (SyncObjsInfoListCnt = _DbgSyncObjsListLength) then
       _OutSyncObjsInfo;
   end;
-  SyncObjsLock.Leave;
+  SyncObjsInfoLock.Leave;
 end;
 
 procedure _HookSleep(milliseconds: Cardinal); stdcall;
@@ -419,7 +421,7 @@ var
   _hUser32: THandle = 0;
   _ImageBase: Pointer = Nil;
 
-function _ReplaceImport(ModuleName: PWideChar; lpProcName: LPCSTR; HookProc: Pointer; var BaseProc: Pointer): Boolean;
+function _ReplaceImport(ModuleName: PWideChar; lpProcName: LPCSTR; HookProc: Pointer; var BaseProc: Pointer): LongBool;
 var
   ProcAddr: Pointer;
   hModule: THandle;
@@ -452,17 +454,17 @@ begin
     _Log(Format('Hook %s - skip', [String(lpProcName)]));
 end;
 
-function _HookSyncObjs(ImageBase: Pointer): Boolean;
+function _HookSyncObjs(ImageBase: Pointer): LongBool;
 begin
   if not SyncObjsHooked then
   begin
-    SyncObjsLock := TDbgCriticalSection.Create;
+    SyncObjsInfoLock := TDbgCriticalSection.Create;
 
     _PeMapImgHooks := TJclPeMapImgHooks.Create;
 
     _ImageBase := ImageBase;
 
-    SyncObjsLock.Enter;
+    SyncObjsInfoLock.Enter;
     try
       _ReplaceImport(kernel32, 'Sleep', @_HookSleep, @Kernel32_Sleep);
       _ReplaceImport(kernel32, 'SleepEx', @_HookSleepEx, @Kernel32_SleepEx);
@@ -483,7 +485,7 @@ begin
       SyncObjsHooked := True;
       Result := True;
     finally
-      SyncObjsLock.Leave;
+      SyncObjsInfoLock.Leave;
     end;
   end
   else
@@ -526,11 +528,11 @@ begin
   end;
 end;
 
-function InitSyncObjsHook(ImageBase: Pointer): Boolean; stdcall;
+function InitSyncObjsHook(ImageBase: Pointer): LongBool; stdcall;
 begin
-  _SyncObjsInfoList := AllocMem(SizeOf(TDbgSyncObjsInfoList));
+  SyncObjsInfoList := AllocMem(SizeOf(TDbgSyncObjsInfoList));
 
-  SyncObjsLock := TDbgCriticalSection.Create;
+  SyncObjsInfoLock := TDbgCriticalSection.Create;
 
   Result := _HookSyncObjs(ImageBase);
   if Result then
@@ -544,27 +546,27 @@ begin
   try
     if SyncObjsHooked then
     begin
-      while not SyncObjsLock.TryEnter do
+      while not SyncObjsInfoLock.TryEnter do
         SwitchToThread;
       try
         _UnHookSyncObjs;
       finally
-        SyncObjsLock.Leave;
+        SyncObjsInfoLock.Leave;
       end;
 
-      while not SyncObjsLock.TryEnter do
+      while not SyncObjsInfoLock.TryEnter do
         SwitchToThread;
       try
         _OutSyncObjsInfo;
 
-        FreeMemory(_SyncObjsInfoList);
-        _SyncObjsInfoList := nil;
+        FreeMemory(SyncObjsInfoList);
+        SyncObjsInfoList := nil;
       finally
-        SyncObjsLock.Leave;
+        SyncObjsInfoLock.Leave;
       end;
     end;
 
-    FreeAndNil(SyncObjsLock);
+    FreeAndNil(SyncObjsInfoLock);
 
     _Log('Reset SyncObjs hooks - ok');
   except

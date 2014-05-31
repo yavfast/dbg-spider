@@ -67,7 +67,7 @@ type
     class procedure DoSyncAction(const Action: TacAction; const Args: TArgsList); overload; static;
     class procedure ViewDebugInfo(DebugInfo: TDebugInfo); static;
 
-    class procedure ClearDebug(const DbgFree: Boolean); static;
+    class procedure ClearDebug(const DbgFree: LongBool); static;
 
     class procedure AppClose; static;
   end;
@@ -153,7 +153,7 @@ begin
   Sleep(500);
 end;
 
-class procedure TActionController.ClearDebug(const DbgFree: Boolean);
+class procedure TActionController.ClearDebug(const DbgFree: LongBool);
 begin
   gvActionQueue.Clear;
 

@@ -29,15 +29,15 @@ object fmSelectSource: TfmSelectSource
         Control = actbTop
         ImageIndex = -1
         MinHeight = 26
-        Width = 535
+        Width = 537
       end>
     EdgeBorders = []
     FixedSize = True
     FixedOrder = True
     object actbTop: TActionToolBar
-      Left = 2
+      Left = 0
       Top = 0
-      Width = 535
+      Width = 537
       Height = 26
       ActionManager = acmgrSelectSource
       Caption = 'actbTop'
@@ -65,7 +65,6 @@ object fmSelectSource: TfmSelectSource
     FixedCols = 0
     FixedRows = 0
     TabOrder = 1
-    ExplicitHeight = 247
     ColWidths = (
       500)
   end

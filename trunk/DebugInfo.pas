@@ -44,7 +44,7 @@ Type
   TNameList = Class(TList)
   private
     FNameIdList: TNameIdList;
-    FFreeItems: Boolean;
+    FFreeItems: LongBool;
     function GetNameInfoItem(const Index: Integer): TNameInfo;
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
@@ -55,11 +55,11 @@ Type
 
     procedure Clear; override;
 
-    function FindByName(Const Name: AnsiString; const SubStr: Boolean = False): TNameInfo;
+    function FindByName(Const Name: AnsiString; const SubStr: LongBool = False): TNameInfo;
     function FindByNameId(Const NameId: TNameId): TNameInfo;
 
     property NameInfoItems[const Index: Integer]: TNameInfo read GetNameInfoItem; default;
-    property FreeItems: Boolean read FFreeItems write FFreeItems;
+    property FreeItems: LongBool read FFreeItems write FFreeItems;
   End;
 
   TTypeInfo = Class(TNameInfo)
@@ -129,8 +129,8 @@ Type
     DataType: TTypeInfo;
     Owner: TSegmentCodeInfo;
     VarKind: TVarKind;
-    // IsPointer      : Boolean;
-    // ByRef          : Boolean;
+    // IsPointer      : LongBool;
+    // ByRef          : LongBool;
     Offset: Integer;
     RegisterRanges: TList;
 
@@ -160,7 +160,7 @@ Type
     AliasNameId: TNameId;
     MethodNameId: TNameId;
     Method: TFuncInfo; // read function for properties
-    IsDefault: Boolean; // true for default property
+    IsDefault: LongBool; // true for default property
 
     function Alias: AnsiString; // read field for properties
     function MethodName: AnsiString; // read function name for properties
@@ -230,11 +230,11 @@ Type
 
     Procedure Clear; Virtual;
 
-    function FindTypeByName(const TypeName: AnsiString; const SubStr: Boolean = False): TTypeInfo;
-    function FindFuncByName(const FuncName: AnsiString; const SubStr: Boolean = False): TFuncInfo;
+    function FindTypeByName(const TypeName: AnsiString; const SubStr: LongBool = False): TTypeInfo;
+    function FindFuncByName(const FuncName: AnsiString; const SubStr: LongBool = False): TFuncInfo;
     function FindFuncByNameId(const FuncNameId: Integer): TFuncInfo;
-    function FindConstByName(const ConstName: AnsiString; const SubStr: Boolean = False): TConstInfo;
-    function FindVarByName(const VarName: AnsiString; const SubStr: Boolean = False): TVarInfo;
+    function FindConstByName(const ConstName: AnsiString; const SubStr: LongBool = False): TConstInfo;
+    function FindVarByName(const VarName: AnsiString; const SubStr: LongBool = False): TVarInfo;
 
     function CheckAddress(const Addr: Pointer): Integer;
   End;
@@ -248,7 +248,7 @@ Type
 
   TSegmentCodeInfoList = Class(TList<TSegmentCodeInfo>)
   private
-    FSorted: Boolean;
+    FSorted: LongBool;
   public
     constructor Create;
     destructor Destroy; override;
@@ -376,7 +376,7 @@ Type
     FMemoryManagerInfo: TMemoryManagerInfo;
 
     FExeFileName: String;
-    FDebugInfoLoaded: Boolean;
+    FDebugInfoLoaded: LongBool;
 
     FDebugInfoProgressCallback: TDebugInfoProgressCallback;
 
@@ -384,15 +384,15 @@ Type
     procedure ClearDirs;
   Protected
     FDebugInfoType: String;
-    FUseShortNames: Boolean;
+    FUseShortNames: LongBool;
 
     procedure DoProgress(const Action: String; const Progress: Integer); virtual;
-    Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Virtual; abstract;
+    Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: LongBool): LongBool; Virtual; abstract;
 
     function GetSegmentByID(const ID: Word): TSegmentClassInfo;
     function GetSegmentByType(const SegType: TSegmentType): TSegmentClassInfo;
 
-    function ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String; virtual;
+    function ParseUnitName(UnitInfo: TUnitInfo; const WithExt: LongBool = True): String; virtual;
     function ParseFuncName(FuncInfo: TFuncInfo): String; virtual;
     function ParseTypeName(TypeInfo: TTypeInfo): String; virtual;
     function ParseConstName(ConstInfo: TConstInfo): String; virtual;
@@ -403,19 +403,19 @@ Type
     Destructor Destroy; Override;
 
     Procedure ClearDebugInfo; Virtual;
-    Function HasDebugInfo(Const FileName: String): Boolean; Virtual; abstract;
-    Function ReadDebugInfo(Const FileName: String): Boolean; Virtual;
+    Function HasDebugInfo(Const FileName: String): LongBool; Virtual; abstract;
+    Function ReadDebugInfo(Const FileName: String): LongBool; Virtual;
     Function GetFileCount: Integer; Virtual;
     Function GetFile(Index: Integer): String; Virtual;
     Function GetTypeInfo(Const TypeName: String): TTypeInfo; Virtual;
     Function GetAddrInfo(Var Addr: Pointer; Const FileName: String; Line: Cardinal): TFindResult; Virtual; abstract;
     Procedure GetCallStackItems(const ThreadID: TThreadId; Const ExceptAddr, ExceptFrame: Pointer; StackItems: TList); Virtual;
 
-    Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo; GetPrevLine: Boolean): TFindResult; Virtual; abstract;
-    Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: Boolean): TFindResult; Virtual;
+    Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo; GetPrevLine: LongBool): TFindResult; Virtual; abstract;
+    Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: LongBool): TFindResult; Virtual;
 
     procedure UpdateSourceDirs(const SourceType: TUnitType; const SourceDirs: String); virtual;
-    procedure AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: Boolean = True); virtual;
+    procedure AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: LongBool = True); virtual;
 
     function FullUnitName(const UnitName: String): String;
     function GetUnitType(const UnitName: String): TUnitType;
@@ -426,7 +426,7 @@ Type
 
     Function FuncByName(const FuncName: AnsiString): TFuncInfo;
 
-    Function Evaluate(BriefMode: Boolean; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String; Virtual; abstract;
+    Function Evaluate(BriefMode: LongBool; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String; Virtual; abstract;
 
     Function EvaluateVariable(VarInfo: TVarInfo): Variant; virtual; abstract;
     Function VarValueAsString(const Value: Variant): String; virtual; abstract;
@@ -438,27 +438,27 @@ Type
 
     Function GetNameById(const Idx: TNameId): AnsiString; virtual; abstract;
 
-    Function CheckAddr(Const Addr: Pointer): Boolean; Virtual;
+    Function CheckAddr(Const Addr: Pointer): LongBool; Virtual;
     Function DumpLineInformation(Const Addr: Pointer): String;
-    Function GetParamsStr(FuncInfo: TFuncInfo; Const EBP: Pointer; IsTopStack: Boolean): String;
+    Function GetParamsStr(FuncInfo: TFuncInfo; Const EBP: Pointer; IsTopStack: LongBool): String;
 
     Function GetClassName(ObjectPtr: Pointer): String; Virtual; abstract;
     Function GetExceptionName(ExceptionRecord: PExceptionRecord): String; Virtual;
     Function GetExceptionMessage(ExceptionRecord: PExceptionRecord; const ThreadID: TThreadId): String; Virtual;
     Function GetExceptionAddress(ExceptionRecord: PExceptionRecord): Pointer; Virtual;
     Function GetExceptionFrame(ExceptionRecord: PExceptionRecord): Pointer; Virtual;
-    Function CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: Boolean): Boolean; Virtual;
-    Function CheckSystemFile(Const FileName: String): Boolean; Virtual; abstract;
+    Function CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: LongBool): LongBool; Virtual;
+    Function CheckSystemFile(Const FileName: String): LongBool; Virtual; abstract;
 
-    Function IsSystemException(Const ExceptionCode: DWORD): Boolean;
+    Function IsSystemException(Const ExceptionCode: DWORD): LongBool;
 
-    Function CheckDebugOutputMessage(DebugEvent: PDebugEvent): Boolean;
-    Function ProcessDebugOutputMessage(Const Msg: WideString; DebugEvent: PDebugEvent): Boolean; Virtual;
+    Function CheckDebugOutputMessage(DebugEvent: PDebugEvent): LongBool;
+    Function ProcessDebugOutputMessage(Const Msg: WideString; DebugEvent: PDebugEvent): LongBool; Virtual;
 
-    Function IsValidAddr(Const Addr: Pointer): Boolean;
-    Function IsValidCodeAddr(Const Addr: Pointer): Boolean;
-    Function IsValidStackAddr(Const Addr: Pointer; const ThreadID: TThreadId): Boolean;
-    Function IsValidDataAddr(Const Addr: Pointer; const ThreadID: TThreadId): Boolean;
+    Function IsValidAddr(Const Addr: Pointer): LongBool;
+    Function IsValidCodeAddr(Const Addr: Pointer): LongBool;
+    Function IsValidStackAddr(Const Addr: Pointer; const ThreadID: TThreadId): LongBool;
+    Function IsValidDataAddr(Const Addr: Pointer; const ThreadID: TThreadId): LongBool;
 
     // Property SourceDirs: String read FSourceDirs;
     Property Dirs[const SourceType: TUnitType]: TDbgSourceDirs Read GetDirs;
@@ -468,10 +468,10 @@ Type
 
     Property DbgLog: TDbgLog read FDbgLog;
 
-    property DebugInfoLoaded: Boolean read FDebugInfoLoaded;
+    property DebugInfoLoaded: LongBool read FDebugInfoLoaded;
     property DebugInfoType: String read FDebugInfoType;
     property DebugInfoProgressCallback: TDebugInfoProgressCallback read FDebugInfoProgressCallback write FDebugInfoProgressCallback;
-    property UseShortNames: Boolean read FUseShortNames write FUseShortNames;
+    property UseShortNames: LongBool read FUseShortNames write FUseShortNames;
     property MemoryManagerInfo: TMemoryManagerInfo read FMemoryManagerInfo;
   End;
 
@@ -549,7 +549,7 @@ begin
     FDebugInfoProgressCallback(Action, Progress);
 end;
 
-procedure TDebugInfo.AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: Boolean);
+procedure TDebugInfo.AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: LongBool);
 const
   _PAS_EXTS: array [0 .. 2] of String = ('*.pas', '*.inc', '*.dpr');
 var
@@ -579,7 +579,7 @@ begin
       AddSourceDir(SourceType, ChildDirs[I], True);
 end;
 
-Function TDebugInfo.CheckAddr(Const Addr: Pointer): Boolean;
+Function TDebugInfo.CheckAddr(Const Addr: Pointer): LongBool;
 Var
   UnitInfo: TUnitInfo;
   FuncInfo: TFuncInfo;
@@ -588,7 +588,7 @@ Begin
   Result := GetLineInfo(Addr, UnitInfo, FuncInfo, LineInfo, False) <> slNotFound;
 End;
 
-Function TDebugInfo.CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: Boolean): Boolean;
+Function TDebugInfo.CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: LongBool): LongBool;
 Begin
   IsTraceException := False;
   Case ExceptionRecord^.ExceptionCode Of
@@ -626,7 +626,7 @@ begin
     FDirs[ST].Clear;
 end;
 
-Function TDebugInfo.ReadDebugInfo(Const FileName: String): Boolean;
+Function TDebugInfo.ReadDebugInfo(Const FileName: String): LongBool;
 Begin
   Result := FDebugInfoLoaded And SameText(FExeFileName, FileName);
 
@@ -753,7 +753,7 @@ Begin
   Result := FUnits.Count;
 End;
 
-function TDebugInfo.GetLineInformation(const Addr: Pointer; var UnitName, FuncName: String; var Line: Integer; GetPrevLine: Boolean): TFindResult;
+function TDebugInfo.GetLineInformation(const Addr: Pointer; var UnitName, FuncName: String; var Line: Integer; GetPrevLine: LongBool): TFindResult;
 Var
   UnitInfo: TUnitInfo;
   FuncInfo: TFuncInfo;
@@ -778,7 +778,7 @@ Begin
   Result := TUnitInfo(FUnits[Index]).FullUnitName;
 End;
 
-Function TDebugInfo.GetParamsStr(FuncInfo: TFuncInfo; Const EBP: Pointer; IsTopStack: Boolean): String;
+Function TDebugInfo.GetParamsStr(FuncInfo: TFuncInfo; Const EBP: Pointer; IsTopStack: LongBool): String;
 // Var
 // I            : Integer;
 // ToStringData : TToStringData;
@@ -1062,7 +1062,7 @@ begin
   Result := String(TypeInfo.Name);
 end;
 
-function TDebugInfo.ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String;
+function TDebugInfo.ParseUnitName(UnitInfo: TUnitInfo; const WithExt: LongBool = True): String;
 begin
   Result := ExtractFileName(UnitInfo.FullUnitName);
 
@@ -1075,19 +1075,19 @@ begin
   Result := String(VarInfo.Name);
 end;
 
-Function TDebugInfo.ProcessDebugOutputMessage(Const Msg: WideString; DebugEvent: PDebugEvent): Boolean;
+Function TDebugInfo.ProcessDebugOutputMessage(Const Msg: WideString; DebugEvent: PDebugEvent): LongBool;
 Begin
   Result := False;
 
   // IDEAPI_AddToOutputPanel(PWideChar(Msg), False, False);
 End;
 
-Function TDebugInfo.CheckDebugOutputMessage(DebugEvent: PDebugEvent): Boolean;
+Function TDebugInfo.CheckDebugOutputMessage(DebugEvent: PDebugEvent): LongBool;
 Var
   OutputStringW: WideString;
   OutputStringA: AnsiString;
 
-  isUnicode: Boolean;
+  isUnicode: LongBool;
   StrAddr: Pointer;
   StrSize: Word;
 Begin
@@ -1118,7 +1118,7 @@ Begin
   Result := ProcessDebugOutputMessage(OutputStringW, DebugEvent);
 End;
 
-Function TDebugInfo.IsSystemException(Const ExceptionCode: DWORD): Boolean;
+Function TDebugInfo.IsSystemException(Const ExceptionCode: DWORD): LongBool;
 Begin
   Case ExceptionCode Of
     STATUS_ACCESS_VIOLATION, STATUS_ARRAY_BOUNDS_EXCEEDED, STATUS_FLOAT_DENORMAL_OPERAND, STATUS_FLOAT_DIVIDE_BY_ZERO, STATUS_FLOAT_INEXACT_RESULT, STATUS_FLOAT_INVALID_OPERATION,
@@ -1130,22 +1130,22 @@ Begin
   End;
 End;
 
-function TDebugInfo.IsValidAddr(const Addr: Pointer): Boolean;
+function TDebugInfo.IsValidAddr(const Addr: Pointer): LongBool;
 Begin
   Result := gvDebuger.IsValidAddr(Addr);
 end;
 
-function TDebugInfo.IsValidCodeAddr(const Addr: Pointer): Boolean;
+function TDebugInfo.IsValidCodeAddr(const Addr: Pointer): LongBool;
 Begin
   Result := gvDebuger.IsValidCodeAddr(Addr);
 end;
 
-function TDebugInfo.IsValidDataAddr(const Addr: Pointer; const ThreadID: TThreadId): Boolean;
+function TDebugInfo.IsValidDataAddr(const Addr: Pointer; const ThreadID: TThreadId): LongBool;
 begin
   Result := IsValidAddr(Addr) And Not(IsValidCodeAddr(Addr) Or IsValidStackAddr(Addr, ThreadID));
 end;
 
-function TDebugInfo.IsValidStackAddr(const Addr: Pointer; const ThreadID: TThreadId): Boolean;
+function TDebugInfo.IsValidStackAddr(const Addr: Pointer; const ThreadID: TThreadId): LongBool;
 Var
   TIB: Pointer;
   TopStack: Pointer;
@@ -1683,12 +1683,12 @@ begin
   inherited;
 end;
 
-function TSegmentCodeInfo.FindConstByName(const ConstName: AnsiString; const SubStr: Boolean = False): TConstInfo;
+function TSegmentCodeInfo.FindConstByName(const ConstName: AnsiString; const SubStr: LongBool = False): TConstInfo;
 begin
   Result := TConstInfo(Consts.FindByName(ConstName, SubStr));
 end;
 
-function TSegmentCodeInfo.FindFuncByName(const FuncName: AnsiString; const SubStr: Boolean = False): TFuncInfo;
+function TSegmentCodeInfo.FindFuncByName(const FuncName: AnsiString; const SubStr: LongBool = False): TFuncInfo;
 begin
   Result := TFuncInfo(Funcs.FindByName(FuncName, SubStr));
 end;
@@ -1698,12 +1698,12 @@ begin
   Result := TFuncInfo(Funcs.FindByNameId(FuncNameId));
 end;
 
-function TSegmentCodeInfo.FindTypeByName(const TypeName: AnsiString; const SubStr: Boolean = False): TTypeInfo;
+function TSegmentCodeInfo.FindTypeByName(const TypeName: AnsiString; const SubStr: LongBool = False): TTypeInfo;
 begin
   Result := TTypeInfo(Types.FindByName(TypeName, SubStr));
 end;
 
-function TSegmentCodeInfo.FindVarByName(const VarName: AnsiString; const SubStr: Boolean = False): TVarInfo;
+function TSegmentCodeInfo.FindVarByName(const VarName: AnsiString; const SubStr: LongBool = False): TVarInfo;
 begin
   Result := TVarInfo(Vars.FindByName(VarName, SubStr));
 end;
@@ -1778,7 +1778,7 @@ begin
   inherited;
 end;
 
-function TNameList.FindByName(const Name: AnsiString; const SubStr: Boolean = False): TNameInfo;
+function TNameList.FindByName(const Name: AnsiString; const SubStr: LongBool = False): TNameInfo;
 var
   I: Integer;
 begin
