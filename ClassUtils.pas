@@ -20,7 +20,7 @@ type
     procedure Init(const AHeight: Integer; const ADelta: Byte);
     procedure InitGrList(const AHeight: Integer; const ADelta: Byte);
   public
-    constructor Create(const AColor: TColor; const AHeight: Integer; const ADelta: Byte);
+    constructor Create(const AColor: TColor; const AHeight: Integer; const ADelta: Byte = 50);
     destructor Destroy; override;
 
     property Color: TColor read FColor;
@@ -33,11 +33,13 @@ type
     class var
       _GradientInfoList: TGradientInfoList;
   public
-    class function GetGradientInfo(const AColor: TColor; const AHeight: Integer; const ADelta: Byte): TGradientInfo;
+    class function GetGradientInfo(const AColor: TColor; const AHeight: Integer): TGradientInfo;
   end;
 
-procedure DrawVGradientRect(const GP: IGPGraphics; const Rect: TRect; const Color: TColor; const Delta: Byte = 50);
-procedure DrawHInterval(const GP: IGPGraphics; const Rect: TRect; const Color: TColor);
+procedure DrawVGradientRect(const GP: IGPGraphics; const Rect: TGPRect; const Color: TColor);
+procedure DrawHInterval(const GP: IGPGraphics; const Rect: TGPRect; const Color: TColor);
+
+function GPRect(const Left, Top, Right, Bottom: Integer): TGPRect; inline;
 
 procedure RGBToHSV(const Color: TColor; var h, s, v: Integer);
 function HSV2RGB(const h, s, v: Integer): TColor;
@@ -55,7 +57,7 @@ procedure SplitStr(const Str: String; const Delimiter: Char; var StrList: TStrin
 function GetXMLValue(const ParentNode: IXMLNode; const NodeName: String): String;
 procedure SetXMLValue(const ParentNode: IXMLNode; const NodeName, NodeValue: String);
 
-function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: Boolean = True): IXMLNode;
+function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: LongBool = True): IXMLNode;
 
 function Compare(var Value1, Value2: UInt64): Integer; overload; inline;
 function Compare(var Value1, Value2: Int64): Integer; overload; inline;
@@ -86,7 +88,7 @@ end;
 
 { TGradientInfo }
 
-constructor TGradientInfo.Create(const AColor: TColor; const AHeight: Integer; const ADelta: Byte);
+constructor TGradientInfo.Create(const AColor: TColor; const AHeight: Integer; const ADelta: Byte = 50);
 begin
   inherited Create;
 
@@ -188,32 +190,35 @@ begin
   end;
 end;
 
-procedure DrawVGradientRect(const GP: IGPGraphics; const Rect: TRect; const Color: TColor; const Delta: Byte = 50);
+procedure DrawVGradientRect(const GP: IGPGraphics; const Rect: TGPRect; const Color: TColor);
 var
   GrInfo: TGradientInfo;
 begin
-  GrInfo := TGradientInfoList.GetGradientInfo(Color, Rect.Height, Delta);
+  GrInfo := TGradientInfoList.GetGradientInfo(Color, Rect.Height);
 
-  if Rect.Left <> Rect.Right then
-    GP.FillRectangle(GrInfo.Brush, Rect.Left, Rect.Top, Rect.Width, Rect.Height)
+  if Rect.Width <> 0 then
+    GP.FillRectangle(GrInfo.Brush, Rect)
   else
-    GP.DrawLine(GrInfo.Pen, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom - 1);
+    GP.DrawLine(GrInfo.Pen, Rect.Left, Rect.Top, Rect.Left, Rect.Bottom - 1);
 end;
 
-procedure DrawHInterval(const GP: IGPGraphics; const Rect: TRect; const Color: TColor);
+procedure DrawHInterval(const GP: IGPGraphics; const Rect: TGPRect; const Color: TColor);
 var
   Brush: IGPBrush;
   C: TGPColor;
-  R: TGPRect;
 begin
-  if Abs(Rect.Right - Rect.Left) > 1 then
+  if Rect.Width <> 0 then
   begin
     C := TGPColor.Create(Color);
     C.Alpha := $20;
     Brush := TGPSolidBrush.Create(C);
-    R := TGPRect.Create(Rect);
-    GP.FillRectangle(Brush, R);
+    GP.FillRectangle(Brush, Rect);
   end;
+end;
+
+function GPRect(const Left, Top, Right, Bottom: Integer): TGPRect;
+begin
+  Result.Initialize(Left, Top, Right - Left, Bottom - Top);
 end;
 
 (*
@@ -381,7 +386,7 @@ begin
     ParentNode.ChildValues[AnsiLowerCase(NodeName)] := NodeValue;
 end;
 
-function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: Boolean = True): IXMLNode;
+function GetXMLChildNode(const ParentNode: IXMLNode; const NodeName: String; const AutoCreate: LongBool = True): IXMLNode;
 begin
   Result := nil;
 
@@ -487,17 +492,18 @@ end;
 { TGradientInfoList }
 
 class function TGradientInfoList.GetGradientInfo(const AColor: TColor;
-  const AHeight: Integer; const ADelta: Byte): TGradientInfo;
+  const AHeight: Integer): TGradientInfo;
 begin
   if not _GradientInfoList.TryGetValue(AColor, Result) then
   begin
-    Result := TGradientInfo.Create(AColor, AHeight, ADelta);
+    Result := TGradientInfo.Create(AColor, AHeight);
     _GradientInfoList.AddOrSetValue(AColor, Result);
   end;
 end;
 
 initialization
   TGradientInfoList._GradientInfoList := TGradientInfoList.Create;
+  TGradientInfoList._GradientInfoList.OwnsValues := True;
 
 finalization
   FreeAndNil(TGradientInfoList._GradientInfoList);

@@ -28,7 +28,7 @@ type
     function GetItem(const Index: Integer): PData; virtual; abstract;
     procedure CheckSeg(const Seg: Integer); virtual; abstract;
 
-    function IndexToSegment(const Index: Integer; var Seg, Offset: Integer): Boolean;
+    function IndexToSegment(const Index: Integer; var Seg, Offset: Integer): LongBool;
     procedure RaiseError(Msg: PString; const Args: Array of const);
   public
     constructor Create;
@@ -126,7 +126,7 @@ begin
   FLock.EndWrite;
 end;
 
-function TBaseCollectList.IndexToSegment(const Index: Integer; var Seg, Offset: Integer): Boolean;
+function TBaseCollectList.IndexToSegment(const Index: Integer; var Seg, Offset: Integer): LongBool;
 begin
   Result := (Index < FCount) and (Index >= 0);
 

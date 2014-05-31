@@ -62,12 +62,13 @@ type
   // Декларация обработчиков отладочных исключений
   TDefaultExceptionEvent = procedure(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord) of object;
   TBreakPointEvent = procedure(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord;
-    BreakPointIndex: Integer; var ReleaseBreakpoint: Boolean) of object;
+    BreakPointIndex: Integer; var ReleaseBreakpoint: LongBool) of object;
 
   // Список типов отладочных исключений (для внутренней работы отладчика,
   // пользователь с ними не работает)
 
   TExceptionCode = (ecUnknown, ecBreakpoint, ecSingleStep, ecCtrlC, ecNonContinuable, ecGuard, ecSetThreadName);
+  TExceptionEvents = array[TExceptionCode] of TDefaultExceptionEvent;
 
   // Список поддерживаемых типов точек остановки (далее ВР)
 
@@ -88,7 +89,7 @@ type
   TMemotyBreakPoint = record
     Address: Pointer;
     Size: Cardinal;
-    BreakOnWrite: Boolean;
+    BreakOnWrite: LongBool;
     RegionStart: Pointer;
     RegionSize: Cardinal;
     PreviosRegionProtect: Cardinal;
@@ -99,7 +100,7 @@ type
     bpType: TBreakpointType;
     ThreadId: TThreadId;
     Description: ShortString;
-    Active: Boolean;
+    Active: LongBool;
     case Integer of
       0: (Int3: TInt3Breakpoint);
       1: (Memory: TMemotyBreakPoint);
@@ -139,7 +140,7 @@ type
     Size: array [THWBPIndex] of THWBPSize;
     Mode: array [THWBPIndex] of THWBPMode;
     Description: array [THWBPIndex] of ShortString;
-    Active: array [THWBPIndex] of Boolean;
+    Active: array [THWBPIndex] of LongBool;
   end;
 
   (*
@@ -238,7 +239,7 @@ type
     SyncObjsInfo: TDbgSyncObjsInfoEx;
   public
     function WaitTime: Int64;
-    function IsShortLock: Boolean;
+    function IsShortLock: LongBool;
 
     function Enter: PSyncObjsInfo; inline;
     function Leave: PSyncObjsInfo; inline;
@@ -699,7 +700,7 @@ type
   end;
 
   THardwareBreakpointEvent = procedure(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord;
-    BreakPointIndex: THWBPIndex; var ReleaseBreakpoint: Boolean) of object;
+    BreakPointIndex: THWBPIndex; var ReleaseBreakpoint: LongBool) of object;
 
   TDbgState = (dsNone, dsStarted, dsWait, dsPerfomance, dsTrace, dsEvent, dsPause, dsStoping, dsStoped, dsDbgFail);
 
@@ -1783,7 +1784,7 @@ begin
     Result := Enter;
 end;
 
-function RSyncObjsInfo.IsShortLock: Boolean;
+function RSyncObjsInfo.IsShortLock: LongBool;
 var
   _Leave: PSyncObjsInfo;
   _Enter: PSyncObjsInfo;

@@ -37,16 +37,16 @@ threadvar
 
 var
   OldDebugHook: Byte = 0;
-  InDebugMode: Boolean = False;
+  InDebugMode: LongBool = False;
 
-function IsValidCodeAddr(const Addr: Pointer): Boolean;
+function IsValidCodeAddr(const Addr: Pointer): LongBool;
 const
   _PAGE_CODE: Cardinal = (PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
 Begin
   Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0) And ((_Buf.Protect And _PAGE_CODE) <> 0);
 end;
 
-function IsValidAddr(const Addr: Pointer): Boolean;
+function IsValidAddr(const Addr: Pointer): LongBool;
 Begin
   Result := (VirtualQuery(Addr, _Buf, SizeOf(TMemoryBasicInformation)) <> 0);
 end;

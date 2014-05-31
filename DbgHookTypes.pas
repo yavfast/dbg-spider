@@ -3,7 +3,7 @@ unit DbgHookTypes;
 interface
 
 uses
-  Windows;
+  WinApi.Windows;
 
 const
   DBG_EXCEPTION = $0EEDFFF0;

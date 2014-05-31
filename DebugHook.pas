@@ -5,8 +5,8 @@ interface
 uses Windows, DebugInfo;
 
 function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo;
-  MemoryCallStack: Boolean; SyncObjsHook: Boolean): Boolean;
-function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
+  MemoryCallStack: LongBool; SyncObjsHook: LongBool): LongBool;
+function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): LongBool;
 
 implementation
 
@@ -42,10 +42,10 @@ type
 
     ImageBase        : Pointer;
     MemoryMgr        : Pointer;
-    MemoryCallStack  : Boolean;
+    MemoryCallStack  : LongBool;
     PerfDelta        : Cardinal;
 
-    SyncObjsHook     : Boolean;
+    SyncObjsHook     : LongBool;
   end;
 
 procedure _DbgLoader(DbgLoaderInfo: PDbgLoaderInfo); stdcall;
@@ -53,9 +53,9 @@ var
   HLib: HMODULE;
 
   ExitThread: procedure(uExitCode: UINT); stdcall;
-  InitThreadHook: function(ImageBase: Pointer): Boolean; stdcall;
-  InitSyncObjsHook: function(ImageBase: Pointer): Boolean; stdcall;
-  InitMemoryHook: procedure(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
+  InitThreadHook: function(ImageBase: Pointer): LongBool; stdcall;
+  InitSyncObjsHook: function(ImageBase: Pointer): LongBool; stdcall;
+  InitMemoryHook: procedure(MemoryMgr: Pointer; MemoryCallStack: LongBool); stdcall;
   InitPerfomance: procedure(Delta: Cardinal); stdcall;
 begin
   if DbgLoaderInfo = nil then Exit;
@@ -102,7 +102,7 @@ end;
 procedure _DbgLoaderEnd; begin end;
 
 function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo;
-  MemoryCallStack: Boolean; SyncObjsHook: Boolean): Boolean;
+  MemoryCallStack: LongBool; SyncObjsHook: LongBool): LongBool;
 var
   DbgLoaderInfo: TDbgLoaderInfo;
   hKernel32: THandle;
@@ -202,7 +202,7 @@ begin
 end;
 procedure _DbgUnLoaderEnd; begin end;
 
-function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): Boolean;
+function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): LongBool;
 var
   DbgUnLoaderInfo: TDbgLoaderInfo;
 begin

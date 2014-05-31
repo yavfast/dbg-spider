@@ -29,19 +29,19 @@ type
     function FindSegmentByAddr(const Addr: Pointer; const SegmentID: Word = 0): TUnitSegmentInfo;
     function FindFuncByAddr(const Addr: Pointer; const SegmentID: Word = 0): TFuncInfo; overload;
     Function FindFuncByAddr(const UnitInfo: TUnitInfo; const Addr: Pointer): TFuncInfo; overload;
-    Function FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
+    Function FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: LongBool = False): TLineInfo;
   Protected
-    Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Override;
+    Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: LongBool): LongBool; Override;
   public
     Constructor Create;
     Destructor Destroy; Override;
 
     Function GetNameById(const Idx: TNameId): AnsiString; override;
 
-    Function HasDebugInfo(Const FileName: String): Boolean; override;
+    Function HasDebugInfo(Const FileName: String): LongBool; override;
 
     Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
-      GetPrevLine: Boolean): TFindResult; override;
+      GetPrevLine: LongBool): TFindResult; override;
 
     Function MakeFuncDbgFullName(Const ClassName, MethodName: AnsiString): AnsiString; override;
     Function MakeFuncShortName(Const MethodName: AnsiString): AnsiString; override;
@@ -111,7 +111,7 @@ type
 
     class function MapStringCacheToFileName(var MapString: TJclMapStringCache): string;
     class function MapStringCacheToModuleName(var MapString: TJclMapStringCache): string;
-    class function MapStringCacheToStr(var MapString: TJclMapStringCache; IgnoreSpaces: Boolean = False): string;
+    class function MapStringCacheToStr(var MapString: TJclMapStringCache; IgnoreSpaces: LongBool = False): string;
 
     function SegmentClassesCount: Integer; inline;
     function SegmentsCount: Integer; inline;
@@ -189,7 +189,7 @@ begin
   inherited;
 end;
 
-function TMapDebugInfo.DoReadDebugInfo(const FileName: String; ALoadDebugInfo: Boolean): Boolean;
+function TMapDebugInfo.DoReadDebugInfo(const FileName: String; ALoadDebugInfo: LongBool): LongBool;
 var
   MapFileName: String;
 begin
@@ -262,7 +262,7 @@ Begin
   Result := TFuncInfo(UnitInfo.FuncsByAddr.FindByAddress(Addr));
 end;
 
-function TMapDebugInfo.FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean): TLineInfo;
+function TMapDebugInfo.FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: LongBool): TLineInfo;
 Var
   LineIdx: Integer;
 Begin
@@ -302,7 +302,7 @@ Begin
 end;
 
 function TMapDebugInfo.GetLineInfo(const Addr: Pointer; var UnitInfo: TUnitInfo; var FuncInfo: TFuncInfo;
-  var LineInfo: TLineInfo; GetPrevLine: Boolean): TFindResult;
+  var LineInfo: TLineInfo; GetPrevLine: LongBool): TFindResult;
 var
   UnitSegmentInfo: TUnitSegmentInfo;
 begin
@@ -353,7 +353,7 @@ begin
   Result := AnsiString(TMapScanner.MapStringCacheToStr(MapStringCache^));
 end;
 
-function TMapDebugInfo.HasDebugInfo(const FileName: String): Boolean;
+function TMapDebugInfo.HasDebugInfo(const FileName: String): LongBool;
 begin
   Result := inherited HasDebugInfo(FileName) or
     FileExists(ChangeFileExt(FileName, '.map'));
@@ -710,7 +710,7 @@ var
   MapLineNumber: PJclMapLineNumber;
   MapSourceName: PJclMapProcName;
   VA: DWORD;
-  Added: Boolean;
+  Added: LongBool;
 begin
   Added := False;
 
@@ -811,7 +811,7 @@ begin
   end;
 end;
 
-class function TMapScanner.MapStringCacheToStr(var MapString: TJclMapStringCache; IgnoreSpaces: Boolean): string;
+class function TMapScanner.MapStringCacheToStr(var MapString: TJclMapStringCache; IgnoreSpaces: LongBool): string;
 begin
   Result := MapString.CachedValue;
   if Result = '' then

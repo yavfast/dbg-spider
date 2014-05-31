@@ -16,17 +16,17 @@ type
     FThreadAdvInfoList: TThreadAdvInfoList;   // Дополнительная информация о потоках
     FActiveThreadList: TDbgActiveThreadList;  // Список активных потоков
 
-    FSetEntryPointBreakPoint: Boolean;   // Флаг указывающий отладчику, необходимо ли ставить ВР на ЕР
+    FSetEntryPointBreakPoint: LongBool;   // Флаг указывающий отладчику, необходимо ли ставить ВР на ЕР
     //FMainLoopWaitPeriod: Cardinal;       // Время ожидания отладочного события
     FBreakpointList: TBreakpointList;    // Список ВР и МВР
     FRestoreBPIndex: Integer;            // Индекс для восстановления ВР
     FRestoreMBPIndex: Integer;           // Индекс для восстановления МВР
     FRestoredHWBPIndex: Integer;         // Индексы для восстановления НВР
     FRestoredThread: TThreadId;
-    FCloseDebugProcess: Boolean;         // Флаг указывающий нужно ли закрывать отлаживаемый процесс при завершении отладки
+    FCloseDebugProcess: LongBool;         // Флаг указывающий нужно ли закрывать отлаживаемый процесс при завершении отладки
     FContinueStatus: DWORD;              // Статус с которым вызывается ContinueDebugEvent
     FResumeAction: TResumeAction;        // Флаг поведения отладчика после обработки очередного события
-    FRemoveCurrentBreakpoint: Boolean;   // Флаг удаления текущего ВР
+    FRemoveCurrentBreakpoint: LongBool;   // Флаг удаления текущего ВР
     FCurThreadId: TThreadId;
     FCurThreadData: PThreadData;
 
@@ -42,23 +42,23 @@ type
     FSamplingLock: TCriticalSection;
 
     // Debug options
-    FPerfomanceMode: Boolean;
+    FPerfomanceMode: LongBool;
 
-    FExceptionCheckMode: Boolean;
-    FExceptionCallStack: Boolean;
+    FExceptionCheckMode: LongBool;
+    FExceptionCallStack: LongBool;
 
-    FMemoryCheckMode: Boolean;
-    FMemoryCallStack: Boolean;
-    FMemoryCheckDoubleFree: Boolean;
+    FMemoryCheckMode: LongBool;
+    FMemoryCallStack: LongBool;
+    FMemoryCheckDoubleFree: LongBool;
 
-    FCodeTracking: Boolean;
-    FTrackSystemUnits: Boolean;
-    FSamplingMethod: Boolean;
+    FCodeTracking: LongBool;
+    FTrackSystemUnits: LongBool;
+    FSamplingMethod: LongBool;
 
-    FSyncObjsTracking: Boolean;
+    FSyncObjsTracking: LongBool;
     // ---
 
-    FMemoryBPCheckMode: Boolean;
+    FMemoryBPCheckMode: LongBool;
 
     FPerfomanceCheckPtr: Pointer;
     //FPerfomanceThreadId: TThreadId;
@@ -84,9 +84,9 @@ type
     FChangeDebugState: TNotifyEvent;
 
     FDbgLog: TDbgLogEvent;
-    FDbgLogMode: Boolean; // Дебажный режим
+    FDbgLogMode: LongBool; // Дебажный режим
 
-    FExceptioEvents: array [TExceptionCode] of TDefaultExceptionEvent;
+    FExceptionEvents: TExceptionEvents;
     FBreakPoint: TBreakPointEvent;
     FHardwareBreakpoint: THardwareBreakpointEvent;
 
@@ -95,23 +95,23 @@ type
 
     function GetExceptionEvent(const Index: TExceptionCode): TDefaultExceptionEvent;
     procedure SetExceptionEvent(const Index: TExceptionCode; const Value: TDefaultExceptionEvent);
-    procedure SetCloseDebugProcess(const Value: Boolean);
+    procedure SetCloseDebugProcess(const Value: LongBool);
 
-    procedure SetPerfomanceMode(const Value: Boolean);
-    procedure SetCodeTracking(const Value: Boolean);
-    procedure SetTrackSystemUnits(const Value: Boolean);
-    procedure SetExceptionCallStack(const Value: Boolean);
-    procedure SetExceptionCheckMode(const Value: Boolean);
-    procedure SetMemoryCallStack(const Value: Boolean);
-    procedure SetMemoryCheckDoubleFree(const Value: Boolean);
-    procedure SetMemoryCheckMode(const Value: Boolean);
+    procedure SetPerfomanceMode(const Value: LongBool);
+    procedure SetCodeTracking(const Value: LongBool);
+    procedure SetTrackSystemUnits(const Value: LongBool);
+    procedure SetExceptionCallStack(const Value: LongBool);
+    procedure SetExceptionCheckMode(const Value: LongBool);
+    procedure SetMemoryCallStack(const Value: LongBool);
+    procedure SetMemoryCheckDoubleFree(const Value: LongBool);
+    procedure SetMemoryCheckMode(const Value: LongBool);
 
     procedure LoadMemoryInfoPackEx(const MemInfoPack: Pointer; const Count: Cardinal);
     procedure ProcessMemoryInfoQueue;
     procedure ProcessMemoryInfoBuf(const Buf: PDbgMemInfoListBuf);
 
     procedure UpdateMemoryInfoObjectTypes;
-    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): Boolean;
+    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): LongBool;
 
     procedure LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
     procedure ProcessSyncObjsInfoQueue;
@@ -126,16 +126,16 @@ type
 
     procedure SetDbgTraceState(const Value: TDbgTraceState);
     procedure SetDbgState(const Value: TDbgState);
-    procedure SetSyncObjsTracking(const Value: Boolean);
-    procedure SetSamplingMethod(const Value: Boolean);
+    procedure SetSyncObjsTracking(const Value: LongBool);
+    procedure SetSamplingMethod(const Value: LongBool);
 
-    function GetActive: Boolean; inline;
+    function GetActive: LongBool; inline;
   protected
     // работа с данными о нитях отлаживаемого приложения
     function AddThread(const ThreadID: TThreadId; ThreadHandle: THandle): PThreadData;
     procedure RemoveThread(const ThreadID: TThreadId);
 
-    function GetThreadIndex(const ThreadID: TThreadId; const UseFinished: Boolean = False): Integer;
+    function GetThreadIndex(const ThreadID: TThreadId; const UseFinished: LongBool = False): Integer;
     procedure GetActiveThreads(var Res: TDbgActiveThreads);
 
     function GetThreadInfoIndex(const ThreadId: TThreadId): Integer;
@@ -167,12 +167,12 @@ type
 
     procedure ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
 
-    function ProcessTrackBreakPoint(DebugEvent: PDebugEvent): Boolean;
-    function ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): Boolean;
+    function ProcessTrackBreakPoint(DebugEvent: PDebugEvent): LongBool;
+    function ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): LongBool;
 
-    function ProcessUserBreakPoint(DebugEvent: PDebugEvent): Boolean;
+    function ProcessUserBreakPoint(DebugEvent: PDebugEvent): LongBool;
 
-    function ProcessTraceBreakPoint(DebugEvent: PDebugEvent): Boolean;
+    function ProcessTraceBreakPoint(DebugEvent: PDebugEvent): LongBool;
 
     procedure ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
     procedure ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
@@ -187,27 +187,27 @@ type
     procedure ProcessDbgTraceInfo(DebugEvent: PDebugEvent);
     procedure ProcessDbgSamplingInfo(DebugEvent: PDebugEvent);
 
-    function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
+    function ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): LongBool;
 
     // работа с точками остановки
 
-    function AddNewBreakPoint(var Value: TBreakpoint): Boolean;
+    function AddNewBreakPoint(var Value: TBreakpoint): LongBool;
     procedure CheckBreakpointIndex(Value: Integer);
-    function CheckIsAddrInRealMemoryBPRegion(BreakPointIndex: Integer; AAddr: Pointer): Boolean;
+    function CheckIsAddrInRealMemoryBPRegion(BreakPointIndex: Integer; AAddr: Pointer): LongBool;
     function GetBPIndex(BreakPointAddr: Pointer; const ThreadID: TThreadId = 0): Integer;
     function GetMBPIndex(BreakPointAddr: Pointer; FromIndex: Integer = 0): Integer;
-    function IsBreakpointPresent(const Value: TBreakpoint): Boolean;
-    procedure ToggleInt3Breakpoint(Index: Integer; Active: Boolean);
-    procedure ToggleMemoryBreakpoint(Index: Integer; Active: Boolean);
+    function IsBreakpointPresent(const Value: TBreakpoint): LongBool;
+    procedure ToggleInt3Breakpoint(Index: Integer; Active: LongBool);
+    procedure ToggleMemoryBreakpoint(Index: Integer; Active: LongBool);
     procedure UpdateHardwareBreakpoints(const ThreadID: TThreadId);
 
-    procedure SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean); overload;
-    procedure SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: Boolean); overload;
+    procedure SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: LongBool); overload;
+    procedure SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: LongBool); overload;
 
-    function PerfomancePauseDebug: Boolean;
+    function PerfomancePauseDebug: LongBool;
 
-    function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): Boolean;
-    function AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
+    function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): LongBool;
+    function AddProcessPointInfo(const PointType: TDbgPointType): LongBool;
 
     procedure AddThreadSamplingInfo(ThreadData: PThreadData);
     procedure ProcessThreadSamplingInfo(ThreadData: PThreadData);
@@ -223,13 +223,13 @@ type
     procedure Log(const Msg: String);
 
     // запуск/остановка отладки
-    function AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: Boolean): Boolean;
-    function DebugNewProcess(const AppPath: string; var ErrInfo: String; const RunParams: String = ''; const WorkingDirectory: String = ''): Boolean;
+    function AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: LongBool): LongBool;
+    function DebugNewProcess(const AppPath: string; var ErrInfo: String; const RunParams: String = ''; const WorkingDirectory: String = ''): LongBool;
 
-    function StopDebug: Boolean;
-    function PauseDebug: Boolean;
-    function ContinueDebug: Boolean;
-    function TraceDebug(const TraceType: TDbgTraceState): Boolean;
+    function StopDebug: LongBool;
+    function PauseDebug: LongBool;
+    function ContinueDebug: LongBool;
+    function TraceDebug(const TraceType: TDbgTraceState): LongBool;
 
     // Основной цикл обработки дебажных событий
     procedure ProcessDebugEvents;
@@ -243,39 +243,39 @@ type
     Procedure ProcFreeMem(Data : Pointer; const Size: Cardinal = 0);
 
     procedure InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer;
-      aParamsSize: Cardinal; WaitAndFree: Boolean = True);
+      aParamsSize: Cardinal; WaitAndFree: LongBool = True);
     function InjectFunc(Func: Pointer; const CodeSize: Cardinal): Pointer;
 
     procedure InjectPerfThread;
     procedure InjectPerfFunc;
 
-    function ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): Boolean;
+    function ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): LongBool;
 
     function ReadStringA(AddrPrt: Pointer; Len: Integer = 0): AnsiString;
     function ReadStringW(AddrPrt: Pointer; Len: Integer = 0): WideString;
     function ReadStringP(AddrPrt: Pointer; Len: Byte = 0): ShortString;
 
-    function WriteData(AddrPrt, DataPtr: Pointer; const DataSize: Cardinal): Boolean;
+    function WriteData(AddrPrt, DataPtr: Pointer; const DataSize: Cardinal): LongBool;
 
-    procedure SetFlag(const ThreadID: TThreadId; Flag: DWORD; Value: Boolean);
-    function GetFlag(const ThreadID: TThreadId; Flag: DWORD): Boolean;
+    procedure SetFlag(const ThreadID: TThreadId; Flag: DWORD; Value: LongBool);
+    function GetFlag(const ThreadID: TThreadId; Flag: DWORD): LongBool;
 
     function UpdateThreadContext(const ThreadID: TThreadId; const ContextFlags: Cardinal = CONTEXT_FULL): PThreadData; overload;
-    function UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): Boolean; overload;
+    function UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): LongBool; overload;
 
-    function UpdateCurThreadContext(const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;
+    function UpdateCurThreadContext(const ContextFlags: Cardinal = CONTEXT_FULL): LongBool;
 
     function GetRegisters(const ThreadID: TThreadId): TContext;
     procedure SetRegisters(const ThreadID: TThreadId; var Context: TContext);
 
-    Function IsValidAddr(Const Addr: Pointer): Boolean;
-    Function IsValidCodeAddr(Const Addr: Pointer): Boolean;
-    Function IsValidProcessCodeAddr(Const Addr: Pointer): Boolean;
+    Function IsValidAddr(Const Addr: Pointer): LongBool;
+    Function IsValidCodeAddr(Const Addr: Pointer): LongBool;
+    Function IsValidProcessCodeAddr(Const Addr: Pointer): LongBool;
 
     procedure GetCallStack(ThData: PThreadData; var Stack: TDbgInfoStack);
     procedure GetCallStackEx(ThData: PThreadData; var Stack: TDbgInfoStack);
 
-    function GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
+    function GetThreadData(const ThreadID: TThreadId; const UseFinished: LongBool = False): PThreadData;
     function CurThreadId: TThreadId;
     function CurThreadData: PThreadData;
     function GetThreadCount: Integer;
@@ -284,11 +284,11 @@ type
     // выполнение кода
     Procedure ExecuteCode(AddrPtr: Pointer; const TimeOut: Cardinal);
 
-    function GetDllName(lpImageName, lpBaseOfDll: Pointer; var Unicode: Boolean): AnsiString;
+    function GetDllName(lpImageName, lpBaseOfDll: Pointer; var Unicode: LongBool): AnsiString;
 
     // работа с точками остановки
-    function SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
-    function SetMemoryBreakpoint(Address: Pointer; Size: Cardinal; BreakOnWrite: Boolean; const Description: string): Boolean;
+    function SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): LongBool;
+    function SetMemoryBreakpoint(Address: Pointer; Size: Cardinal; BreakOnWrite: LongBool; const Description: string): LongBool;
 
     procedure SetTrackBreakpoint(const Address: Pointer; FuncInfo: TObject; const BPType: TTrackBreakpointType = tbTrackFunc);
     function SetTrackRETBreakpoint(const Address: Pointer): PTrackRETBreakpoint;
@@ -300,7 +300,7 @@ type
 
     procedure RemoveBreakpoint(Index: Integer);
 
-    procedure ToggleBreakpoint(Index: Integer; Active: Boolean);
+    procedure ToggleBreakpoint(Index: Integer; Active: LongBool);
 
     function BreakpointCount: Integer;
     function BreakpointItem(Index: Integer): TBreakpoint;
@@ -309,7 +309,7 @@ type
 
     // работа с аппаратными точками остановки
     procedure SetHardwareBreakpoint(const ThreadId: TThreadID; Address: Pointer; Size: THWBPSize; Mode: THWBPMode; HWIndex: THWBPIndex; const Description: string);
-    procedure ToggleHardwareBreakpoint(const ThreadId: TThreadID; Index: THWBPIndex; Active: Boolean);
+    procedure ToggleHardwareBreakpoint(const ThreadId: TThreadID; Index: THWBPIndex; Active: LongBool);
     procedure DropHardwareBreakpoint(const ThreadId: TThreadID; Index: THWBPIndex);
     procedure DropAllHardwareBreakpoint(const ThreadId: TThreadID);
 
@@ -329,7 +329,7 @@ type
     property OnRip: TRipEvent read FRip write FRip;
     property OnDbgLog: TDbgLogEvent read FDbgLog write FDbgLog;
 
-    property DbgLogMode: Boolean read FDbgLogMode write FDbgLogMode;
+    property DbgLogMode: LongBool read FDbgLogMode write FDbgLogMode;
 
     // обработчики исключений
     property OnBreakPoint: TBreakPointEvent read FBreakPoint write FBreakPoint;
@@ -343,31 +343,31 @@ type
 
     // расширенные свойства отладчика
     property ContinueStatus: DWORD read FContinueStatus write FContinueStatus;
-    property CloseDebugProcessOnFree: Boolean read FCloseDebugProcess write SetCloseDebugProcess;
+    property CloseDebugProcessOnFree: LongBool read FCloseDebugProcess write SetCloseDebugProcess;
     property ProcessData: PProcessData read FProcessData;
     property ResumeAction: TResumeAction read FResumeAction write FResumeAction;
     property DbgState: TDbgState read FDbgState write SetDbgState;
     property DbgTraceState: TDbgTraceState read FDbgTraceState write SetDbgTraceState;
 
-    property Active: Boolean read GetActive;
+    property Active: LongBool read GetActive;
 
     // Опции профайлера
-    property PerfomanceMode: Boolean read FPerfomanceMode write SetPerfomanceMode;
+    property PerfomanceMode: LongBool read FPerfomanceMode write SetPerfomanceMode;
 
-    property ExceptionCheckMode: Boolean read FExceptionCheckMode write SetExceptionCheckMode;
-    property ExceptionCallStack: Boolean read FExceptionCallStack write SetExceptionCallStack;
+    property ExceptionCheckMode: LongBool read FExceptionCheckMode write SetExceptionCheckMode;
+    property ExceptionCallStack: LongBool read FExceptionCallStack write SetExceptionCallStack;
 
-    property MemoryCheckMode: Boolean read FMemoryCheckMode write SetMemoryCheckMode;
-    property MemoryCallStack: Boolean read FMemoryCallStack write SetMemoryCallStack;
-    property MemoryCheckDoubleFree: Boolean read FMemoryCheckDoubleFree write SetMemoryCheckDoubleFree;
+    property MemoryCheckMode: LongBool read FMemoryCheckMode write SetMemoryCheckMode;
+    property MemoryCallStack: LongBool read FMemoryCallStack write SetMemoryCallStack;
+    property MemoryCheckDoubleFree: LongBool read FMemoryCheckDoubleFree write SetMemoryCheckDoubleFree;
 
-    property CodeTracking: Boolean read FCodeTracking write SetCodeTracking;
-    property TrackSystemUnits: Boolean read FTrackSystemUnits write SetTrackSystemUnits;
-    property SamplingMethod: Boolean read FSamplingMethod write SetSamplingMethod;
+    property CodeTracking: LongBool read FCodeTracking write SetCodeTracking;
+    property TrackSystemUnits: LongBool read FTrackSystemUnits write SetTrackSystemUnits;
+    property SamplingMethod: LongBool read FSamplingMethod write SetSamplingMethod;
 
-    property SyncObjsTracking: Boolean read FSyncObjsTracking write SetSyncObjsTracking;
+    property SyncObjsTracking: LongBool read FSyncObjsTracking write SetSyncObjsTracking;
 
-    property MemoryBPCheckMode: Boolean read FMemoryBPCheckMode write FMemoryBPCheckMode;
+    property MemoryBPCheckMode: LongBool read FMemoryBPCheckMode write FMemoryBPCheckMode;
   end;
 
 var
@@ -405,7 +405,7 @@ begin
   Result := DWORD(@_DbgPerfomanceHook);
 end;
 
-procedure Check(const Value: Boolean); inline;
+procedure Check(const Value: LongBool); inline;
 begin
   if not Value then
     RaiseLastOSError;
@@ -433,7 +433,7 @@ end;
 
 { TDebuger }
 
-function TDebuger.AddNewBreakPoint(var Value: TBreakpoint): Boolean;
+function TDebuger.AddNewBreakPoint(var Value: TBreakpoint): LongBool;
 var
   Len: Integer;
 begin
@@ -447,7 +447,7 @@ begin
   end;
 end;
 
-function TDebuger.AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): Boolean;
+function TDebuger.AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): LongBool;
 var
   Cur: UInt64;
   //Prev: UInt64;
@@ -602,7 +602,7 @@ begin
   end;
 end;
 
-function TDebuger.AddProcessPointInfo(const PointType: TDbgPointType): Boolean;
+function TDebuger.AddProcessPointInfo(const PointType: TDbgPointType): LongBool;
 var
   ProcPoint: PProcessPoint;
   //Prev: UInt64;
@@ -718,7 +718,7 @@ begin
     RaiseLastOsError;
 end;
 
-function TDebuger.AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: Boolean): Boolean;
+function TDebuger.AttachToProcess(const ProcessID: TProcessId; SentEntryPointBreakPoint: LongBool): LongBool;
 begin
   LoadLibrary('DbgHook32.dll'); // Для быстрой загрузки в процессе
 
@@ -750,13 +750,13 @@ procedure TDebuger.CallUnhandledBreakPointEvents(const Code: TExceptionCode; Deb
 begin
   //ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
 
-  if Assigned(FExceptioEvents[Code]) then
-    FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
+  if Assigned(FExceptionEvents[Code]) then
+    FExceptionEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
 end;
 
 procedure TDebuger.CallUnhandledExceptionEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 var
-  IsTraceException: Boolean;
+  IsTraceException: LongBool;
 begin
   if gvDebugInfo.CheckDebugException(@DebugEvent^.Exception.ExceptionRecord, IsTraceException) then
   begin
@@ -776,8 +776,8 @@ begin
       if AddProcessPointInfo(ptException) then
         AddThreadPointInfo(CurThreadData, ptException, DebugEvent);
 
-      if Assigned(FExceptioEvents[Code]) then
-        FExceptioEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
+      if Assigned(FExceptionEvents[Code]) then
+        FExceptionEvents[Code](Self, DebugEvent^.dwThreadId, @DebugEvent^.Exception.ExceptionRecord);
     end
     else
       ContinueStatus := DBG_CONTINUE;
@@ -790,7 +790,7 @@ begin
     raise EDebugCoreException.CreateFmt(SListIndexError, [Value]);
 end;
 
-function TDebuger.CheckIsAddrInRealMemoryBPRegion(BreakPointIndex: Integer; AAddr: Pointer): Boolean;
+function TDebuger.CheckIsAddrInRealMemoryBPRegion(BreakPointIndex: Integer; AAddr: Pointer): LongBool;
 begin
   CheckBreakpointIndex(BreakPointIndex);
   Result := Cardinal(AAddr) >= Cardinal(FBreakpointList[BreakPointIndex].Memory.Address);
@@ -845,7 +845,7 @@ begin
   end;
 end;
 
-function TDebuger.ContinueDebug: Boolean;
+function TDebuger.ContinueDebug: LongBool;
 begin
   Result := False;
 
@@ -860,7 +860,7 @@ end;
 
 constructor TDebuger.Create();
 
-  function SetDebugPriv: Boolean;
+  function SetDebugPriv: LongBool;
   var
     Token: THandle;
     tkp: TTokenPrivileges;
@@ -933,7 +933,7 @@ begin
   Result := FCurThreadId;
 end;
 
-function TDebuger.DebugNewProcess(const AppPath: string; var ErrInfo: String; const RunParams: String = ''; const WorkingDirectory: String = ''): Boolean;
+function TDebuger.DebugNewProcess(const AppPath: string; var ErrInfo: String; const RunParams: String = ''; const WorkingDirectory: String = ''): LongBool;
 var
   PI: PProcessInformation;
   SI: PStartupInfo;
@@ -1262,7 +1262,7 @@ end;
 procedure TDebuger.DropAllHardwareBreakpoint(const ThreadId: TThreadID);
 var
   I: THWBPIndex;
-  NeedUpdate: Boolean;
+  NeedUpdate: LongBool;
   ThData: PThreadData;
 begin
   ThData := GetThreadData(ThreadID);
@@ -1305,7 +1305,7 @@ begin
     RaiseLastOSError;
 end;
 
-function TDebuger.GetActive: Boolean;
+function TDebuger.GetActive: LongBool;
 const
   DBG_STOPED_STATE = [dsNone, dsStoped, dsDbgFail];
 begin
@@ -1345,7 +1345,7 @@ const
 var
   Cnt: Integer;
 
-  function AddStackEntry(Const Addr: Pointer): Boolean;
+  function AddStackEntry(Const Addr: Pointer): LongBool;
   begin
     Result := False;
 
@@ -1442,7 +1442,7 @@ end;
 
 function GetMappedFileNameA(hProcess: THandle; lpv: Pointer; lpFilename: LPSTR; nSize: DWORD): DWORD; stdcall; external 'psapi.dll';
 
-function TDebuger.GetDllName(lpImageName, lpBaseOfDll: Pointer; var Unicode: Boolean): AnsiString;
+function TDebuger.GetDllName(lpImageName, lpBaseOfDll: Pointer; var Unicode: LongBool): AnsiString;
 var
   DllNameAddr: Pointer;
   MappedName: array [0 .. MAX_PATH - 1] of AnsiChar;
@@ -1468,10 +1468,10 @@ end;
 
 function TDebuger.GetExceptionEvent(const Index: TExceptionCode): TDefaultExceptionEvent;
 begin
-  Result := FExceptioEvents[Index];
+  Result := FExceptionEvents[Index];
 end;
 
-function TDebuger.GetFlag(const ThreadID: TThreadId; Flag: DWORD): Boolean;
+function TDebuger.GetFlag(const ThreadID: TThreadId; Flag: DWORD): LongBool;
 var
   Context: TContext;
   ThData: PThreadData;
@@ -1489,12 +1489,12 @@ end;
 
 function TDebuger.GetMBPIndex(BreakPointAddr: Pointer; FromIndex: Integer): Integer;
 
-  function CheckStartAddr(Data: Pointer): Boolean;
+  function CheckStartAddr(Data: Pointer): LongBool;
   begin
     Result := Cardinal(Data) <= Cardinal(BreakPointAddr);
   end;
 
-  function CheckEndAddr(Data: Pointer; Size: DWORD): Boolean;
+  function CheckEndAddr(Data: Pointer; Size: DWORD): LongBool;
   begin
     Result := Cardinal(Data) + Size > Cardinal(BreakPointAddr);
   end;
@@ -1532,7 +1532,7 @@ begin
   end;
 end;
 
-function TDebuger.GetThreadIndex(const ThreadID: TThreadId; const UseFinished: Boolean = False): Integer;
+function TDebuger.GetThreadIndex(const ThreadID: TThreadId; const UseFinished: LongBool = False): Integer;
 var
   ThData: PThreadData;
 begin
@@ -1588,7 +1588,7 @@ begin
   Result := FThreadList.Count;
 end;
 
-function TDebuger.GetThreadData(const ThreadID: TThreadId; const UseFinished: Boolean = False): PThreadData;
+function TDebuger.GetThreadData(const ThreadID: TThreadId; const UseFinished: LongBool = False): PThreadData;
 var
   Index: Integer;
 begin
@@ -1613,7 +1613,7 @@ begin
     Result := FThreadList[Idx];
 end;
 
-function TDebuger.IsBreakpointPresent(const Value: TBreakpoint): Boolean;
+function TDebuger.IsBreakpointPresent(const Value: TBreakpoint): LongBool;
 var
   I: Integer;
 begin
@@ -1639,7 +1639,7 @@ end;
 threadvar
   _mbi: TMemoryBasicInformation;
 
-function TDebuger.IsValidAddr(const Addr: Pointer): Boolean;
+function TDebuger.IsValidAddr(const Addr: Pointer): LongBool;
 Var
   mbi: PMemoryBasicInformation;
 Begin
@@ -1652,7 +1652,7 @@ Begin
   Result := (VirtualQueryEx(FProcessData.AttachedProcessHandle, Addr, mbi^, SizeOf(TMemoryBasicInformation)) <> 0);
 end;
 
-function TDebuger.IsValidCodeAddr(const Addr: Pointer): Boolean;
+function TDebuger.IsValidCodeAddr(const Addr: Pointer): LongBool;
 Const
   _PAGE_CODE = DWORD(PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
 Var
@@ -1666,7 +1666,7 @@ Begin
     Result := ((mbi^.Protect And _PAGE_CODE) <> 0);
 end;
 
-function TDebuger.IsValidProcessCodeAddr(const Addr: Pointer): Boolean;
+function TDebuger.IsValidProcessCodeAddr(const Addr: Pointer): LongBool;
 Begin
   Result := False;
 
@@ -1675,7 +1675,7 @@ Begin
       (Cardinal(Addr) <= (Cardinal(FProcessData.BaseOfImage) + FProcessData.PEImage.OptionalHeader32.SizeOfCode));
 end;
 
-function TDebuger.PauseDebug: Boolean;
+function TDebuger.PauseDebug: LongBool;
 begin
   if Active then
   begin
@@ -1695,7 +1695,7 @@ begin
   DbgTrackRETBreakpoints.OwnsValues := True;
 end;
 
-procedure _DbgSamplingEvent(Context: Pointer; Success: Boolean); stdcall;
+procedure _DbgSamplingEvent(Context: Pointer; Success: LongBool); stdcall;
 begin
   if Assigned(gvDebuger) then
     gvDebuger.DoSamplingEvent;
@@ -1782,7 +1782,7 @@ begin
 end;
 
 procedure TDebuger.InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer;
-  aParamsSize: Cardinal; WaitAndFree: Boolean = True);
+  aParamsSize: Cardinal; WaitAndFree: LongBool = True);
 var
   hThread: THandle;
   lpNumberOfBytes: TSysUInt;
@@ -1825,7 +1825,7 @@ begin
   end;
 end;
 
-function TDebuger.PerfomancePauseDebug: Boolean;
+function TDebuger.PerfomancePauseDebug: LongBool;
 begin
   // Эта функция создает поток с функцией в контексте процесса, которая вызывает DebugBreak
   // Проблема в том, что не ожидается, пока брекпоинт отработается
@@ -1862,7 +1862,7 @@ procedure TDebuger.ProcessExceptionGuardPage(DebugEvent: PDebugEvent);
 var
   CurrentMBPIndex: Integer;
 
-  function CheckWriteMode: Boolean;
+  function CheckWriteMode: LongBool;
   begin
     Result := not FBreakpointList[CurrentMBPIndex].Memory.BreakOnWrite;
     if not Result then
@@ -1871,7 +1871,7 @@ var
 
 var
   MBPIndex: Integer;
-  ReleaseMBP: Boolean;
+  ReleaseMBP: LongBool;
   dwGuardedAddr: Pointer;
 begin
   ReleaseMBP := False;
@@ -1912,7 +1912,7 @@ end;
 
 procedure TDebuger.ProcessExceptionSingleStep(DebugEvent: PDebugEvent);
 //var
-  //Handled: Boolean;
+  //Handled: LongBool;
   //ThData: PThreadData;
 begin
   //ThData := CurThreadData;
@@ -1972,10 +1972,10 @@ begin
   *)
 end;
 
-function TDebuger.ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): Boolean;
+function TDebuger.ProcessHardwareBreakpoint(DebugEvent: PDebugEvent): LongBool;
 var
   Index: Integer;
-  ReleaseBP: Boolean;
+  ReleaseBP: LongBool;
   //ThData: PThreadData;
   Context: PContext;
 begin
@@ -2438,7 +2438,7 @@ begin
   end;
 end;
 
-function TDebuger.ProcessTraceBreakPoint(DebugEvent: PDebugEvent): Boolean;
+function TDebuger.ProcessTraceBreakPoint(DebugEvent: PDebugEvent): LongBool;
 begin
   Result := False;
 
@@ -2459,7 +2459,7 @@ begin
   end;
 end;
 
-function TDebuger.ProcessTrackBreakPoint(DebugEvent: PDebugEvent): Boolean;
+function TDebuger.ProcessTrackBreakPoint(DebugEvent: PDebugEvent): LongBool;
 var
   ThData: PThreadData;
   Address: Pointer;
@@ -2617,7 +2617,7 @@ begin
   Exit(False);
 end;
 
-function TDebuger.ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): Boolean;
+function TDebuger.ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): LongBool;
 var
   ThData: PThreadData;
   Address: Pointer;
@@ -2790,10 +2790,10 @@ begin
   Exit(False);
 end;
 
-function TDebuger.ProcessUserBreakPoint(DebugEvent: PDebugEvent): Boolean;
+function TDebuger.ProcessUserBreakPoint(DebugEvent: PDebugEvent): LongBool;
 var
   Address: Pointer;
-  ReleaseBP: Boolean;
+  ReleaseBP: LongBool;
   BreakPointIndex: Integer;
 begin
   Result := False;
@@ -2893,10 +2893,17 @@ begin
 
         LoadSyncObjsInfoPackEx(Ptr, Size);
       end;
+    dstPerfomanceAndInfo:
+      begin
+        Ptr := Pointer(ER^.ExceptionInformation[3]);
+        Size := ER^.ExceptionInformation[4];
+
+        LoadSyncObjsInfoPackEx(Ptr, Size);
+      end;
   end;
 end;
 
-function TDebuger.ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): Boolean;
+function TDebuger.ReadData(const AddrPrt, ResultPtr: Pointer; const DataSize: Integer): LongBool;
 var
   Dummy: TSysUInt;
 begin
@@ -3048,6 +3055,7 @@ begin
       begin
         ProcessDbgPerfomance(DebugEvent);
         ProcessDbgMemoryInfo(DebugEvent);
+        ProcessDbgSyncObjsInfo(DebugEvent);
       end;
     dstMemHookStatus:
       ProcessDbgMemoryInfo(DebugEvent);
@@ -3058,7 +3066,7 @@ begin
   end;
 end;
 
-function TDebuger.FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): Boolean;
+function TDebuger.FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): LongBool;
 var
   Idx: Integer;
 begin
@@ -3313,7 +3321,7 @@ begin
   Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @BPOpcode, 1, Dummy));
 end;
 
-function TDebuger.SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): Boolean;
+function TDebuger.SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): LongBool;
 var
   Breakpoint: TBreakpoint;
   //OldProtect: DWORD;
@@ -3342,13 +3350,13 @@ begin
   Result := AddNewBreakPoint(Breakpoint);
 end;
 
-procedure TDebuger.SetCloseDebugProcess(const Value: Boolean);
+procedure TDebuger.SetCloseDebugProcess(const Value: LongBool);
 begin
   FCloseDebugProcess := Value;
   DebugSetProcessKillOnExit(CloseDebugProcessOnFree);
 end;
 
-procedure TDebuger.SetCodeTracking(const Value: Boolean);
+procedure TDebuger.SetCodeTracking(const Value: LongBool);
 begin
   FCodeTracking := Value;
 end;
@@ -3357,7 +3365,7 @@ procedure TDebuger.SetDbgState(const Value: TDbgState);
 const
   _UpdateState: set of TDbgState = [dsNone, dsStarted, dsTrace, dsPause, dsStoping, dsStoped, dsDbgFail];
 var
-  Update: Boolean;
+  Update: LongBool;
 begin
   if Value <> FDbgState then
   begin
@@ -3381,22 +3389,22 @@ begin
   end;
 end;
 
-procedure TDebuger.SetExceptionCallStack(const Value: Boolean);
+procedure TDebuger.SetExceptionCallStack(const Value: LongBool);
 begin
   FExceptionCallStack := Value;
 end;
 
-procedure TDebuger.SetExceptionCheckMode(const Value: Boolean);
+procedure TDebuger.SetExceptionCheckMode(const Value: LongBool);
 begin
   FExceptionCheckMode := Value;
 end;
 
 procedure TDebuger.SetExceptionEvent(const Index: TExceptionCode; const Value: TDefaultExceptionEvent);
 begin
-  FExceptioEvents[Index] := Value;
+  FExceptionEvents[Index] := Value;
 end;
 
-procedure TDebuger.SetFlag(const ThreadID: TThreadId; Flag: DWORD; Value: Boolean);
+procedure TDebuger.SetFlag(const ThreadID: TThreadId; Flag: DWORD; Value: LongBool);
 var
   ThData: PThreadData;
   Context: TContext;
@@ -3433,7 +3441,7 @@ begin
   end;
 end;
 
-function TDebuger.SetMemoryBreakpoint(Address: Pointer; Size: Cardinal; BreakOnWrite: Boolean; const Description: string): Boolean;
+function TDebuger.SetMemoryBreakpoint(Address: Pointer; Size: Cardinal; BreakOnWrite: LongBool; const Description: string): LongBool;
 var
   Breakpoint: TBreakpoint;
   MBI: TMemoryBasicInformation; // TODO: GetMemory
@@ -3464,22 +3472,22 @@ begin
   Result := AddNewBreakPoint(Breakpoint);
 end;
 
-procedure TDebuger.SetMemoryCallStack(const Value: Boolean);
+procedure TDebuger.SetMemoryCallStack(const Value: LongBool);
 begin
   FMemoryCallStack := Value;
 end;
 
-procedure TDebuger.SetMemoryCheckDoubleFree(const Value: Boolean);
+procedure TDebuger.SetMemoryCheckDoubleFree(const Value: LongBool);
 begin
   FMemoryCheckDoubleFree := Value;
 end;
 
-procedure TDebuger.SetMemoryCheckMode(const Value: Boolean);
+procedure TDebuger.SetMemoryCheckMode(const Value: LongBool);
 begin
   FMemoryCheckMode := Value;
 end;
 
-procedure TDebuger.SetPerfomanceMode(const Value: Boolean);
+procedure TDebuger.SetPerfomanceMode(const Value: LongBool);
 begin
   if FPerfomanceMode <> Value then
   begin
@@ -3505,12 +3513,12 @@ begin
   end;
 end;
 
-procedure TDebuger.SetSamplingMethod(const Value: Boolean);
+procedure TDebuger.SetSamplingMethod(const Value: LongBool);
 begin
   FSamplingMethod := Value;
 end;
 
-procedure TDebuger.SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: Boolean);
+procedure TDebuger.SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: LongBool);
 begin
   // !!! ThData^.Context уже должен быть актуальным
   if RestoreEIPAfterBP then
@@ -3521,12 +3529,12 @@ begin
   Check(SetThreadContext(ThData^.ThreadHandle, ThData^.Context^));
 end;
 
-procedure TDebuger.SetSyncObjsTracking(const Value: Boolean);
+procedure TDebuger.SetSyncObjsTracking(const Value: LongBool);
 begin
   FSyncObjsTracking := Value;
 end;
 
-procedure TDebuger.SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: Boolean);
+procedure TDebuger.SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: LongBool);
 var
   ThData: PThreadData;
 begin
@@ -3621,12 +3629,12 @@ begin
   end;
 end;
 
-procedure TDebuger.SetTrackSystemUnits(const Value: Boolean);
+procedure TDebuger.SetTrackSystemUnits(const Value: LongBool);
 begin
   FTrackSystemUnits := Value;
 end;
 
-function TDebuger.StopDebug: Boolean;
+function TDebuger.StopDebug: LongBool;
 begin
   Result := False;
 
@@ -3665,7 +3673,7 @@ begin
   end;
 end;
 
-procedure TDebuger.ToggleBreakpoint(Index: Integer; Active: Boolean);
+procedure TDebuger.ToggleBreakpoint(Index: Integer; Active: LongBool);
 begin
   CheckBreakpointIndex(Index);
   case FBreakpointList[Index].bpType of
@@ -3676,7 +3684,7 @@ begin
   end;
 end;
 
-procedure TDebuger.ToggleHardwareBreakpoint(const ThreadId: TThreadID; Index: THWBPIndex; Active: Boolean);
+procedure TDebuger.ToggleHardwareBreakpoint(const ThreadId: TThreadID; Index: THWBPIndex; Active: LongBool);
 var
   ThData: PThreadData;
 begin
@@ -3712,7 +3720,7 @@ begin
   Check(WriteProcessMemory(FProcessData.AttachedProcessHandle, Address, @SaveByte, 1, Dummy));
 end;
 
-procedure TDebuger.ToggleInt3Breakpoint(Index: Integer; Active: Boolean);
+procedure TDebuger.ToggleInt3Breakpoint(Index: Integer; Active: LongBool);
 var
   OldProtect: DWORD;
   Dummy: TSysUInt;
@@ -3738,7 +3746,7 @@ begin
   FBreakpointList[Index].Active := Active;
 end;
 
-procedure TDebuger.ToggleMemoryBreakpoint(Index: Integer; Active: Boolean);
+procedure TDebuger.ToggleMemoryBreakpoint(Index: Integer; Active: LongBool);
 var
   Dummy, TmpSize: DWORD;
 begin
@@ -3759,7 +3767,7 @@ begin
   FBreakpointList[Index].Active := Active;
 end;
 
-function TDebuger.TraceDebug(const TraceType: TDbgTraceState): Boolean;
+function TDebuger.TraceDebug(const TraceType: TDbgTraceState): LongBool;
 begin
   Result := False;
 
@@ -3856,7 +3864,7 @@ const
     (DR7_SIZE_DR3_B, DR7_SIZE_DR3_W, DR7_SIZE_DR3_D)
   );
 
-function TDebuger.UpdateCurThreadContext(const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;
+function TDebuger.UpdateCurThreadContext(const ContextFlags: Cardinal = CONTEXT_FULL): LongBool;
 begin
   Result := True;
 
@@ -3951,7 +3959,7 @@ begin
   *)
 end;
 
-function TDebuger.UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): Boolean;
+function TDebuger.UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): LongBool;
 begin
   Result := False;
 
@@ -3972,7 +3980,7 @@ begin
       RaiseDebugCoreException();
 end;
 
-function TDebuger.WriteData(AddrPrt, DataPtr: Pointer; const DataSize: Cardinal): Boolean;
+function TDebuger.WriteData(AddrPrt, DataPtr: Pointer; const DataSize: Cardinal): LongBool;
 var
   Dummy: TSysUInt;
 begin

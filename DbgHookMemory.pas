@@ -2,25 +2,27 @@ unit DbgHookMemory;
 
 interface
 
-uses DbgHookTypes;
+uses DbgHookTypes, DbgHookCS;
 
-procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
+procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: LongBool); stdcall;
 procedure ResetMemoryHook; stdcall;
 
-function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
+function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): LongBool;
+
+var
+  MemInfoLock: TDbgCriticalSection = nil;
+  MemInfoList: PDbgMemInfoList = nil;
+  MemInfoListCnt: Integer = 0;
 
 implementation
 
-uses Windows, DbgHookCS, SysUtils, DbgHookUtils;
+uses WinApi.Windows, System.SysUtils, DbgHookUtils;
 
 var
   _BaseMemoryMgr: TMemoryManagerEx;
   _HookMemoryMgr: TMemoryManagerEx;
 
-  MemInfoList: PDbgMemInfoList = nil;
-  MemInfoListCnt: Integer = 0;
-  MemCallStack: Boolean = False;
-  MemInfoLock: TDbgCriticalSection = nil;
+  MemCallStack: LongBool = False;
 
   MemLock: TDbgCriticalSection = nil;
 
@@ -65,7 +67,7 @@ begin
   RaiseException(DBG_EXCEPTION, 0, 2, @MemOutDbgInfo[0]);
 end;
 
-function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): Boolean;
+function _OutMemInfoBuf(const DbgInfoType: TDbgInfoType = dstMemInfo): LongBool;
 begin
   Result := False;
 
@@ -198,7 +200,7 @@ begin
   {$ENDIF}
 end;
 
-procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: Boolean); stdcall;
+procedure InitMemoryHook(MemoryMgr: Pointer; MemoryCallStack: LongBool); stdcall;
 begin
   _Log('Init memory hooks...');
 

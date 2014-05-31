@@ -15,7 +15,7 @@ type
     procedure Enter;
     procedure Leave;
 
-    function TryEnter: Boolean;
+    function TryEnter: LongBool;
   end;
 
 
@@ -54,7 +54,7 @@ begin
     LeaveCriticalSection(FLock);
 end;
 
-function TDbgCriticalSection.TryEnter: Boolean;
+function TDbgCriticalSection.TryEnter: LongBool;
 begin
   Result := TryEnterCriticalSection(FLock);
 end;

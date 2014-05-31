@@ -1541,11 +1541,11 @@ type
     Width: Integer;
     Height: Integer;
   private
-    function GetLocation: TGPPoint;
-    function GetSize: TGPSize;
-    function GetBounds: TGPRect;
-    function GetRight: Integer;
-    function GetBottom: Integer;
+    function GetLocation: TGPPoint; inline;
+    function GetSize: TGPSize; inline;
+    function GetBounds: TGPRect; inline;
+    function GetRight: Integer; inline;
+    function GetBottom: Integer; inline;
   public
     procedure Initialize; overload;
     procedure Initialize(const AX, AY, AWidth, AHeight: Integer); overload;
@@ -9607,10 +9607,16 @@ end;
 {$ENDREGION 'Support classes'}
 
 {$REGION 'Utilities'}
+
+procedure RaiseGdipError(const Status: TGPStatus);
+begin
+  raise EGdipError.Create(Status);
+end;
+
 procedure GdipCheck(const Status: TGPStatus); inline;
 begin
   if (Status <> Ok) then
-    raise EGdipError.Create(Status);
+    RaiseGdipError(Status);
 end;
 
 function GdipHandle(const GpObject: IGdiplusBase): GpNativeHandle;

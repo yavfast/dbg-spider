@@ -10,8 +10,8 @@ type
     FProcessID: TProcessId;
     FDbgOptions: TDbgOptions;
 
-    FDbgInfoLoaded: Boolean;
-    FDbgStarted: Boolean;
+    FDbgInfoLoaded: LongBool;
+    FDbgStarted: LongBool;
 
     procedure OnChangeDebugState(Sender: TObject);
     procedure OnEndDebug(Sender: TObject);
@@ -25,7 +25,7 @@ type
     procedure OnDebugString(Sender: TObject; ThreadId: TThreadId; Data: POutputDebugStringInfo);
     procedure OnUnknownException(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
     procedure OnUnknownBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord);
-    procedure OnBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord; BreakPointIndex: Integer; var ReleaseBreakpoint: Boolean);
+    procedure OnBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord; BreakPointIndex: Integer; var ReleaseBreakpoint: LongBool);
     procedure OnDbgLog(Sender: TObject; ThreadId: TThreadId; const Data: String);
     procedure OnProgress(const Action: String; const Progress: Integer);
 
@@ -91,7 +91,7 @@ end;
 
 procedure TDebugerThread.Execute;
 var
-  FRun: Boolean;
+  FRun: LongBool;
   FError: String;
 begin
   NameThreadForDebugging(AnsiString(ClassName), ThreadId);
@@ -265,7 +265,7 @@ begin
 end;
 
 procedure TDebugerThread.OnBreakPoint(Sender: TObject; ThreadId: TThreadId; ExceptionRecord: PExceptionRecord;
-      BreakPointIndex: Integer; var ReleaseBreakpoint: Boolean);
+      BreakPointIndex: Integer; var ReleaseBreakpoint: LongBool);
 begin
   if BreakPointIndex = -1 then
     _AC.Log(dltThreadEvent, 'Perfomance ThreadID: %d', [ThreadId]);
@@ -339,7 +339,7 @@ const
   FormatStrUnknownDLL = 'Load unknown Dll at instance $%p handle %d';
 var
   DllName: AnsiString;
-  IsUnicodeData: Boolean;
+  IsUnicodeData: LongBool;
 begin
   //FDebuger.ContinueStatus := DBG_EXCEPTION_NOT_HANDLED;
   IsUnicodeData := Data^.fUnicode = 1;

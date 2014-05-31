@@ -14,7 +14,7 @@ Type
     FDelphiVersion: TDelphiVersion;
     FSystemUnits: TStringList;
     FAddressInfoList: TAddressInfoList;
-    FIsHookSet: Boolean;
+    FIsHookSet: LongBool;
 
     Function ImageBase: Cardinal;
     Function ImageNames(const Index: TNameId): AnsiString;
@@ -39,11 +39,11 @@ Type
 
     Function FindUnitByAddr(const Addr: Pointer): TUnitInfo;
     Function FindFuncByAddr(const UnitInfo: TUnitInfo; const Addr: Pointer): TFuncInfo;
-    Function FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
+    Function FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: LongBool = False): TLineInfo;
 
     function CustomVariantAsString(const Value: Variant): String;
     procedure SetDelphiVersion(const Value: TDelphiVersion);
-    procedure InitCodeTracking(const SetBP: Boolean);
+    procedure InitCodeTracking(const SetBP: LongBool);
     procedure FillSystemUnits;
 
   Protected
@@ -51,14 +51,14 @@ Type
 
     function GetDBGFileName(const FileName: String): String;
 
-    Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean; Override;
+    Function DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: LongBool): LongBool; Override;
   Public
     Constructor Create;
     Destructor Destroy; Override;
 
     Function GetNameById(const Idx: TNameId): AnsiString; override;
 
-    function ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String; override;
+    function ParseUnitName(UnitInfo: TUnitInfo; const WithExt: LongBool = True): String; override;
     function ParseFuncName(FuncInfo: TFuncInfo): String; override;
     function ParseTypeName(TypeInfo: TTypeInfo): String; override;
     function ParseConstName(ConstInfo: TConstInfo): String; override;
@@ -67,46 +67,46 @@ Type
 
     Procedure ClearDebugInfo; Override;
 
-    Function HasDebugInfo(Const FileName: String): Boolean; Override;
+    Function HasDebugInfo(Const FileName: String): LongBool; Override;
 
     Function GetAddrInfo(Var Addr: Pointer; Const FileName: String; Line: Cardinal): TFindResult; Override;
 
-    Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo; GetPrevLine: Boolean): TFindResult; Override;
+    Function GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo; GetPrevLine: LongBool): TFindResult; Override;
 
     Function MakeFuncDbgFullName(Const ClassName, MethodName: AnsiString): AnsiString; Override;
     Function MakeFuncShortName(Const MethodName: AnsiString): AnsiString; Override;
     Function MakeFuncNativeName(Const MethodName: AnsiString): AnsiString; Override;
 
-    Function Evaluate(BriefMode: Boolean; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String; Override;
+    Function Evaluate(BriefMode: LongBool; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String; Override;
     Function EvaluateVariable(VarInfo: TVarInfo): Variant; override;
 
     Function VarValueAsString(const Value: Variant): String; override;
 
     function GetSystemUnit: TUnitInfo;
     function GetMemoryManager: TVarInfo; virtual;
-    function SetDebugHook(const Value: Byte): Boolean;
+    function SetDebugHook(const Value: Byte): LongBool;
 
     procedure SetMemoryManagerBreakpoints; Override;
     procedure ResetMemoryManagerBreakpoints; Override;
 
     Procedure InitDebugHook; Override;
 
-    Function CheckAddr(Const Addr: Pointer): Boolean; Override;
+    Function CheckAddr(Const Addr: Pointer): LongBool; Override;
 
     Function GetClassName(ObjectPtr: Pointer): String; Override;
     Function GetExceptionName(ExceptionRecord: PExceptionRecord): String; Override;
     Function GetExceptionMessage(ExceptionRecord: PExceptionRecord; Const ThreadId: TThreadId): String; Override;
     Function GetExceptionAddress(ExceptionRecord: PExceptionRecord): Pointer; Override;
     Function GetExceptionFrame(ExceptionRecord: PExceptionRecord): Pointer; Override;
-    Function IsDelphiException(ExceptionRecord: PExceptionRecord): Boolean;
-    Function IsDelphiTraceException(ExceptionRecord: PExceptionRecord): Boolean;
-    Function CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: Boolean): Boolean; Override;
-    Function CheckSystemFile(Const FileName: String): Boolean; Override;
+    Function IsDelphiException(ExceptionRecord: PExceptionRecord): LongBool;
+    Function IsDelphiTraceException(ExceptionRecord: PExceptionRecord): LongBool;
+    Function CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: LongBool): LongBool; Override;
+    Function CheckSystemFile(Const FileName: String): LongBool; Override;
 
     property DelphiVersion: TDelphiVersion read FDelphiVersion write SetDelphiVersion;
   End;
 
-Function HasDelphiDebugInfo(Const AFileName: String): Boolean;
+Function HasDelphiDebugInfo(Const AFileName: String): LongBool;
 
 Implementation
 
@@ -126,7 +126,7 @@ Const
   cNonDelphiException = DWORD($0EEDFAE4);
   cDelphiExitFinally = DWORD($0EEDFAE5);
 
-Function HasDelphiDebugInfo(Const AFileName: String): Boolean;
+Function HasDelphiDebugInfo(Const AFileName: String): LongBool;
 Var
   PEImage: TJclPeBorTD32Image;
 Begin
@@ -293,7 +293,7 @@ Begin
   LoadSourceModules(Result, Module);
 End;
 
-function TDelphiDebugInfo.ParseUnitName(UnitInfo: TUnitInfo; const WithExt: Boolean = True): String;
+function TDelphiDebugInfo.ParseUnitName(UnitInfo: TUnitInfo; const WithExt: LongBool = True): String;
 begin
   Result := inherited;
 end;
@@ -1265,7 +1265,7 @@ Begin
   End;
 End;
 
-function TDelphiDebugInfo.SetDebugHook(const Value: Byte): Boolean;
+function TDelphiDebugInfo.SetDebugHook(const Value: Byte): LongBool;
 Const
   _DebugHook: AnsiString = 'DebugHook';
 
@@ -1453,7 +1453,7 @@ Begin
   Result := Nil;
 End;
 
-Function TDelphiDebugInfo.FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: Boolean = False): TLineInfo;
+Function TDelphiDebugInfo.FindLineByAddr(const FuncInfo: TFuncInfo; const Addr: Pointer; const GetPrevLine: LongBool = False): TLineInfo;
 Var
   LineIdx: Integer;
   //SearchLine: TLineInfo;
@@ -1496,7 +1496,7 @@ Begin
   Result := Nil;
 End;
 
-Function TDelphiDebugInfo.DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: Boolean): Boolean;
+Function TDelphiDebugInfo.DoReadDebugInfo(Const FileName: String; ALoadDebugInfo: LongBool): LongBool;
 Var
   I: Integer;
   Module: TJclTD32ModuleInfo;
@@ -1547,12 +1547,12 @@ Begin
   End;
 End;
 
-Function TDelphiDebugInfo.CheckAddr(Const Addr: Pointer): Boolean;
+Function TDelphiDebugInfo.CheckAddr(Const Addr: Pointer): LongBool;
 Begin
   Result := FindUnitByAddr(Addr) <> Nil;
 End;
 
-Function TDelphiDebugInfo.CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: Boolean): Boolean;
+Function TDelphiDebugInfo.CheckDebugException(ExceptionRecord: PExceptionRecord; Var IsTraceException: LongBool): LongBool;
 Begin
   Result := Inherited CheckDebugException(ExceptionRecord, IsTraceException);
 
@@ -1563,7 +1563,7 @@ Begin
   End;
 End;
 
-Function TDelphiDebugInfo.CheckSystemFile(Const FileName: String): Boolean;
+Function TDelphiDebugInfo.CheckSystemFile(Const FileName: String): LongBool;
 Var
   FN: String;
   SL: TStringArray;
@@ -1605,7 +1605,7 @@ Begin
   Inherited ClearDebugInfo;
 End;
 
-Function TDelphiDebugInfo.HasDebugInfo(Const FileName: String): Boolean;
+Function TDelphiDebugInfo.HasDebugInfo(Const FileName: String): LongBool;
 Begin
   Result := HasDelphiDebugInfo(FileName);
 End;
@@ -1614,7 +1614,7 @@ Function TDelphiDebugInfo.GetAddrInfo(Var Addr: Pointer; Const FileName: String;
 Var
   Index: Integer;
   UnitInfo: TUnitInfo;
-  ExactMatch: Boolean;
+  ExactMatch: LongBool;
 Begin
   Result := slNotFound;
 
@@ -1745,7 +1745,7 @@ Begin
 End;
 
 Function TDelphiDebugInfo.GetLineInfo(const Addr: Pointer; Var UnitInfo: TUnitInfo; Var FuncInfo: TFuncInfo; Var LineInfo: TLineInfo;
-  GetPrevLine: Boolean): TFindResult;
+  GetPrevLine: LongBool): TFindResult;
 var
   AddressInfo: PAddressInfo;
 Begin
@@ -1864,7 +1864,7 @@ Begin
   End;
 End;
 
-Function TDelphiDebugInfo.Evaluate(BriefMode: Boolean; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String;
+Function TDelphiDebugInfo.Evaluate(BriefMode: LongBool; Const Expression: String; Const TimeOut: Cardinal = INFINITE): String;
 // Var
 // Parser   : TExprParser;
 // UnitInfo : TUnitInfo;
@@ -1914,7 +1914,7 @@ begin
     Result := '';
 end;
 
-procedure TDelphiDebugInfo.InitCodeTracking(const SetBP: Boolean);
+procedure TDelphiDebugInfo.InitCodeTracking(const SetBP: LongBool);
 var
   FuncCount: Integer;
   I, J: Integer;
@@ -2026,7 +2026,7 @@ begin
   *)
 end;
 
-Function TDelphiDebugInfo.IsDelphiException(ExceptionRecord: PExceptionRecord): Boolean;
+Function TDelphiDebugInfo.IsDelphiException(ExceptionRecord: PExceptionRecord): LongBool;
 Begin
   Case ExceptionRecord^.ExceptionCode Of
     cDelphiUnhandled, cDelphiTerminate, cDelphiException, cDelphiReRaise, cDelphiExcept, cDelphiFinally, cNonDelphiException, cDelphiExitFinally:
@@ -2036,7 +2036,7 @@ Begin
   End;
 End;
 
-Function TDelphiDebugInfo.IsDelphiTraceException(ExceptionRecord: PExceptionRecord): Boolean;
+Function TDelphiDebugInfo.IsDelphiTraceException(ExceptionRecord: PExceptionRecord): LongBool;
 Begin
   Case ExceptionRecord^.ExceptionCode Of
     // cDelphiUnhandled,

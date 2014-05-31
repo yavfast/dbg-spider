@@ -2,7 +2,7 @@ unit DbgHookUtils;
 
 interface
 
-uses SysUtils, DbgHookTypes;
+uses System.SysUtils, DbgHookTypes;
 
 type
   TJclAddr = NativeInt;
@@ -17,10 +17,10 @@ procedure _Log(const Msg: AnsiString); overload;
 procedure _Log(const Msg: String); overload;
 procedure _LogException(E: Exception; const Code: Integer = 0);
 
-function IsValidCodeAddr(const Addr: Pointer): Boolean;
-function IsValidAddr(const Addr: Pointer): Boolean;
+function IsValidCodeAddr(const Addr: Pointer): LongBool;
+function IsValidAddr(const Addr: Pointer): LongBool;
 
-function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): Boolean;
+function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): LongBool;
 
 function GetFramePointer: Pointer; assembler;
 function GetStackTop: TJclAddr; assembler;
@@ -69,7 +69,7 @@ end;
 threadvar
   _Buf: TMemoryBasicInformation;
 
-function IsValidCodeAddr(const Addr: Pointer): Boolean;
+function IsValidCodeAddr(const Addr: Pointer): LongBool;
 const
   _PAGE_CODE = DWORD(PAGE_EXECUTE Or PAGE_EXECUTE_READ or PAGE_EXECUTE_READWRITE Or PAGE_EXECUTE_WRITECOPY);
 var
@@ -83,7 +83,7 @@ Begin
   Result := (VirtualQuery(Addr, Buf^, SizeOf(TMemoryBasicInformation)) <> 0) And ((Buf^.Protect And _PAGE_CODE) <> 0);
 end;
 
-function IsValidAddr(const Addr: Pointer): Boolean;
+function IsValidAddr(const Addr: Pointer): LongBool;
 var
   Buf: PMemoryBasicInformation;
 Begin
@@ -96,7 +96,7 @@ Begin
   Result := (VirtualQuery(Addr, Buf^, SizeOf(TMemoryBasicInformation)) <> 0);
 end;
 
-function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): Boolean;
+function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): LongBool;
 var
   ClassTypePtr: Pointer;
   ClassNamePtr: Pointer;
