@@ -44,6 +44,7 @@ var
   ThRec: PThreadRec;
   Th: TObject;
   ParentId: Cardinal;
+  //Ptr: Pointer;
   ThName: ShortString;
 begin
   Th := Nil;
@@ -57,6 +58,7 @@ begin
     begin
       ThRec := PThreadRec(Parameter);
       try
+        // TODO: Validate Ptr
         Th := TObject(ThRec^.Parameter);
         ThName := PShortString(PPointer(Integer(Th.ClassType) + vmtClassName)^)^;
       except
