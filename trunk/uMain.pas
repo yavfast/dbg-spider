@@ -3345,7 +3345,9 @@ end;
 procedure TMainForm.ProgressAction(const Action: String; const Progress: Integer);
 begin
   pbProgress.Visible := (Progress > 0);
-  pbProgress.Position := Progress;
+
+  if pbProgress.Position <> Progress then
+    pbProgress.Position := Progress;
 
   if Action <> '' then
     lbStatusAction.Caption := Action
