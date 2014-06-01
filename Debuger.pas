@@ -2922,6 +2922,8 @@ begin
     // передан указатель на PAnsiChar. Читаем до первого #0
     // TODO: Переписать это на чтение буфером
     repeat
+      C := #0;
+
       if not ReadData(AddrPrt, @C, SizeOf(AnsiChar)) then Exit;
 
       if C <> #0 then

@@ -2835,8 +2835,7 @@ resourcestring
 
 {$REGION 'Enex Internal Enumerables'}
 type
-  Collections = record
-  private type
+  //private type
     TWhereSequence<T> = class sealed(TSequence<T>)
     private type
       TEnumerator = class(TForwardingEnumerator<T>)
@@ -3265,7 +3264,7 @@ type
       destructor Destroy(); override;
       function GetEnumerator(): IEnumerator<TPair<TKey, TValue>>; override;
     end;
-  end;
+//  end;
 
 {$ENDREGION}
 
@@ -3367,7 +3366,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('ASelector');
 
   { Create an intermediate collection that will lazy-create the actual stuff }
-  Result := Collections.TGroupBySequence<T, TKey>.Create(FInstance, ASelector);
+  Result := TGroupBySequence<T, TKey>.Create(FInstance, ASelector);
 end;
 
 {$IF CompilerVersion > 21}
@@ -3788,7 +3787,7 @@ begin
   if (not Assigned(LTypeInfo)) or (LTypeInfo^.Kind <> tkClass) then
     ExceptionHelper.Throw_TypeNotAClassError(GetTypeName(LTypeInfo));
 
-  Result := Collections.TSelectClassSequence<TObject, TOut>.Create(FInstance, TRules<TOut>.Default);
+  Result := TSelectClassSequence<TObject, TOut>.Create(FInstance, TRules<TOut>.Default);
 end;
 
 function TEnexExtOps<T>.Select<TOut>(const ASelector: TFunc<T, TOut>): ISequence<TOut>;
@@ -3804,7 +3803,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('ASelector');
 
   { Create a new Enex collection }
-  Result := Collections.TSelectSequence<T, TOut>.Create(FInstance, ASelector, ARules);
+  Result := TSelectSequence<T, TOut>.Create(FInstance, ASelector, ARules);
 end;
 
 { TAbstractContainer }
@@ -4084,7 +4083,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('ACollection');
 
   { Create concatenation iterator }
-  Result := Collections.TConcatSequence<T>.Create(Self, ACollection);
+  Result := TConcatSequence<T>.Create(Self, ACollection);
 end;
 
 constructor TSequence<T>.Create(const ARules: TRules<T>);
@@ -4100,7 +4099,7 @@ end;
 function TSequence<T>.Distinct: ISequence<T>;
 begin
   { Create a new enumerator }
-  Result := Collections.TDistinctSequence<T>.Create(Self);
+  Result := TDistinctSequence<T>.Create(Self);
 end;
 
 function TSequence<T>.ElementAt(const AIndex: NativeInt): T;
@@ -4211,7 +4210,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('ACollection');
 
   { Create concatenation iterator }
-  Result := Collections.TExclusionSequence<T>.Create(Self, ACollection);
+  Result := TExclusionSequence<T>.Create(Self, ACollection);
 end;
 
 class function TSequence<T>.Fill(const AElement: T; const ACount: NativeInt; const ARules: TRules<T>): ISequence<T>;
@@ -4221,7 +4220,7 @@ begin
     ExceptionHelper.Throw_ArgumentOutOfRangeError('ACount');
 
   { Create an collection }
-  Result := Collections.TFillSequence<T>.Create(AElement, ACount, ARules);
+  Result := TFillSequence<T>.Create(AElement, ACount, ARules);
 end;
 
 class function TSequence<T>.Fill(const AElement: T; const ACount: NativeInt): ISequence<T>;
@@ -4474,7 +4473,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('ACollection');
 
   { Create concatenation iterator }
-  Result := Collections.TIntersectionSequence<T>.Create(Self, ACollection);
+  Result := TIntersectionSequence<T>.Create(Self, ACollection);
 end;
 
 function TSequence<T>.Last: T;
@@ -4589,7 +4588,7 @@ begin
     ExceptionHelper.Throw_ArgumentOutOfRangeError('AEnd');
 
   { Create a new Enex collection }
-  Result := Collections.TRangeSequence<T>.Create(Self, AStart, AEnd);
+  Result := TRangeSequence<T>.Create(Self, AStart, AEnd);
 end;
 
 function TSequence<T>.Reversed: ISequence<T>;
@@ -4612,7 +4611,7 @@ begin
     ExceptionHelper.Throw_ArgumentOutOfRangeError('ACount');
 
   { Create a new Enex collection }
-  Result := Collections.TSkipSequence<T>.Create(Self, ACount);
+  Result := TSkipSequence<T>.Create(Self, ACount);
 end;
 
 function TSequence<T>.SkipWhile(const APredicate: TPredicate<T>): ISequence<T>;
@@ -4622,7 +4621,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
   { Create a new Enex collection }
-  Result := Collections.TSkipWhileSequence<T>.Create(Self, APredicate);
+  Result := TSkipWhileSequence<T>.Create(Self, APredicate);
 end;
 
 function TSequence<T>.SkipWhileBetween(const ALower, AHigher: T): ISequence<T>;
@@ -4739,7 +4738,7 @@ begin
     ExceptionHelper.Throw_ArgumentOutOfRangeError('ACount');
 
   { Create a new Enex collection }
-  Result := Collections.TTakeSequence<T>.Create(Self, ACount);
+  Result := TTakeSequence<T>.Create(Self, ACount);
 end;
 
 function TSequence<T>.TakeWhile(const APredicate: TPredicate<T>): ISequence<T>;
@@ -4749,7 +4748,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
   { Create a new Enex collection }
-  Result := Collections.TTakeWhileSequence<T>.Create(Self, APredicate);
+  Result := TTakeWhileSequence<T>.Create(Self, APredicate);
 end;
 
 function TSequence<T>.TakeWhileBetween(const ALower, AHigher: T): ISequence<T>;
@@ -4854,7 +4853,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('ACollection');
 
   { Create concatenation iterator }
-  Result := Collections.TUnionSequence<T>.Create(Self, ACollection);
+  Result := TUnionSequence<T>.Create(Self, ACollection);
 end;
 
 function TSequence<T>.Where(const APredicate: TPredicate<T>): ISequence<T>;
@@ -4864,7 +4863,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
   { Create a new Enex collection }
-  Result := Collections.TWhereSequence<T>.Create(Self, APredicate, False); // Don't invert the result
+  Result := TWhereSequence<T>.Create(Self, APredicate, False); // Don't invert the result
 end;
 
 function TSequence<T>.WhereBetween(const ALower, AHigher: T): ISequence<T>;
@@ -4956,7 +4955,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
   { Create a new Enex collection }
-  Result := Collections.TWhereSequence<T>.Create(Self, APredicate, True); // Invert the result
+  Result := TWhereSequence<T>.Create(Self, APredicate, True); // Invert the result
 end;
 
 { TCollection<T> }
@@ -5084,12 +5083,12 @@ end;
 
 function TAssociation<TKey, TValue>.DistinctByKeys: IAssociation<TKey, TValue>;
 begin
-  Result := Collections.TAssociativeDistinctByKeysSequence<TKey, TValue>.Create(Self);
+  Result := TAssociativeDistinctByKeysSequence<TKey, TValue>.Create(Self);
 end;
 
 function TAssociation<TKey, TValue>.DistinctByValues: IAssociation<TKey, TValue>;
 begin
-  Result := Collections.TAssociativeDistinctByValuesSequence<TKey, TValue>.Create(Self);
+  Result := TAssociativeDistinctByValuesSequence<TKey, TValue>.Create(Self);
 end;
 
 function TAssociation<TKey, TValue>.GetKeyHashCode(const AValue: TKey): NativeInt;
@@ -5291,13 +5290,13 @@ end;
 function TAssociation<TKey, TValue>.SelectKeys: ISequence<TKey>;
 begin
   { Create a selector }
-  Result := Collections.TSelectKeysSequence<TKey, TValue>.Create(Self);
+  Result := TSelectKeysSequence<TKey, TValue>.Create(Self);
 end;
 
 function TAssociation<TKey, TValue>.SelectValues: ISequence<TValue>;
 begin
   { Create a selector }
-  Result := Collections.TSelectValuesSequence<TKey, TValue>.Create(Self);
+  Result := TSelectValuesSequence<TKey, TValue>.Create(Self);
 end;
 
 function TAssociation<TKey, TValue>.ToDictionary: IDictionary<TKey, TValue>;
@@ -5341,7 +5340,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
   { Create a new Enex collection }
-  Result := Collections.TAssociativeWhereSequence<TKey, TValue>.Create(Self, APredicate, False); // Don't invert the result
+  Result := TAssociativeWhereSequence<TKey, TValue>.Create(Self, APredicate, False); // Don't invert the result
 end;
 
 function TAssociation<TKey, TValue>.WhereKeyBetween(const ALower,
@@ -5439,7 +5438,7 @@ begin
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
 
   { Create a new Enex collection }
-  Result := Collections.TAssociativeWhereSequence<TKey, TValue>.Create(Self, APredicate, True); // Invert the result
+  Result := TAssociativeWhereSequence<TKey, TValue>.Create(Self, APredicate, True); // Invert the result
 end;
 
 function TAssociation<TKey, TValue>.WhereValueBetween(
@@ -5602,7 +5601,7 @@ end;
 
 { Collections.TWhereSequence<T> }
 
-constructor Collections.TWhereSequence<T>.Create(const ACollection: TSequence<T>;
+constructor TWhereSequence<T>.Create(const ACollection: TSequence<T>;
   const APredicate: TPredicate<T>; const AInvertResult: Boolean);
 begin
   { Check arguments }
@@ -5622,7 +5621,7 @@ begin
   FInvertResult := AInvertResult;
 end;
 
-destructor Collections.TWhereSequence<T>.Destroy;
+destructor TWhereSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -5630,23 +5629,23 @@ begin
   inherited;
 end;
 
-function Collections.TWhereSequence<T>.GetEnumerator: IEnumerator<T>;
+function TWhereSequence<T>.GetEnumerator: IEnumerator<T>;
 begin
   { Generate an enumerator }
   Result := TEnumerator.Create(Self, FCollection.GetEnumerator());
 end;
 
-{ Collections.TWhereSequence<T>.TEnumerator }
+{ TWhereSequence<T>.TEnumerator }
 
-function Collections.TWhereSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
+function TWhereSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
 begin
   with TWhereSequence<T>(Owner) do
     Result := FPredicate(AValue) xor FInvertResult;
 end;
 
-{ Collections.TSelectSequence<T, TOut> }
+{ TSelectSequence<T, TOut> }
 
-constructor Collections.TSelectSequence<T, TOut>.Create(const ACollection: TSequence<T>;
+constructor TSelectSequence<T, TOut>.Create(const ACollection: TSequence<T>;
   const ASelector: TFunc<T, TOut>; const ARules: TRules<TOut>);
 begin
   { Check arguments }
@@ -5666,7 +5665,7 @@ begin
   FSelector := ASelector;
 end;
 
-destructor Collections.TSelectSequence<T, TOut>.Destroy;
+destructor TSelectSequence<T, TOut>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -5674,27 +5673,27 @@ begin
   inherited;
 end;
 
-function Collections.TSelectSequence<T, TOut>.ElementAt(const AIndex: NativeInt): TOut;
+function TSelectSequence<T, TOut>.ElementAt(const AIndex: NativeInt): TOut;
 begin
   Result := FSelector(FCollection.ElementAt(AIndex));
 end;
 
-function Collections.TSelectSequence<T, TOut>.Empty: Boolean;
+function TSelectSequence<T, TOut>.Empty: Boolean;
 begin
   Result := FCollection.Empty;
 end;
 
-function Collections.TSelectSequence<T, TOut>.First: TOut;
+function TSelectSequence<T, TOut>.First: TOut;
 begin
   Result := FSelector(FCollection.First);
 end;
 
-function Collections.TSelectSequence<T, TOut>.GetCount: NativeInt;
+function TSelectSequence<T, TOut>.GetCount: NativeInt;
 begin
   Result := FCollection.GetCount();
 end;
 
-function Collections.TSelectSequence<T, TOut>.GetEnumerator: IEnumerator<TOut>;
+function TSelectSequence<T, TOut>.GetEnumerator: IEnumerator<TOut>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -5703,19 +5702,19 @@ begin
   Result := LEnumerator;
 end;
 
-function Collections.TSelectSequence<T, TOut>.Last: TOut;
+function TSelectSequence<T, TOut>.Last: TOut;
 begin
   Result := FSelector(FCollection.Last);
 end;
 
-function Collections.TSelectSequence<T, TOut>.Single: TOut;
+function TSelectSequence<T, TOut>.Single: TOut;
 begin
   Result := FSelector(FCollection.Single);
 end;
 
-{ Collections.TSelectSequence<T, TOut>.TEnumerator }
+{ TSelectSequence<T, TOut>.TEnumerator }
 
-function Collections.TSelectSequence<T, TOut>.TEnumerator.TryMoveNext(out ACurrent: TOut): Boolean;
+function TSelectSequence<T, TOut>.TEnumerator.TryMoveNext(out ACurrent: TOut): Boolean;
 begin
   { Next iteration }
   Result := FInEnumerator.MoveNext();
@@ -5730,17 +5729,17 @@ end;
 
 { TConcatSequence<T> }
 
-function Collections.TConcatSequence<T>.All(const APredicate: TPredicate<T>): Boolean;
+function TConcatSequence<T>.All(const APredicate: TPredicate<T>): Boolean;
 begin
   Result := FCollection1.All(APredicate) and FCollection2.All(APredicate);
 end;
 
-function Collections.TConcatSequence<T>.Any(const APredicate: TPredicate<T>): Boolean;
+function TConcatSequence<T>.Any(const APredicate: TPredicate<T>): Boolean;
 begin
   Result := FCollection1.Any(APredicate) or FCollection2.Any(APredicate);
 end;
 
-constructor Collections.TConcatSequence<T>.Create(
+constructor TConcatSequence<T>.Create(
   const ACollection1: TSequence<T>; const ACollection2: ISequence<T>);
 begin
   { Check arguments }
@@ -5760,7 +5759,7 @@ begin
   FCollection2 := ACollection2;
 end;
 
-destructor Collections.TConcatSequence<T>.Destroy;
+destructor TConcatSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection1, false);
@@ -5768,17 +5767,17 @@ begin
   inherited;
 end;
 
-function Collections.TConcatSequence<T>.Empty: Boolean;
+function TConcatSequence<T>.Empty: Boolean;
 begin
   Result := (GetCount = 0);
 end;
 
-function Collections.TConcatSequence<T>.GetCount: NativeInt;
+function TConcatSequence<T>.GetCount: NativeInt;
 begin
   Result := FCollection1.GetCount() + FCollection2.GetCount();
 end;
 
-function Collections.TConcatSequence<T>.GetEnumerator: IEnumerator<T>;
+function TConcatSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -5788,9 +5787,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TConcatSequence<T>.TEnumerator }
+{ TConcatSequence<T>.TEnumerator }
 
-function Collections.TConcatSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
+function TConcatSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
 begin
   if Assigned(FInEnumerator1) then
   begin
@@ -5814,9 +5813,9 @@ begin
     ACurrent := FInEnumerator2.Current;
 end;
 
-{ Collections.TUnionSequence<T> }
+{ TUnionSequence<T> }
 
-constructor Collections.TUnionSequence<T>.Create(
+constructor TUnionSequence<T>.Create(
   const ACollection1: TSequence<T>; const ACollection2: ISequence<T>);
 begin
   { Check arguments }
@@ -5836,7 +5835,7 @@ begin
   FCollection2 := ACollection2;
 end;
 
-destructor Collections.TUnionSequence<T>.Destroy;
+destructor TUnionSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection1, false);
@@ -5844,7 +5843,7 @@ begin
   inherited;
 end;
 
-function Collections.TUnionSequence<T>.GetEnumerator: IEnumerator<T>;
+function TUnionSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -5855,9 +5854,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TUnionSequence<T>.TEnumerator }
+{ TUnionSequence<T>.TEnumerator }
 
-function Collections.TUnionSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
+function TUnionSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
 begin
   if Assigned(FInEnumerator1) then
   begin
@@ -5897,9 +5896,9 @@ begin
   end;
 end;
 
-{ Collections.TExclusionSequence<T> }
+{ TExclusionSequence<T> }
 
-constructor Collections.TExclusionSequence<T>.Create(
+constructor TExclusionSequence<T>.Create(
   const ACollection1: TSequence<T>; const ACollection2: ISequence<T>);
 begin
   { Check arguments }
@@ -5919,7 +5918,7 @@ begin
   FCollection2 := ACollection2;
 end;
 
-destructor Collections.TExclusionSequence<T>.Destroy;
+destructor TExclusionSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection1, false);
@@ -5927,7 +5926,7 @@ begin
   inherited;
 end;
 
-function Collections.TExclusionSequence<T>.GetEnumerator: IEnumerator<T>;
+function TExclusionSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -5938,9 +5937,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TExclusionSequence<T>.TEnumerator }
+{ TExclusionSequence<T>.TEnumerator }
 
-function Collections.TExclusionSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
+function TExclusionSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
 begin
   { Load the first enum into the set }
   if Assigned(FInEnumerator2) then
@@ -5970,9 +5969,9 @@ begin
   end;
 end;
 
-{ Collections.TIntersectionSequence<T> }
+{ TIntersectionSequence<T> }
 
-constructor Collections.TIntersectionSequence<T>.Create(
+constructor TIntersectionSequence<T>.Create(
   const ACollection1: TSequence<T>; const ACollection2: ISequence<T>);
 begin
   { Check arguments }
@@ -5992,7 +5991,7 @@ begin
   FCollection2 := ACollection2;
 end;
 
-destructor Collections.TIntersectionSequence<T>.Destroy;
+destructor TIntersectionSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection1, false);
@@ -6000,7 +5999,7 @@ begin
   inherited;
 end;
 
-function Collections.TIntersectionSequence<T>.GetEnumerator: IEnumerator<T>;
+function TIntersectionSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6013,7 +6012,7 @@ end;
 
 { Collection.TIntersectionSequence<T>.TEnumerator }
 
-function Collections.TIntersectionSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
+function TIntersectionSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
 begin
   { Load the first enum into the set }
   if Assigned(FInEnumerator1) then
@@ -6043,9 +6042,9 @@ begin
   end;
 end;
 
-{ Collections.TRangeSequence<T> }
+{ TRangeSequence<T> }
 
-constructor Collections.TRangeSequence<T>.Create(const ACollection: TSequence<T>; const AStart, AEnd: NativeInt);
+constructor TRangeSequence<T>.Create(const ACollection: TSequence<T>; const AStart, AEnd: NativeInt);
 begin
   if AStart < 0 then
     ExceptionHelper.Throw_ArgumentOutOfRangeError('AStart');
@@ -6068,7 +6067,7 @@ begin
   FEnd := AEnd;
 end;
 
-destructor Collections.TRangeSequence<T>.Destroy;
+destructor TRangeSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6076,7 +6075,7 @@ begin
   inherited;
 end;
 
-function Collections.TRangeSequence<T>.GetEnumerator: IEnumerator<T>;
+function TRangeSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6085,9 +6084,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TRangeSequence<T>.TEnumerator }
+{ TRangeSequence<T>.TEnumerator }
 
-function Collections.TRangeSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
+function TRangeSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
 begin
   with TRangeSequence<T>(Owner) do
   begin
@@ -6114,9 +6113,9 @@ begin
   end;
 end;
 
-{ Collections.TDistinctSequence<T> }
+{ TDistinctSequence<T> }
 
-constructor Collections.TDistinctSequence<T>.Create(const ACollection: TSequence<T>);
+constructor TDistinctSequence<T>.Create(const ACollection: TSequence<T>);
 begin
   { Check arguments }
   if not Assigned(ACollection) then
@@ -6129,7 +6128,7 @@ begin
   KeepObjectAlive(FCollection);
 end;
 
-destructor Collections.TDistinctSequence<T>.Destroy;
+destructor TDistinctSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6137,7 +6136,7 @@ begin
   inherited;
 end;
 
-function Collections.TDistinctSequence<T>.GetEnumerator: IEnumerator<T>;
+function TDistinctSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6146,9 +6145,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TDistinctSequence<T>.TEnumerator }
+{ TDistinctSequence<T>.TEnumerator }
 
-function Collections.TDistinctSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
+function TDistinctSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
 begin
   Result := not FSet.Contains(AValue);
   if Result then
@@ -6157,7 +6156,7 @@ end;
 
 { TFillSequence<T> }
 
-function Collections.TFillSequence<T>.Aggregate(const AAggregator: TFunc<T, T, T>): T;
+function TFillSequence<T>.Aggregate(const AAggregator: TFunc<T, T, T>): T;
 var
   I: NativeInt;
 begin
@@ -6179,7 +6178,7 @@ begin
   end;
 end;
 
-function Collections.TFillSequence<T>.AggregateOrDefault(const AAggregator: TFunc<T, T, T>; const ADefault: T): T;
+function TFillSequence<T>.AggregateOrDefault(const AAggregator: TFunc<T, T, T>; const ADefault: T): T;
 var
   I: NativeInt;
 begin
@@ -6201,7 +6200,7 @@ begin
   end;
 end;
 
-function Collections.TFillSequence<T>.All(const APredicate: TPredicate<T>): Boolean;
+function TFillSequence<T>.All(const APredicate: TPredicate<T>): Boolean;
 begin
   if not Assigned(APredicate) then
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
@@ -6212,7 +6211,7 @@ begin
     Result := true;
 end;
 
-function Collections.TFillSequence<T>.Any(const APredicate: TPredicate<T>): Boolean;
+function TFillSequence<T>.Any(const APredicate: TPredicate<T>): Boolean;
 begin
   if not Assigned(APredicate) then
     ExceptionHelper.Throw_ArgumentNilError('APredicate');
@@ -6223,7 +6222,7 @@ begin
     Result := false;
 end;
 
-constructor Collections.TFillSequence<T>.Create(const AElement: T; const ACount: NativeInt; const ARules: TRules<T>);
+constructor TFillSequence<T>.Create(const AElement: T; const ACount: NativeInt; const ARules: TRules<T>);
 begin
   if ACount <= 0 then
     ExceptionHelper.Throw_ArgumentOutOfRangeError('ACount');
@@ -6236,7 +6235,7 @@ begin
   FElement := AElement;
 end;
 
-function Collections.TFillSequence<T>.ElementAt(const AIndex: NativeInt): T;
+function TFillSequence<T>.ElementAt(const AIndex: NativeInt): T;
 begin
   if (AIndex = FCount) or (AIndex < 0) then
     ExceptionHelper.Throw_ArgumentOutOfRangeError('AIndex');
@@ -6244,7 +6243,7 @@ begin
   Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.ElementAtOrDefault(const AIndex: NativeInt; const ADefault: T): T;
+function TFillSequence<T>.ElementAtOrDefault(const AIndex: NativeInt; const ADefault: T): T;
 begin
   if (AIndex = FCount) or (AIndex < 0) then
     Result := ADefault
@@ -6252,12 +6251,12 @@ begin
     Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.Empty: Boolean;
+function TFillSequence<T>.Empty: Boolean;
 begin
   Result := (FCount = 0);
 end;
 
-function Collections.TFillSequence<T>.EqualsTo(const ACollection: IEnumerable<T>): Boolean;
+function TFillSequence<T>.EqualsTo(const ACollection: IEnumerable<T>): Boolean;
 var
   LValue: T;
   I: NativeInt;
@@ -6281,7 +6280,7 @@ begin
   Result := true;
 end;
 
-function Collections.TFillSequence<T>.First: T;
+function TFillSequence<T>.First: T;
 begin
   if FCount = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
@@ -6289,7 +6288,7 @@ begin
   Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.FirstOrDefault(const ADefault: T): T;
+function TFillSequence<T>.FirstOrDefault(const ADefault: T): T;
 begin
   if FCount = 0 then
     Result := ADefault
@@ -6297,12 +6296,12 @@ begin
     Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.GetCount: NativeInt;
+function TFillSequence<T>.GetCount: NativeInt;
 begin
   Result := FCount;
 end;
 
-function Collections.TFillSequence<T>.GetEnumerator: IEnumerator<T>;
+function TFillSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6311,7 +6310,7 @@ begin
   Result := LEnumerator;
 end;
 
-function Collections.TFillSequence<T>.Last: T;
+function TFillSequence<T>.Last: T;
 begin
   if FCount = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
@@ -6319,7 +6318,7 @@ begin
   Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.LastOrDefault(const ADefault: T): T;
+function TFillSequence<T>.LastOrDefault(const ADefault: T): T;
 begin
   if FCount = 0 then
     Result := ADefault
@@ -6327,7 +6326,7 @@ begin
     Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.Max: T;
+function TFillSequence<T>.Max: T;
 begin
   if FCount = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
@@ -6335,7 +6334,7 @@ begin
   Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.Min: T;
+function TFillSequence<T>.Min: T;
 begin
   if FCount = 0 then
     ExceptionHelper.Throw_CollectionEmptyError();
@@ -6343,7 +6342,7 @@ begin
   Result := FElement;
 end;
 
-function Collections.TFillSequence<T>.Single: T;
+function TFillSequence<T>.Single: T;
 begin
   if FCount = 0 then
     ExceptionHelper.Throw_CollectionEmptyError()
@@ -6353,7 +6352,7 @@ begin
     ExceptionHelper.Throw_CollectionHasMoreThanOneElement();
 end;
 
-function Collections.TFillSequence<T>.SingleOrDefault(const ADefault: T): T;
+function TFillSequence<T>.SingleOrDefault(const ADefault: T): T;
 begin
   if FCount = 0 then
     Result := ADefault
@@ -6363,9 +6362,9 @@ begin
     ExceptionHelper.Throw_CollectionHasMoreThanOneElement();
 end;
 
-{ Collections.TFillSequence<T>.TEnumerator }
+{ TFillSequence<T>.TEnumerator }
 
-function Collections.TFillSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
+function TFillSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
 begin
   { Check for end }
   Result := FRemaining > 0;
@@ -6377,9 +6376,9 @@ begin
   end;
 end;
 
-{ Collections.TSkipSequence<T> }
+{ TSkipSequence<T> }
 
-constructor Collections.TSkipSequence<T>.Create(const ACollection: TSequence<T>; const ACount: NativeInt);
+constructor TSkipSequence<T>.Create(const ACollection: TSequence<T>; const ACount: NativeInt);
 begin
   { Check parameters }
   if ACount <= 0 then
@@ -6399,7 +6398,7 @@ begin
   FCount := ACount;
 end;
 
-destructor Collections.TSkipSequence<T>.Destroy;
+destructor TSkipSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6407,7 +6406,7 @@ begin
   inherited;
 end;
 
-function Collections.TSkipSequence<T>.GetEnumerator: IEnumerator<T>;
+function TSkipSequence<T>.GetEnumerator: IEnumerator<T>;
 begin
   { Create the enumerator }
   Result := TEnumerator.Create(Self, FCollection.GetEnumerator());
@@ -6415,15 +6414,15 @@ end;
 
 { TSkipSequence<T>.TEnumerator }
 
-function Collections.TSkipSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
+function TSkipSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
 begin
   Result := FCurrentIndex >= TSkipSequence<T>(Owner).FCount;
   Inc(FCurrentIndex);
 end;
 
-{ Collections.TTakeSequence<T> }
+{ TTakeSequence<T> }
 
-constructor Collections.TTakeSequence<T>.Create(const ACollection: TSequence<T>; const ACount: NativeInt);
+constructor TTakeSequence<T>.Create(const ACollection: TSequence<T>; const ACount: NativeInt);
 begin
   { Check parameters }
   if ACount <= 0 then
@@ -6443,7 +6442,7 @@ begin
   FCount := ACount;
 end;
 
-destructor Collections.TTakeSequence<T>.Destroy;
+destructor TTakeSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6451,23 +6450,23 @@ begin
   inherited;
 end;
 
-function Collections.TTakeSequence<T>.GetEnumerator: IEnumerator<T>;
+function TTakeSequence<T>.GetEnumerator: IEnumerator<T>;
 begin
   { Create the enumerator }
   Result := TEnumerator.Create(Self, FCollection.GetEnumerator());
 end;
 
-{ Collections.TTakeSequence<T>.TEnumerator }
+{ TTakeSequence<T>.TEnumerator }
 
-function Collections.TTakeSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
+function TTakeSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
 begin
   Result := FCurrentIndex < TSkipSequence<T>(Owner).FCount;
   Inc(FCurrentIndex);
 end;
 
-{ Collections.TTakeWhileSequence<T> }
+{ TTakeWhileSequence<T> }
 
-constructor Collections.TTakeWhileSequence<T>.Create(const ACollection: TSequence<T>; const APredicate: TPredicate<T>);
+constructor TTakeWhileSequence<T>.Create(const ACollection: TSequence<T>; const APredicate: TPredicate<T>);
 begin
   { Check arguments }
   if not Assigned(APredicate) then
@@ -6486,7 +6485,7 @@ begin
   FPredicate := APredicate;
 end;
 
-destructor Collections.TTakeWhileSequence<T>.Destroy;
+destructor TTakeWhileSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6494,7 +6493,7 @@ begin
   inherited;
 end;
 
-function Collections.TTakeWhileSequence<T>.GetEnumerator: IEnumerator<T>;
+function TTakeWhileSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6503,9 +6502,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TTakeWhileSequence<T>.TEnumerator }
+{ TTakeWhileSequence<T>.TEnumerator }
 
-function Collections.TTakeWhileSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
+function TTakeWhileSequence<T>.TEnumerator.TryMoveNext(out ACurrent: T): Boolean;
 begin
   Result := FInEnumerator.MoveNext() and
      TTakeWhileSequence<T>(Owner).FPredicate(FInEnumerator.Current);
@@ -6514,9 +6513,9 @@ begin
     ACurrent := FInEnumerator.Current;
 end;
 
-{ Collections.TSkipWhileSequence<T> }
+{ TSkipWhileSequence<T> }
 
-constructor Collections.TSkipWhileSequence<T>.Create(const ACollection: TSequence<T>; const APredicate: TPredicate<T>);
+constructor TSkipWhileSequence<T>.Create(const ACollection: TSequence<T>; const APredicate: TPredicate<T>);
 begin
   { Check arguments }
   if not Assigned(APredicate) then
@@ -6535,7 +6534,7 @@ begin
   FPredicate := APredicate;
 end;
 
-destructor Collections.TSkipWhileSequence<T>.Destroy;
+destructor TSkipWhileSequence<T>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6543,7 +6542,7 @@ begin
   inherited;
 end;
 
-function Collections.TSkipWhileSequence<T>.GetEnumerator: IEnumerator<T>;
+function TSkipWhileSequence<T>.GetEnumerator: IEnumerator<T>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6551,9 +6550,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TSkipWhileSequence<T>.TEnumerator }
+{ TSkipWhileSequence<T>.TEnumerator }
 
-function Collections.TSkipWhileSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
+function TSkipWhileSequence<T>.TEnumerator.AcceptValue(const AValue: T): Boolean;
 begin
   if not FStarted then
   begin
@@ -6566,9 +6565,9 @@ begin
   Result := True;
 end;
 
-{ Collections.TGroupBySequence<T, TGroup> }
+{ TGroupBySequence<T, TGroup> }
 
-constructor Collections.TGroupBySequence<T, TBy>.Create(
+constructor TGroupBySequence<T, TBy>.Create(
   const ACollection: TSequence<T>; const ASelector: TFunc<T, TBy>);
 begin
   { Check arguments }
@@ -6588,7 +6587,7 @@ begin
   FSelector := ASelector;
 end;
 
-destructor Collections.TGroupBySequence<T, TBy>.Destroy;
+destructor TGroupBySequence<T, TBy>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6596,7 +6595,7 @@ begin
   inherited;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.GetEnumerator: IEnumerator<IGrouping<TBy, T>>;
+function TGroupBySequence<T, TBy>.GetEnumerator: IEnumerator<IGrouping<TBy, T>>;
 var
   LDictionary: IDictionary<TBy, IList<T>>;
   LList: IList<T>;
@@ -6651,111 +6650,111 @@ begin
   Result := LOutList.GetEnumerator();
 end;
 
-{ Collections.TGroupBySequence<T, TKey>.TEnexGroupingCollection }
+{ TGroupBySequence<T, TKey>.TEnexGroupingCollection }
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.Aggregate(const AAggregator: TFunc<T, T, T>): T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.Aggregate(const AAggregator: TFunc<T, T, T>): T;
 begin
   Result := FList.Aggregate(AAggregator);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.AggregateOrDefault(const AAggregator: TFunc<T, T, T>; const ADefault: T): T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.AggregateOrDefault(const AAggregator: TFunc<T, T, T>; const ADefault: T): T;
 begin
   Result := FList.AggregateOrDefault(AAggregator, ADefault);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.All(const APredicate: TPredicate<T>): Boolean;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.All(const APredicate: TPredicate<T>): Boolean;
 begin
   Result := FList.All(APredicate);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.Any(const APredicate: TPredicate<T>): Boolean;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.Any(const APredicate: TPredicate<T>): Boolean;
 begin
   Result := FList.Any(APredicate);
 end;
 
-procedure Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.CopyTo(var AArray: array of T; const AStartIndex: NativeInt);
+procedure TGroupBySequence<T, TBy>.TEnexGroupingCollection.CopyTo(var AArray: array of T; const AStartIndex: NativeInt);
 begin
   FList.CopyTo(AArray, AStartIndex);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.ElementAt(const AIndex: NativeInt): T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.ElementAt(const AIndex: NativeInt): T;
 begin
   Result := FList.ElementAt(AIndex);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.ElementAtOrDefault(const AIndex: NativeInt; const ADefault: T): T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.ElementAtOrDefault(const AIndex: NativeInt; const ADefault: T): T;
 begin
   Result := FList.ElementAtOrDefault(AIndex, ADefault);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.Empty: Boolean;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.Empty: Boolean;
 begin
   Result := FList.Empty;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.EqualsTo(const ACollection: IEnumerable<T>): Boolean;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.EqualsTo(const ACollection: IEnumerable<T>): Boolean;
 begin
   Result := FList.EqualsTo(ACollection);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.First: T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.First: T;
 begin
   Result := FList.First;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.FirstOrDefault(const ADefault: T): T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.FirstOrDefault(const ADefault: T): T;
 begin
   Result := FList.FirstOrDefault(ADefault);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.GetCount: NativeInt;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.GetCount: NativeInt;
 begin
   Result := FList.Count;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.GetEnumerator: IEnumerator<T>;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.GetEnumerator: IEnumerator<T>;
 begin
   Result := FList.GetEnumerator();
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.GetKey: TBy;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.GetKey: TBy;
 begin
   Result := FBy;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.Last: T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.Last: T;
 begin
   Result := FList.Last;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.LastOrDefault(const ADefault: T): T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.LastOrDefault(const ADefault: T): T;
 begin
   Result := FList.LastOrDefault(ADefault);
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.Max: T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.Max: T;
 begin
   Result := FList.Max;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.Min: T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.Min: T;
 begin
   Result := FList.Min;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.Single: T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.Single: T;
 begin
   Result := FList.Single;
 end;
 
-function Collections.TGroupBySequence<T, TBy>.TEnexGroupingCollection.SingleOrDefault(const ADefault: T): T;
+function TGroupBySequence<T, TBy>.TEnexGroupingCollection.SingleOrDefault(const ADefault: T): T;
 begin
   Result := FList.SingleOrDefault(ADefault);
 end;
 
 { TSelectKeysSequence<TKey, TValue> }
 
-constructor Collections.TSelectKeysSequence<TKey, TValue>.Create(const ACollection: TAssociation<TKey, TValue>);
+constructor TSelectKeysSequence<TKey, TValue>.Create(const ACollection: TAssociation<TKey, TValue>);
 begin
   { Check arguments }
   if not Assigned(ACollection) then
@@ -6769,7 +6768,7 @@ begin
   KeepObjectAlive(FCollection);
 end;
 
-destructor Collections.TSelectKeysSequence<TKey, TValue>.Destroy;
+destructor TSelectKeysSequence<TKey, TValue>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6777,12 +6776,12 @@ begin
   inherited;
 end;
 
-function Collections.TSelectKeysSequence<TKey, TValue>.GetCount: NativeInt;
+function TSelectKeysSequence<TKey, TValue>.GetCount: NativeInt;
 begin
   Result := FCollection.GetCount();
 end;
 
-function Collections.TSelectKeysSequence<TKey, TValue>.GetEnumerator: IEnumerator<TKey>;
+function TSelectKeysSequence<TKey, TValue>.GetEnumerator: IEnumerator<TKey>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6791,9 +6790,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TSelectKeysSequence<TKey, TValue>.TEnumerator }
+{ TSelectKeysSequence<TKey, TValue>.TEnumerator }
 
-function Collections.TSelectKeysSequence<TKey, TValue>.TEnumerator.TryMoveNext(out ACurrent: TKey): Boolean;
+function TSelectKeysSequence<TKey, TValue>.TEnumerator.TryMoveNext(out ACurrent: TKey): Boolean;
 begin
   { Next iteration }
   Result := FInEnumerator.MoveNext();
@@ -6801,9 +6800,9 @@ begin
     ACurrent := FInEnumerator.Current.Key;
 end;
 
-{ Collections.TSelectValuesSequence<TKey, TValue> }
+{ TSelectValuesSequence<TKey, TValue> }
 
-constructor Collections.TSelectValuesSequence<TKey, TValue>.Create(
+constructor TSelectValuesSequence<TKey, TValue>.Create(
   const ACollection: TAssociation<TKey, TValue>);
 begin
   { Check arguments }
@@ -6819,7 +6818,7 @@ begin
   KeepObjectAlive(FCollection);
 end;
 
-destructor Collections.TSelectValuesSequence<TKey, TValue>.Destroy;
+destructor TSelectValuesSequence<TKey, TValue>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6827,12 +6826,12 @@ begin
   inherited;
 end;
 
-function Collections.TSelectValuesSequence<TKey, TValue>.GetCount: NativeInt;
+function TSelectValuesSequence<TKey, TValue>.GetCount: NativeInt;
 begin
   Result := FCollection.GetCount();
 end;
 
-function Collections.TSelectValuesSequence<TKey, TValue>.GetEnumerator: IEnumerator<TValue>;
+function TSelectValuesSequence<TKey, TValue>.GetEnumerator: IEnumerator<TValue>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6841,9 +6840,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TSelectValuesSequence<TKey, TValue>.TEnumerator }
+{ TSelectValuesSequence<TKey, TValue>.TEnumerator }
 
-function Collections.TSelectValuesSequence<TKey, TValue>.TEnumerator.TryMoveNext(out ACurrent: TValue): Boolean;
+function TSelectValuesSequence<TKey, TValue>.TEnumerator.TryMoveNext(out ACurrent: TValue): Boolean;
 begin
   { Next iteration }
   Result := FInEnumerator.MoveNext();
@@ -6851,9 +6850,9 @@ begin
     ACurrent := FInEnumerator.Current.Value;
 end;
 
-{ Collections.TAssociativeWhereSequence<TKey, TValue> }
+{ TAssociativeWhereSequence<TKey, TValue> }
 
-constructor Collections.TAssociativeWhereSequence<TKey, TValue>.Create(
+constructor TAssociativeWhereSequence<TKey, TValue>.Create(
   const ACollection: TAssociation<TKey, TValue>;
   const APredicate: TPredicate<TKey, TValue>;
   const AInvertResult: Boolean);
@@ -6877,7 +6876,7 @@ begin
   FInvertResult := AInvertResult;
 end;
 
-destructor Collections.TAssociativeWhereSequence<TKey, TValue>.Destroy;
+destructor TAssociativeWhereSequence<TKey, TValue>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6885,23 +6884,23 @@ begin
   inherited;
 end;
 
-function Collections.TAssociativeWhereSequence<TKey, TValue>.GetEnumerator: IEnumerator<TPair<TKey, TValue>>;
+function TAssociativeWhereSequence<TKey, TValue>.GetEnumerator: IEnumerator<TPair<TKey, TValue>>;
 begin
   { Generate an enumerator }
   Result := TEnumerator.Create(Self, FCollection.GetEnumerator());
 end;
 
-{ Collections.TAssociativeWhereSequence<TKey, TValue>.TEnumerator }
+{ TAssociativeWhereSequence<TKey, TValue>.TEnumerator }
 
-function Collections.TAssociativeWhereSequence<TKey, TValue>.TEnumerator.AcceptValue(const AValue: TPair<TKey, TValue>): Boolean;
+function TAssociativeWhereSequence<TKey, TValue>.TEnumerator.AcceptValue(const AValue: TPair<TKey, TValue>): Boolean;
 begin
   with TAssociativeWhereSequence<TKey, TValue>(Owner) do
     Result := FPredicate(AValue.Key, AValue.Value) xor FInvertResult;
 end;
 
-{ Collections.TAssociativeDistinctByKeysSequence<TKey, TValue> }
+{ TAssociativeDistinctByKeysSequence<TKey, TValue> }
 
-constructor Collections.TAssociativeDistinctByKeysSequence<TKey, TValue>.Create(
+constructor TAssociativeDistinctByKeysSequence<TKey, TValue>.Create(
   const ACollection: TAssociation<TKey, TValue>);
 begin
   { Check arguments }
@@ -6916,7 +6915,7 @@ begin
   KeepObjectAlive(FCollection);
 end;
 
-destructor Collections.TAssociativeDistinctByKeysSequence<TKey, TValue>.Destroy;
+destructor TAssociativeDistinctByKeysSequence<TKey, TValue>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6924,7 +6923,7 @@ begin
   inherited;
 end;
 
-function Collections.TAssociativeDistinctByKeysSequence<TKey, TValue>.GetEnumerator: IEnumerator<TPair<TKey, TValue>>;
+function TAssociativeDistinctByKeysSequence<TKey, TValue>.GetEnumerator: IEnumerator<TPair<TKey, TValue>>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6935,7 +6934,7 @@ end;
 
 { TAssociativeDistinctByKeysSequence<TKey, TValue>.TEnumerator }
 
-function Collections.TAssociativeDistinctByKeysSequence<TKey, TValue>.TEnumerator.AcceptValue(const AValue: TPair<TKey, TValue>): Boolean;
+function TAssociativeDistinctByKeysSequence<TKey, TValue>.TEnumerator.AcceptValue(const AValue: TPair<TKey, TValue>): Boolean;
 begin
   Result := not FSet.Contains(AValue.Key);
   if Result then
@@ -6944,7 +6943,7 @@ end;
 
 { TAssociativeDistinctByValuesSequence<TKey, TValue> }
 
-constructor Collections.TAssociativeDistinctByValuesSequence<TKey, TValue>.Create(
+constructor TAssociativeDistinctByValuesSequence<TKey, TValue>.Create(
   const ACollection: TAssociation<TKey, TValue>);
 begin
   { Check arguments }
@@ -6959,7 +6958,7 @@ begin
   KeepObjectAlive(FCollection);
 end;
 
-destructor Collections.TAssociativeDistinctByValuesSequence<TKey, TValue>.Destroy;
+destructor TAssociativeDistinctByValuesSequence<TKey, TValue>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -6967,7 +6966,7 @@ begin
   inherited;
 end;
 
-function Collections.TAssociativeDistinctByValuesSequence<TKey, TValue>.GetEnumerator: IEnumerator<TPair<TKey, TValue>>;
+function TAssociativeDistinctByValuesSequence<TKey, TValue>.GetEnumerator: IEnumerator<TPair<TKey, TValue>>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -6976,18 +6975,18 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TAssociativeDistinctByValuesSequence<TKey, TValue>.TEnumerator }
+{ TAssociativeDistinctByValuesSequence<TKey, TValue>.TEnumerator }
 
-function Collections.TAssociativeDistinctByValuesSequence<TKey, TValue>.TEnumerator.AcceptValue(const AValue: TPair<TKey, TValue>): Boolean;
+function TAssociativeDistinctByValuesSequence<TKey, TValue>.TEnumerator.AcceptValue(const AValue: TPair<TKey, TValue>): Boolean;
 begin
   Result := not FSet.Contains(AValue.Value);
   if Result then
     FSet.Add(AValue.Value);
 end;
 
-{ Collections.TSelectClassSequence<T, TOut> }
+{ TSelectClassSequence<T, TOut> }
 
-constructor Collections.TSelectClassSequence<T, TOut>.Create(const ACollection: TSequence<T>; const ARules: TRules<TOut>);
+constructor TSelectClassSequence<T, TOut>.Create(const ACollection: TSequence<T>; const ARules: TRules<TOut>);
 begin
   { Check arguments }
   if not Assigned(ACollection) then
@@ -7001,7 +7000,7 @@ begin
   KeepObjectAlive(FCollection);
 end;
 
-destructor Collections.TSelectClassSequence<T, TOut>.Destroy;
+destructor TSelectClassSequence<T, TOut>.Destroy;
 begin
   { Delete the enumerable if required }
   ReleaseObject(FCollection, false);
@@ -7009,7 +7008,7 @@ begin
   inherited;
 end;
 
-function Collections.TSelectClassSequence<T, TOut>.GetEnumerator: IEnumerator<TOut>;
+function TSelectClassSequence<T, TOut>.GetEnumerator: IEnumerator<TOut>;
 var
   LEnumerator: TEnumerator;
 begin
@@ -7018,9 +7017,9 @@ begin
   Result := LEnumerator;
 end;
 
-{ Collections.TSelectClassSequence<T, TOut>.TEnumerator }
+{ TSelectClassSequence<T, TOut>.TEnumerator }
 
-function Collections.TSelectClassSequence<T, TOut>.TEnumerator.TryMoveNext(out ACurrent: TOut): Boolean;
+function TSelectClassSequence<T, TOut>.TEnumerator.TryMoveNext(out ACurrent: TOut): Boolean;
 begin
   { Iterate until given condition is met on an element }
   while True do

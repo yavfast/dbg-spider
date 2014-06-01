@@ -701,7 +701,7 @@ type
     ObjectTypeMax = ObjectTypeGraphics,
     {$ELSE}
     ObjectTypeMax = ObjectTypeCustomLineCap,
-    {$ENDIF}
+    {$IFEND}
     ObjectTypeMin = ObjectTypeBrush);
 
 function ObjectTypeIsValid(const ObjectType: TGPObjectType): Boolean; inline;
@@ -17032,7 +17032,7 @@ var
   StartupInput: TGdiplusStartupInputEx;
   {$ELSE}
   StartupInput: TGdiplusStartupInput;
-  {$ENDIF}
+  {$IFEND}
   GdiplusToken: ULONG;
 
 procedure Initialize;

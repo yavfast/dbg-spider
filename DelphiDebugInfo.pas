@@ -1647,7 +1647,10 @@ Var
   I: Integer;
 begin
   Result := '';
+  ObjTypePtr := Nil;
   if gvDebuger.ReadData(ObjectPtr, @ObjTypePtr, SizeOf(Pointer)) then
+  begin
+    ClassNamePtr := Nil;
     if gvDebuger.ReadData(IncPointer(ObjTypePtr, vmtClassName), @ClassNamePtr, SizeOf(Pointer)) then
     begin
       ClassName := gvDebuger.ReadStringP(IncPointer(ClassNamePtr, SizeOf(Byte)));
@@ -1657,6 +1660,7 @@ begin
 
       Result := String(ClassName);
     end;
+  end;
 end;
 
 function TDelphiDebugInfo.GetDBGFileName(const FileName: String): String;
@@ -1712,20 +1716,15 @@ Function TDelphiDebugInfo.GetExceptionMessage(ExceptionRecord: PExceptionRecord;
 Var
   ExceptTypeAddr: Pointer;
   ExceptMsgPtr: Pointer;
-  //ExceptMsg: String;
 Begin
   Result := '';
   If ExceptionRecord^.ExceptionCode = cDelphiException Then
   Begin
     ExceptTypeAddr := Pointer(ExceptionRecord^.ExceptionInformation[1]);
 
-    // ExceptMsgPtr   := ReadAddressValue(Debuger, TPointer(@Exception(ExceptTypeAddr).Message));
-    // ExceptMsg      := String(ReadAnsiStringValue(Debuger, ExceptMsgPtr, False));
-
+    ExceptMsgPtr := nil;
     if gvDebuger.ReadData(@Exception(ExceptTypeAddr).Message, @ExceptMsgPtr, SizeOf(Pointer)) then
       Result := gvDebuger.ReadStringW(ExceptMsgPtr);
-
-    // Result := Format('Exception [%s] at $%p: %s', [GetExceptionName(ExceptionRecord), GetExceptionAddress(ExceptionRecord), ExceptMsg]);
   End
   Else
     Result := Inherited GetExceptionMessage(ExceptionRecord, ThreadId);

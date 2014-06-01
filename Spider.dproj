@@ -3,7 +3,7 @@
         <ProjectGuid>{99256B98-0F1D-4707-BC25-85850B6A52B7}</ProjectGuid>
         <ProjectVersion>14.6</ProjectVersion>
         <MainSource>Spider.dpr</MainSource>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
@@ -78,6 +78,7 @@
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
+        <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
         <Icon_MainIcon>..\dbg-spider_\Spider_Icon.ico</Icon_MainIcon>
     </PropertyGroup>
@@ -176,7 +177,7 @@
                     <VersionInfo Name="MajorVer">0</VersionInfo>
                     <VersionInfo Name="MinorVer">1</VersionInfo>
                     <VersionInfo Name="Release">1</VersionInfo>
-                    <VersionInfo Name="Build">329</VersionInfo>
+                    <VersionInfo Name="Build">331</VersionInfo>
                     <VersionInfo Name="Debug">False</VersionInfo>
                     <VersionInfo Name="PreRelease">False</VersionInfo>
                     <VersionInfo Name="Special">False</VersionInfo>
@@ -188,7 +189,7 @@
                 <VersionInfoKeys>
                     <VersionInfoKeys Name="CompanyName"/>
                     <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="FileVersion">0.1.1.329</VersionInfoKeys>
+                    <VersionInfoKeys Name="FileVersion">0.1.1.331</VersionInfoKeys>
                     <VersionInfoKeys Name="InternalName"/>
                     <VersionInfoKeys Name="LegalCopyright"/>
                     <VersionInfoKeys Name="LegalTrademarks"/>

@@ -1010,40 +1010,53 @@ Begin
       If (EIP = StackEntry.FuncInfo.Address) Then
       Begin
         StackEntry.EBP := nil;
-        gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
-        AddStackEntry(ESPV, EBP);
+        ESPV := Nil;
+        if gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV)) then
+          AddStackEntry(ESPV, EBP);
       End
       Else
       Begin
         StackEntry.EBP := nil;
-        gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
-        // push ebp; move ebp, esp;
-        If (ESPV = EBP) Then
-        Begin
-          gvDebuger.ReadData(Pointer(Cardinal(ESP) + 4), @ESPV, SizeOf(ESPV));
-          AddStackEntry(ESPV, EBP);
-        End;
+        ESPV := Nil;
+        if gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV)) then
+        begin
+          // push ebp; move ebp, esp;
+          If (ESPV = EBP) Then
+          Begin
+            gvDebuger.ReadData(Pointer(Cardinal(ESP) + 4), @ESPV, SizeOf(ESPV));
+            AddStackEntry(ESPV, EBP);
+          End;
+        end;
       End;
     End
     Else If (StackEntry.LineInfo = TLineInfo(StackEntry.FuncInfo.Lines[StackEntry.FuncInfo.Lines.Count - 1])) Then
     Begin
       StackEntry.EBP := nil;
+      ESPV := Nil;
+      OpCode := $00;
       // ret;
-      gvDebuger.ReadData(EIP, @OpCode, SizeOf(Byte));
-      If OpCode In [$C3, $CB] Then
-      Begin
-        gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV));
-        AddStackEntry(ESPV, EBP);
-      End;
+      if gvDebuger.ReadData(EIP, @OpCode, SizeOf(Byte)) then
+        If OpCode In [$C3, $CB] Then
+        Begin
+          if gvDebuger.ReadData(ESP, @ESPV, SizeOf(ESPV)) then
+            AddStackEntry(ESPV, EBP);
+        End;
     End;
   End;
 
   While IsValidAddr(EBP) Do
   Begin
-    gvDebuger.ReadData(IncPointer(EBP, 4), @EIP, SizeOf(Pointer));
-    gvDebuger.ReadData(EBP, @EBP, SizeOf(Pointer));
-
-    If AddStackEntry(EIP, EBP) = Nil Then
+    if gvDebuger.ReadData(IncPointer(EBP, 4), @EIP, SizeOf(Pointer)) then
+    begin
+      if gvDebuger.ReadData(EBP, @EBP, SizeOf(Pointer)) then
+      begin
+        If AddStackEntry(EIP, EBP) = Nil Then
+          Break;
+      end
+      else
+        Break;
+    end
+    else
       Break;
   End;
 End;
