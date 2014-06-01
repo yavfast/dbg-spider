@@ -379,6 +379,8 @@ Type
     FDebugInfoLoaded: LongBool;
 
     FDebugInfoProgressCallback: TDebugInfoProgressCallback;
+    FLastProgressAction: String;
+    FLastProgress: Integer;
 
     function GetDirs(const SourceType: TUnitType): TDbgSourceDirs;
     procedure ClearDirs;
@@ -517,6 +519,9 @@ Begin
   FDebugInfoType := '';
 
   FDebugInfoProgressCallback := Nil;
+  FLastProgressAction := '';
+  FLastProgress := 0;
+
   FUseShortNames := True;
 
   FMemoryManagerInfo := TMemoryManagerInfo.Create;
@@ -545,8 +550,14 @@ End;
 
 procedure TDebugInfo.DoProgress(const Action: String; const Progress: Integer);
 begin
-  if Assigned(FDebugInfoProgressCallback) then
-    FDebugInfoProgressCallback(Action, Progress);
+  if (FLastProgressAction <> Action) or (FLastProgress <> Progress) then
+  begin
+    FLastProgressAction := Action;
+    FLastProgress := Progress;
+
+    if Assigned(FDebugInfoProgressCallback) then
+      FDebugInfoProgressCallback(Action, Progress);
+  end;
 end;
 
 procedure TDebugInfo.AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: LongBool);
