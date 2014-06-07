@@ -111,6 +111,7 @@ type
     procedure ProcessMemoryInfoBuf(const Buf: PDbgMemInfoListBuf);
 
     procedure UpdateMemoryInfoObjectTypes;
+    procedure UpdateMemoryInfoObjectTypesOfThread(ThData: PThreadData);
     function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): LongBool;
 
     procedure LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
@@ -2200,7 +2201,8 @@ begin
       ThData := GetThreadData(SyncObjsInfo^.ThreadId, True);
 
     if ThData = Nil then
-      RaiseDebugCoreException();
+      Continue; // TODO: В каких-то случаях сюда заходит
+      //RaiseDebugCoreException();
 
     case SyncObjsInfo^.SyncObjsType of
       soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection, soSendMessage:
@@ -3019,7 +3021,7 @@ begin
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(ThData, ptStop);
 
-    UpdateMemoryInfoObjectTypes;
+    UpdateMemoryInfoObjectTypesOfThread(ThData);
   end;
 end;
 
@@ -3926,26 +3928,13 @@ procedure TDebuger.UpdateMemoryInfoObjectTypes;
 var
   Idx: Integer;
   ThData: PThreadData;
-  GetMemInfo: TGetMemInfoList;
-  GetMemInfoItem: TGetMemInfoItem;
 begin
   Idx := 0;
   repeat
     ThData := GetThreadDataByIdx(Idx);
     if ThData <> Nil then
     begin
-      GetMemInfo := ThData^.DbgGetMemInfo;
-      if GetMemInfo.Count > 0 then
-      begin
-        GetMemInfo.LockForRead;
-        try
-          for GetMemInfoItem in GetMemInfo do
-            GetMemInfoItem.Value.CheckObjectType;
-        finally
-          GetMemInfo.UnLockForRead;
-        end;
-      end;
-
+      UpdateMemoryInfoObjectTypesOfThread(ThData);
       Inc(Idx);
     end;
   until ThData = Nil;
@@ -3959,6 +3948,24 @@ begin
       GetMemInfoItem.Value^.ObjectType := GetMemInfoItem.Value^.GetObjectType(GetMemInfoItem.Key);
   end;
   *)
+end;
+
+procedure TDebuger.UpdateMemoryInfoObjectTypesOfThread(ThData: PThreadData);
+var
+  GetMemInfo: TGetMemInfoList;
+  GetMemInfoItem: TGetMemInfoItem;
+begin
+  GetMemInfo := ThData^.DbgGetMemInfo;
+  if GetMemInfo.Count > 0 then
+  begin
+    GetMemInfo.LockForRead;
+    try
+      for GetMemInfoItem in GetMemInfo do
+        GetMemInfoItem.Value.CheckObjectType;
+    finally
+      GetMemInfo.UnLockForRead;
+    end;
+  end;
 end;
 
 function TDebuger.UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): LongBool;
