@@ -44,7 +44,8 @@ uses
   CollectList in 'CollectList.pas',
   MapDebugInfo in 'MapDebugInfo.pas',
   JclPeImage in 'JclPeImage.pas',
-  uSharedObject in 'uSharedObject.pas';
+  uSharedObject in 'uSharedObject.pas',
+  uSQLiteDB in 'uSQLiteDB.pas';
 
 {$R *.res}
 
