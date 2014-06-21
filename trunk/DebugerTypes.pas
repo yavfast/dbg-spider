@@ -1340,9 +1340,17 @@ function TTrackUnitInfoList.GetTrackUnitInfo(const UnitInfo: TObject): TTrackUni
 begin
   if not TryGetValue(UnitInfo, Result) then
   begin
-    Result := CreateTrackUnitInfo(UnitInfo);
+    LockForWrite;
+    try
+      if not TryGetValue(UnitInfo, Result) then
+      begin
+        Result := CreateTrackUnitInfo(UnitInfo);
 
-    Add(UnitInfo, Result);
+        Add(UnitInfo, Result);
+      end;
+    finally
+      LockForWrite;
+    end;
   end;
 end;
 
