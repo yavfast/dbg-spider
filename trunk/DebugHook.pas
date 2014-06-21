@@ -4,7 +4,7 @@ interface
 
 uses Windows, DebugInfo;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo; _vmtClassName: Integer;
   MemoryCallStack: LongBool; SyncObjsHook: LongBool): LongBool;
 function UnLoadDbgHookDll(hProcess: THandle; const DllPath: String): LongBool;
 
@@ -41,6 +41,7 @@ type
     sTemp: TStrTemp;
 
     ImageBase        : Pointer;
+    vmtClassName     : Integer;
     MemoryMgr        : Pointer;
     MemoryCallStack  : LongBool;
     PerfDelta        : Cardinal;
@@ -53,7 +54,7 @@ var
   HLib: HMODULE;
 
   ExitThread: procedure(uExitCode: UINT); stdcall;
-  InitThreadHook: function(ImageBase: Pointer): LongBool; stdcall;
+  InitThreadHook: function(ImageBase: Pointer; _vmtClassName: Integer): LongBool; stdcall;
   InitSyncObjsHook: function(ImageBase: Pointer): LongBool; stdcall;
   InitMemoryHook: procedure(MemoryMgr: Pointer; MemoryCallStack: LongBool); stdcall;
   InitPerfomance: procedure(Delta: Cardinal); stdcall;
@@ -78,7 +79,7 @@ begin
       @InitMemoryHook := GetProcAddress(HLib, sDllProcMemoryHook);
       @InitPerfomance := GetProcAddress(HLib, sDllProcPerfomance);
 
-      if (@InitThreadHook <> nil) and InitThreadHook(ImageBase) then
+      if (@InitThreadHook <> nil) and InitThreadHook(ImageBase, vmtClassName) then
       begin
         // 1 - хуки на системные функции
         if SyncObjsHook and (@InitSyncObjsHook <> nil) then
@@ -101,7 +102,7 @@ begin
 end;
 procedure _DbgLoaderEnd; begin end;
 
-function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo;
+function LoadDbgHookDll(hProcess: THandle; const DllPath: String; ImageBase: Pointer; MemoryMgr: TVarInfo; _vmtClassName: Integer;
   MemoryCallStack: LongBool; SyncObjsHook: LongBool): LongBool;
 var
   DbgLoaderInfo: TDbgLoaderInfo;
@@ -110,6 +111,8 @@ begin
   ZeroMemory(@DbgLoaderInfo, SizeOf(TDbgLoaderInfo));
 
   DbgLoaderInfo.ImageBase := ImageBase;
+
+  DbgLoaderInfo.vmtClassName := _vmtClassName;
 
   if Assigned(MemoryMgr) then
     DbgLoaderInfo.MemoryMgr := Pointer(MemoryMgr.Offset)

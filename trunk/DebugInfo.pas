@@ -360,8 +360,17 @@ Type
     AllocMem: TFuncInfo;
 
     constructor Create;
-
     procedure Clear;
+  end;
+
+  TRTLInfo = class
+  public
+    vmtClassNameInfo: TConstInfo;
+
+    constructor Create;
+    procedure Clear;
+
+    function vmtClassName: Integer;
   end;
 
   TDebugInfoClass = Class Of TDebugInfo;
@@ -374,6 +383,7 @@ Type
     FUnitsByAddr: TSegmentCodeInfoList; // Sorted by Address
     FDbgLog: TDbgLog;
     FMemoryManagerInfo: TMemoryManagerInfo;
+    FRTLInfo: TRTLInfo;
 
     FExeFileName: String;
     FDebugInfoLoaded: LongBool;
@@ -444,7 +454,7 @@ Type
     Function DumpLineInformation(Const Addr: Pointer): String;
     Function GetParamsStr(FuncInfo: TFuncInfo; Const EBP: Pointer; IsTopStack: LongBool): String;
 
-    Function GetClassName(ObjectPtr: Pointer): String; Virtual; abstract;
+    Function GetClassName(Const ObjectPtr: Pointer): String; Virtual; abstract;
     Function GetExceptionName(ExceptionRecord: PExceptionRecord): String; Virtual;
     Function GetExceptionMessage(ExceptionRecord: PExceptionRecord; const ThreadID: TThreadId): String; Virtual;
     Function GetExceptionAddress(ExceptionRecord: PExceptionRecord): Pointer; Virtual;
@@ -475,6 +485,7 @@ Type
     property DebugInfoProgressCallback: TDebugInfoProgressCallback read FDebugInfoProgressCallback write FDebugInfoProgressCallback;
     property UseShortNames: LongBool read FUseShortNames write FUseShortNames;
     property MemoryManagerInfo: TMemoryManagerInfo read FMemoryManagerInfo;
+    property RTLInfo: TRTLInfo read FRTLInfo;
   End;
 
 const
@@ -525,6 +536,7 @@ Begin
   FUseShortNames := True;
 
   FMemoryManagerInfo := TMemoryManagerInfo.Create;
+  FRTLInfo := TRTLInfo.Create;
 End;
 
 Destructor TDebugInfo.Destroy;
@@ -544,6 +556,7 @@ Begin
   FreeAndNil(FDbgLog);
 
   FreeAndNil(FMemoryManagerInfo);
+  FreeAndNil(FRTLInfo);
 
   Inherited Destroy;
 End;
@@ -624,6 +637,7 @@ Begin
     FDbgLog.ClearLog;
 
     FMemoryManagerInfo.Clear;
+    FRTLInfo.Clear;
 
     FExeFileName := '';
   End;
@@ -2077,6 +2091,28 @@ begin
       Exit;
 
   Result := ustUnknown;
+end;
+
+{ TRTLInfo }
+
+procedure TRTLInfo.Clear;
+begin
+  vmtClassNameInfo := Nil;
+end;
+
+constructor TRTLInfo.Create;
+begin
+  inherited;
+
+  Clear;
+end;
+
+function TRTLInfo.vmtClassName: Integer;
+begin
+  if Assigned(vmtClassNameInfo) then
+    Result := Integer(vmtClassNameInfo.Value)
+  else
+    Result := System.vmtClassName;
 end;
 
 End.

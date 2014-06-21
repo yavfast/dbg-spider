@@ -2,7 +2,7 @@ unit DbgHookThread;
 
 interface
 
-function InitThreadHook(ImageBase: Pointer): LongBool; stdcall;
+function InitThreadHook(ImageBase: Pointer; _vmtClassName: Integer): LongBool; stdcall;
 procedure ResetThreadHook; stdcall;
 
 implementation
@@ -61,7 +61,7 @@ begin
         if IsValidAddr(ThRec) then
         begin
           Th := TObject(ThRec^.Parameter);
-          Ptr := Pointer(Integer(Th.ClassType) + vmtClassName);
+          Ptr := Pointer(Integer(Th.ClassType) + RTL_vmtClassName);
           if IsValidAddr(Ptr) then
           begin
             Ptr := PPointer(Ptr)^;
@@ -87,12 +87,15 @@ end;
 var
   _PeMapImgHooks: TJclPeMapImgHooks = Nil;
 
-function _HookThreads(ImageBase: Pointer): LongBool;
+function _HookThreads(ImageBase: Pointer; _vmtClassName: Integer): LongBool;
 var
   ProcAddr: Pointer;
 begin
   if not ThreadsHooked then
   begin
+    RTL_vmtClassName := _vmtClassName;
+    _Log(Format('vmtClassName = %d', [RTL_vmtClassName]));
+
     ThreadsLock := TDbgCriticalSection.Create;
 
     _PeMapImgHooks := TJclPeMapImgHooks.Create;
@@ -138,11 +141,11 @@ begin
   FreeAndNil(ThreadsLock);
 end;
 
-function InitThreadHook(ImageBase: Pointer): LongBool; stdcall;
+function InitThreadHook(ImageBase: Pointer; _vmtClassName: Integer): LongBool; stdcall;
 begin
   _Log('Init debug hooks...');
 
-  Result := _HookThreads(ImageBase);
+  Result := _HookThreads(ImageBase, _vmtClassName);
   if Result then
     _Log('Init thread hook - ok')
   else

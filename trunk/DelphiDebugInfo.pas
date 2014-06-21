@@ -84,6 +84,7 @@ Type
 
     function GetSystemUnit: TUnitInfo;
     function GetMemoryManager: TVarInfo; virtual;
+    function GetVMTClassName: TConstInfo;
     function SetDebugHook(const Value: Byte): LongBool;
 
     procedure SetMemoryManagerBreakpoints; Override;
@@ -93,7 +94,7 @@ Type
 
     Function CheckAddr(Const Addr: Pointer): LongBool; Override;
 
-    Function GetClassName(ObjectPtr: Pointer): String; Override;
+    Function GetClassName(Const ObjectPtr: Pointer): String; Override;
     Function GetExceptionName(ExceptionRecord: PExceptionRecord): String; Override;
     Function GetExceptionMessage(ExceptionRecord: PExceptionRecord; Const ThreadId: TThreadId): String; Override;
     Function GetExceptionAddress(ExceptionRecord: PExceptionRecord): Pointer; Override;
@@ -340,6 +341,19 @@ Begin
 
   Result := S;
 End;
+
+function TDelphiDebugInfo.GetVMTClassName: TConstInfo;
+const
+  _vmtClassName = 'vmtClassName';
+Var
+  USystem: TUnitInfo;
+begin
+  Result := Nil;
+
+  USystem := GetSystemUnit;
+  if Assigned(USystem) then
+    Result := USystem.FindConstByName(_vmtClassName, True);
+end;
 
 function TDelphiDebugInfo.GetNameById(const Idx: TNameId): AnsiString;
 begin
@@ -1637,7 +1651,7 @@ Begin
   End;
 End;
 
-function TDelphiDebugInfo.GetClassName(ObjectPtr: Pointer): String;
+function TDelphiDebugInfo.GetClassName(Const ObjectPtr: Pointer): String;
 Const
   _ValidChars = ['_', 'a' .. 'z', 'A' .. 'Z', '0' .. '9'];
 Var
@@ -1651,7 +1665,7 @@ begin
   if gvDebuger.ReadData(ObjectPtr, @ObjTypePtr, SizeOf(Pointer)) then
   begin
     ClassNamePtr := Nil;
-    if gvDebuger.ReadData(IncPointer(ObjTypePtr, vmtClassName), @ClassNamePtr, SizeOf(Pointer)) then
+    if gvDebuger.ReadData(IncPointer(ObjTypePtr, RTLInfo.vmtClassName), @ClassNamePtr, SizeOf(Pointer)) then
     begin
       ClassName := gvDebuger.ReadStringP(IncPointer(ClassNamePtr, SizeOf(Byte)));
       for I := 1 to Length(ClassName) do
@@ -1971,6 +1985,7 @@ Begin
     InitCodeTracking(gvDebuger.CodeTracking and not gvDebuger.SamplingMethod);
 
     MemoryManagerInfo.VarInfo := GetMemoryManager;
+    RTLInfo.vmtClassNameInfo := GetVMTClassName;
 
     // Установка перехвата вызовов GetMem и FreeMem
     // SetMemoryManagerBreakpoints;
@@ -1982,6 +1997,7 @@ Begin
       Format('%s\DbgHook32.dll', [ExtractFileDir(Application.ExeName)]),
       Pointer(FImage.OptionalHeader32.ImageBase),
       MemoryManagerInfo.VarInfo,
+      RTLInfo.vmtClassName,
       gvDebuger.MemoryCallStack,
       gvDebuger.SyncObjsTracking
     );
