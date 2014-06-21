@@ -20,13 +20,16 @@ procedure _LogException(E: Exception; const Code: Integer = 0);
 function IsValidCodeAddr(const Addr: Pointer): LongBool;
 function IsValidAddr(const Addr: Pointer): LongBool;
 
-function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): LongBool;
+function _GetObjClassType(const Obj: Pointer; var ObjClassName: ShortString): LongBool;
 
 function GetFramePointer: Pointer; assembler;
 function GetStackTop: TJclAddr; assembler;
 
 procedure GetCallStack(var Stack: TDbgHookInfoStack; Level: Integer); stdcall;
 procedure GetCallStackOS(var Stack: TDbgHookInfoStack; FramesToSkip: Integer); stdcall;
+
+var
+  RTL_vmtClassName: Integer = System.vmtClassName;
 
 implementation
 
@@ -96,7 +99,7 @@ Begin
   Result := (VirtualQuery(Addr, Buf^, SizeOf(TMemoryBasicInformation)) <> 0);
 end;
 
-function _GetObjClassType(Obj: Pointer; var ObjClassName: ShortString): LongBool;
+function _GetObjClassType(const Obj: Pointer; var ObjClassName: ShortString): LongBool;
 var
   ClassTypePtr: Pointer;
   ClassNamePtr: Pointer;
@@ -107,7 +110,7 @@ begin
 
     ClassTypePtr := PPointer(Obj)^;
     if not IsValidCodeAddr(ClassTypePtr) then Exit;
-    ClassNamePtr := Pointer(Integer(ClassTypePtr) + vmtClassName);
+    ClassNamePtr := Pointer(Integer(ClassTypePtr) + RTL_vmtClassName);
     if not IsValidCodeAddr(ClassNamePtr) then Exit;
     ClassNamePtr := PPointer(ClassNamePtr)^;
     if not IsValidCodeAddr(ClassNamePtr) then Exit;
