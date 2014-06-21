@@ -151,7 +151,7 @@ type
     ///  needs to grow again.</returns>
     ///  <remarks>The value of this property is greater than or equal to the amount of elements in the queue. If this value
     ///  if greater than the number of elements, it means that the queue has some extra capacity to operate upon.</remarks>
-    property Capacity: NativeInt read GetCapacity;
+    property Capacity: NativeInt read GetCapacity write SetCapacity;
 
     ///  <summary>Removes the excess capacity from the queue.</summary>
     ///  <remarks>This method can be called manually to force the queue to drop the extra capacity it might hold. For example,

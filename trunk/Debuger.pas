@@ -915,7 +915,10 @@ begin
   FSamplingLock := TCriticalSection.Create;
 
   FProcessMemoryQueue := TQueue<PDbgMemInfoListBuf>.Create(True);
+  FProcessMemoryQueue.Capacity := _MAX_MEM_INFO_BUF_COUNT + 1;
+
   FProcessSyncObjsInfoQueue := TQueue<PDbgSyncObjsInfoListBuf>.Create(True);
+  FProcessSyncObjsInfoQueue.Capacity := _MAX_SYNC_OBJS_INFO_BUF_COUNT + 1;
 
   //FDbgShareMem :=
   //  CreateFileMapping($FFFFFFFF, nil, PAGE_READWRITE, 0, 4 * 1024, 'DBG_SHARE_MEM');
@@ -3111,7 +3114,7 @@ begin
   if not MemoryCheckMode then
     Exit;
 
-  while FProcessMemoryQueue.Count > _MAX_MEM_INFO_BUF_COUNT do
+  while FProcessMemoryQueue.Count >= _MAX_MEM_INFO_BUF_COUNT do
     SwitchToThread;
 
   Buf := AllocMem(SizeOf(TDbgMemInfoListBuf));
@@ -3132,7 +3135,7 @@ begin
   if not SyncObjsTracking then
     Exit;
 
-  while FProcessSyncObjsInfoQueue.Count > _MAX_SYNC_OBJS_INFO_BUF_COUNT do
+  while FProcessSyncObjsInfoQueue.Count >= _MAX_SYNC_OBJS_INFO_BUF_COUNT do
     SwitchToThread;
 
   Buf := AllocMem(SizeOf(TDbgSyncObjsInfoListBuf));

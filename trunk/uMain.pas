@@ -2544,68 +2544,74 @@ begin
     begin
       ThData^.UpdateGetMemUnitList;
 
-      TThread.Synchronize(nil,
-        procedure
-        var
-          Data: PLinkData;
+      // ∆дем, пока не освободитс€ ресурс на чтение
+      ThData^.DbgGetMemUnitList.LockForRead;
+      try
+        TThread.Synchronize(nil,
+          procedure
+          var
+            Data: PLinkData;
 
-          TrackFuncInfoPair: TTrackFuncInfoPair;
-          TrackUnitInfoPair: TTrackUnitInfoPair;
+            TrackFuncInfoPair: TTrackFuncInfoPair;
+            TrackUnitInfoPair: TTrackUnitInfoPair;
 
-          UnitInfo: TUnitInfo;
+            UnitInfo: TUnitInfo;
 
-          BaseNode: PVirtualNode;
-          UnitNode: PVirtualNode;
-          Node: PVirtualNode;
-        begin
-          vstMemInfoFuncTree.Clear;
-          vstMemInfoFuncParents.Clear;
-          vstMemInfoFuncChilds.Clear;
+            BaseNode: PVirtualNode;
+            UnitNode: PVirtualNode;
+            Node: PVirtualNode;
+          begin
+            vstMemInfoFuncTree.Clear;
+            vstMemInfoFuncParents.Clear;
+            vstMemInfoFuncChilds.Clear;
 
-          vstMemInfoFuncTree.BeginUpdate;
-          try
-            BaseNode := vstMemInfoFuncTree.AddChild(nil);
-            Data := vstMemInfoFuncTree.GetNodeData(BaseNode);
-            Data^.ThreadData := ThData;
-            Data^.SyncNode := ThreadNode;
-            Data^.LinkType := ltThread;
-
-            ThData^.DbgGetMemUnitList.LockForRead;
+            vstMemInfoFuncTree.BeginUpdate;
             try
-              for TrackUnitInfoPair in ThData^.DbgGetMemUnitList do
-              begin
-                UnitInfo := TUnitInfo(TrackUnitInfoPair.Value.UnitInfo);
-                if UnitInfo = nil then Continue;
+              BaseNode := vstMemInfoFuncTree.AddChild(nil);
+              Data := vstMemInfoFuncTree.GetNodeData(BaseNode);
+              Data^.ThreadData := ThData;
+              Data^.SyncNode := ThreadNode;
+              Data^.LinkType := ltThread;
 
-                UnitNode := vstMemInfoFuncTree.AddChild(BaseNode);
-                Data := vstMemInfoFuncTree.GetNodeData(UnitNode);
-
-                Data^.SyncNode := ThreadNode;
-                Data^.TrackUnitInfo := TrackUnitInfoPair.Value;
-                Data^.LinkType := ltTrackUnitInfo;
-
-                for TrackFuncInfoPair in TrackUnitInfoPair.Value.FuncInfoList do
+              ThData^.DbgGetMemUnitList.LockForRead;
+              try
+                for TrackUnitInfoPair in ThData^.DbgGetMemUnitList do
                 begin
-                  Node := vstMemInfoFuncTree.AddChild(UnitNode);
-                  Data := vstMemInfoFuncTree.GetNodeData(Node);
+                  UnitInfo := TUnitInfo(TrackUnitInfoPair.Value.UnitInfo);
+                  if UnitInfo = nil then Continue;
+
+                  UnitNode := vstMemInfoFuncTree.AddChild(BaseNode);
+                  Data := vstMemInfoFuncTree.GetNodeData(UnitNode);
 
                   Data^.SyncNode := ThreadNode;
-                  Data^.TrackFuncInfo := TrackFuncInfoPair.Value;
-                  Data^.LinkType := ltTrackFuncInfo;
+                  Data^.TrackUnitInfo := TrackUnitInfoPair.Value;
+                  Data^.LinkType := ltTrackUnitInfo;
+
+                  for TrackFuncInfoPair in TrackUnitInfoPair.Value.FuncInfoList do
+                  begin
+                    Node := vstMemInfoFuncTree.AddChild(UnitNode);
+                    Data := vstMemInfoFuncTree.GetNodeData(Node);
+
+                    Data^.SyncNode := ThreadNode;
+                    Data^.TrackFuncInfo := TrackFuncInfoPair.Value;
+                    Data^.LinkType := ltTrackFuncInfo;
+                  end;
+
+                  vstMemInfoFuncTree.Expanded[UnitNode] := True;
                 end;
-
-                vstMemInfoFuncTree.Expanded[UnitNode] := True;
+              finally
+                ThData^.DbgGetMemUnitList.UnLockForRead;
               end;
-            finally
-              ThData^.DbgGetMemUnitList.UnLockForRead;
-            end;
 
-            vstMemInfoFuncTree.Expanded[BaseNode] := True;
-          finally
-            vstMemInfoFuncTree.EndUpdate;
-          end;
-        end
-      );
+              vstMemInfoFuncTree.Expanded[BaseNode] := True;
+            finally
+              vstMemInfoFuncTree.EndUpdate;
+            end;
+          end
+        );
+      finally
+        ThData^.DbgGetMemUnitList.UnLockForRead;
+      end;
     end
   );
   Th.Suspended := False;

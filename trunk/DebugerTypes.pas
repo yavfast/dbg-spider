@@ -1349,7 +1349,7 @@ begin
         Add(UnitInfo, Result);
       end;
     finally
-      LockForWrite;
+      UnLockForWrite;
     end;
   end;
 end;

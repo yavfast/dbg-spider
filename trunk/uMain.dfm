@@ -2506,7 +2506,7 @@ object MainForm: TMainForm
         Columns = <
           item
             Position = 0
-            Width = 1200
+            Width = 1204
             WideText = 'Info'
           end>
       end
@@ -2705,6 +2705,7 @@ object MainForm: TMainForm
         Caption = 'Options'
         Page = rbnpgOptions
       end>
+    TabIndex = 1
     UseCustomFrame = False
     DesignSize = (
       1212
@@ -2773,6 +2774,62 @@ object MainForm: TMainForm
       Width = 48
       Height = 24
       ActionManager = amMain
+    end
+    object rbpMain: TRibbonPage
+      Left = 0
+      Top = 50
+      Width = 1211
+      Height = 93
+      Caption = 'Menu'
+      Index = 0
+      object rbgProject: TRibbonGroup
+        Left = 4
+        Top = 3
+        Width = 197
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Project'
+        GroupIndex = 0
+      end
+      object rbgApplication: TRibbonGroup
+        Left = 203
+        Top = 3
+        Width = 122
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Application'
+        GroupIndex = 1
+        Rows = 2
+      end
+      object rbngrpDebug: TRibbonGroup
+        Left = 327
+        Top = 3
+        Width = 121
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Debug'
+        GroupIndex = 2
+      end
+      object rbngrpFeedback: TRibbonGroup
+        AlignWithMargins = True
+        Left = 616
+        Top = 3
+        Width = 61
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Feedback'
+        GroupIndex = 9
+        Rows = 1
+      end
+      object rbngrpProfilers: TRibbonGroup
+        Left = 450
+        Top = 3
+        Width = 164
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Active profilers'
+        GroupIndex = 4
+      end
     end
     object rbnpgOptions: TRibbonPage
       Left = 0
@@ -2844,62 +2901,6 @@ object MainForm: TMainForm
         ActionManager = amMain
         Caption = 'Lock tracking options'
         GroupIndex = 3
-      end
-    end
-    object rbpMain: TRibbonPage
-      Left = 0
-      Top = 50
-      Width = 1211
-      Height = 93
-      Caption = 'Menu'
-      Index = 0
-      object rbgProject: TRibbonGroup
-        Left = 4
-        Top = 3
-        Width = 197
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Project'
-        GroupIndex = 0
-      end
-      object rbgApplication: TRibbonGroup
-        Left = 203
-        Top = 3
-        Width = 122
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Application'
-        GroupIndex = 1
-        Rows = 2
-      end
-      object rbngrpDebug: TRibbonGroup
-        Left = 327
-        Top = 3
-        Width = 121
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Debug'
-        GroupIndex = 2
-      end
-      object rbngrpFeedback: TRibbonGroup
-        AlignWithMargins = True
-        Left = 616
-        Top = 3
-        Width = 61
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Feedback'
-        GroupIndex = 9
-        Rows = 1
-      end
-      object rbngrpProfilers: TRibbonGroup
-        Left = 450
-        Top = 3
-        Width = 164
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Active profilers'
-        GroupIndex = 4
       end
     end
   end
@@ -3016,7 +3017,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 44
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3040,7 +3041,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 51
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3079,7 +3080,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 59
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3119,7 +3120,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 66
-          Height = 19
+          Height = 13
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
