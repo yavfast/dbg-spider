@@ -107,7 +107,7 @@ type
     procedure SetMemoryCheckMode(const Value: LongBool);
 
     procedure LoadMemoryInfoPackEx(const MemInfoPack: Pointer; const Count: Cardinal);
-    procedure ProcessMemoryInfoQueue;
+    function ProcessMemoryInfoQueue: LongBool;
     procedure ProcessMemoryInfoBuf(const Buf: PDbgMemInfoListBuf);
 
     procedure UpdateMemoryInfoObjectTypes;
@@ -115,7 +115,7 @@ type
     function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): LongBool;
 
     procedure LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
-    procedure ProcessSyncObjsInfoQueue;
+    function ProcessSyncObjsInfoQueue: LongBool;
     procedure ProcessSyncObjsInfoBuf(const Buf: PDbgSyncObjsInfoListBuf);
 
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
@@ -381,8 +381,8 @@ uses
   System.Contnrs, System.AnsiStrings, CollectList, Collections.Base;
 
 const
-  _MAX_SYNC_OBJS_INFO_BUF_COUNT = 128;
-  _MAX_MEM_INFO_BUF_COUNT = 64;
+  _MAX_SYNC_OBJS_INFO_BUF_COUNT = 512;
+  _MAX_MEM_INFO_BUF_COUNT = 512;
 
 type
   TDbgWorkerThread = class(TThread)
@@ -2121,10 +2121,12 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessMemoryInfoQueue;
+function TDebuger.ProcessMemoryInfoQueue: LongBool;
 var
   Buf: PDbgMemInfoListBuf;
 begin
+  Result := False;
+
   if not MemoryCheckMode then
     Exit;
 
@@ -2138,6 +2140,8 @@ begin
         FreeMemory(Buf^.DbgMemInfoList);
         FreeMemory(Buf);
       end;
+
+      Result := True;
     end;
   except
     on E: Exception do ; // TODO:
@@ -2297,10 +2301,12 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessSyncObjsInfoQueue;
+function TDebuger.ProcessSyncObjsInfoQueue: LongBool;
 var
   Buf: PDbgSyncObjsInfoListBuf;
 begin
+  Result := False;
+
   if not SyncObjsTracking then
     Exit;
 
@@ -2322,6 +2328,8 @@ begin
         FreeMemory(Buf^.DbgSyncObjsInfoList);
         FreeMemory(Buf);
       end;
+
+      Result := True;
     except
       on E: Exception do ; // TODO:
     end;
@@ -4016,6 +4024,8 @@ begin
 end;
 
 procedure TDbgWorkerThread.Execute;
+var
+  F: LongBool;
 begin
   NameThreadForDebugging(ClassName);
 
@@ -4024,10 +4034,12 @@ begin
     if Assigned(gvDebuger) then
     begin
       gvDebuger.ProcessSamplingInfo;
-      gvDebuger.ProcessMemoryInfoQueue;
-      gvDebuger.ProcessSyncObjsInfoQueue;
 
-      Sleep(1);
+      F := gvDebuger.ProcessMemoryInfoQueue;
+      F := gvDebuger.ProcessSyncObjsInfoQueue or F;
+
+      if not F then
+        Sleep(10);
     end;
   end;
 end;
