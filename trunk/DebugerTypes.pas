@@ -662,7 +662,7 @@ type
     CPUElapsed: UInt64; // время использования CPU
 
     SamplingCPUTime: UInt64;
-    SamplingCount: Cardinal;
+    SamplingCount: Int64;
 
     DbgPoints: TProcessPointList;
 

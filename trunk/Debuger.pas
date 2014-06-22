@@ -5,7 +5,8 @@ interface
 uses
   WinApi.Windows, System.Classes, System.SysUtils, System.SyncObjs,
   ClassUtils, JclPeImage, JclDebug, DebugerTypes, DbgHookTypes,
-  Collections.Queues, Collections.Dictionaries;
+  Collections.Queues, Collections.Dictionaries, DbgMemoryProfiler,
+  DbgSyncObjsProfiler, DbgSamplingProfiler, DbgCodeProfiler;
 
 type
   TDebuger = class
@@ -36,39 +37,20 @@ type
     FTraceEvent: TEvent;
     FTraceCounter: Cardinal;
 
-    // Timers
-    FTimerQueue: THandle;
-    FSamplingTimer: THandle;
-    FSamplingLock: TCriticalSection;
-
     // Debug options
     FPerfomanceMode: LongBool;
 
     FExceptionCheckMode: LongBool;
     FExceptionCallStack: LongBool;
 
-    FMemoryCheckMode: LongBool;
-    FMemoryCallStack: LongBool;
-    FMemoryCheckDoubleFree: LongBool;
-
     FCodeTracking: LongBool;
     FTrackSystemUnits: LongBool;
     FSamplingMethod: LongBool;
-
-    FSyncObjsTracking: LongBool;
     // ---
 
     FMemoryBPCheckMode: LongBool;
 
     FPerfomanceCheckPtr: Pointer;
-    //FPerfomanceThreadId: TThreadId;
-
-    //FDbgShareMem: THandle;
-
-    DbgTrackBreakpoints: TTrackBreakpointList;
-    DbgTrackRETBreakpoints: TTrackRETBreakpointList;
-
-    DbgCurTrackAddress: Pointer;
 
     // внешние события
     FMainLoopFailed: TNotifyEvent;
@@ -90,8 +72,10 @@ type
     FBreakPoint: TBreakPointEvent;
     FHardwareBreakpoint: THardwareBreakpointEvent;
 
-    FProcessMemoryQueue: TQueue<PDbgMemInfoListBuf>;
-    FProcessSyncObjsInfoQueue: TQueue<PDbgSyncObjsInfoListBuf>;
+    FDbgMemoryProfiler: TDbgMemoryProfiler;
+    FDbgSyncObjsProfiler: TDbgSyncObjsProfiler;
+    FDbgSamplingProfiler: TDbgSamplingProfiler;
+    FDbgCodeProfiler: TDbgCodeProfiler;
 
     function GetExceptionEvent(const Index: TExceptionCode): TDefaultExceptionEvent;
     procedure SetExceptionEvent(const Index: TExceptionCode; const Value: TDefaultExceptionEvent);
@@ -102,21 +86,6 @@ type
     procedure SetTrackSystemUnits(const Value: LongBool);
     procedure SetExceptionCallStack(const Value: LongBool);
     procedure SetExceptionCheckMode(const Value: LongBool);
-    procedure SetMemoryCallStack(const Value: LongBool);
-    procedure SetMemoryCheckDoubleFree(const Value: LongBool);
-    procedure SetMemoryCheckMode(const Value: LongBool);
-
-    procedure LoadMemoryInfoPackEx(const MemInfoPack: Pointer; const Count: Cardinal);
-    function ProcessMemoryInfoQueue: LongBool;
-    procedure ProcessMemoryInfoBuf(const Buf: PDbgMemInfoListBuf);
-
-    procedure UpdateMemoryInfoObjectTypes;
-    procedure UpdateMemoryInfoObjectTypesOfThread(ThData: PThreadData);
-    function FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): LongBool;
-
-    procedure LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
-    function ProcessSyncObjsInfoQueue: LongBool;
-    procedure ProcessSyncObjsInfoBuf(const Buf: PDbgSyncObjsInfoListBuf);
 
     procedure DoSetBreakpoint(const Address: Pointer; var SaveByte: Byte);
     procedure DoSetBreakpointF(const Address: Pointer; var SaveByte: Byte);
@@ -127,7 +96,6 @@ type
 
     procedure SetDbgTraceState(const Value: TDbgTraceState);
     procedure SetDbgState(const Value: TDbgState);
-    procedure SetSyncObjsTracking(const Value: LongBool);
     procedure SetSamplingMethod(const Value: LongBool);
 
     function GetActive: LongBool; inline;
@@ -137,7 +105,6 @@ type
     procedure RemoveThread(const ThreadID: TThreadId);
 
     function GetThreadIndex(const ThreadID: TThreadId; const UseFinished: LongBool = False): Integer;
-    procedure GetActiveThreads(var Res: TDbgActiveThreads);
 
     function GetThreadInfoIndex(const ThreadId: TThreadId): Integer;
     function AddThreadInfo(const ThreadId: TThreadId): PThreadAdvInfo;
@@ -167,9 +134,6 @@ type
     procedure CallUnhandledBreakPointEvents(const Code: TExceptionCode; DebugEvent: PDebugEvent);
 
     procedure ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
-
-    function ProcessTrackBreakPoint(DebugEvent: PDebugEvent): LongBool;
-    function ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): LongBool;
 
     function ProcessUserBreakPoint(DebugEvent: PDebugEvent): LongBool;
 
@@ -202,19 +166,11 @@ type
     procedure ToggleMemoryBreakpoint(Index: Integer; Active: LongBool);
     procedure UpdateHardwareBreakpoints(const ThreadID: TThreadId);
 
-    procedure SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: LongBool); overload;
-    procedure SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: LongBool); overload;
-
     function PerfomancePauseDebug: LongBool;
 
     function AddThreadPointInfo(ThreadData: PThreadData; const PointType: TDbgPointType; DebugEvent: PDebugEvent = nil): LongBool;
     function AddProcessPointInfo(const PointType: TDbgPointType): LongBool;
 
-    procedure AddThreadSamplingInfo(ThreadData: PThreadData);
-    function ProcessThreadSamplingInfo(ThreadData: PThreadData): LongBool;
-    procedure ProcessThreadSamplingStack(ThreadData: PThreadData; var Stack: TDbgInfoStack);
-    procedure ProcessThreadSamplingAddress(ThData: PThreadData; FuncAddr, ParentFuncAddr: Pointer);
-    function ProcessSamplingInfo: LongBool;
   public
     constructor Create;
     destructor Destroy; override;
@@ -234,10 +190,6 @@ type
 
     // Основной цикл обработки дебажных событий
     procedure ProcessDebugEvents;
-
-    procedure InitSamplingTimer;
-    procedure ResetSamplingTimer;
-    procedure DoSamplingEvent;
 
     // чтение запись данных
     Function ProcAllocMem(const Size: Cardinal): Pointer;
@@ -269,6 +221,9 @@ type
     function GetRegisters(const ThreadID: TThreadId): TContext;
     procedure SetRegisters(const ThreadID: TThreadId; var Context: TContext);
 
+    procedure SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: LongBool); overload;
+    procedure SetSingleStepMode(ThData: PThreadData; const RestoreEIPAfterBP: LongBool); overload;
+
     Function IsValidAddr(Const Addr: Pointer): LongBool;
     Function IsValidCodeAddr(Const Addr: Pointer): LongBool;
     Function IsValidProcessCodeAddr(Const Addr: Pointer): LongBool;
@@ -281,6 +236,7 @@ type
     function CurThreadData: PThreadData;
     function GetThreadCount: Integer;
     function GetThreadDataByIdx(const Idx: Integer): PThreadData;
+    procedure GetActiveThreads(var Res: TDbgActiveThreads);
 
     // выполнение кода
     Procedure ExecuteCode(AddrPtr: Pointer; const TimeOut: Cardinal);
@@ -291,16 +247,11 @@ type
     function SetUserBreakpoint(Address: Pointer; const ThreadId: TThreadId = 0; const Description: string = ''): LongBool;
     function SetMemoryBreakpoint(Address: Pointer; Size: Cardinal; BreakOnWrite: LongBool; const Description: string): LongBool;
 
-    procedure SetTrackBreakpoint(const Address: Pointer; FuncInfo: TObject; const BPType: TTrackBreakpointType = tbTrackFunc);
-    function SetTrackRETBreakpoint(const Address: Pointer): PTrackRETBreakpoint;
+    procedure RemoveBreakpoint(const Address: Pointer; const SaveByte: Byte); overload; inline;
+    procedure SetBreakpoint(const Address: Pointer; var SaveByte: Byte); inline;
+    procedure RestoreBreakpoint(const Address: Pointer); inline;
 
-    procedure RemoveTrackBreakpoint(const Address: Pointer; const BPType: TTrackBreakpointType = tbTrackFunc);
-
-    procedure InitDbgTracking(const Capacity: Integer);
-    procedure ClearDbgTracking;
-
-    procedure RemoveBreakpoint(Index: Integer);
-
+    procedure RemoveBreakpoint(Index: Integer); overload;
     procedure ToggleBreakpoint(Index: Integer; Active: LongBool);
 
     function BreakpointCount: Integer;
@@ -358,17 +309,16 @@ type
     property ExceptionCheckMode: LongBool read FExceptionCheckMode write SetExceptionCheckMode;
     property ExceptionCallStack: LongBool read FExceptionCallStack write SetExceptionCallStack;
 
-    property MemoryCheckMode: LongBool read FMemoryCheckMode write SetMemoryCheckMode;
-    property MemoryCallStack: LongBool read FMemoryCallStack write SetMemoryCallStack;
-    property MemoryCheckDoubleFree: LongBool read FMemoryCheckDoubleFree write SetMemoryCheckDoubleFree;
-
     property CodeTracking: LongBool read FCodeTracking write SetCodeTracking;
     property TrackSystemUnits: LongBool read FTrackSystemUnits write SetTrackSystemUnits;
     property SamplingMethod: LongBool read FSamplingMethod write SetSamplingMethod;
 
-    property SyncObjsTracking: LongBool read FSyncObjsTracking write SetSyncObjsTracking;
-
     property MemoryBPCheckMode: LongBool read FMemoryBPCheckMode write FMemoryBPCheckMode;
+
+    property DbgMemoryProfiler: TDbgMemoryProfiler read FDbgMemoryProfiler;
+    property DbgSysncObjsProfiler: TDbgSyncObjsProfiler read FDbgSyncObjsProfiler;
+    property DbgSamplingProfiler: TDbgSamplingProfiler read FDbgSamplingProfiler;
+    property DbgCodeProfiler: TDbgCodeProfiler read FDbgCodeProfiler;
   end;
 
 var
@@ -378,38 +328,12 @@ implementation
 
 uses
   RTLConsts, Math, DebugHook, DebugInfo, WinAPIUtils, Winapi.TlHelp32, Winapi.ImageHlp,
-  System.Contnrs, System.AnsiStrings, CollectList, Collections.Base;
-
-const
-  _MAX_SYNC_OBJS_INFO_BUF_COUNT = 512;
-  _MAX_MEM_INFO_BUF_COUNT = 512;
-
-type
-  TDbgWorkerThread = class(TThread)
-  protected
-    procedure Execute; override;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    procedure Stop;
-
-    class procedure Init; static;
-    class procedure Reset; static;
-  end;
-
-var
-  gvDbgWorkerThread: TDbgWorkerThread = Nil;
+  System.Contnrs, System.AnsiStrings, CollectList, Collections.Base,
+  DbgWorkerThread;
 
 function _DbgPerfomanceHook(pvParam: Pointer): DWORD; stdcall;
 begin
   Result := DWORD(@_DbgPerfomanceHook);
-end;
-
-procedure Check(const Value: LongBool); inline;
-begin
-  if not Value then
-    RaiseLastOSError;
 end;
 
 function CodeDataToExceptionCode(const Value: DWORD): TExceptionCode;
@@ -559,56 +483,10 @@ begin
   end;
 end;
 
-procedure TDebuger.AddThreadSamplingInfo(ThreadData: PThreadData);
-var
-  ThCPU: UInt64;
-  FreqCPU: Int64;
-  Stack: TDbgInfoStack;
-  StackInfo: PDbgInfoStackRec;
-  Res: DWORD;
-begin
-  if Assigned(ThreadData^.ThreadAdvInfo) and (ThreadData^.ThreadAdvInfo.ThreadAdvType = tatNormal) then
-  begin
-    ThCPU := _QueryThreadCycleTime(ThreadData^.ThreadHandle);
-    FreqCPU := _QueryPerformanceFrequency;
-
-    // FreqCPU - количество циклов CPU за 1 сек
-    // Обрабатываем только те потоки, которые получили более 10% циклов за 1 мсек
-    if (ThCPU - ThreadData^.SamplingCPUTime) > (FreqCPU div 10000) then
-    begin
-      ThreadData^.SamplingCPUTime := ThCPU;
-      Inc(ThreadData^.SamplingCount);
-
-      SetLength(Stack, 0);
-
-      Res := SuspendThread(ThreadData^.ThreadHandle);
-      if Res = 0 then
-      begin
-        if UpdateThreadContext(ThreadData, CONTEXT_CONTROL) then
-          GetCallStackEx(ThreadData, Stack);
-      end;
-
-      ResumeThread(ThreadData^.ThreadHandle);
-
-      if Length(Stack) > 0 then
-      begin
-        New(StackInfo);
-        StackInfo^.Stack := Stack;
-
-        ThreadData^.SamplingQueue.Add(StackInfo);
-      end;
-    end
-    else
-      ThreadData^.SamplingCPUTime := ThCPU;
-  end;
-end;
-
 function TDebuger.AddProcessPointInfo(const PointType: TDbgPointType): LongBool;
 var
   ProcPoint: PProcessPoint;
-  //Prev: UInt64;
   Cur: UInt64;
-  //PPrev: Int64;
   PCur: Int64;
   PrevTime: UInt64;
   CurTime: UInt64;
@@ -621,9 +499,6 @@ begin
   CurTime := GetProcessCPUTime(FProcessData.AttachedProcessHandle);
 
   Delta := 0;
-  //PPrev := 0;
-  //Prev := 0;
-  //Cur := 0;
 
   case PointType of
     ptStart, ptException, ptThreadInfo, ptTraceInfo {, ptMemoryInfo}:
@@ -641,12 +516,10 @@ begin
     ptPerfomance:
       begin
         // дельта абсолютного времени
-        //PPrev := FProcessData.Elapsed;
         FProcessData.Elapsed := PCur;
 
         // дельта счетчика таймера CPU
         Cur := _QueryProcessCycleTime(FProcessData.AttachedProcessHandle);
-        //Prev := FProcessData.CPUElapsed;
         FProcessData.CPUElapsed := Cur;
 
         // Время CPU процесса
@@ -670,8 +543,6 @@ begin
     case PointType of
       ptPerfomance:
         begin
-          //ProcPoint^.DeltaTick := PCur - PPrev;
-          //ProcPoint^.DeltaTickCPU := Cur - Prev;
           ProcPoint^.DeltaTime := Delta;
         end;
     end;
@@ -730,7 +601,6 @@ begin
 
   FSetEntryPointBreakPoint := SentEntryPointBreakPoint;
 
-  //FProcessInfo.State := psActive;
   FProcessData.ProcessID := ProcessID;
 
   Result := DebugActiveProcess(Cardinal(ProcessID));
@@ -806,8 +676,10 @@ var
 begin
   DbgState := dsNone;
 
-  FProcessMemoryQueue.Clear;
-  FProcessSyncObjsInfoQueue.Clear;
+  FDbgMemoryProfiler.Clear;
+  FDbgSyncObjsProfiler.Clear;
+  FDbgSamplingProfiler.Clear;
+  FDbgCodeProfiler.Clear;
 
   FProcessData.Clear;
 
@@ -828,24 +700,7 @@ begin
   finally
     FThreadAdvInfoList.Clear;
 
-    ClearDbgTracking;
-
     FTraceCounter := 0;
-  end;
-end;
-
-procedure TDebuger.ClearDbgTracking;
-begin
-  if Assigned(DbgTrackBreakpoints) then
-  begin
-    DbgTrackBreakpoints.Clear;
-    FreeAndNil(DbgTrackBreakpoints);
-  end;
-
-  if Assigned(DbgTrackRETBreakpoints) then
-  begin
-    DbgTrackRETBreakpoints.Clear;
-    FreeAndNil(DbgTrackRETBreakpoints);
   end;
 end;
 
@@ -913,18 +768,10 @@ begin
   FPerfomanceMode := False;
   FPerfomanceCheckPtr := Nil; //Pointer($76FED315);
 
-  FTimerQueue := 0;
-  FSamplingTimer := 0;
-  FSamplingLock := TCriticalSection.Create;
-
-  FProcessMemoryQueue := TQueue<PDbgMemInfoListBuf>.Create(True);
-  FProcessMemoryQueue.Capacity := _MAX_MEM_INFO_BUF_COUNT + 1;
-
-  FProcessSyncObjsInfoQueue := TQueue<PDbgSyncObjsInfoListBuf>.Create(True);
-  FProcessSyncObjsInfoQueue.Capacity := _MAX_SYNC_OBJS_INFO_BUF_COUNT + 1;
-
-  //FDbgShareMem :=
-  //  CreateFileMapping($FFFFFFFF, nil, PAGE_READWRITE, 0, 4 * 1024, 'DBG_SHARE_MEM');
+  FDbgSamplingProfiler := TDbgSamplingProfiler.Create;
+  FDbgMemoryProfiler := TDbgMemoryProfiler.Create;
+  FDbgSyncObjsProfiler := TDbgSyncObjsProfiler.Create;
+  FDbgCodeProfiler := TDbgCodeProfiler.Create;
 end;
 
 function TDebuger.CurThreadData: PThreadData;
@@ -1007,19 +854,16 @@ begin
   FreeAndNil(FThreadList);
   FreeAndNil(FThreadAdvInfoList);
 
-  //CloseHandle(FDbgShareMem);
-  //FDbgShareMem := 0;
-
   FreeAndNil(FProcessData.DbgExceptions);
   FreeMemory(FProcessData);
   FProcessData := nil;
 
   FreeAndNil(FTraceEvent);
 
-  FreeAndNil(FSamplingLock);
-
-  FreeAndNil(FProcessMemoryQueue);
-  FreeAndNil(FProcessSyncObjsInfoQueue);
+  FreeAndNil(FDbgMemoryProfiler);
+  FreeAndNil(FDbgSyncObjsProfiler);
+  FreeAndNil(FDbgSamplingProfiler);
+  FreeAndNil(FDbgCodeProfiler);
 
   inherited;
 end;
@@ -1060,8 +904,8 @@ begin
   FProcessData.DbgTrackUsedUnitList.OwnsKeys := False;
   FProcessData.DbgTrackUsedUnitList.OwnsValues := False;
 
-  DbgTrackBreakpoints := nil;
-  DbgTrackRETBreakpoints := nil;
+  //DbgTrackBreakpoints := nil;
+  //DbgTrackRETBreakpoints := nil;
 
   // Метка старта процесса
   AddProcessPointInfo(ptStart);
@@ -1099,7 +943,8 @@ begin
   end;
 
   // Запуск потока по обработке стеков
-  InitSamplingTimer;
+  if CodeTracking and SamplingMethod then
+   DbgSamplingProfiler.InitSamplingTimer;
 
   TDbgWorkerThread.Init;
 
@@ -1122,7 +967,7 @@ end;
 
 procedure TDebuger.DoExitProcess(DebugEvent: PDebugEvent);
 begin
-  ResetSamplingTimer;
+  DbgSamplingProfiler.ResetSamplingTimer;
 
   TDbgWorkerThread.Reset;
 
@@ -1693,66 +1538,6 @@ begin
     Result := True;
 end;
 
-procedure TDebuger.InitDbgTracking(const Capacity: Integer);
-begin
-  DbgTrackBreakpoints := TTrackBreakpointList.Create(Capacity * 2);
-  DbgTrackBreakpoints.OwnsValues := True;
-
-  DbgTrackRETBreakpoints := TTrackRETBreakpointList.Create(Capacity * 2);
-  DbgTrackRETBreakpoints.OwnsValues := True;
-end;
-
-procedure _DbgSamplingEvent(Context: Pointer; Success: LongBool); stdcall;
-begin
-  if Assigned(gvDebuger) then
-    gvDebuger.DoSamplingEvent;
-end;
-
-procedure TDebuger.DoSamplingEvent;
-begin
-  if DbgState <> dsWait then Exit;
-
-  // Игнорим обработку, если не успели за отведенное время
-  if FSamplingLock.TryEnter then
-  begin
-    ProcessDbgSamplingInfo(Nil);
-
-    FSamplingLock.Leave;
-  end;
-end;
-
-procedure TDebuger.InitSamplingTimer;
-begin
-  if CodeTracking and SamplingMethod then
-  begin
-    FTimerQueue := CreateTimerQueue;
-    if FTimerQueue <> 0 then
-    begin
-      if CreateTimerQueueTimer(FSamplingTimer, FTimerQueue, @_DbgSamplingEvent, nil, 100, 1, WT_EXECUTEINPERSISTENTTHREAD) then
-      begin
-        Log('Init sampling timer - ok');
-        Exit;
-      end;
-    end;
-
-    Log('Init sampling timer - fail');
-  end;
-end;
-
-procedure TDebuger.ResetSamplingTimer;
-begin
-  if FTimerQueue <> 0 then
-  begin
-    if DeleteTimerQueue(FTimerQueue) then
-      Log('Reset timer queue - ok')
-    else
-      Log('Reset timer queue - fail');
-
-    FSamplingTimer := 0;
-    FTimerQueue := 0;
-  end;
-end;
-
 function TDebuger.InjectFunc(Func: Pointer; const CodeSize: Cardinal): Pointer;
 begin
   Result := VirtualAllocEx(FProcessData.AttachedProcessHandle, nil, CodeSize, MEM_COMMIT, PAGE_READWRITE);
@@ -1846,14 +1631,11 @@ procedure TDebuger.ProcessExceptionBreakPoint(DebugEvent: PDebugEvent);
 begin
   if FCodeTracking or FMemoryBPCheckMode then
   begin
-    if ProcessTrackRETBreakPoint(DebugEvent) then
+    if DbgCodeProfiler.ProcessTrackRETBreakPoint(DebugEvent) then
       Exit;
 
-    if ProcessTrackBreakPoint(DebugEvent) then
+    if DbgCodeProfiler.ProcessTrackBreakPoint(DebugEvent) then
       Exit;
-
-    //if FMemoryBPCheckMode and not FCodeTracking then
-    //  FMemoryBPCheckMode := (DbgTrackRETBreakpoints.Count > 0) or (DbgTrackBreakpoints.Count > 0);
   end;
 
   if ProcessUserBreakPoint(DebugEvent) then
@@ -1926,10 +1708,10 @@ begin
 
   //if Assigned(ThData) then
   //begin
-    if Assigned(DbgCurTrackAddress) then
+    if Assigned(DbgCodeProfiler.DbgCurTrackAddress) then
     begin
-      DoRestoreBreakpointF(DbgCurTrackAddress);
-      DbgCurTrackAddress := nil;
+      DoRestoreBreakpointF(DbgCodeProfiler.DbgCurTrackAddress);
+      DbgCodeProfiler.DbgCurTrackAddress := nil;
     end;
 
     Exit;
@@ -2042,424 +1824,6 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessMemoryInfoBuf(const Buf: PDbgMemInfoListBuf);
-var
-  Idx: Integer;
-  DbgMemInfo: PDbgMemInfo;
-  ThData: PThreadData;
-  FoundThData: PThreadData;
-  MemInfo: TGetMemInfo;
-  NewMemInfo: TGetMemInfo;
-begin
-  ThData := Nil;
-
-  for Idx := 0 to Buf^.Count - 1 do
-  begin
-    DbgMemInfo := @Buf^.DbgMemInfoList^[Idx];
-    if (ThData = Nil) or (ThData^.ThreadID <> DbgMemInfo^.ThreadId) then
-      ThData := GetThreadData(DbgMemInfo^.ThreadId, True);
-
-    if ThData = Nil then
-      RaiseDebugCoreException();
-
-    case DbgMemInfo^.MemInfoType of
-      miGetMem:
-      begin
-        //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['GetMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
-
-        // Если найден ещё неосвобожденный объект, то он уже был кем-то освобожден
-        // TODO: Если есть такие объекты, то это мы где-то пропустили FreeMem
-        (*
-        FoundThData := ThData;
-        if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
-        begin
-          //DoDbgLog(FoundThData^.ThreadId, Format('<<< ERROR!!! FOUND BEFORE GETMEM (%d)', [MemInfo^.Size]));
-
-          Dec(FoundThData^.DbgGetMemInfoSize, MemInfo^.Size);
-
-          Dec(FProcessData.ProcessGetMemCount);
-          Dec(FProcessData.ProcessGetMemSize, MemInfo^.Size);
-
-          FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-        end;
-        *)
-
-        // Добавляем инфу про новый объект
-        NewMemInfo := TGetMemInfo.Create;
-
-        NewMemInfo.PerfIdx := Buf^.DbgPointIdx;
-        NewMemInfo.ObjAddr := DbgMemInfo^.Ptr;
-        NewMemInfo.Size := DbgMemInfo^.Size;
-        NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
-
-        NewMemInfo.LoadStack(@DbgMemInfo^.Stack);
-
-        ThData^.DbgGetMemInfo.AddOrSetValue(DbgMemInfo^.Ptr, NewMemInfo);
-        TInterlocked.Add(ThData^.DbgGetMemInfoSize, NewMemInfo.Size);
-
-        TInterlocked.Add(FProcessData.ProcessGetMemCount, 1);
-        TInterlocked.Add(FProcessData.ProcessGetMemSize, NewMemInfo.Size);
-      end;
-      miFreeMem:
-      begin
-        //DoDbgLog(DbgMemInfo^.ThreadId, Format('%s: %p (%d)', ['FreeMem', DbgMemInfo^.Ptr, DbgMemInfo^.Size]));
-
-        FoundThData := ThData;
-        if FindMemoryPointer(DbgMemInfo^.Ptr, FoundThData, MemInfo) then
-        begin
-          TInterlocked.Add(FoundThData^.DbgGetMemInfoSize, -MemInfo.Size);
-
-          TInterlocked.Add(FProcessData.ProcessGetMemCount, -1);
-          TInterlocked.Add(FProcessData.ProcessGetMemSize, -MemInfo.Size);
-
-          FoundThData^.DbgGetMemInfo.Remove(DbgMemInfo^.Ptr);
-        end
-        else
-        begin
-          // Сюда может зайти, если объект создался раньше установки хука на менеджер памяти
-          //RaiseDebugCoreException();
-          //DoDbgLog(DbgMemInfo^.ThreadId, '<<< ERROR!!! NOT FOUND FOR FREEMEM');
-
-          // TODO: Double free ???
-        end;
-      end;
-    end;
-  end;
-end;
-
-function TDebuger.ProcessMemoryInfoQueue: LongBool;
-var
-  Buf: PDbgMemInfoListBuf;
-begin
-  Result := False;
-
-  if not MemoryCheckMode then
-    Exit;
-
-  try
-    if FProcessMemoryQueue.Count > 0 then
-    begin
-      Buf := FProcessMemoryQueue.Dequeue;
-      try
-        ProcessMemoryInfoBuf(Buf);
-      finally
-        FreeMemory(Buf^.DbgMemInfoList);
-        FreeMemory(Buf);
-      end;
-
-      Result := True;
-    end;
-  except
-    on E: Exception do ; // TODO:
-  end;
-end;
-
-function TDebuger.ProcessSamplingInfo: LongBool;
-var
-  I: Integer;
-  ThData: PThreadData;
-begin
-  Result := False;
-
-  if not(CodeTracking and SamplingMethod) then
-    Exit;
-
-  try
-    for I := FThreadList.Count - 1 downto 0 do
-    begin
-      ThData := FThreadList[I];
-      Result := ProcessThreadSamplingInfo(ThData) or Result;
-    end;
-  except
-    on E: Exception do ; // TODO:
-  end;
-end;
-
-procedure TDebuger.ProcessSyncObjsInfoBuf(const Buf: PDbgSyncObjsInfoListBuf);
-var
-  ThData: PThreadData;
-
-  function FindCSLink(const CSData: PRTLCriticalSection): PSyncObjsInfo;
-  var
-    Idx: Integer;
-  begin
-    for Idx := ThData^.DbgSyncObjsInfo.Count - 1 downto 0 do
-    begin
-      Result := ThData^.DbgSyncObjsInfo[Idx];
-      if (Result^.SyncObjsInfo.SyncObjsType = soInCriticalSection) and
-        (Result^.Link = nil) and
-        (Result^.SyncObjsInfo.CS = CSData) and
-        (Result^.SyncObjsInfo.SyncObjsStateType = sosEnter)
-      then
-        Exit;
-    end;
-
-    Result := nil;
-  end;
-
-var
-  Idx: Integer;
-  SyncObjsInfo: PDbgSyncObjsInfo;
-  ThSyncObjsInfo: PSyncObjsInfo;
-  SyncObjsLink: PSyncObjsInfo;
-  SyncObjsLinkExt: PSyncObjsInfo;
-begin
-  ThData := Nil;
-
-  for Idx := 0 to Buf^.Count - 1 do
-  begin
-    SyncObjsInfo := @Buf^.DbgSyncObjsInfoList^[Idx];
-    if (ThData = Nil) or (ThData^.ThreadID <> SyncObjsInfo^.ThreadId) then
-      ThData := GetThreadData(SyncObjsInfo^.ThreadId, True);
-
-    if ThData = Nil then
-      Continue; // TODO: В каких-то случаях сюда заходит
-      //RaiseDebugCoreException();
-
-    case SyncObjsInfo^.SyncObjsType of
-      soSleep, soWaitForSingleObject, soWaitForMultipleObjects, soEnterCriticalSection, soInCriticalSection, soSendMessage:
-        begin
-          ThData^.DbgSyncObjsInfo.BeginRead;
-          try
-            SyncObjsLink := nil;
-            SyncObjsLinkExt := nil;
-
-            if SyncObjsInfo^.SyncObjsStateType = sosLeave then
-            begin
-              // Поиск sosEnter вызова
-              if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
-              begin
-                // Так как Id события выхода не совпадает с Id входа, то ищем по указателю CS
-                // Необходимо найти последнее событие по CS с SyncObjsStateType = sosEnter
-
-                SyncObjsLink := FindCSLink(SyncObjsInfo^.CS);
-              end
-              else
-              begin
-                // У остальных типов Id события входа и выхода будут совпадать
-
-                if ThData^.DbgSyncObjsInfoByID.TryGetValue(SyncObjsInfo^.Id, SyncObjsLink) then
-                begin
-                  // Удаляем отработанный Id из словаря, кроме EnterCriticalSection,
-                  // который ещё нужен для soInCriticalSection
-
-                  if SyncObjsInfo^.SyncObjsType <> soEnterCriticalSection then
-                    ThData^.DbgSyncObjsInfoByID.Remove(SyncObjsInfo^.Id);
-                end;
-              end;
-            end
-            else // sosEnter
-            begin
-              if SyncObjsInfo^.SyncObjsType = soInCriticalSection then
-              begin
-                // Ищем линк на soEnterCriticalSection
-                if ThData^.DbgSyncObjsInfoByID.TryGetValue(SyncObjsInfo^.Id, SyncObjsLinkExt) then
-                  ThData^.DbgSyncObjsInfoByID.Remove(SyncObjsInfo^.Id);
-              end;
-            end;
-
-            // Добавляем инфу про новый элемент
-            ThSyncObjsInfo := ThData^.DbgSyncObjsInfo.Add;
-
-            if ThData^.State = tsFinished then
-              ThSyncObjsInfo^.PerfIdx := PThreadPoint(ThData^.DbgPoints[ThData^.DbgPoints.Count - 1])^.PerfIdx
-            else
-              ThSyncObjsInfo^.PerfIdx := Buf^.DbgPointIdx;
-
-            // Линк на пару
-            ThSyncObjsInfo^.Link := SyncObjsLink;
-            if SyncObjsLink <> nil then
-              SyncObjsLink^.Link := ThSyncObjsInfo;
-
-            // Внешний линк
-            ThSyncObjsInfo^.LinkExt := SyncObjsLinkExt;
-            if SyncObjsLinkExt <> nil then
-              SyncObjsLinkExt^.LinkExt := ThSyncObjsInfo;
-
-            // Копируем инфу из буфера, так как он потом будет уничтожен
-            ThSyncObjsInfo^.SyncObjsInfo.Init(SyncObjsInfo);
-
-            ThData^.DbgSyncObjsInfo.Commit;
-
-            // Добавляем инфу про sosEnter вызовы
-            if SyncObjsInfo^.SyncObjsStateType = sosEnter then
-            begin
-              if SyncObjsInfo^.SyncObjsType <> soInCriticalSection then
-                ThData^.DbgSyncObjsInfoByID.AddOrSetValue(SyncObjsInfo^.Id, ThSyncObjsInfo);
-            end;
-
-            // Формируем стек вызова
-            case SyncObjsInfo^.SyncObjsType of
-              soEnterCriticalSection, soInCriticalSection,
-              soSendMessage,
-              soWaitForSingleObject, soWaitForMultipleObjects:
-                begin
-                  ThData^.DbgSyncObjsUnitList.LoadStack(ThSyncObjsInfo);
-                end;
-            end;
-          finally
-            ThData^.DbgSyncObjsInfo.EndRead;
-          end;
-        end;
-      soLeaveCriticalSection:
-        begin
-          // TODO:
-        end;
-    end;
-  end;
-end;
-
-function TDebuger.ProcessSyncObjsInfoQueue: LongBool;
-var
-  Buf: PDbgSyncObjsInfoListBuf;
-begin
-  Result := False;
-
-  if not SyncObjsTracking then
-    Exit;
-
-  if FProcessSyncObjsInfoQueue.Count > 0 then
-  begin
-    try
-      // Пропускаем недавние события для корректной обработки коротких критических секций
-      if FProcessSyncObjsInfoQueue.Count < _MAX_SYNC_OBJS_INFO_BUF_COUNT then
-      begin
-        Buf := FProcessSyncObjsInfoQueue.First;
-        if (ProcessData^.CurDbgPointIdx - Buf^.DbgPointIdx) <= 2 then
-          Exit;
-      end;
-
-      Buf := FProcessSyncObjsInfoQueue.Dequeue;
-      try
-        ProcessSyncObjsInfoBuf(Buf);
-      finally
-        FreeMemory(Buf^.DbgSyncObjsInfoList);
-        FreeMemory(Buf);
-      end;
-
-      Result := True;
-    except
-      on E: Exception do ; // TODO:
-    end;
-  end;
-end;
-
-function TDebuger.ProcessThreadSamplingInfo(ThreadData: PThreadData): LongBool;
-var
-  StackInfo: PDbgInfoStackRec;
-begin
-  if ThreadData.SamplingQueue.Count > 0 then
-  begin
-    try
-      while ThreadData.SamplingQueue.Count > 0 do
-      begin
-        StackInfo := ThreadData.SamplingQueue.Dequeue;
-        try
-          if Length(StackInfo^.Stack) > 0 then
-            ProcessThreadSamplingStack(ThreadData, StackInfo^.Stack);
-        finally
-          Dispose(StackInfo);
-        end;
-      end;
-    except
-      on E: Exception do ;
-    end;
-
-    Result := True;
-  end
-  else
-    Result := False;
-end;
-
-procedure TDebuger.ProcessThreadSamplingAddress(ThData: PThreadData; FuncAddr, ParentFuncAddr: Pointer);
-var
-  UnitInfo: TUnitInfo;
-  FuncInfo: TFuncInfo;
-  LineInfo: TLineInfo;
-
-  TrackFuncInfo: TCodeTrackFuncInfo;
-  ParentCallFuncInfo: TCallFuncInfo;
-  ParentFuncInfo: TFuncInfo;
-  ParentTrackFuncInfo: TCodeTrackFuncInfo;
-begin
-  // --- Регистрируем вызываемую функцию в текущем потоке --- //
-  if gvDebugInfo.GetLineInfo(FuncAddr, UnitInfo, FuncInfo, LineInfo, False) = slNotFound then
-    Exit;
-
-  TrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(FuncInfo));
-  ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
-
-  TrackFuncInfo.IncCallCount;
-
-  // Добавление в список активных юнитов
-  ThData.DbgTrackUsedUnitList.AddOrSetValue(UnitInfo, TrackFuncInfo.TrackUnitInfo);
-
-  // Добавляем линк с текущей функции на родительскую
-  ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
-
-  // Добавляем линк с родительской функции на текущую
-  if Assigned(ParentCallFuncInfo) then
-  begin
-    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
-    if Assigned(ParentFuncInfo) then
-    begin
-      ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-      ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
-
-      ParentTrackFuncInfo.AddChildCall(FuncAddr);
-    end;
-  end;
-
-  // --- Регистрируем вызываемую функцию в процессе --- //
-  TrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(FuncInfo));
-  FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
-
-  TrackFuncInfo.IncCallCount;
-
-  // Добавление в список активных юнитов
-  FProcessData^.DbgTrackUsedUnitList.AddOrSetValue(UnitInfo, TrackFuncInfo.TrackUnitInfo);
-
-  // Добавляем линк с текущей функции на родительскую
-  ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
-
-  // Добавляем линк с родительской функции на текущую
-  if Assigned(ParentCallFuncInfo) then
-  begin
-    ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
-    if Assigned(ParentFuncInfo) then
-    begin
-      ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-      FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
-
-      ParentTrackFuncInfo.AddChildCall(FuncAddr);
-    end;
-  end;
-end;
-
-procedure TDebuger.ProcessThreadSamplingStack(ThreadData: PThreadData; var Stack: TDbgInfoStack);
-var
-  Idx: Integer;
-  TrackUnitInfoPair: TTrackUnitInfoPair;
-begin
-  TInterlocked.Add(FProcessData.DbgTrackEventCount, 1);
-  TInterlocked.Add(ThreadData^.DbgTrackEventCount, 1);
-
-  try
-    for Idx := 0 to High(Stack) - 1 do
-      ProcessThreadSamplingAddress(ThreadData, Stack[Idx], Stack[Idx + 1]);
-
-    for TrackUnitInfoPair in ThreadData.DbgTrackUsedUnitList do
-      TrackUnitInfoPair.Value.IncCallCount;
-
-    for TrackUnitInfoPair in FProcessData.DbgTrackUsedUnitList do
-      TrackUnitInfoPair.Value.IncCallCount;
-  finally
-    SetLength(Stack, 0);
-    ThreadData.DbgTrackUsedUnitList.Clear;
-    FProcessData.DbgTrackUsedUnitList.Clear;
-  end;
-end;
-
 function TDebuger.ProcessTraceBreakPoint(DebugEvent: PDebugEvent): LongBool;
 begin
   Result := False;
@@ -2479,337 +1843,6 @@ begin
 
     Result := True;
   end;
-end;
-
-function TDebuger.ProcessTrackBreakPoint(DebugEvent: PDebugEvent): LongBool;
-var
-  ThData: PThreadData;
-  Address: Pointer;
-  TrackBp: PTrackBreakpoint;
-  ParentFuncAddr: Pointer;
-  TrackRETBreakpoint: PTrackRETBreakpoint;
-
-  procedure _RegisterTrackPoint;
-  var
-    TrackFuncInfo: TCodeTrackFuncInfo;
-    ParentCallFuncInfo: TCallFuncInfo;
-    ParentFuncInfo: TFuncInfo;
-    ParentTrackFuncInfo: TCodeTrackFuncInfo;
-
-    TrackStackPoint: PTrackStackPoint;
-    CurTime: UInt64;
-  begin
-    // Текущее время CPU потока
-    CurTime := _QueryThreadCycleTime(ThData^.ThreadHandle);
-
-    // --- Регистрируем вызываемую функцию в текущем потоке --- //
-    Inc(ThData^.DbgTrackEventCount);
-
-    TrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo));
-    ThData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
-
-    TrackFuncInfo.IncCallCount;
-    TrackFuncInfo.TrackUnitInfo.IncCallCount;
-
-    // Добавляем линк с текущей функции на родительскую
-    ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
-
-    // Добавляем линк с родительской функции на текущую
-    ParentTrackFuncInfo := nil;
-
-    if Assigned(ParentCallFuncInfo) then
-    begin
-      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
-      if Assigned(ParentFuncInfo) then
-      begin
-        ParentTrackFuncInfo := TCodeTrackFuncInfo(ThData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-        ThData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
-
-        ParentTrackFuncInfo.AddChildCall(Address);
-      end;
-    end;
-
-    // Создание новой записи для Track Stack
-    TrackStackPoint := AllocMem(SizeOf(TTrackStackPoint));
-
-    // Добавляем в Track Stack
-    ThData^.DbgTrackStack.Push(TrackStackPoint);
-
-    TrackStackPoint^.TrackFuncInfo := TrackFuncInfo;
-    TrackStackPoint^.ParentTrackFuncInfo := ParentTrackFuncInfo;
-    TrackStackPoint^.TrackRETBreakpoint := TrackRETBreakpoint;
-    TrackStackPoint^.Enter := CurTime;
-    TrackStackPoint^.Elapsed := 0;
-
-    // --- Регистрируем вызываемую функцию в процессе --- //
-    Inc(FProcessData.DbgTrackEventCount);
-
-    TrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo));
-    FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
-
-    TrackFuncInfo.IncCallCount;
-    TrackFuncInfo.TrackUnitInfo.IncCallCount;
-
-    // Добавляем линк с текущей функции на родительскую
-    ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
-
-    // Добавляем линк с родительской функции на текущую
-    ParentTrackFuncInfo := nil;
-
-    if Assigned(ParentCallFuncInfo) then
-    begin
-      ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
-      if Assigned(ParentFuncInfo) then
-      begin
-        ParentTrackFuncInfo := TCodeTrackFuncInfo(FProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-        FProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
-
-        ParentTrackFuncInfo.AddChildCall(Address);
-      end;
-    end;
-
-    // Записываем инфу для процесса
-    TrackStackPoint^.ProcTrackFuncInfo := TrackFuncInfo;
-    TrackStackPoint^.ProcParentTrackFuncInfo := ParentTrackFuncInfo;
-  end;
-
-  procedure _RegisterFreeMemInfoPoint;
-  var
-    FuncInfo: TFuncInfo;
-    MemInfo: TGetMemInfo;
-    Param: TVarInfo;
-    Addr: Pointer;
-  begin
-    FuncInfo := TFuncInfo(TrackBp^.FuncInfo);
-    if (gvDebugInfo.MemoryManagerInfo.FreeMem = FuncInfo) or
-      (gvDebugInfo.MemoryManagerInfo.ReallocMem = FuncInfo)
-    then
-    begin
-      Param := TVarInfo(FuncInfo.Params[0]);
-      Addr := Pointer(Integer(Param.Value));
-
-      if FindMemoryPointer(Addr, ThData, MemInfo) then
-      begin
-        Dec(ThData^.DbgGetMemInfoSize, MemInfo.Size);
-
-        Dec(FProcessData.ProcessGetMemCount);
-        Dec(FProcessData.ProcessGetMemSize, MemInfo.Size);
-
-        ThData^.DbgGetMemInfo.Remove(Addr);
-      end;
-    end;
-  end;
-
-begin
-  if UpdateCurThreadContext then
-  begin
-    ThData := FCurThreadData;
-
-    Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
-    if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
-    begin
-      // Получаем адресс выхода в родительской функции
-      ParentFuncAddr := nil;
-      Check(ReadData(Pointer(ThData^.Context^.Esp), @ParentFuncAddr, SizeOf(Pointer)));
-
-      // Устанавливаем точку останова на выход
-      TrackRETBreakpoint := SetTrackRETBreakpoint(ParentFuncAddr);
-      TrackRETBreakpoint^.FuncInfo := TrackBp^.FuncInfo;
-      TrackRETBreakpoint^.BPType := TrackBp^.BPType;
-
-      // Восстанавливаем Code byte для продолжения выполнения
-      DbgCurTrackAddress := Address;
-      DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
-      SetSingleStepMode(ThData, True);
-
-      // --- Регистрация --- //
-      // TODO: Можно вынести обработку в отдельный поток
-      if tbTrackFunc in TrackBp^.BPType then
-        _RegisterTrackPoint;
-
-      if tbMemInfo in TrackBp^.BPType then
-        _RegisterFreeMemInfoPoint;
-
-      // Выходим с признаком успешной регистрации
-      Exit(True);
-    end;
-  end;
-
-  // Это не Track Breakpoint
-  Exit(False);
-end;
-
-function TDebuger.ProcessTrackRETBreakPoint(DebugEvent: PDebugEvent): LongBool;
-var
-  ThData: PThreadData;
-  Address: Pointer;
-  TrackRETBp: PTrackRETBreakpoint;
-
-  procedure _RegisterRETTrackPoint;
-  var
-    TrackStackPoint: PTrackStackPoint;
-    CurTime: UInt64;
-    FuncAddress: Pointer;
-    CallFuncInfo: TCallFuncInfo;
-  begin
-    CurTime := _QueryThreadCycleTime(ThData^.ThreadHandle);
-
-    // Обработка Track-стека текущего потока
-    while ThData^.DbgTrackStack.Count > 0 do
-    begin
-      TrackStackPoint := ThData^.DbgTrackStack.Pop;
-
-      // Увеличиваем счетчик самой функции
-      TrackStackPoint^.Leave := CurTime;
-      // Thread
-      TrackStackPoint^.TrackFuncInfo.GrowElapsed(TrackStackPoint^.Elapsed);
-      // Proc
-      TrackStackPoint^.ProcTrackFuncInfo.GrowElapsed(TrackStackPoint^.Elapsed);
-
-      // Увеличиваем счетчик родителя
-      // Thread
-      if TrackStackPoint^.TrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-        Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
-
-      // Proc
-      if TrackStackPoint^.ProcTrackFuncInfo.ParentFuncs.TryGetValue(Address, CallFuncInfo) then
-        Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
-
-      // Увеличиваем свой счетчик у родителя
-      // Thread
-      if Assigned(TrackStackPoint^.ParentTrackFuncInfo) then
-      begin
-        FuncAddress := TFuncInfo(TrackStackPoint^.TrackFuncInfo.FuncInfo).Address;
-        if TrackStackPoint^.ParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-          Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
-      end;
-
-      // Proc
-      if Assigned(TrackStackPoint^.ProcParentTrackFuncInfo) then
-      begin
-        FuncAddress := TFuncInfo(TrackStackPoint^.ProcTrackFuncInfo.FuncInfo).Address;
-        if TrackStackPoint^.ProcParentTrackFuncInfo.ChildFuncs.TryGetValue(FuncAddress, CallFuncInfo) then
-          Inc(CallFuncInfo.Data, TrackStackPoint^.Elapsed);
-      end;
-
-      // Если это вершина стека - выходим
-      if TrackStackPoint^.TrackRETBreakpoint = TrackRETBp then
-      begin
-        // Dec(TrackRETBp.Count);
-
-        FreeMemory(TrackStackPoint);
-        Break;
-      end;
-
-      FreeMemory(TrackStackPoint);
-    end;
-  end;
-
-  procedure _RegisterGetMemInfoPoint;
-  var
-    FuncInfo: TFuncInfo;
-    ParamSize: TVarInfo;
-    ParamAddr: TVarInfo;
-    Addr: Pointer;
-    Size: Cardinal;
-    NewMemInfo: TGetMemInfo;
-  begin
-    FuncInfo := TFuncInfo(TrackRETBp^.FuncInfo);
-
-    // Dec(TrackRETBp^.Count);
-
-    ParamAddr := nil;
-    ParamSize := nil;
-
-    if (gvDebugInfo.MemoryManagerInfo.GetMem = FuncInfo) or
-      (gvDebugInfo.MemoryManagerInfo.AllocMem = FuncInfo)
-    then
-      begin
-        // GetMem: function(Size: NativeInt): Pointer;
-        // AllocMem: function(Size: NativeInt): Pointer;
-
-        ParamSize := TVarInfo(FuncInfo.Params[0]);
-
-        ParamAddr := TVarInfo.Create;
-        ParamAddr.DataType := FuncInfo.ResultType;
-        ParamAddr.VarKind := vkRegister;
-      end
-    else
-    if (gvDebugInfo.MemoryManagerInfo.ReallocMem = FuncInfo)
-    then
-      begin
-        // ReallocMem: function(P: Pointer; Size: NativeInt): Pointer;
-
-        ParamSize := TVarInfo(FuncInfo.Params[1]);
-
-        ParamAddr := TVarInfo.Create;
-        ParamAddr.DataType := FuncInfo.ResultType;
-        ParamAddr.VarKind := vkRegister;
-      end;
-
-    if Assigned(ParamSize) and Assigned(ParamAddr) then
-    begin
-      Size := 1; //ParamSize.Value;
-      Addr := Pointer(Integer(ParamAddr.Value));
-
-      FreeAndNil(ParamAddr);
-
-      // Добавляем инфу про новый объект
-      //NewMemInfo := AllocMem(SizeOf(RGetMemInfo));
-      NewMemInfo := TGetMemInfo.Create;
-
-      NewMemInfo.PerfIdx := ProcessData.CurDbgPointIdx;
-      NewMemInfo.ObjAddr := Addr;
-      NewMemInfo.Size := Size;
-
-      //NewMemInfo^.Stack := DbgMemInfo^.Stack;
-      NewMemInfo.Stack[0] := nil;
-
-      NewMemInfo.ObjectType := ''; // На этот момент тип ещё может быть неопределен
-
-      ThData^.DbgGetMemInfo.AddOrSetValue(Addr, NewMemInfo);
-      Inc(ThData^.DbgGetMemInfoSize, NewMemInfo.Size);
-
-      Inc(FProcessData.ProcessGetMemCount);
-      Inc(FProcessData.ProcessGetMemSize, NewMemInfo.Size);
-    end;
-  end;
-
-begin
-  if UpdateCurThreadContext then
-  begin
-    ThData := FCurThreadData;
-
-    Address := DebugEvent^.Exception.ExceptionRecord.ExceptionAddress;
-    if DbgTrackRETBreakpoints.TryGetValue(Address, TrackRETBp) and (TrackRETBp.Count > 0){???} then
-    begin
-      if tbTrackFunc in TrackRETBp^.BPType then
-        _RegisterRETTrackPoint;
-
-      if tbMemInfo in TrackRETBp^.BPType then
-        _RegisterGetMemInfoPoint;
-
-      // Уменьшаем счетчик
-      if TrackRETBp.Count > 0 then
-        Dec(TrackRETBp.Count);
-
-      // Восстанавливаем breakpoint в случае рекурсивного вызова функции
-      if TrackRETBp.Count > 0 then
-        DbgCurTrackAddress := Address;
-
-      // Восстанавливаем byte-code для продолжения выполнения
-      DoRemoveBreakpointF(Address, TrackRETBp^.SaveByte);
-
-      //if TrackRETBp^.Count = 0 then
-      //  DbgTrackRETBreakpoints.Remove(Address);
-
-      SetSingleStepMode(ThData, True);
-
-      Exit(True);
-    end;
-  end;
-
-  Exit(False);
 end;
 
 function TDebuger.ProcessUserBreakPoint(DebugEvent: PDebugEvent): LongBool;
@@ -2864,37 +1897,8 @@ begin
 end;
 
 procedure TDebuger.ProcessDbgSamplingInfo(DebugEvent: PDebugEvent);
-var
-  CPUTime: UInt64;
-  ThData: PThreadData;
-  I: Integer;
-  Threads: TDbgActiveThreads;
 begin
-  CPUTime := _QueryProcessCycleTime(ProcessData^.AttachedProcessHandle);
-  // TODO: Контроль загрузки CPU
-  if CPUTime > ProcessData^.SamplingCPUTime then
-  begin
-    ProcessData^.SamplingCPUTime := CPUTime;
-    Inc(ProcessData^.SamplingCount);
-
-    GetActiveThreads(Threads);
-
-    for I := 0 to High(Threads) do
-    begin
-      ThData := Threads[I];
-      if ThData^.State = tsActive then
-        AddThreadSamplingInfo(ThData);
-    end;
-
-    (*
-    for I := 0 to FThreadList.Count - 1 do
-    begin
-      ThData := FThreadList[I];
-      if ThData^.State = tsActive then
-        AddThreadSamplingInfo(ThData);
-    end;
-    *)
-  end;
+  DbgSamplingProfiler.ProcessDbgSamplingInfo;
 end;
 
 procedure TDebuger.ProcessDbgSyncObjsInfo(DebugEvent: PDebugEvent);
@@ -2913,14 +1917,14 @@ begin
         Ptr := Pointer(ER^.ExceptionInformation[1]);
         Size := ER^.ExceptionInformation[2];
 
-        LoadSyncObjsInfoPackEx(Ptr, Size);
+        DbgSysncObjsProfiler.LoadSyncObjsInfoPackEx(Ptr, Size);
       end;
     dstPerfomanceAndInfo:
       begin
         Ptr := Pointer(ER^.ExceptionInformation[3]);
         Size := ER^.ExceptionInformation[4];
 
-        LoadSyncObjsInfoPackEx(Ptr, Size);
+        DbgSysncObjsProfiler.LoadSyncObjsInfoPackEx(Ptr, Size);
       end;
   end;
 end;
@@ -3016,6 +2020,11 @@ begin
   end;
 end;
 
+procedure TDebuger.RemoveBreakpoint(const Address: Pointer; const SaveByte: Byte);
+begin
+  DoRemoveBreakpointF(Address, SaveByte);
+end;
+
 procedure TDebuger.RemoveCurrentBreakpoint;
 begin
   FRemoveCurrentBreakpoint := True;
@@ -3041,26 +2050,13 @@ begin
     if AddProcessPointInfo(ptThreadInfo) then
       AddThreadPointInfo(ThData, ptStop);
 
-    UpdateMemoryInfoObjectTypesOfThread(ThData);
+    DbgMemoryProfiler.UpdateMemoryInfoObjectTypesOfThread(ThData);
   end;
 end;
 
-procedure TDebuger.RemoveTrackBreakpoint(const Address: Pointer; const BPType: TTrackBreakpointType);
-var
-  TrackBp: PTrackBreakpoint;
+procedure TDebuger.RestoreBreakpoint(const Address: Pointer);
 begin
-  if DbgTrackBreakpoints.TryGetValue(Address, TrackBp) then
-  begin
-    Exclude(TrackBp^.BPType, BPType);
-
-    if TrackBp^.BPType = [] then
-    begin
-      DoRemoveBreakpointF(Address, TrackBp^.SaveByte);
-      //DbgTrackBreakpoints.Remove(Address);
-    end;
-  end
-  else
-    RaiseDebugCoreException();
+  DoRestoreBreakpointF(Address);
 end;
 
 procedure TDebuger.ProcessDbgException(DebugEvent: PDebugEvent);
@@ -3090,74 +2086,6 @@ begin
   end;
 end;
 
-function TDebuger.FindMemoryPointer(const Ptr: Pointer; var ThData: PThreadData; var MemInfo: TGetMemInfo): LongBool;
-var
-  Idx: Integer;
-begin
-  Result := False;
-
-  // Ищем в текущем потоке
-  if ThData <> Nil then
-    Result := ThData^.DbgGetMemInfo.TryGetValue(Ptr, MemInfo);
-
-  if not Result then
-  begin
-    // Ищем в других потоках
-    Idx := 0;
-    repeat
-      ThData := GetThreadDataByIdx(Idx);
-      if ThData <> Nil then
-      begin
-        Result := ThData^.DbgGetMemInfo.TryGetValue(Ptr, MemInfo);
-
-        Inc(Idx);
-      end;
-    until Result or (ThData = Nil);
-  end;
-end;
-
-procedure TDebuger.LoadMemoryInfoPackEx(const MemInfoPack: Pointer; const Count: Cardinal);
-var
-  Buf: PDbgMemInfoListBuf;
-begin
-  if not MemoryCheckMode then
-    Exit;
-
-  while FProcessMemoryQueue.Count >= _MAX_MEM_INFO_BUF_COUNT do
-    SwitchToThread;
-
-  Buf := AllocMem(SizeOf(TDbgMemInfoListBuf));
-  Buf^.Count := Count;
-  Buf^.DbgMemInfoList := AllocMem(Count * SizeOf(TDbgMemInfo));
-  Buf^.DbgPointIdx := ProcessData.CurDbgPointIdx;
-
-  if ReadData(MemInfoPack, Buf^.DbgMemInfoList, Count * SizeOf(TDbgMemInfo)) then
-    FProcessMemoryQueue.Enqueue(Buf)
-  else
-    RaiseDebugCoreException();
-end;
-
-procedure TDebuger.LoadSyncObjsInfoPackEx(const SyncObjsInfoPack: Pointer; const Count: Cardinal);
-var
-  Buf: PDbgSyncObjsInfoListBuf;
-begin
-  if not SyncObjsTracking then
-    Exit;
-
-  while FProcessSyncObjsInfoQueue.Count >= _MAX_SYNC_OBJS_INFO_BUF_COUNT do
-    SwitchToThread;
-
-  Buf := AllocMem(SizeOf(TDbgSyncObjsInfoListBuf));
-  Buf^.Count := Count;
-  Buf^.DbgSyncObjsInfoList := AllocMem(Count * SizeOf(TDbgSyncObjsInfo));
-  Buf^.DbgPointIdx := ProcessData.CurDbgPointIdx;
-
-  if ReadData(SyncObjsInfoPack, Buf^.DbgSyncObjsInfoList, Count * SizeOf(TDbgSyncObjsInfo)) then
-    FProcessSyncObjsInfoQueue.Enqueue(Buf)
-  else
-    RaiseDebugCoreException();
-end;
-
 procedure TDebuger.Log(const Msg: String);
 begin
   DoDbgLog(CurThreadId, Msg);
@@ -3180,7 +2108,7 @@ begin
         Size := ER^.ExceptionInformation[2];
 
         //LoadMemoryInfoPack(Ptr, Size);
-        LoadMemoryInfoPackEx(Ptr, Size);
+        DbgMemoryProfiler.LoadMemoryInfoPackEx(Ptr, Size);
       end;
     dstMemHookStatus:
       begin
@@ -3374,6 +2302,11 @@ begin
   Result := AddNewBreakPoint(Breakpoint);
 end;
 
+procedure TDebuger.SetBreakpoint(const Address: Pointer; var SaveByte: Byte);
+begin
+  DoSetBreakpointF(Address, SaveByte);
+end;
+
 procedure TDebuger.SetCloseDebugProcess(const Value: LongBool);
 begin
   FCloseDebugProcess := Value;
@@ -3496,21 +2429,6 @@ begin
   Result := AddNewBreakPoint(Breakpoint);
 end;
 
-procedure TDebuger.SetMemoryCallStack(const Value: LongBool);
-begin
-  FMemoryCallStack := Value;
-end;
-
-procedure TDebuger.SetMemoryCheckDoubleFree(const Value: LongBool);
-begin
-  FMemoryCheckDoubleFree := Value;
-end;
-
-procedure TDebuger.SetMemoryCheckMode(const Value: LongBool);
-begin
-  FMemoryCheckMode := Value;
-end;
-
 procedure TDebuger.SetPerfomanceMode(const Value: LongBool);
 begin
   if FPerfomanceMode <> Value then
@@ -3551,11 +2469,6 @@ begin
   ThData^.Context^.EFlags := ThData^.Context^.EFlags or EFLAGS_TF;
 
   Check(SetThreadContext(ThData^.ThreadHandle, ThData^.Context^));
-end;
-
-procedure TDebuger.SetSyncObjsTracking(const Value: LongBool);
-begin
-  FSyncObjsTracking := Value;
 end;
 
 procedure TDebuger.SetSingleStepMode(const ThreadID: TThreadId; const RestoreEIPAfterBP: LongBool);
@@ -3605,51 +2518,6 @@ begin
       else
         ThreadAdvInfo^.ThreadAdvType := tatNormal;
     end;
-  end;
-end;
-
-procedure TDebuger.SetTrackBreakpoint(const Address: Pointer; FuncInfo: TObject; const BPType: TTrackBreakpointType = tbTrackFunc);
-var
-  TrackBk: PTrackBreakpoint;
-begin
-  if not DbgTrackBreakpoints.TryGetValue(Address, TrackBk) then
-  begin
-    TrackBk := AllocMem(SizeOf(TTrackBreakpoint));
-
-    TrackBk^.FuncInfo := FuncInfo;
-    TrackBk^.SaveByte := 0;
-
-    TrackBk^.BPType := [];
-    Include(TrackBk^.BPType, BPType);
-
-    DoSetBreakpointF(Address, TrackBk^.SaveByte);
-
-    DbgTrackBreakpoints.Add(Address, TrackBk);
-  end
-  else
-    Include(TrackBk^.BPType, BPType);
-end;
-
-function TDebuger.SetTrackRETBreakpoint(const Address: Pointer): PTrackRETBreakpoint;
-begin
-  if DbgTrackRETBreakpoints.TryGetValue(Address, Result) then
-  begin
-    Inc(Result^.Count);
-
-    DoRestoreBreakpointF(Address);
-  end
-  else
-  begin
-    GetMem(Result, SizeOf(TTrackRETBreakpoint));
-
-    Result^.Count := 1;
-
-    Result^.SaveByte := 0;
-    DoSetBreakpointF(Address, Result^.SaveByte);
-
-    Result^.BPType := [];
-
-    DbgTrackRETBreakpoints.Add(Address, Result);
   end;
 end;
 
@@ -3944,50 +2812,6 @@ begin
   end;
 end;
 
-procedure TDebuger.UpdateMemoryInfoObjectTypes;
-var
-  Idx: Integer;
-  ThData: PThreadData;
-begin
-  Idx := 0;
-  repeat
-    ThData := GetThreadDataByIdx(Idx);
-    if ThData <> Nil then
-    begin
-      UpdateMemoryInfoObjectTypesOfThread(ThData);
-      Inc(Idx);
-    end;
-  until ThData = Nil;
-
-  // Потеряшки
-  (*
-  GetMemInfo := ProcessData.DbgGetMemInfo;
-  if GetMemInfo.Count > 0 then
-  begin
-    for GetMemInfoItem in GetMemInfo do
-      GetMemInfoItem.Value^.ObjectType := GetMemInfoItem.Value^.GetObjectType(GetMemInfoItem.Key);
-  end;
-  *)
-end;
-
-procedure TDebuger.UpdateMemoryInfoObjectTypesOfThread(ThData: PThreadData);
-var
-  GetMemInfo: TGetMemInfoList;
-  GetMemInfoItem: TGetMemInfoItem;
-begin
-  GetMemInfo := ThData^.DbgGetMemInfo;
-  if GetMemInfo.Count > 0 then
-  begin
-    GetMemInfo.LockForRead;
-    try
-      for GetMemInfoItem in GetMemInfo do
-        GetMemInfoItem.Value.CheckObjectType;
-    finally
-      GetMemInfo.UnLockForRead;
-    end;
-  end;
-end;
-
 function TDebuger.UpdateThreadContext(ThreadData: PThreadData; const ContextFlags: Cardinal = CONTEXT_FULL): LongBool;
 begin
   Result := False;
@@ -4018,67 +2842,6 @@ begin
 
   if Result then
     Result := FlushInstructionCache(FProcessData.AttachedProcessHandle, AddrPrt, DataSize);
-end;
-
-{ TDbgSamplingThread }
-
-constructor TDbgWorkerThread.Create;
-begin
-  inherited Create(True);
-  FreeOnTerminate := False;
-
-  Suspended := False;
-end;
-
-destructor TDbgWorkerThread.Destroy;
-begin
-  inherited;
-end;
-
-procedure TDbgWorkerThread.Execute;
-var
-  HasNext: LongBool;
-begin
-  NameThreadForDebugging(ClassName);
-
-  repeat
-    HasNext := False;
-
-    if Assigned(gvDebuger) then
-    begin
-      HasNext := gvDebuger.ProcessSamplingInfo;
-
-      HasNext := gvDebuger.ProcessMemoryInfoQueue or HasNext;
-      HasNext := gvDebuger.ProcessSyncObjsInfoQueue or HasNext;
-
-      if not HasNext then
-        Sleep(10);
-    end;
-  until Terminated and not(HasNext);
-end;
-
-class procedure TDbgWorkerThread.Init;
-begin
-  if gvDebuger.CodeTracking or gvDebuger.MemoryCheckMode or gvDebuger.SyncObjsTracking then
-  begin
-    if gvDbgWorkerThread = Nil then
-      gvDbgWorkerThread := TDbgWorkerThread.Create;
-  end;
-end;
-
-class procedure TDbgWorkerThread.Reset;
-begin
-  if Assigned(gvDbgWorkerThread) then
-  begin
-    gvDbgWorkerThread.Stop;
-    FreeAndNil(gvDbgWorkerThread);
-  end;
-end;
-
-procedure TDbgWorkerThread.Stop;
-begin
-  Terminate;
-  WaitFor;
 end;
 
 initialization

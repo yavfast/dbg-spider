@@ -129,9 +129,9 @@ begin
     begin
       gvDebuger.PerfomanceMode := (doProfiler in FDbgOptions);
 
-      gvDebuger.MemoryCheckMode := (doMemProfiler in FDbgOptions);
-      gvDebuger.MemoryCallStack := gvDebuger.MemoryCheckMode and (doMemCallStack in FDbgOptions);
-      gvDebuger.MemoryCheckDoubleFree := gvDebuger.MemoryCheckMode and (doMemCheckDoubleFree in FDbgOptions);
+      gvDebuger.DbgMemoryProfiler.MemoryCheckMode := (doMemProfiler in FDbgOptions);
+      gvDebuger.DbgMemoryProfiler.MemoryCallStack := gvDebuger.DbgMemoryProfiler.MemoryCheckMode and (doMemCallStack in FDbgOptions);
+      gvDebuger.DbgMemoryProfiler.MemoryCheckDoubleFree := gvDebuger.DbgMemoryProfiler.MemoryCheckMode and (doMemCheckDoubleFree in FDbgOptions);
 
       gvDebuger.ExceptionCheckMode := (doExceptions in FDbgOptions);
       gvDebuger.ExceptionCallStack := gvDebuger.ExceptionCheckMode and (doExceptionCallStack in FDbgOptions);
@@ -140,7 +140,7 @@ begin
       gvDebuger.TrackSystemUnits := gvDebuger.CodeTracking and (doTrackSystemUnits in FDbgOptions);
       gvDebuger.SamplingMethod := gvDebuger.CodeTracking and (doSamplingMethod in FDbgOptions);
 
-      gvDebuger.SyncObjsTracking := (doSyncObjsTracking in FDbgOptions);
+      gvDebuger.DbgSysncObjsProfiler.SyncObjsTracking := (doSyncObjsTracking in FDbgOptions);
 
       _AC.Log(dltInfo, 'Start debug process');
       try

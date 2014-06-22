@@ -45,7 +45,12 @@ uses
   MapDebugInfo in 'MapDebugInfo.pas',
   JclPeImage in 'JclPeImage.pas',
   uSharedObject in 'uSharedObject.pas',
-  uSQLiteDB in 'uSQLiteDB.pas';
+  uSQLiteDB in 'uSQLiteDB.pas',
+  DbgMemoryProfiler in 'DbgMemoryProfiler.pas',
+  DbgWorkerThread in 'DbgWorkerThread.pas',
+  DbgSyncObjsProfiler in 'DbgSyncObjsProfiler.pas',
+  DbgSamplingProfiler in 'DbgSamplingProfiler.pas',
+  DbgCodeProfiler in 'DbgCodeProfiler.pas';
 
 {$R *.res}
 

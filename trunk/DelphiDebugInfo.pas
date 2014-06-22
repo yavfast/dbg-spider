@@ -1215,13 +1215,13 @@ begin
   if MemoryManagerInfo.VarInfo = nil then Exit;
 
   if MemoryManagerInfo.GetMem <> nil then
-    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.GetMem.Address, tbMemInfo);
+    gvDebuger.DbgCodeProfiler.RemoveTrackBreakpoint(MemoryManagerInfo.GetMem.Address, tbMemInfo);
   if MemoryManagerInfo.FreeMem <> nil then
-    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.FreeMem.Address, tbMemInfo);
+    gvDebuger.DbgCodeProfiler.RemoveTrackBreakpoint(MemoryManagerInfo.FreeMem.Address, tbMemInfo);
   if MemoryManagerInfo.ReallocMem <> nil then
-    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.ReallocMem.Address, tbMemInfo);
+    gvDebuger.DbgCodeProfiler.RemoveTrackBreakpoint(MemoryManagerInfo.ReallocMem.Address, tbMemInfo);
   if MemoryManagerInfo.AllocMem <> nil then
-    gvDebuger.RemoveTrackBreakpoint(MemoryManagerInfo.AllocMem.Address, tbMemInfo);
+    gvDebuger.DbgCodeProfiler.RemoveTrackBreakpoint(MemoryManagerInfo.AllocMem.Address, tbMemInfo);
 
   gvDebuger.Log('Reset slow memory manager hook - ok');
 end;
@@ -1334,7 +1334,7 @@ var
     Result := Nil;
 
     if GetLineInfo(Addr, UnitInfo, Result, LineInfo, False) <> slNotFound then
-      gvDebuger.SetTrackBreakpoint(Addr, Result, tbMemInfo)
+      gvDebuger.DbgCodeProfiler.SetTrackBreakpoint(Addr, Result, tbMemInfo)
     else
       RaiseDebugCoreException();
   end;
@@ -1942,8 +1942,8 @@ begin
     for I := 0 to Units.Count - 1 do
       Inc(FuncCount, TUnitInfo(Units.Objects[I]).Funcs.Count);
 
-  gvDebuger.ClearDbgTracking;
-  gvDebuger.InitDbgTracking(FuncCount);
+  gvDebuger.DbgCodeProfiler.ClearDbgTracking;
+  gvDebuger.DbgCodeProfiler.InitDbgTracking(FuncCount);
 
   if SetBP then
   begin
@@ -1968,7 +1968,7 @@ begin
       for J := 0 to UnitInfo.Funcs.Count - 1 do
       begin
         FuncInfo := TFuncInfo(UnitInfo.Funcs[J]);
-        gvDebuger.SetTrackBreakpoint(FuncInfo.Address, FuncInfo);
+        gvDebuger.DbgCodeProfiler.SetTrackBreakpoint(FuncInfo.Address, FuncInfo);
       end;
     end;
   end;
@@ -1998,8 +1998,8 @@ Begin
       Pointer(FImage.OptionalHeader32.ImageBase),
       MemoryManagerInfo.VarInfo,
       RTLInfo.vmtClassName,
-      gvDebuger.MemoryCallStack,
-      gvDebuger.SyncObjsTracking
+      gvDebuger.DbgMemoryProfiler.MemoryCallStack,
+      gvDebuger.DbgSysncObjsProfiler.SyncObjsTracking
     );
   end;
 End;
