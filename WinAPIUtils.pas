@@ -31,6 +31,8 @@ function GetFileVersion(const AFileName: string): string;
 
 function GetGUID: String;
 
+procedure Check(const Value: LongBool); inline;
+
 implementation
 
 type
@@ -55,6 +57,12 @@ var
   _KernelLibHandle: THandle = 0;
   NtSuspendProcess: TProcFunction = Nil;
   NtResumeProcess: TProcFunction = Nil;
+
+procedure Check(const Value: LongBool);
+begin
+  if not Value then
+    RaiseLastOSError;
+end;
 
 procedure _LoadKernelProcs;
 begin
