@@ -211,10 +211,10 @@ type
     function AddProcessPointInfo(const PointType: TDbgPointType): LongBool;
 
     procedure AddThreadSamplingInfo(ThreadData: PThreadData);
-    procedure ProcessThreadSamplingInfo(ThreadData: PThreadData);
+    function ProcessThreadSamplingInfo(ThreadData: PThreadData): LongBool;
     procedure ProcessThreadSamplingStack(ThreadData: PThreadData; var Stack: TDbgInfoStack);
     procedure ProcessThreadSamplingAddress(ThData: PThreadData; FuncAddr, ParentFuncAddr: Pointer);
-    procedure ProcessSamplingInfo;
+    function ProcessSamplingInfo: LongBool;
   public
     constructor Create;
     destructor Destroy; override;
@@ -805,6 +805,9 @@ var
   ThData: PThreadData;
 begin
   DbgState := dsNone;
+
+  FProcessMemoryQueue.Clear;
+  FProcessSyncObjsInfoQueue.Clear;
 
   FProcessData.Clear;
 
@@ -2151,11 +2154,13 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessSamplingInfo;
+function TDebuger.ProcessSamplingInfo: LongBool;
 var
   I: Integer;
   ThData: PThreadData;
 begin
+  Result := False;
+
   if not(CodeTracking and SamplingMethod) then
     Exit;
 
@@ -2163,7 +2168,7 @@ begin
     for I := FThreadList.Count - 1 downto 0 do
     begin
       ThData := FThreadList[I];
-      ProcessThreadSamplingInfo(ThData);
+      Result := ProcessThreadSamplingInfo(ThData) or Result;
     end;
   except
     on E: Exception do ; // TODO:
@@ -2339,7 +2344,7 @@ begin
   end;
 end;
 
-procedure TDebuger.ProcessThreadSamplingInfo(ThreadData: PThreadData);
+function TDebuger.ProcessThreadSamplingInfo(ThreadData: PThreadData): LongBool;
 var
   StackInfo: PDbgInfoStackRec;
 begin
@@ -2359,7 +2364,11 @@ begin
     except
       on E: Exception do ;
     end;
-  end;
+
+    Result := True;
+  end
+  else
+    Result := False;
 end;
 
 procedure TDebuger.ProcessThreadSamplingAddress(ThData: PThreadData; FuncAddr, ParentFuncAddr: Pointer);
@@ -4028,23 +4037,24 @@ end;
 
 procedure TDbgWorkerThread.Execute;
 var
-  F: LongBool;
+  HasNext: LongBool;
 begin
   NameThreadForDebugging(ClassName);
 
-  while not Terminated do
-  begin
+  repeat
+    HasNext := False;
+
     if Assigned(gvDebuger) then
     begin
-      gvDebuger.ProcessSamplingInfo;
+      HasNext := gvDebuger.ProcessSamplingInfo;
 
-      F := gvDebuger.ProcessMemoryInfoQueue;
-      F := gvDebuger.ProcessSyncObjsInfoQueue or F;
+      HasNext := gvDebuger.ProcessMemoryInfoQueue or HasNext;
+      HasNext := gvDebuger.ProcessSyncObjsInfoQueue or HasNext;
 
-      if not F then
+      if not HasNext then
         Sleep(10);
     end;
-  end;
+  until Terminated and not(HasNext);
 end;
 
 class procedure TDbgWorkerThread.Init;
