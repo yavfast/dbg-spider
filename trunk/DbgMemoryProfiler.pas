@@ -42,7 +42,7 @@ type
 
 implementation
 
-uses Debuger;
+uses Debuger, Collections.Base;
 
 const
   _MAX_MEM_INFO_BUF_COUNT = 512;

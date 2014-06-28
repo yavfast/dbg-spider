@@ -647,8 +647,9 @@ type
 
   TProcessState = (psNone, psActive, psFinished);
 
-  PProcessData = ^TProcessData;
-  TProcessData = record
+  //PProcessData = ^TProcessData;
+  TProcessData = class
+  public
     ProcessID: TProcessId;
     State: TProcessState;
     StartAddress: Pointer;
@@ -684,6 +685,9 @@ type
     AttachedProcessHandle: THandle;
     AttachedThreadHandle: THandle;
     AttachedFileHandle: THandle;
+
+    constructor Create;
+    destructor Destroy; override;
 
     //DbgShareMem: THandle; // FileMap для взаимодействия с процессом
 
@@ -739,7 +743,7 @@ procedure RaiseDebugCoreException(const Msg: String = '');
 
 implementation
 
-uses Debuger, DebugInfo, WinAPIUtils;
+uses Debuger, DebugInfo, WinAPIUtils, Collections.Base;
 
 procedure RaiseDebugCoreException(const Msg: String);
 begin
@@ -751,6 +755,9 @@ end;
 
 procedure TProcessData.Clear;
 begin
+  SamplingCPUTime := 0;
+  SamplingCount := 0;
+
   if DbgPoints <> Nil then
     FreeAndNil(DbgPoints);
 
@@ -760,6 +767,15 @@ begin
   FreeAndNil(DbgTrackFuncList);
   FreeAndNil(DbgTrackUnitList);
   FreeAndNil(DbgTrackUsedUnitList);
+end;
+
+constructor TProcessData.Create;
+begin
+  inherited;
+
+  State := psNone;
+  DbgPoints := Nil;
+  DbgExceptions := TThreadList.Create;
 end;
 
 function TProcessData.CurDbgPointIdx: Integer;
@@ -796,6 +812,15 @@ begin
     Result := DbgPoints.Count
   else
     Result := 0;
+end;
+
+destructor TProcessData.Destroy;
+begin
+  Clear;
+
+  FreeAndNil(DbgExceptions);
+
+  inherited;
 end;
 
 function TProcessData.Elapsed_MSec: Cardinal;
@@ -1613,7 +1638,7 @@ begin
     soSendMessage:
       begin
         // Игнорим SendMessage в главном потоке
-        if DbgSyncObjsInfo^.ThreadId = gvDebuger.ProcessData^.MainThreadID then
+        if DbgSyncObjsInfo^.ThreadId = gvDebuger.ProcessData.MainThreadID then
           Exit;
       end;
   end;

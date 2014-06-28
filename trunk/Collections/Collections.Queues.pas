@@ -84,9 +84,6 @@ type
     FLength: NativeInt;
     FArray: TArray<T>;
 
-    FLock: TMREWSync;
-    FThreadSafe: Boolean;
-
     procedure SetCapacity(const ANewCapacity : NativeInt);
   protected
     ///  <summary>Returns the number of elements in the queue.</summary>
@@ -117,12 +114,6 @@ type
     constructor Create(const ARules: TRules<T>; const AInitialCapacity: NativeInt; const AThreadSafe: Boolean = False); overload;
 
     destructor Destroy; override;
-
-    procedure LockForRead; inline;
-    procedure UnLockForRead; inline;
-
-    procedure LockForWrite; inline;
-    procedure UnLockForWrite; inline;
 
     ///  <summary>Clears the contents of the queue.</summary>
     procedure Clear(); override;
@@ -961,8 +952,7 @@ constructor TQueue<T>.Create(const ARules: TRules<T>; const AInitialCapacity: Na
 begin
   inherited Create(ARules);
 
-  FLock := TMREWSync.Create;
-  FThreadSafe := AThreadSafe;
+  ThreadSafe := AThreadSafe;
 
   LockForWrite;
 
@@ -1137,11 +1127,7 @@ end;
 
 destructor TQueue<T>.Destroy;
 begin
-  LockForWrite;
   inherited Destroy;
-  UnLockForWrite;
-
-  FreeAndNil(FLock);
 end;
 
 function TQueue<T>.GetCapacity: NativeInt;
@@ -1215,18 +1201,6 @@ begin
   end;
 
   UnLockForRead;
-end;
-
-procedure TQueue<T>.LockForRead;
-begin
-  if FThreadSafe then
-    FLock.BeginRead;
-end;
-
-procedure TQueue<T>.LockForWrite;
-begin
-  if FThreadSafe then
-    FLock.BeginWrite;
 end;
 
 function TQueue<T>.Max: T;
@@ -1355,18 +1329,6 @@ begin
     Result := FArray[FHead];
     UnLockForRead;
   end;
-end;
-
-procedure TQueue<T>.UnLockForRead;
-begin
-  if FThreadSafe then
-    FLock.EndRead;
-end;
-
-procedure TQueue<T>.UnLockForWrite;
-begin
-  if FThreadSafe then
-    FLock.EndWrite;
 end;
 
 { TQueue<T>.TEnumerator }

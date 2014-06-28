@@ -508,3 +508,4 @@ initialization
 finalization
   FreeAndNil(TGradientInfoList._GradientInfoList);
 end.
+

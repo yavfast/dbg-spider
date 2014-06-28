@@ -1616,8 +1616,11 @@ type
   TAbstractContainer = class abstract(TRefCountedObject)
   private
     FVersion: NativeInt;
-
+    FLock: TMREWSync;
+    FThreadSafe: LongBool;
   protected
+    procedure SetThreadSafe(const Value: LongBool); virtual;
+
     ///  <summary>Returns the number of elements in the collection.</summary>
     ///  <returns>A positive value specifying the number of elements in the collection.</returns>
     ///  <remarks>A call to this method can be costly because some
@@ -1629,6 +1632,9 @@ type
     procedure NotifyCollectionChanged(); virtual;
   public
     const CDefaultSize = 32;
+
+    constructor Create(const AThreadSafe: LongBool = False);
+    destructor Destroy; override;
 
     ///  <summary>Returns the current version of the collection.</summary>
     ///  <returns>An integer value specifying the current "structural version" of the collection.</returns>
@@ -1648,6 +1654,15 @@ type
     ///  <remarks>Accesing this property can be costly because some
     ///  collections cannot detect the number of stored elements directly, resorting to enumerating themselves.</remarks>
     property Count: NativeInt read GetCount;
+
+    procedure LockForRead; inline;
+    procedure UnLockForRead; inline;
+
+    procedure LockForWrite; inline;
+    procedure UnLockForWrite; inline;
+
+    property Lock: TMREWSync read FLock;
+    property ThreadSafe: LongBool read FThreadSafe write SetThreadSafe;
   end;
 
   ///  <summary>Base class for all collections.</summary>
@@ -3808,9 +3823,54 @@ end;
 
 { TAbstractContainer }
 
+constructor TAbstractContainer.Create(const AThreadSafe: LongBool);
+begin
+  inherited Create;
+
+  FLock := TMREWSync.Create;
+  ThreadSafe := AThreadSafe;
+end;
+
+destructor TAbstractContainer.Destroy;
+begin
+  FThreadSafe := False;
+  FreeAndNil(FLock);
+
+  inherited;
+end;
+
+procedure TAbstractContainer.LockForRead;
+begin
+  if FThreadSafe then
+    FLock.BeginRead;
+end;
+
+procedure TAbstractContainer.LockForWrite;
+begin
+  if FThreadSafe then
+    FLock.BeginWrite;
+end;
+
 procedure TAbstractContainer.NotifyCollectionChanged;
 begin
-  Inc(FVersion);
+  AtomicIncrement(FVersion);
+end;
+
+procedure TAbstractContainer.SetThreadSafe(const Value: LongBool);
+begin
+  FThreadSafe := Value;
+end;
+
+procedure TAbstractContainer.UnLockForRead;
+begin
+  if FThreadSafe then
+    FLock.EndRead;
+end;
+
+procedure TAbstractContainer.UnLockForWrite;
+begin
+  if FThreadSafe then
+    FLock.EndWrite;
 end;
 
 function TAbstractContainer.Version: NativeInt;
@@ -4088,6 +4148,8 @@ end;
 
 constructor TSequence<T>.Create(const ARules: TRules<T>);
 begin
+  inherited Create;
+
   FElementRules := ARules;
 end;
 
@@ -5077,6 +5139,8 @@ end;
 
 constructor TAssociation<TKey, TValue>.Create(const AKeyRules: TRules<TKey>; const AValueRules: TRules<TValue>);
 begin
+  inherited Create;
+
   FKeyRules := AKeyRules;
   FValueRules := AValueRules;
 end;

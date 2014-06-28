@@ -30,7 +30,7 @@ type
       ltProject:
         ();
       ltProcess:
-        (ProcessData: PProcessData);
+        (ProcessData: TProcessData);
       ltThread:
         (ThreadData: PThreadData);
       ltMemInfo:
@@ -542,7 +542,7 @@ type
     function LoadFunctionSource(SrcView: TSourceViewFrame; FuncInfo: TFuncInfo; LineNo: Integer = 0): LongBool; overload;
     procedure LoadUnitSource(UnitInfo: TUnitInfo; UnitNode: PVirtualNode);
 
-    procedure LoadTrackProcessFunctions(ProcData: PProcessData; ThreadNode: PVirtualNode);
+    procedure LoadTrackProcessFunctions(ProcData: TProcessData; ThreadNode: PVirtualNode);
     procedure LoadTrackThreadFunctions(ThData: PThreadData; ThreadNode: PVirtualNode);
     procedure LoadTrackParentFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
     procedure LoadTrackChildFunctions(TrackFuncInfo: TTrackFuncInfo; TrackFuncNode: PVirtualNode);
@@ -567,8 +567,8 @@ type
     procedure DrawThreadTimeLine(const GP: IGPGraphics; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
     procedure DrawThreadCPUTimeLine(const GP: IGPGraphics; const R: TRect; ThData: PThreadData; const CurOffset: Cardinal);
 
-    procedure DrawProcessTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
-    procedure DrawProcessCPUTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+    procedure DrawProcessTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: TProcessData; const CurOffset: Cardinal);
+    procedure DrawProcessCPUTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: TProcessData; const CurOffset: Cardinal);
 
     procedure DrawBackgroundEx(const GP: IGPGraphics; const R: TRect; const BkColor: TColor);
 
@@ -615,7 +615,7 @@ implementation
 uses Math, ClassUtils, uProcessList, uDebugerThread,
   uProjectOptions, WinAPIUtils, System.UITypes, System.Types,
   uGA, System.Win.Registry, Winapi.ActiveX, Winapi.ShellAPI, uFeedback,
-  DbgHookTypes, Collections.Dictionaries;
+  DbgHookTypes, Collections.Dictionaries, Collections.Base;
 
 const
   _TrackingID_web = 'UA-44820931-1';
@@ -666,7 +666,7 @@ begin
           end;
         end;
 
-        gvDebuger.ProcessData^.DbgExceptions.Add(ExceptInfo);
+        gvDebuger.ProcessData.DbgExceptions.Add(ExceptInfo);
 
         vstExceptionThreadsFocusChanged(nil, nil, 0);
       end;
@@ -1508,17 +1508,17 @@ begin
   end;
 end;
 
-procedure TMainForm.DrawProcessCPUTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+procedure TMainForm.DrawProcessCPUTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: TProcessData; const CurOffset: Cardinal);
 var
   X1, X2, Y1, Y2: Integer;
   T1, T2: Int64;
   I: Cardinal;
   ProcPoint: PProcessPoint;
 begin
-  if (ProcData = nil) or (ProcData^.DbgPointsCount = 0) then Exit;
+  if (ProcData = nil) or (ProcData.DbgPointsCount = 0) then Exit;
 
   T1 := 0;
-  T2 := ProcData^.DbgPointsCount - 1;
+  T2 := ProcData.DbgPointsCount - 1;
 
   X1 := R.Left + Integer(T1 - CurOffset);
   X2 := R.Left + Integer(T2 - CurOffset);
@@ -1537,11 +1537,11 @@ begin
 
   DrawVGradientRect(GP, GPRect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
-  if ProcData^.DbgPointsCount > 0 then
+  if ProcData.DbgPointsCount > 0 then
   begin
-    for I := CurOffset to ProcData^.DbgPointsCount - 1 do
+    for I := CurOffset to ProcData.DbgPointsCount - 1 do
     begin
-      ProcPoint := ProcData^.DbgPointByIdx(I);
+      ProcPoint := ProcData.DbgPointByIdx(I);
       if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
         (ProcPoint^.PointType in [ptException, ptThreadInfo, ptTraceInfo])
       then begin
@@ -1555,7 +1555,7 @@ begin
   end;
 end;
 
-procedure TMainForm.DrawProcessTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: PProcessData; const CurOffset: Cardinal);
+procedure TMainForm.DrawProcessTimeLine(const GP: IGPGraphics; const R: TRect; ProcData: TProcessData; const CurOffset: Cardinal);
 var
   X1, X2, Y1, Y2: Integer;
   T1, T2, F: Int64;
@@ -1567,12 +1567,12 @@ begin
   if ProcData = nil then Exit;
 
   T1 := 0;
-  if ProcData^.State <> psActive then
-    T2 := ProcData^.Elapsed
+  if ProcData.State <> psActive then
+    T2 := ProcData.Elapsed
   else
     T2 := _QueryPerformanceCounter;
 
-  T2 := T2 - ProcData^.Started;
+  T2 := T2 - ProcData.Started;
 
   Offset := CurOffset * _TicksPerSec;
 
@@ -1600,18 +1600,18 @@ begin
 
   DrawVGradientRect(GP, GPRect(X1, Y1, X2, Y2), FSpiderOptions.TimelineColors[ptWait]);
 
-  if ProcData^.DbgPointsCount > 0 then
+  if ProcData.DbgPointsCount > 0 then
   begin
     IdxL := 0;
 
     // Ищем начальный индекс для первого видимого события
     if Offset > 0 then
     begin
-      IdxR := ProcData^.DbgPointsCount - 1;
+      IdxR := ProcData.DbgPointsCount - 1;
 
       repeat
         Idx := (IdxL + IdxR) div 2;
-        ProcPoint := ProcData^.DbgPointByIdx(Idx);
+        ProcPoint := ProcData.DbgPointByIdx(Idx);
 
         if (ProcPoint^.FromStart div F) > Offset then
           IdxR := Idx
@@ -1620,9 +1620,9 @@ begin
       until IdxR - IdxL <= 1;
     end;
 
-    for I := IdxL to ProcData^.DbgPointsCount - 1 do
+    for I := IdxL to ProcData.DbgPointsCount - 1 do
     begin
-      ProcPoint := ProcData^.DbgPointByIdx(I);
+      ProcPoint := ProcData.DbgPointByIdx(I);
       if ((ProcPoint^.PointType = ptPerfomance) and (ProcPoint^.DeltaTime > 0)) or
         (ProcPoint^.PointType in [ptException, ptThreadInfo, ptTraceInfo])
       then begin
@@ -2989,7 +2989,7 @@ begin
   end;
 end;
 
-procedure TMainForm.LoadTrackProcessFunctions(ProcData: PProcessData; ThreadNode: PVirtualNode);
+procedure TMainForm.LoadTrackProcessFunctions(ProcData: TProcessData; ThreadNode: PVirtualNode);
 var
   Data: PLinkData;
 
@@ -3014,7 +3014,7 @@ begin
     Data^.SyncNode := ThreadNode;
     Data^.LinkType := ltProcess;
 
-    for TrackUnitInfoPair in ProcData^.DbgTrackUnitList do
+    for TrackUnitInfoPair in ProcData.DbgTrackUnitList do
     begin
       UnitInfo := TUnitInfo(TrackUnitInfoPair.Value.UnitInfo);
       if UnitInfo = nil then Continue;
@@ -4353,7 +4353,7 @@ procedure TMainForm.vstExceptionThreadsFocusChanged(Sender: TBaseVirtualTree; No
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
   ExceptList: TThreadList;
   ExceptNode: PVirtualNode;
   I: Integer;
@@ -4373,7 +4373,7 @@ begin
       ltProcess:
       begin
         ProcData := Data^.ProcessData;
-        ExceptList := ProcData^.DbgExceptions;
+        ExceptList := ProcData.DbgExceptions;
       end;
       ltThread:
       begin
@@ -4386,7 +4386,7 @@ begin
   begin
     // Для получения списка Address info
     ProcData := gvDebuger.ProcessData;
-    ExceptList := ProcData^.DbgExceptions;
+    ExceptList := ProcData.DbgExceptions;
   end;
 
   vstExceptionList.BeginUpdate;
@@ -4418,7 +4418,7 @@ procedure TMainForm.vstExceptionThreadsGetText(Sender: TBaseVirtualTree;
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 begin
   CellText := ' ';
   Data := Sender.GetNodeData(Node);
@@ -4429,9 +4429,9 @@ begin
         if ProcData <> nil then
           case Column of
             0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-            1: CellText := ProcessIDToStr(ProcData^.ProcessID);
-            2: if ProcData^.DbgExceptionsCount > 0 then
-                 CellText := Format('%d', [ProcData^.DbgExceptionsCount]);
+            1: CellText := ProcessIDToStr(ProcData.ProcessID);
+            2: if ProcData.DbgExceptionsCount > 0 then
+                 CellText := Format('%d', [ProcData.DbgExceptionsCount]);
           end;
       end;
     ltThread:
@@ -4476,7 +4476,7 @@ procedure TMainForm.vstLockThreadsGetText(Sender: TBaseVirtualTree;
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 begin
   CellText := ' ';
 
@@ -4488,7 +4488,7 @@ begin
         if ProcData <> nil then
           case Column of
             0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-            1: CellText := ProcessIDToStr(ProcData^.ProcessID);
+            1: CellText := ProcessIDToStr(ProcData.ProcessID);
           end;
       end;
     ltThread:
@@ -5144,7 +5144,7 @@ procedure TMainForm.vstMemInfoFuncTreeGetText(Sender: TBaseVirtualTree; Node: PV
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
   TrackFuncInfo: TMemInfoTrackFuncInfo;
   TrackUnitInfo: TTrackUnitInfo;
 begin
@@ -5156,8 +5156,8 @@ begin
         ProcData := Data^.ProcessData;
         case Column of
           0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-          1: CellText := IntToStr(ProcData^.DbgGetMemInfo.Count);
-          2: CellText := IntToStr(ProcData^.DbgGetMemInfoSize);
+          1: CellText := IntToStr(ProcData.DbgGetMemInfo.Count);
+          2: CellText := IntToStr(ProcData.DbgGetMemInfoSize);
         end;
       end;
     ltThread:
@@ -5273,7 +5273,7 @@ var
   ThLinkData: PLinkData;
 
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
   MemInfo: TGetMemInfoList;
   GetMemInfo: TGetMemInfo;
 begin
@@ -5297,7 +5297,7 @@ begin
     ltProcess:
     begin
       ProcData := ThLinkData^.ProcessData;
-      MemInfo := ProcData^.DbgGetMemInfo;
+      MemInfo := ProcData.DbgGetMemInfo;
     end;
     ltThread:
     begin
@@ -5328,7 +5328,7 @@ var
   ThNode: PVirtualNode;
   ThLinkData: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 
   MemInfo: TGetMemInfoList;
   GetMemInfo: TGetMemInfo;
@@ -5355,7 +5355,7 @@ begin
     ltProcess:
     begin
       ProcData := ThLinkData^.ProcessData;
-      MemInfo := ProcData^.DbgGetMemInfo;
+      MemInfo := ProcData.DbgGetMemInfo;
     end;
     ltThread:
     begin
@@ -5426,7 +5426,7 @@ procedure TMainForm.vstMemInfoThreadsFocusChanged(Sender: TBaseVirtualTree; Node
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
   MemInfo: TGetMemInfoList;
 begin
   vstMemList.Clear;
@@ -5447,7 +5447,7 @@ begin
     ltProcess:
     begin
       ProcData := Data^.ProcessData;
-      MemInfo := ProcData^.DbgGetMemInfo;
+      MemInfo := ProcData.DbgGetMemInfo;
 
       case pcMemInfo.ActivePageIndex of
         0: LoadMemInfoObjects(vstMemList, MemInfo, Node);
@@ -5473,7 +5473,7 @@ procedure TMainForm.vstMemInfoThreadsGetText(Sender: TBaseVirtualTree;
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 begin
   CellText := ' ';
 
@@ -5485,11 +5485,11 @@ begin
         if ProcData <> nil then
           case Column of
             0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-            1: CellText := ProcessIDToStr(ProcData^.ProcessID);
-            2: if ProcData^.ProcessGetMemCount > 0 then
-                 CellText := Format('%d', [ProcData^.ProcessGetMemCount]);
-            3: if ProcData^.ProcessGetMemCount > 0 then
-                 CellText := Format('%d', [ProcData^.ProcessGetMemSize]);
+            1: CellText := ProcessIDToStr(ProcData.ProcessID);
+            2: if ProcData.ProcessGetMemCount > 0 then
+                 CellText := Format('%d', [ProcData.ProcessGetMemCount]);
+            3: if ProcData.ProcessGetMemCount > 0 then
+                 CellText := Format('%d', [ProcData.ProcessGetMemSize]);
           end;
       end;
     ltThread:
@@ -5515,7 +5515,7 @@ var
   ThLinkData: PLinkData;
 
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
   MemInfo: TGetMemInfoList;
   GetMemInfo: TGetMemInfo;
 begin
@@ -5535,7 +5535,7 @@ begin
     ltProcess:
     begin
       ProcData := ThLinkData^.ProcessData;
-      MemInfo := ProcData^.DbgGetMemInfo;
+      MemInfo := ProcData.DbgGetMemInfo;
     end;
     ltThread:
     begin
@@ -5563,7 +5563,7 @@ var
   ThLinkData: PLinkData;
 
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
   MemInfo: TGetMemInfoList;
   GetMemInfo: TGetMemInfo;
 begin
@@ -5581,7 +5581,7 @@ begin
     ltProcess:
     begin
       ProcData := ThLinkData^.ProcessData;
-      MemInfo := ProcData^.DbgGetMemInfo;
+      MemInfo := ProcData.DbgGetMemInfo;
     end;
     ltThread:
     begin
@@ -5710,14 +5710,14 @@ procedure TMainForm.vstThreadsDrawText(Sender: TBaseVirtualTree;
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 begin
   Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
     ltProcess:
       begin
         ProcData := Data^.ProcessData;
-        if (ProcData <> nil) and (ProcData^.State = psActive) then
+        if (ProcData <> nil) and (ProcData.State = psActive) then
           TargetCanvas.Font.Style := [fsBold];
       end;
     ltThread:
@@ -5749,7 +5749,7 @@ procedure TMainForm.vstThreadsGetText(Sender: TBaseVirtualTree; Node: PVirtualNo
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 begin
   Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
@@ -5759,8 +5759,8 @@ begin
         if ProcData <> nil then
           case Column of
             0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-            1: CellText := ProcessIDToStr(ProcData^.ProcessID);
-            2: CellText := ElapsedToTime(ProcData^.CPUTime);
+            1: CellText := ProcessIDToStr(ProcData.ProcessID);
+            2: CellText := ElapsedToTime(ProcData.CPUTime);
           end;
       end;
     ltThread:
@@ -5913,7 +5913,7 @@ var
   SyncData: PLinkData;
 
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 begin
   Result := ' ';
 
@@ -5934,7 +5934,7 @@ begin
       ltProcess:
         begin
           ProcData := SyncData^.ProcessData;
-          Result := FuncElapsedToTime(ProcData^.CPUTime, ProcData^.CPUElapsed, Elapsed);
+          Result := FuncElapsedToTime(ProcData.CPUTime, ProcData.CPUElapsed, Elapsed);
         end;
     end;
   end;
@@ -6106,7 +6106,7 @@ var
   Data: PLinkData;
   SyncData: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
   TrackFuncInfo: TCodeTrackFuncInfo;
   TrackUnitInfo: TTrackUnitInfo;
 begin
@@ -6118,8 +6118,8 @@ begin
         ProcData := Data^.ProcessData;
         case Column of
           0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-          1: CellText := IntToStr(ProcData^.DbgTrackEventCount);
-          2: CellText := ElapsedToTime(ProcData^.CPUTime);
+          1: CellText := IntToStr(ProcData.DbgTrackEventCount);
+          2: CellText := ElapsedToTime(ProcData.CPUTime);
         end;
       end;
     ltThread:
@@ -6131,7 +6131,7 @@ begin
             begin
               CellText := IntToStr(ThData^.DbgTrackEventCount);
               if gvDebuger.SamplingMethod then
-                CellText := CellText + PercentStr(ThData^.DbgTrackEventCount, gvDebuger.ProcessData^.DbgTrackEventCount);
+                CellText := CellText + PercentStr(ThData^.DbgTrackEventCount, gvDebuger.ProcessData.DbgTrackEventCount);
             end;
           2: CellText := ElapsedToTime(ThData^.CPUTime);
         end;
@@ -6157,7 +6157,7 @@ begin
                   ltProcess:
                     begin
                       ProcData := SyncData^.ProcessData;
-                      CellText := CellText + PercentStr(TrackFuncInfo.CallCount, ProcData^.DbgTrackEventCount);
+                      CellText := CellText + PercentStr(TrackFuncInfo.CallCount, ProcData.DbgTrackEventCount);
                     end;
                 end;
               end;
@@ -6174,7 +6174,7 @@ begin
                 ltProcess:
                   begin
                     ProcData := SyncData^.ProcessData;
-                    CellText := FuncElapsedToTime(ProcData^.CPUTime, ProcData^.CPUElapsed, TrackFuncInfo.CPUElapsed);
+                    CellText := FuncElapsedToTime(ProcData.CPUTime, ProcData.CPUElapsed, TrackFuncInfo.CPUElapsed);
                   end;
               end;
             end;
@@ -6234,7 +6234,7 @@ procedure TMainForm.vstTrackThreadsGetText(Sender: TBaseVirtualTree; Node: PVirt
 var
   Data: PLinkData;
   ThData: PThreadData;
-  ProcData: PProcessData;
+  ProcData: TProcessData;
 begin
   Data := Sender.GetNodeData(Node);
   case Data^.LinkType of
@@ -6244,9 +6244,9 @@ begin
         if ProcData <> nil then
           case Column of
             0: CellText := ExtractFileName(gvProjectOptions.ApplicationName);
-            1: CellText := ProcessIDToStr(ProcData^.ProcessID);
-            2: CellText := IntToStr(ProcData^.DbgTrackEventCount);
-            3: CellText := ElapsedToTime(ProcData^.CPUTime);
+            1: CellText := ProcessIDToStr(ProcData.ProcessID);
+            2: CellText := IntToStr(ProcData.DbgTrackEventCount);
+            3: CellText := ElapsedToTime(ProcData.CPUTime);
           end;
       end;
     ltThread:
@@ -6260,7 +6260,7 @@ begin
               begin
                 CellText := IntToStr(ThData^.DbgTrackEventCount);
                 if gvDebuger.SamplingMethod then
-                  CellText := CellText + PercentStr(ThData^.DbgTrackEventCount, gvDebuger.ProcessData^.DbgTrackEventCount);
+                  CellText := CellText + PercentStr(ThData^.DbgTrackEventCount, gvDebuger.ProcessData.DbgTrackEventCount);
               end;
             3: CellText := ElapsedToTime(ThData^.CPUTime);
           end;

@@ -71,7 +71,9 @@ begin
       if Res = 0 then
       begin
         if gvDebuger.UpdateThreadContext(ThreadData, CONTEXT_CONTROL) then
-          gvDebuger.GetCallStackEx(ThreadData, Stack);
+        begin
+          gvDebuger.GetCallStack(ThreadData, Stack);
+        end;
       end;
 
       ResumeThread(ThreadData^.ThreadHandle);
@@ -145,12 +147,12 @@ var
   I: Integer;
   Threads: TDbgActiveThreads;
 begin
-  CPUTime := _QueryProcessCycleTime(gvDebuger.ProcessData^.AttachedProcessHandle);
+  CPUTime := _QueryProcessCycleTime(gvDebuger.ProcessData.AttachedProcessHandle);
   // TODO: Контроль загрузки CPU
-  if CPUTime > gvDebuger.ProcessData^.SamplingCPUTime then
+  if CPUTime > gvDebuger.ProcessData.SamplingCPUTime then
   begin
-    gvDebuger.ProcessData^.SamplingCPUTime := CPUTime;
-    TInterlocked.Increment(gvDebuger.ProcessData^.SamplingCount);
+    gvDebuger.ProcessData.SamplingCPUTime := CPUTime;
+    TInterlocked.Increment(gvDebuger.ProcessData.SamplingCount);
 
     gvDebuger.GetActiveThreads(Threads);
 
@@ -224,13 +226,13 @@ begin
   end;
 
   // --- Регистрируем вызываемую функцию в процессе --- //
-  TrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData^.DbgTrackFuncList.GetTrackFuncInfo(FuncInfo));
-  gvDebuger.ProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
+  TrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData.DbgTrackFuncList.GetTrackFuncInfo(FuncInfo));
+  gvDebuger.ProcessData.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 
   TrackFuncInfo.IncCallCount;
 
   // Добавление в список активных юнитов
-  gvDebuger.ProcessData^.DbgTrackUsedUnitList.AddOrSetValue(UnitInfo, TrackFuncInfo.TrackUnitInfo);
+  gvDebuger.ProcessData.DbgTrackUsedUnitList.AddOrSetValue(UnitInfo, TrackFuncInfo.TrackUnitInfo);
 
   // Добавляем линк с текущей функции на родительскую
   ParentCallFuncInfo := TrackFuncInfo.AddParentCall(ParentFuncAddr);
@@ -241,8 +243,8 @@ begin
     ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
     if Assigned(ParentFuncInfo) then
     begin
-      ParentTrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-      gvDebuger.ProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+      ParentTrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+      gvDebuger.ProcessData.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
 
       ParentTrackFuncInfo.AddChildCall(FuncAddr);
     end;

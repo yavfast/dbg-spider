@@ -141,8 +141,8 @@ var
     // --- Регистрируем вызываемую функцию в процессе --- //
     TInterlocked.Increment(gvDebuger.ProcessData.DbgTrackEventCount);
 
-    TrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData^.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo));
-    gvDebuger.ProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
+    TrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData.DbgTrackFuncList.GetTrackFuncInfo(TrackBp^.FuncInfo));
+    gvDebuger.ProcessData.DbgTrackUnitList.CheckTrackFuncInfo(TrackFuncInfo);
 
     TrackFuncInfo.IncCallCount;
     TrackFuncInfo.TrackUnitInfo.IncCallCount;
@@ -158,8 +158,8 @@ var
       ParentFuncInfo := TFuncInfo(ParentCallFuncInfo.FuncInfo);
       if Assigned(ParentFuncInfo) then
       begin
-        ParentTrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData^.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
-        gvDebuger.ProcessData^.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
+        ParentTrackFuncInfo := TCodeTrackFuncInfo(gvDebuger.ProcessData.DbgTrackFuncList.GetTrackFuncInfo(ParentFuncInfo));
+        gvDebuger.ProcessData.DbgTrackUnitList.CheckTrackFuncInfo(ParentTrackFuncInfo);
 
         ParentTrackFuncInfo.AddChildCall(Address);
       end;
