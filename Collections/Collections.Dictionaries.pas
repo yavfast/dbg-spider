@@ -241,9 +241,6 @@ type
     FFreeCount: NativeInt;
     FFreeList: NativeInt;
 
-    FLock: TMREWSync;
-    FThreadSafe: Boolean;
-
     { Internal }
     procedure InitializeInternals(const ACapacity: NativeInt);
     procedure Insert(const AKey: TKey; const AValue: TValue; const AShouldAdd: Boolean = true);
@@ -289,12 +286,6 @@ type
 
     destructor Destroy; override;
 
-    procedure LockForRead; inline;
-    procedure UnLockForRead; inline;
-
-    procedure LockForWrite; inline;
-    procedure UnLockForWrite; inline;
-
     ///  <summary>Clears the contents of the dictionary.</summary>
     procedure Clear(); override;
 
@@ -339,8 +330,6 @@ type
     ///  <exception cref="SysUtils|EArgumentOutOfRangeException"><paramref name="AStartIndex"/> is out of bounds.</exception>
     ///  <exception cref="Collections.Base|EArgumentOutOfSpaceException">The array is not long enough.</exception>
     procedure CopyTo(var AArray: array of TPair<TKey,TValue>; const AStartIndex: NativeInt); overload; override;
-
-    property Lock: TMREWSync read FLock;
   end;
 
   ///  <summary>The generic <c>dictionary</c> collection designed to store objects.</summary>
@@ -1049,8 +1038,7 @@ constructor TDictionary<TKey, TValue>.Create(const AKeyRules: TRules<TKey>;
 begin
   inherited Create(AKeyRules, AValueRules);
 
-  FLock := TMREWSync.Create;
-  FThreadSafe := AThreadSafe;
+  ThreadSafe := AThreadSafe;
 
   if AInitialCapacity <= 0 then
     InitializeInternals(CDefaultSize)
@@ -1060,11 +1048,7 @@ end;
 
 destructor TDictionary<TKey, TValue>.Destroy;
 begin
-  LockForWrite;
   inherited Destroy;
-  UnLockForWrite;
-
-  FreeAndNil(FLock);
 end;
 
 constructor TDictionary<TKey, TValue>.Create(const AInitialCapacity: NativeInt = TAbstractContainer.CDefaultSize;
@@ -1243,18 +1227,6 @@ begin
   UnLockForRead;
 end;
 
-procedure TDictionary<TKey, TValue>.LockForRead;
-begin
-  if FThreadSafe then
-    FLock.BeginRead;
-end;
-
-procedure TDictionary<TKey, TValue>.LockForWrite;
-begin
-  if FThreadSafe then
-    FLock.BeginWrite;
-end;
-
 procedure TDictionary<TKey, TValue>.Remove(const AKey: TKey);
 begin
   LockForWrite;
@@ -1391,18 +1363,6 @@ begin
   Result := False;
 end;
 
-
-procedure TDictionary<TKey, TValue>.UnLockForRead;
-begin
-  if FThreadSafe then
-    FLock.EndRead;
-end;
-
-procedure TDictionary<TKey, TValue>.UnLockForWrite;
-begin
-  if FThreadSafe then
-    FLock.EndWrite;
-end;
 
 { TDictionary<TKey, TValue>.TEnumerator }
 

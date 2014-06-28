@@ -227,7 +227,7 @@ begin
       if FSyncObjsInfoQueue.Count < _MAX_SYNC_OBJS_INFO_BUF_COUNT then
       begin
         Buf := FSyncObjsInfoQueue.First;
-        if (gvDebuger.ProcessData^.CurDbgPointIdx - Buf^.DbgPointIdx) <= 2 then
+        if (gvDebuger.ProcessData.CurDbgPointIdx - Buf^.DbgPointIdx) <= 2 then
           Exit;
       end;
 

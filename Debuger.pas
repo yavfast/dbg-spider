@@ -10,9 +10,9 @@ uses
 
 type
   TDebuger = class
+  strict private
+    FProcessData: TProcessData;          // Служебная информация об отлаживаемом процессе
   private
-    FProcessData: PProcessData;          // Служебная информация об отлаживаемом процессе
-
     FThreadList: TDbgThreadList;              // Данные о всех потоках отлаживаемого процесса
     FThreadAdvInfoList: TThreadAdvInfoList;   // Дополнительная информация о потоках
     FActiveThreadList: TDbgActiveThreadList;  // Список активных потоков
@@ -296,7 +296,7 @@ type
     // расширенные свойства отладчика
     property ContinueStatus: DWORD read FContinueStatus write FContinueStatus;
     property CloseDebugProcessOnFree: LongBool read FCloseDebugProcess write SetCloseDebugProcess;
-    property ProcessData: PProcessData read FProcessData;
+    property ProcessData: TProcessData read FProcessData;
     property ResumeAction: TResumeAction read FResumeAction write FResumeAction;
     property DbgState: TDbgState read FDbgState write SetDbgState;
     property DbgTraceState: TDbgTraceState read FDbgTraceState write SetDbgTraceState;
@@ -760,10 +760,7 @@ begin
   FThreadAdvInfoList := TCollectList<TThreadAdvInfo>.Create;
   FActiveThreadList := TDbgActiveThreadList.Create(512, True);
 
-  FProcessData := AllocMem(SizeOf(TProcessData));
-  FProcessData.State := psNone;
-  FProcessData.DbgPoints := Nil;
-  FProcessData.DbgExceptions := TThreadList.Create;
+  FProcessData := TProcessData.Create;
 
   FPerfomanceMode := False;
   FPerfomanceCheckPtr := Nil; //Pointer($76FED315);
@@ -854,9 +851,7 @@ begin
   FreeAndNil(FThreadList);
   FreeAndNil(FThreadAdvInfoList);
 
-  FreeAndNil(FProcessData.DbgExceptions);
-  FreeMemory(FProcessData);
-  FProcessData := nil;
+  FreeAndNil(FProcessData);
 
   FreeAndNil(FTraceEvent);
 
@@ -1194,25 +1189,22 @@ end;
 procedure TDebuger.GetCallStack(ThData: PThreadData; var Stack: TDbgInfoStack);
 const
   _MAX_STACK_CNT = 64;
-var
-  Cnt: Integer;
 
-  function AddStackEntry(Const Addr: Pointer): LongBool;
+  function AddStackEntry(Const Addr: Pointer; var Cnt: Integer): LongBool;
   begin
-    Result := False;
+    Result := (Cnt < _MAX_STACK_CNT) and IsValidAddr(Addr);
 
-    if (Cnt < _MAX_STACK_CNT) and IsValidAddr(Addr) then
+    if Result then
     begin
       Stack[Cnt] := Addr;
       Inc(Cnt);
-
-      Result := True;
     end;
   end;
 
 Var
   EIP : Pointer;
   EBP : Pointer;
+  Cnt: Integer;
 Begin
   EIP := Pointer(ThData^.Context^.Eip);
   EBP := Pointer(ThData^.Context^.Ebp);
@@ -1220,7 +1212,7 @@ Begin
   SetLength(Stack, _MAX_STACK_CNT);
   Cnt := 0;
 
-  if AddStackEntry(EIP) then
+  if AddStackEntry(EIP, Cnt) then
   begin
     while IsValidAddr(EBP) Do
     begin
@@ -1230,7 +1222,7 @@ Begin
       if not ReadData(EBP, @EBP, SizeOf(Pointer)) then
         Break;
 
-      if not AddStackEntry(EIP) then
+      if not AddStackEntry(EIP, Cnt) then
         Break;
     end;
   end;
@@ -1277,13 +1269,12 @@ begin
   while Cnt < Length(Stack) do
   begin
     {$IFDEF WIN32}
-    if not StackWalk(MachineType, ProcessData^.AttachedProcessHandle, ThData^.ThreadHandle, @StackFrame, ThreadContext, nil, nil, nil, nil) then
+    if not StackWalk(MachineType, ProcessData.AttachedProcessHandle, ThData^.ThreadHandle, @StackFrame, ThreadContext, nil, nil, nil, nil) then
       Break;
     {$ELSE}
     if not StackWalk64(MachineType, hProcess, hThread, StackFrame, ThreadContext, nil, nil, nil, nil) then
       Break;
     {$ENDIF}
-
     Stack[Cnt] := Pointer(StackFrame.AddrPC.Offset);
 
     Inc(Cnt);

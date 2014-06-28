@@ -53,6 +53,9 @@ function DebugActiveProcessStop(dwProcessId: DWORD): BOOL; stdcall; external ker
 function GetThreadId(ThreadHandle: THandle): DWORD; stdcall; external kernel32 name 'GetThreadId';
 function CoCreateGuid(out guid: TGUID): HResult; stdcall; external 'ole32.dll' name 'CoCreateGuid';
 
+function NtQueryVirtualMemory(ProcessHandle: THandle; BaseAddress: Pointer; MemoryInformationClass: DWORD; MemoryInformation: Pointer;
+  MemoryInformationLength :ULONG; ReturnLength :PULONG): LongInt; stdcall; external 'ntdll.dll';
+
 var
   _KernelLibHandle: THandle = 0;
   NtSuspendProcess: TProcFunction = Nil;
