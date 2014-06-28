@@ -95,6 +95,9 @@ procedure _AddMemInfo(const _MemInfoType: TDbgMemInfoType; const _Ptr: Pointer; 
 var
   DbgMemInfo: PDbgMemInfo;
 begin
+  if MemInfoLock = Nil then Exit;
+  if MemInfoList = Nil then Exit;
+
   DbgMemInfo := @_DbgMemInfo;
   ZeroMemory(DbgMemInfo, SizeOf(TDbgMemInfo));
 

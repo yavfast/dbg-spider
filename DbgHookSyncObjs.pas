@@ -199,6 +199,9 @@ var
   SyncObjsInfo: PDbgSyncObjsInfo;
   CurTime: Int64;
 begin
+  if SyncObjsInfoList = Nil then Exit;
+  if SyncObjsInfoLock = Nil then Exit;
+
   CurTime := _QueryPerformanceCounter;
 
   SyncObjsInfoLock.Enter;

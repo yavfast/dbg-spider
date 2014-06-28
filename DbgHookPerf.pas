@@ -41,8 +41,12 @@ begin
 
       ZeroMemory(@_OutDbgInfoRec[0], SizeOf(TOutDbgInfo));
 
-      MemInfoLock.Enter;
-      SyncObjsInfoLock.Enter;
+      if MemInfoLock <> Nil then
+        MemInfoLock.Enter;
+
+      if SyncObjsInfoLock <> Nil then
+        SyncObjsInfoLock.Enter;
+
       try
         _OutDbgInfoRec[0] := NativeUInt(dstPerfomanceAndInfo);
 
@@ -63,8 +67,11 @@ begin
         MemInfoListCnt := 0;
         SyncObjsInfoListCnt := 0;
       finally
-        SyncObjsInfoLock.Leave;
-        MemInfoLock.Leave;
+        if SyncObjsInfoLock <> Nil then
+          SyncObjsInfoLock.Leave;
+
+        if MemInfoLock <> Nil then
+          MemInfoLock.Leave;
       end;
     finally
       _DbgOutLock.Leave;
