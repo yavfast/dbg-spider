@@ -18,7 +18,6 @@ type
     FActiveThreadList: TDbgActiveThreadList;  // Список активных потоков
 
     FSetEntryPointBreakPoint: LongBool;   // Флаг указывающий отладчику, необходимо ли ставить ВР на ЕР
-    //FMainLoopWaitPeriod: Cardinal;       // Время ожидания отладочного события
     FBreakpointList: TBreakpointList;    // Список ВР и МВР
     FRestoreBPIndex: Integer;            // Индекс для восстановления ВР
     FRestoreMBPIndex: Integer;           // Индекс для восстановления МВР
@@ -28,6 +27,7 @@ type
     FContinueStatus: DWORD;              // Статус с которым вызывается ContinueDebugEvent
     FResumeAction: TResumeAction;        // Флаг поведения отладчика после обработки очередного события
     FRemoveCurrentBreakpoint: LongBool;   // Флаг удаления текущего ВР
+
     FCurThreadId: TThreadId;
     FCurThreadData: PThreadData;
 
