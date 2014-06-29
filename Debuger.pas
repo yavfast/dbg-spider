@@ -411,7 +411,7 @@ begin
         ThreadData^.CPUElapsed := Cur;
 
         // Добавляем инфу, когда поток активен
-        Result := (Delta > 0);
+        Result := (Delta > (_QueryPerformanceFrequency div 10000)); // 0.1 msec из 10 msec
       end;
     ptSyncObjsInfo:
       Result := True;
@@ -528,7 +528,7 @@ begin
         Delta := CurTime - PrevTime;
 
         // Добавляем только если процесс активен
-        Result := (Delta > 0); // TODO: Определить минимальное время
+        Result := (Delta > (_QueryPerformanceFrequency div 10000)); // 0.1 msec из 10 msec
       end;
   end;
 
