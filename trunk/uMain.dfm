@@ -24,7 +24,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1212
     Height = 545
-    ActivePage = tsLockTracking
+    ActivePage = tsCodeTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -491,7 +491,6 @@ object MainForm: TMainForm
                 TabOrder = 1
                 inherited synmSourceView: TSynMemo
                   Width = 287
-                  Height = 272
                 end
                 inherited eSrcFileName: TEdit
                   Width = 287
@@ -1644,7 +1643,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coUseCaptionAlignment]
             Position = 0
-            Width = 300
+            Width = 275
             WideText = 'Thread name'
           end
           item
@@ -1660,7 +1659,7 @@ object MainForm: TMainForm
             CaptionAlignment = taCenter
             Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
             Position = 2
-            Width = 65
+            Width = 90
             WideText = 'Call Count'
           end
           item
@@ -1736,7 +1735,7 @@ object MainForm: TMainForm
                 CaptionAlignment = taCenter
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                 Position = 0
-                Width = 300
+                Width = 280
                 WideText = 'Function name'
               end
               item
@@ -1745,7 +1744,7 @@ object MainForm: TMainForm
                 DefaultSortDirection = sdDescending
                 Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                 Position = 1
-                Width = 70
+                Width = 90
                 WideText = 'Call count'
               end
               item
@@ -1826,7 +1825,7 @@ object MainForm: TMainForm
                       CaptionAlignment = taCenter
                       Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                       Position = 0
-                      Width = 300
+                      Width = 280
                       WideText = 'Parent function name'
                     end
                     item
@@ -1841,7 +1840,7 @@ object MainForm: TMainForm
                       CaptionAlignment = taCenter
                       Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                       Position = 2
-                      Width = 70
+                      Width = 90
                       WideText = 'Call count'
                     end
                     item
@@ -1891,7 +1890,7 @@ object MainForm: TMainForm
                       CaptionAlignment = taCenter
                       Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                       Position = 0
-                      Width = 300
+                      Width = 280
                       WideText = 'Child function name'
                     end
                     item
@@ -1906,7 +1905,7 @@ object MainForm: TMainForm
                       CaptionAlignment = taCenter
                       Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coAllowFocus, coUseCaptionAlignment]
                       Position = 2
-                      Width = 70
+                      Width = 90
                       WideText = 'Call count'
                     end
                     item
@@ -2506,7 +2505,7 @@ object MainForm: TMainForm
         Columns = <
           item
             Position = 0
-            Width = 1204
+            Width = 1200
             WideText = 'Info'
           end>
       end
@@ -3017,7 +3016,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 44
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3041,7 +3040,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 51
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3080,7 +3079,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 59
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3120,7 +3119,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 66
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
