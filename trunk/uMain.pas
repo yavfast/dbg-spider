@@ -502,6 +502,7 @@ type
     procedure WMClose(var Message: TWMClose); message WM_CLOSE;
 
     procedure SetProjectName(const ProjectName: String);
+    procedure UpdateProjectOptions;
 
     procedure ProgressAction(const Action: String; const Progress: Integer);
 
@@ -1440,6 +1441,8 @@ begin
       ProgressAction(Args[0], Args[1]);
     acSetProjectName:
       SetProjectName(Args[0]);
+    acChangeProjectSettings:
+      UpdateProjectOptions;
     acChangeDbgState:
       UpdateDebugActions;
   end;
@@ -3576,6 +3579,15 @@ begin
     acSave.Enabled := True;
     acSaveCopy.Enabled := True;
     acEditProject.Enabled := True;
+  end;
+end;
+
+procedure TMainForm.UpdateProjectOptions;
+begin
+  if Assigned(gvDebugInfo) then
+  begin
+    gvDebugInfo.UpdateSourceDirs(utSystem, gvProjectOptions.DelphiSource);
+    gvDebugInfo.UpdateSourceDirs(utProject, gvProjectOptions.ProjectSource);
   end;
 end;
 

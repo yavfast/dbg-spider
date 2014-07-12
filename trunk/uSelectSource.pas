@@ -24,6 +24,8 @@ type
     pActions: TPanel;
     btnOk: TBitBtn;
     btnCancel: TBitBtn;
+    acUp: TAction;
+    acDown: TAction;
     procedure acOkExecute(Sender: TObject);
     procedure acCancelExecute(Sender: TObject);
     procedure acAddExecute(Sender: TObject);
@@ -31,8 +33,9 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure acRemoveExecute(Sender: TObject);
     procedure acEditExecute(Sender: TObject);
-    procedure alSelectSourceUpdate(Action: TBasicAction;
-      var Handled: Boolean);
+    procedure alSelectSourceUpdate(Action: TBasicAction; var Handled: Boolean);
+    procedure acUpExecute(Sender: TObject);
+    procedure acDownExecute(Sender: TObject);
   private
     FList: TStringList;
     procedure AddSource(const FolderName: String);
@@ -82,6 +85,22 @@ begin
   ModalResult := mrCancel;
 end;
 
+procedure TfmSelectSource.acDownExecute(Sender: TObject);
+var
+  Str: String;
+begin
+  if sgSource.Row < sgSource.RowCount then
+  begin
+    Str := FList.Strings[sgSource.Row];
+    FList.Strings[sgSource.Row] := FList.Strings[sgSource.Row + 1];
+    FList.Strings[sgSource.Row + 1] := Str;
+
+    sgSource.Row := sgSource.Row + 1;
+
+    UpdateView;
+  end;
+end;
+
 procedure TfmSelectSource.acEditExecute(Sender: TObject);
 var
   CurSource: String;
@@ -94,7 +113,8 @@ begin
     if FList.Count > sgSource.Row then
     begin
       CurSource := FList.Strings[sgSource.Row];
-      odSelectSource.FileName := CurSource;
+      odSelectSource.DefaultFolder := CurSource;
+      odSelectSource.FileName := '';
     end;
 
     if odSelectSource.Execute then
@@ -120,6 +140,22 @@ begin
   end;
 end;
 
+procedure TfmSelectSource.acUpExecute(Sender: TObject);
+var
+  Str: String;
+begin
+  if sgSource.Row > 0 then
+  begin
+    Str := FList.Strings[sgSource.Row];
+    FList.Strings[sgSource.Row] := FList.Strings[sgSource.Row - 1];
+    FList.Strings[sgSource.Row - 1] := Str;
+
+    sgSource.Row := sgSource.Row - 1;
+
+    UpdateView;
+  end;
+end;
+
 procedure TfmSelectSource.AddSource(const FolderName: String);
 begin
   if FList.IndexOf(FolderName) < 0 then
@@ -134,6 +170,9 @@ procedure TfmSelectSource.alSelectSourceUpdate(Action: TBasicAction;
 begin
   acEdit.Enabled := FList.Count > 0;
   acRemove.Enabled := acEdit.Enabled;
+
+  acUp.Enabled := (sgSource.Row - 1) >= 0;
+  acDown.Enabled := (sgSource.Row + 1) < sgSource.RowCount;
 end;
 
 procedure TfmSelectSource.FormCreate(Sender: TObject);
@@ -165,7 +204,10 @@ end;
 procedure TfmSelectSource.UpdateView;
 var
   I: Integer;
+  CurRow: Integer;
 begin
+  CurRow := sgSource.Row;
+
   sgSource.RowCount := 1;
   sgSource.Cells[0, 0] := '';
 
@@ -173,6 +215,9 @@ begin
 
   for I := 0 to FList.Count - 1 do
     sgSource.Cells[0, I] := FList.Strings[I];
+
+  if CurRow < FList.Count then
+    sgSource.Row := CurRow;
 end;
 
 end.

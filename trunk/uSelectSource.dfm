@@ -64,6 +64,7 @@ object fmSelectSource: TfmSelectSource
     DefaultRowHeight = 18
     FixedCols = 0
     FixedRows = 0
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected]
     TabOrder = 1
     ColWidths = (
       500)
@@ -127,6 +128,16 @@ object fmSelectSource: TfmSelectSource
       ImageIndex = 0
       OnExecute = acEditExecute
     end
+    object acUp: TAction
+      Caption = 'Up'
+      ImageIndex = 7
+      OnExecute = acUpExecute
+    end
+    object acDown: TAction
+      Caption = 'Down'
+      ImageIndex = 8
+      OnExecute = acDownExecute
+    end
   end
   object acmgrSelectSource: TActionManager
     ActionBars = <
@@ -159,6 +170,19 @@ object fmSelectSource: TfmSelectSource
             Action = acRemove
             Caption = '&Remove'
             ImageIndex = 6
+          end
+          item
+            Caption = '-'
+          end
+          item
+            Action = acUp
+            Caption = '&Up'
+            ImageIndex = 7
+          end
+          item
+            Action = acDown
+            Caption = '&Down'
+            ImageIndex = 8
           end>
         ActionBar = actbTop
       end>

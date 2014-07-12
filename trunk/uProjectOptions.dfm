@@ -9,7 +9,7 @@ object fmProjectOptions: TfmProjectOptions
   Color = clBtnFace
   Constraints.MaxHeight = 253
   Constraints.MaxWidth = 460
-  Constraints.MinHeight = 253
+  Constraints.MinHeight = 250
   Constraints.MinWidth = 460
   DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET

@@ -141,6 +141,9 @@ begin
         gvProjectOptions.Clear;
         _AC.DoAction(acSetProjectName, [F.ProjectName, OpenType]);
       end;
+
+      if OpenType = otEdit then
+        _AC.DoAction(acChangeProjectSettings, []);
     end;
   finally
     F.Release;
@@ -200,29 +203,35 @@ begin
     Exit;
   end;
 
-  try
-    TFile.Create(ProjectName).Free;
-    TFile.Delete(ProjectName);
-  except
-    on E: Exception do
-    begin
-      pcProjectOpt.ActivePage := tsProject;
-      ActiveControl := lbeProjectName;
-      ShowMessageFmt('%s', [E.Message]);
-      Exit;
+  if not TFile.Exists(ProjectName) then
+  begin
+    try
+      TFile.Create(ProjectName).Free;
+      TFile.Delete(ProjectName);
+    except
+      on E: Exception do
+      begin
+        pcProjectOpt.ActivePage := tsProject;
+        ActiveControl := lbeProjectName;
+        ShowMessageFmt('%s', [E.Message]);
+        Exit;
+      end;
     end;
   end;
 
-  try
-    TDirectory.CreateDirectory(ProjectStorage);
-    TDirectory.Delete(ProjectStorage);
-  except
-    on E: Exception do
-    begin
-      pcProjectOpt.ActivePage := tsProject;
-      ActiveControl := lbeProjectName;
-      ShowMessageFmt('%s', [E.Message]);
-      Exit;
+  if not TDirectory.Exists(ProjectStorage) then
+  begin
+    try
+      TDirectory.CreateDirectory(ProjectStorage);
+      TDirectory.Delete(ProjectStorage);
+    except
+      on E: Exception do
+      begin
+        pcProjectOpt.ActivePage := tsProject;
+        ActiveControl := lbeProjectName;
+        ShowMessageFmt('%s', [E.Message]);
+        Exit;
+      end;
     end;
   end;
 
