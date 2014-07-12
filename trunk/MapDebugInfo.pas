@@ -716,7 +716,7 @@ begin
 
   SegmentClass := SegmentClassesByID[Address.Segment];
 
-  if Assigned(SegmentClass) and (Address.Offset < SegmentClass.Len) then
+  if Assigned(SegmentClass) {and (Address.Offset < SegmentClass.Len)} then
   begin
     (*
     if SegmentClass.Segment = FTLSSegmentID then
