@@ -491,7 +491,7 @@ Type
 const
   // TODO: for MACOS '_text'
   SegmentTypeNames: array [TSegmentType] of String =
-    ('', '.text', '.itext', '.data', '.bss', '.tls', '.pdata', '.idata', '.didata', '.rdata', '.reloc', '.rsrc');
+    ('', 'text', 'itext', 'data', 'bss', 'tls', 'pdata', 'idata', 'didata', 'rdata', 'reloc', 'rsrc');
 
 var
   gvDebugInfo: TDebugInfo = nil;
@@ -2085,10 +2085,22 @@ begin
 end;
 
 class function TSegmentClassInfo.StrToSegmentType(const Str: String): TSegmentType;
+var
+  SegName: String;
+  Idx: Integer;
 begin
-  for Result := ustCode to High(TSegmentType) do
-    if SameText(Str, SegmentTypeNames[Result]) then
-      Exit;
+  if Str <> '' then
+  begin
+    Idx := 1;
+    while (Idx <= Length(Str)) and CharInSet(Str[Idx], ['.', '_']) do
+      Inc(Idx);
+
+    SegName := Copy(Str, Idx, MaxInt);
+
+    for Result := ustCode to High(TSegmentType) do
+      if SameText(SegName, SegmentTypeNames[Result]) then
+        Exit;
+  end;
 
   Result := ustUnknown;
 end;
