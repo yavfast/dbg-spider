@@ -6,7 +6,7 @@ uses Classes, DebugInfo, DebugerTypes, XMLDoc, XMLIntf, Collections.Queues,
   System.SyncObjs;
 
 type
-  TacAction = (acCreateProcess, acAddThread, acUpdateInfo, acProgress, acSetProjectName, acChangeDbgState);
+  TacAction = (acCreateProcess, acAddThread, acUpdateInfo, acProgress, acSetProjectName, acChangeProjectSettings, acChangeDbgState);
 
   TDbgOption = (
     doDebugInfo,

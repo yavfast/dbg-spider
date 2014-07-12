@@ -593,7 +593,9 @@ begin
         FileName := Files[I];
         ShortFileName := AnsiLowerCase(ExtractFileName(FileName));
 
-        FDirs[SourceType].AddOrSetValue(ShortFileName, FileName);
+        // Добавляем только первый файл по поиску
+        if not FDirs[SourceType].ContainsKey(ShortFileName) then
+          FDirs[SourceType].Add(ShortFileName, FileName);
       end;
   end;
 
