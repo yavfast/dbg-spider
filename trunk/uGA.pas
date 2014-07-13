@@ -514,7 +514,7 @@ var
 begin
   StartTime := GetTickCount;
   while (Self <> Nil) and not Terminated and (Abs(GetTickCount - StartTime) < MSec) do
-    SwitchToThread;
+    Sleep(50);
 end;
 
 initialization
