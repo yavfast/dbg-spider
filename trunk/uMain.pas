@@ -652,7 +652,7 @@ var
   Address: Integer;
 begin
   AddressListStr := '';
-  if InputQuery('Get address info', 'Address', AddressListStr) then
+  if InputQuery('Get stack info', 'Stack', AddressListStr) then
   begin
     AddressList := TStringList.Create;
     try
@@ -660,7 +660,7 @@ begin
       if AddressList.Count > 0 then
       begin
         ExceptInfo := TExceptInfo.Create();
-        ExceptInfo.ExceptionName := '### DBG_ADDRESS_INFO';
+        ExceptInfo.ExceptionName := '### DBG_STACK_INFO';
         ExceptInfo.Message := AddressListStr;
 
         ExceptInfo.Stack.Capacity := AddressList.Count;
