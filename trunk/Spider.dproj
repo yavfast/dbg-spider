@@ -34,14 +34,14 @@
         <VerInfo_MinorVer>3</VerInfo_MinorVer>
         <DCC_Define>SUPPORTS_INLINE;$(DCC_Define)</DCC_Define>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Release>7</VerInfo_Release>
+        <VerInfo_Release>8</VerInfo_Release>
         <DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
         <DCC_UNIT_PLATFORM>false</DCC_UNIT_PLATFORM>
         <Icon_MainIcon>Spider_Icon.ico</Icon_MainIcon>
         <VCL_Custom_Styles>&quot;Silver|VCLSTYLE|$(PUBLIC)\Documents\RAD Studio\11.0\Styles\Silver.vsf&quot;</VCL_Custom_Styles>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <DCC_UsePackage>vclx;vcl;vclimg;dbrtl;Rave77VCL;bdertl;rtl;vclactnband;vcldb;vcldbx;vcltouch;xmlrtl;dsnap;dsnapcon;TeeUI;Tee;TeeDB;vclib;ibxpress;adortl;IndyCore;IndySystem;IndyProtocols;inet;intrawebdb_100_140;Intraweb_100_140;VclSmp;vclie;websnap;webdsnap;inetdb;inetdbbde;inetdbxpress;soaprtl;vclribbon;dbexpress;DbxCommonDriver;DataSnapIndy10ServerTransport;DataSnapProviderClient;DataSnapServer;DbxClientDriver;DBXInterBaseDriver;DBXMySQLDriver;dbxcds;DBXFirebirdDriver;DBXSybaseASEDriver;DBXSybaseASADriver;DBXOracleDriver;DBXMSSQLDriver;DBXInformixDriver;DBXDb2Driver;GanttPackage;VirtualTreesR;JclDeveloperTools;Jcl;JclVcl;JclContainers;JvCore;JvSystem;JvStdCtrls;JvAppFrm;JvBands;JvDB;JvDlgs;JvBDE;JvControls;JvCmp;JvCrypt;JvCustom;JvDocking;JvDotNetCtrls;JvGlobus;JvHMI;JvJans;JvManagedThreads;JvMM;JvNet;JvPageComps;JvPascalInterpreter;JvPluginSystem;JvPrintPreview;JvRuntimeDesign;JvTimeFramework;JvWizards;JvXPCtrls;acnt2010_R;$(DCC_UsePackage)</DCC_UsePackage>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.3.7.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=Spider;ProductVersion=1.3;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.3.8.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=Spider;ProductVersion=1.3;Comments=</VerInfo_Keys>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Bindings;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <BRCC_IncludePath>C:\Projects\Spider\JCL\source\common;C:\Projects\Spider\JCL\source\include;C:\Projects\Spider\JCL\source\include\jedi;C:\Projects\Spider\JCL\source\windows;C:\Projects\Spider\JCL\source;$(BRCC_IncludePath)</BRCC_IncludePath>
