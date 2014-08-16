@@ -303,6 +303,19 @@ type
     rbngrpProfilers: TRibbonGroup;
     acSamplingMethod: TAction;
     acCALLMethod: TAction;
+    splDebugInfo: TSplitter;
+    splDbgInfoFuncs: TSplitter;
+    splMemInfo: TSplitter;
+    splMemInfoSmpView: TSplitter;
+    splMemInfoTreeView1: TSplitter;
+    splMemInfoTreeView2: TSplitter;
+    splExceptInfo: TSplitter;
+    splExceptInfo2: TSplitter;
+    splCodeTrack1: TSplitter;
+    splCodeTrack2: TSplitter;
+    splLockTrack1: TSplitter;
+    splLockTrack2: TSplitter;
+    splLockTrack3: TSplitter;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -316,7 +329,7 @@ type
     procedure vstThreadsScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: Integer);
     procedure vstThreadsCollapsed(Sender: TBaseVirtualTree; Node: PVirtualNode);
     procedure vstThreadsExpanded(Sender: TBaseVirtualTree; Node: PVirtualNode);
-    procedure vstThreadsColumnResize(Sender: TVTHeader; Column: TColumnIndex);
+    procedure vstColumnResize(Sender: TVTHeader; Column: TColumnIndex);
 
     procedure vdtTimeLineDrawNode(Sender: TBaseVirtualTree; const PaintInfo: TVTPaintInfo);
     procedure vdtTimeLineAdvancedHeaderDraw(Sender: TVTHeader; var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
@@ -491,6 +504,7 @@ type
     procedure acDebugOptionsExecute(Sender: TObject);
     procedure acSamplingMethodExecute(Sender: TObject);
 
+    procedure vstTreeResize(Sender: TObject);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -600,6 +614,7 @@ type
     function GetDebugOptions: TDbgOptions;
     function GetAppID: String;
     procedure FillUpdateInfo(Sender: TObject);
+
   public
     procedure OnException(Sender: TObject; E: Exception);
     procedure DoAction(Action: TacAction; const Args: array of Variant);
@@ -2663,8 +2678,8 @@ begin
   UpdateMainActions;
   UpdateStatusInfo;
 
-  vstThreadsColumnResize(vstThreads.Header, 0);
-  vstThreadsColumnResize(vstMemInfoThreads.Header, 0);
+  vstColumnResize(vstThreads.Header, 0);
+  vstColumnResize(vstMemInfoThreads.Header, 0);
 
   LoadUpdateInfo;
 end;
@@ -4237,6 +4252,58 @@ begin
   end;
 end;
 
+procedure TMainForm.vstTreeResize(Sender: TObject);
+var
+  Idx: Integer;
+  C: TVirtualTreeColumn;
+  OldWidth: Integer;
+  NewWidth: Integer;
+  Factor: Double;
+  CCnt: Integer;
+  SaveOnColumnResize: TVTHeaderNotifyEvent;
+  vTree: TVirtualStringTree;
+begin
+  vTree := TVirtualStringTree(Sender);
+
+  SaveOnColumnResize := vTree.OnColumnResize;
+  vTree.OnColumnResize := Nil;
+  try
+    CCnt := vTree.Header.Columns.Count;
+
+    OldWidth := 0;
+    for Idx := 0 to CCnt - 1 do
+    begin
+      C := vTree.Header.Columns[Idx];
+      if coVisible in C.Options then
+        Inc(OldWidth, C.Width);
+    end;
+
+    NewWidth := vTree.ClientWidth;
+
+    if (OldWidth = 0) or (NewWidth = 0)  then Exit;
+
+    Factor := NewWidth / OldWidth;
+
+    for Idx := 0 to CCnt - 1 do
+    begin
+      C := vTree.Header.Columns[Idx];
+
+      if coVisible in C.Options then
+      begin
+        if Idx < CCnt - 1 then
+        begin
+            C.Width := Round(C.Width * Factor);
+            Dec(NewWidth, C.Width);
+        end
+        else
+          C.Width := NewWidth;
+      end;
+    end;
+  finally
+    vTree.OnColumnResize := SaveOnColumnResize;
+  end;
+end;
+
 procedure TMainForm.vstDbgInfoVarsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 var
   Data: PLinkData;
@@ -5699,21 +5766,31 @@ begin
   SyncNodes(Sender, Node);
 end;
 
-procedure TMainForm.vstThreadsColumnResize(Sender: TVTHeader; Column: TColumnIndex);
+procedure TMainForm.vstColumnResize(Sender: TVTHeader; Column: TColumnIndex);
 var
   W: Integer;
   I: Integer;
   C: TVirtualTreeColumn;
+  vTree: TVirtualStringTree;
+  SaveOnResize: TNotifyEvent;
 begin
-  W := 0;
-  for I := 0 to Sender.Columns.Count - 1 do
-  begin
-    C := Sender.Columns[I];
-    if coVisible in C.Options then
-      Inc(W, C.Width);
-  end;
+  vTree := TVirtualStringTree(Sender.Treeview);
 
-  Sender.Treeview.ClientWidth := W;
+  SaveOnResize := vTree.OnResize;
+  vTree.OnResize := nil;
+  try
+    W := 0;
+    for I := 0 to Sender.Columns.Count - 1 do
+    begin
+      C := Sender.Columns[I];
+      if coVisible in C.Options then
+        Inc(W, C.Width);
+    end;
+
+    vTree.ClientWidth := W;
+  finally
+    vTree.OnResize := SaveOnResize;
+  end;
 end;
 
 procedure TMainForm.vstThreadsDrawText(Sender: TBaseVirtualTree;

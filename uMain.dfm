@@ -2,9 +2,11 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'Spider'
-  ClientHeight = 737
-  ClientWidth = 1212
+  ClientHeight = 766
+  ClientWidth = 1213
   Color = clWindow
+  Constraints.MinHeight = 600
+  Constraints.MinWidth = 800
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -22,9 +24,9 @@ object MainForm: TMainForm
   object pcMain: TPageControl
     Left = 0
     Top = 167
-    Width = 1212
-    Height = 545
-    ActivePage = tsCodeTracking
+    Width = 1213
+    Height = 574
+    ActivePage = tsLockTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -33,8 +35,8 @@ object MainForm: TMainForm
       object vstLog: TVirtualStringTree
         Left = 0
         Top = 0
-        Width = 1204
-        Height = 517
+        Width = 1205
+        Height = 546
         Align = alClient
         BevelEdges = []
         BevelInner = bvNone
@@ -87,11 +89,16 @@ object MainForm: TMainForm
       Caption = 'Debug info'
       Highlighted = True
       ImageIndex = 5
+      object splDebugInfo: TSplitter
+        Left = 362
+        Top = 0
+        Height = 546
+      end
       object vstDbgInfoUnits: TVirtualStringTree
         Left = 0
         Top = 0
         Width = 362
-        Height = 517
+        Height = 546
         Align = alLeft
         BevelEdges = []
         BevelInner = bvNone
@@ -104,6 +111,7 @@ object MainForm: TMainForm
           'Rich Text Format'
           'Rich Text Format Without Objects'
           'Unicode text')
+        Constraints.MinWidth = 200
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -117,12 +125,13 @@ object MainForm: TMainForm
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toCheckSupport, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
-        OnColumnResize = vstThreadsColumnResize
+        OnColumnResize = vstColumnResize
         OnCompareNodes = vstDbgInfoUnitsCompareNodes
         OnDrawText = vstDbgInfoUnitsDrawText
         OnFocusChanged = vstDbgInfoUnitsFocusChanged
         OnGetText = vstDbgInfoUnitsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnResize = vstTreeResize
         Columns = <
           item
             CaptionAlignment = taCenter
@@ -150,19 +159,20 @@ object MainForm: TMainForm
           end>
       end
       object pDbgInfoDetail: TPanel
-        Left = 362
+        Left = 365
         Top = 0
-        Width = 842
-        Height = 517
+        Width = 840
+        Height = 546
         Align = alClient
         BevelEdges = []
         BevelOuter = bvNone
+        Constraints.MinWidth = 400
         TabOrder = 1
         object pcDbgInfoDetail: TPageControl
           Left = 0
           Top = 0
-          Width = 842
-          Height = 517
+          Width = 840
+          Height = 546
           ActivePage = tsDbgUnitFunctions
           Align = alClient
           TabOrder = 0
@@ -171,8 +181,8 @@ object MainForm: TMainForm
             object vstDbgInfoConsts: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 834
-              Height = 489
+              Width = 832
+              Height = 518
               Align = alClient
               BevelEdges = []
               BevelInner = bvNone
@@ -230,8 +240,8 @@ object MainForm: TMainForm
             object vstDbgInfoTypes: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 834
-              Height = 489
+              Width = 832
+              Height = 518
               Align = alClient
               BevelEdges = []
               BevelInner = bvNone
@@ -297,8 +307,8 @@ object MainForm: TMainForm
             object vstDbgInfoVars: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 834
-              Height = 489
+              Width = 832
+              Height = 518
               Align = alClient
               BevelEdges = []
               BevelInner = bvNone
@@ -353,11 +363,16 @@ object MainForm: TMainForm
           object tsDbgUnitFunctions: TTabSheet
             Caption = 'Functions'
             ImageIndex = 3
+            object splDbgInfoFuncs: TSplitter
+              Left = 447
+              Top = 0
+              Height = 518
+            end
             object vstDbgInfoFunctions: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 547
-              Height = 489
+              Width = 447
+              Height = 518
               Align = alLeft
               BevelEdges = []
               BevelInner = bvNone
@@ -370,6 +385,7 @@ object MainForm: TMainForm
                 'Rich Text Format'
                 'Rich Text Format Without Objects'
                 'Unicode text')
+              Constraints.MinWidth = 200
               Header.AutoSizeIndex = 0
               Header.Font.Charset = DEFAULT_CHARSET
               Header.Font.Color = clWindowText
@@ -382,16 +398,17 @@ object MainForm: TMainForm
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
-              OnColumnResize = vstThreadsColumnResize
+              OnColumnResize = vstColumnResize
               OnFocusChanged = vstDbgInfoFunctionsFocusChanged
               OnGetText = vstDbgInfoFunctionsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              OnResize = vstTreeResize
               Columns = <
                 item
                   CaptionAlignment = taCenter
                   Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus, coUseCaptionAlignment]
                   Position = 0
-                  Width = 400
+                  Width = 300
                   WideText = 'Function name'
                 end
                 item
@@ -412,10 +429,10 @@ object MainForm: TMainForm
                 end>
             end
             object pDbgInfoFuncAdv: TPanel
-              Left = 547
+              Left = 450
               Top = 0
-              Width = 287
-              Height = 489
+              Width = 382
+              Height = 518
               Align = alClient
               BevelEdges = []
               BevelOuter = bvNone
@@ -425,7 +442,7 @@ object MainForm: TMainForm
               object splDbgInfoFuncAdv: TSplitter
                 Left = 0
                 Top = 193
-                Width = 287
+                Width = 382
                 Height = 3
                 Cursor = crVSplit
                 Align = alTop
@@ -433,7 +450,7 @@ object MainForm: TMainForm
               object vstDbgInfoFuncVars: TVirtualStringTree
                 Left = 0
                 Top = 0
-                Width = 287
+                Width = 382
                 Height = 193
                 Align = alTop
                 BevelEdges = []
@@ -447,6 +464,7 @@ object MainForm: TMainForm
                   'Rich Text Format'
                   'Rich Text Format Without Objects'
                   'Unicode text')
+                Constraints.MinHeight = 100
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -485,16 +503,17 @@ object MainForm: TMainForm
               inline svfDbgInfoFuncAdv: TSourceViewFrame
                 Left = 0
                 Top = 196
-                Width = 287
-                Height = 293
+                Width = 382
+                Height = 322
                 Align = alClient
+                Constraints.MinHeight = 100
                 TabOrder = 1
                 inherited synmSourceView: TSynMemo
-                  Width = 287
-                  Height = 339
+                  Width = 382
+                  Height = 301
                 end
                 inherited eSrcFileName: TEdit
-                  Width = 287
+                  Width = 382
                 end
               end
             end
@@ -505,16 +524,16 @@ object MainForm: TMainForm
             inline svfDbgInfoUnitSource: TSourceViewFrame
               Left = 0
               Top = 0
-              Width = 834
-              Height = 489
+              Width = 832
+              Height = 518
               Align = alClient
               TabOrder = 0
               inherited synmSourceView: TSynMemo
-                Width = 834
-                Height = 468
+                Width = 832
+                Height = 497
               end
               inherited eSrcFileName: TEdit
-                Width = 834
+                Width = 832
               end
             end
           end
@@ -528,7 +547,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 460
-        Height = 517
+        Height = 546
         Align = alLeft
         BorderStyle = bsNone
         ClipboardFormats.Strings = (
@@ -543,6 +562,7 @@ object MainForm: TMainForm
         Colors.SelectionRectangleBlendColor = clBtnFace
         Colors.SelectionRectangleBorderColor = clBtnFace
         Colors.SelectionTextColor = clWindowText
+        Constraints.MinWidth = 200
         DrawSelectionMode = smBlendedRectangle
         Header.AutoSizeIndex = -1
         Header.Font.Charset = DEFAULT_CHARSET
@@ -561,7 +581,7 @@ object MainForm: TMainForm
         TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
         OnChange = vdtTimeLineChange
         OnCollapsed = vstThreadsCollapsed
-        OnColumnResize = vstThreadsColumnResize
+        OnColumnResize = vstColumnResize
         OnDrawText = vstThreadsDrawText
         OnExpanded = vstThreadsExpanded
         OnGetText = vstThreadsGetText
@@ -595,14 +615,15 @@ object MainForm: TMainForm
       object vdtTimeLine: TVirtualDrawTree
         Left = 460
         Top = 0
-        Width = 744
-        Height = 517
+        Width = 745
+        Height = 546
         Align = alClient
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
         Colors.FocusedSelectionBorderColor = clBtnFace
         Colors.SelectionRectangleBlendColor = clBtnFace
         Colors.SelectionRectangleBorderColor = clBtnFace
+        Constraints.MinWidth = 200
         DrawSelectionMode = smBlendedRectangle
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
@@ -640,11 +661,16 @@ object MainForm: TMainForm
     object tsMemInfo: TTabSheet
       Caption = 'Memory Info'
       ImageIndex = 3
+      object splMemInfo: TSplitter
+        Left = 486
+        Top = 0
+        Height = 546
+      end
       object vstMemInfoThreads: TVirtualStringTree
         Left = 0
         Top = 0
         Width = 486
-        Height = 517
+        Height = 546
         Align = alLeft
         ClipboardFormats.Strings = (
           'CSV'
@@ -653,6 +679,7 @@ object MainForm: TMainForm
           'Rich Text Format'
           'Rich Text Format Without Objects'
           'Unicode text')
+        Constraints.MinWidth = 200
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -667,11 +694,12 @@ object MainForm: TMainForm
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-        OnColumnResize = vstThreadsColumnResize
+        OnColumnResize = vstColumnResize
         OnDrawText = vstThreadsDrawText
         OnFocusChanged = vstMemInfoThreadsFocusChanged
         OnGetText = vstMemInfoThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnResize = vstTreeResize
         Columns = <
           item
             CaptionAlignment = taCenter
@@ -705,20 +733,21 @@ object MainForm: TMainForm
           end>
       end
       object pMemInfoClient: TPanel
-        Left = 486
+        Left = 489
         Top = 0
-        Width = 718
-        Height = 517
+        Width = 716
+        Height = 546
         Align = alClient
         BevelEdges = []
         BevelOuter = bvNone
         Caption = 'pMemInfoClient'
+        Constraints.MinWidth = 400
         ShowCaption = False
         TabOrder = 1
         object cbMemInfo: TCoolBar
           Left = 0
           Top = 0
-          Width = 718
+          Width = 716
           Height = 24
           AutoSize = True
           BandBorderStyle = bsNone
@@ -727,7 +756,7 @@ object MainForm: TMainForm
               Control = actbMemInfo
               ImageIndex = -1
               MinHeight = 24
-              Width = 718
+              Width = 716
             end>
           EdgeBorders = []
           EdgeInner = esNone
@@ -736,7 +765,7 @@ object MainForm: TMainForm
           object actbMemInfo: TActionToolBar
             Left = 0
             Top = 0
-            Width = 718
+            Width = 716
             Height = 24
             ActionManager = amMain
             Caption = 'actbMemInfo'
@@ -756,9 +785,9 @@ object MainForm: TMainForm
         object pcMemInfo: TPageControl
           Left = 0
           Top = 24
-          Width = 718
-          Height = 493
-          ActivePage = tsMemInfoTreeView
+          Width = 716
+          Height = 522
+          ActivePage = tsMemInfoViewStack
           Align = alClient
           TabOrder = 1
           OnChange = pcMemInfoChange
@@ -767,25 +796,31 @@ object MainForm: TMainForm
             object pnl1: TPanel
               Left = 0
               Top = 0
-              Width = 710
-              Height = 465
+              Width = 708
+              Height = 494
               Align = alClient
               BevelOuter = bvNone
               TabOrder = 0
-              object pMemoryInfoAdv: TPanel
+              object splMemInfoSmpView: TSplitter
                 Left = 305
                 Top = 0
-                Width = 405
-                Height = 465
+                Height = 494
+              end
+              object pMemoryInfoAdv: TPanel
+                Left = 308
+                Top = 0
+                Width = 400
+                Height = 494
                 Align = alClient
                 BevelOuter = bvNone
                 Caption = 'pMemoryInfoAdv'
+                Constraints.MinWidth = 200
                 ShowCaption = False
                 TabOrder = 0
                 object splMemInfoAdv: TSplitter
                   Left = 0
                   Top = 225
-                  Width = 405
+                  Width = 400
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
@@ -793,7 +828,7 @@ object MainForm: TMainForm
                 object vstMemStack: TVirtualStringTree
                   Left = 0
                   Top = 0
-                  Width = 405
+                  Width = 400
                   Height = 225
                   Align = alTop
                   ClipboardFormats.Strings = (
@@ -803,6 +838,7 @@ object MainForm: TMainForm
                     'Rich Text Format'
                     'Rich Text Format Without Objects'
                     'Unicode text')
+                  Constraints.MinHeight = 100
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -851,16 +887,17 @@ object MainForm: TMainForm
                 inline svfMemInfoSource: TSourceViewFrame
                   Left = 0
                   Top = 228
-                  Width = 405
-                  Height = 237
+                  Width = 400
+                  Height = 266
                   Align = alClient
+                  Constraints.MinHeight = 100
                   TabOrder = 1
                   inherited synmSourceView: TSynMemo
-                    Width = 405
-                    Height = 216
+                    Width = 400
+                    Height = 245
                   end
                   inherited eSrcFileName: TEdit
-                    Width = 405
+                    Width = 400
                   end
                 end
               end
@@ -868,7 +905,7 @@ object MainForm: TMainForm
                 Left = 0
                 Top = 0
                 Width = 305
-                Height = 465
+                Height = 494
                 Align = alLeft
                 ClipboardFormats.Strings = (
                   'CSV'
@@ -877,6 +914,7 @@ object MainForm: TMainForm
                   'Rich Text Format'
                   'Rich Text Format Without Objects'
                   'Unicode text')
+                Constraints.MinWidth = 200
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -893,11 +931,12 @@ object MainForm: TMainForm
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
-                OnColumnResize = vstThreadsColumnResize
+                OnColumnResize = vstColumnResize
                 OnCompareNodes = vstMemInfoObjectsCompareNodes
                 OnFocusChanged = vstMemListFocusChanged
                 OnGetText = vstMemListGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                OnResize = vstTreeResize
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -931,8 +970,8 @@ object MainForm: TMainForm
             ImageIndex = 1
             object spl2: TSplitter
               Left = 0
-              Top = 213
-              Width = 710
+              Top = 242
+              Width = 708
               Height = 3
               Cursor = crVSplit
               Align = alBottom
@@ -940,19 +979,25 @@ object MainForm: TMainForm
             object pMemInfoTreeLeft: TPanel
               Left = 0
               Top = 0
-              Width = 710
-              Height = 213
+              Width = 708
+              Height = 242
               Align = alClient
               BevelEdges = []
               BevelOuter = bvNone
               Caption = 'pMemInfoTreeLeft'
+              Constraints.MinHeight = 200
               ShowCaption = False
               TabOrder = 0
+              object splMemInfoTreeView1: TSplitter
+                Left = 456
+                Top = 0
+                Height = 242
+              end
               object vstMemInfoFuncTree: TVirtualStringTree
                 Left = 0
                 Top = 0
                 Width = 456
-                Height = 213
+                Height = 242
                 Align = alLeft
                 BevelEdges = []
                 BevelInner = bvNone
@@ -965,6 +1010,7 @@ object MainForm: TMainForm
                   'Rich Text Format'
                   'Rich Text Format Without Objects'
                   'Unicode text')
+                Constraints.MinWidth = 200
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -980,12 +1026,13 @@ object MainForm: TMainForm
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
-                OnColumnResize = vstThreadsColumnResize
+                OnColumnResize = vstColumnResize
                 OnCompareNodes = vstMemInfoFuncTreeCompareNodes
                 OnDrawText = vstTrackFuncsDrawText
                 OnFocusChanged = vstMemInfoFuncTreeFocusChanged
                 OnGetText = vstMemInfoFuncTreeGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                OnResize = vstTreeResize
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -1014,20 +1061,21 @@ object MainForm: TMainForm
                   end>
               end
               object pcMemInfoFuncInfo: TPageControl
-                Left = 456
+                Left = 459
                 Top = 0
-                Width = 254
-                Height = 213
+                Width = 249
+                Height = 242
                 ActivePage = tsMemInfoFuncLinks
                 Align = alClient
+                Constraints.MinWidth = 200
                 TabOrder = 1
                 object tsMemInfoFuncLinks: TTabSheet
                   Caption = 'Links'
                   object pMemInfoFuncLinks: TPanel
                     Left = 0
                     Top = 0
-                    Width = 246
-                    Height = 185
+                    Width = 241
+                    Height = 214
                     Align = alClient
                     BevelOuter = bvNone
                     ShowCaption = False
@@ -1036,7 +1084,7 @@ object MainForm: TMainForm
                     object spl1: TSplitter
                       Left = 0
                       Top = 100
-                      Width = 246
+                      Width = 241
                       Height = 3
                       Cursor = crVSplit
                       Align = alTop
@@ -1044,7 +1092,7 @@ object MainForm: TMainForm
                     object vstMemInfoFuncParents: TVirtualStringTree
                       Left = 0
                       Top = 0
-                      Width = 246
+                      Width = 241
                       Height = 100
                       Align = alTop
                       BevelEdges = []
@@ -1058,6 +1106,7 @@ object MainForm: TMainForm
                         'Rich Text Format'
                         'Rich Text Format Without Objects'
                         'Unicode text')
+                      Constraints.MinHeight = 50
                       Header.AutoSizeIndex = 0
                       Header.Font.Charset = DEFAULT_CHARSET
                       Header.Font.Color = clWindowText
@@ -1109,8 +1158,8 @@ object MainForm: TMainForm
                     object vstMemInfoFuncChilds: TVirtualStringTree
                       Left = 0
                       Top = 103
-                      Width = 246
-                      Height = 82
+                      Width = 241
+                      Height = 111
                       Align = alClient
                       BevelEdges = []
                       BevelInner = bvNone
@@ -1123,6 +1172,7 @@ object MainForm: TMainForm
                         'Rich Text Format'
                         'Rich Text Format Without Objects'
                         'Unicode text')
+                      Constraints.MinHeight = 50
                       Header.AutoSizeIndex = 0
                       Header.Font.Charset = DEFAULT_CHARSET
                       Header.Font.Color = clWindowText
@@ -1179,16 +1229,16 @@ object MainForm: TMainForm
                   inline svfMemInfoFuncSrc: TSourceViewFrame
                     Left = 0
                     Top = 0
-                    Width = 246
-                    Height = 185
+                    Width = 241
+                    Height = 214
                     Align = alClient
                     TabOrder = 0
                     inherited synmSourceView: TSynMemo
-                      Width = 246
-                      Height = 164
+                      Width = 241
+                      Height = 193
                     end
                     inherited eSrcFileName: TEdit
-                      Width = 246
+                      Width = 241
                     end
                   end
                 end
@@ -1196,15 +1246,21 @@ object MainForm: TMainForm
             end
             object pMemInfoButtom: TPanel
               Left = 0
-              Top = 216
-              Width = 710
+              Top = 245
+              Width = 708
               Height = 249
               Align = alBottom
               BevelEdges = []
               BevelOuter = bvNone
               Caption = 'pMemInfoButtom'
+              Constraints.MinHeight = 200
               ShowCaption = False
               TabOrder = 1
+              object splMemInfoTreeView2: TSplitter
+                Left = 356
+                Top = 0
+                Height = 249
+              end
               object vstMemInfoObjects: TVirtualStringTree
                 Left = 0
                 Top = 0
@@ -1218,6 +1274,7 @@ object MainForm: TMainForm
                   'Rich Text Format'
                   'Rich Text Format Without Objects'
                   'Unicode text')
+                Constraints.MinWidth = 200
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -1234,11 +1291,12 @@ object MainForm: TMainForm
                 TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                 TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                 TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
-                OnColumnResize = vstThreadsColumnResize
+                OnColumnResize = vstColumnResize
                 OnCompareNodes = vstMemInfoObjectsCompareNodes
                 OnFocusChanged = vstMemInfoObjectsFocusChanged
                 OnGetText = vstMemInfoObjectsGetText
                 OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                OnResize = vstTreeResize
                 Columns = <
                   item
                     CaptionAlignment = taCenter
@@ -1266,9 +1324,9 @@ object MainForm: TMainForm
                   end>
               end
               object vstMemInfoObjStack: TVirtualStringTree
-                Left = 356
+                Left = 359
                 Top = 0
-                Width = 354
+                Width = 349
                 Height = 249
                 Align = alClient
                 ClipboardFormats.Strings = (
@@ -1278,6 +1336,7 @@ object MainForm: TMainForm
                   'Rich Text Format'
                   'Rich Text Format Without Objects'
                   'Unicode text')
+                Constraints.MinWidth = 200
                 Header.AutoSizeIndex = 0
                 Header.Font.Charset = DEFAULT_CHARSET
                 Header.Font.Color = clWindowText
@@ -1331,11 +1390,16 @@ object MainForm: TMainForm
     object tsExceptions: TTabSheet
       Caption = 'Exceptions'
       ImageIndex = 4
+      object splExceptInfo: TSplitter
+        Left = 411
+        Top = 0
+        Height = 546
+      end
       object vstExceptionThreads: TVirtualStringTree
         Left = 0
         Top = 0
         Width = 411
-        Height = 517
+        Height = 546
         Align = alLeft
         ClipboardFormats.Strings = (
           'CSV'
@@ -1344,6 +1408,7 @@ object MainForm: TMainForm
           'Rich Text Format'
           'Rich Text Format Without Objects'
           'Unicode text')
+        Constraints.MinWidth = 200
         Header.AutoSizeIndex = 0
         Header.Font.Charset = DEFAULT_CHARSET
         Header.Font.Color = clWindowText
@@ -1358,11 +1423,12 @@ object MainForm: TMainForm
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-        OnColumnResize = vstThreadsColumnResize
+        OnColumnResize = vstColumnResize
         OnDrawText = vstThreadsDrawText
         OnFocusChanged = vstExceptionThreadsFocusChanged
         OnGetText = vstExceptionThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnResize = vstTreeResize
         Columns = <
           item
             CaptionAlignment = taCenter
@@ -1388,29 +1454,35 @@ object MainForm: TMainForm
           end>
       end
       object pExceptionInfo: TPanel
-        Left = 411
+        Left = 414
         Top = 0
-        Width = 793
-        Height = 517
+        Width = 791
+        Height = 546
         Align = alClient
         BevelEdges = []
         BevelOuter = bvNone
         Caption = 'pExceptionInfo'
+        Constraints.MinWidth = 400
         ShowCaption = False
         TabOrder = 1
         object pnl2: TPanel
           Left = 0
           Top = 24
-          Width = 793
-          Height = 493
+          Width = 791
+          Height = 522
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 0
+          object splExceptInfo2: TSplitter
+            Left = 511
+            Top = 0
+            Height = 522
+          end
           object vstExceptionList: TVirtualStringTree
             Left = 0
             Top = 0
             Width = 511
-            Height = 493
+            Height = 522
             Align = alLeft
             ClipboardFormats.Strings = (
               'CSV'
@@ -1419,6 +1491,7 @@ object MainForm: TMainForm
               'Rich Text Format'
               'Rich Text Format Without Objects'
               'Unicode text')
+            Constraints.MinWidth = 200
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
@@ -1434,10 +1507,11 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
-            OnColumnResize = vstThreadsColumnResize
+            OnColumnResize = vstColumnResize
             OnFocusChanged = vstExceptionListFocusChanged
             OnGetText = vstExceptionListGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnResize = vstTreeResize
             Columns = <
               item
                 Alignment = taRightJustify
@@ -1464,20 +1538,21 @@ object MainForm: TMainForm
               end>
           end
           object pExceptInfoAdv: TPanel
-            Left = 511
+            Left = 514
             Top = 0
-            Width = 282
-            Height = 493
+            Width = 277
+            Height = 522
             Align = alClient
             BevelEdges = []
             BevelOuter = bvNone
             Caption = 'pExceptInfoAdv'
+            Constraints.MinWidth = 200
             ShowCaption = False
             TabOrder = 1
             object splExceptInfoAdv: TSplitter
               Left = 0
               Top = 217
-              Width = 282
+              Width = 277
               Height = 3
               Cursor = crVSplit
               Align = alTop
@@ -1485,7 +1560,7 @@ object MainForm: TMainForm
             object vstExceptionCallStack: TVirtualStringTree
               Left = 0
               Top = 0
-              Width = 282
+              Width = 277
               Height = 217
               Align = alTop
               ClipboardFormats.Strings = (
@@ -1495,6 +1570,7 @@ object MainForm: TMainForm
                 'Rich Text Format'
                 'Rich Text Format Without Objects'
                 'Unicode text')
+              Constraints.MinHeight = 100
               Header.AutoSizeIndex = 0
               Header.Font.Charset = DEFAULT_CHARSET
               Header.Font.Color = clWindowText
@@ -1543,16 +1619,17 @@ object MainForm: TMainForm
             inline svfExceptInfoSource: TSourceViewFrame
               Left = 0
               Top = 220
-              Width = 282
-              Height = 273
+              Width = 277
+              Height = 302
               Align = alClient
+              Constraints.MinHeight = 100
               TabOrder = 1
               inherited synmSourceView: TSynMemo
-                Width = 282
-                Height = 252
+                Width = 277
+                Height = 281
               end
               inherited eSrcFileName: TEdit
-                Width = 282
+                Width = 277
               end
             end
           end
@@ -1560,7 +1637,7 @@ object MainForm: TMainForm
         object cbExceptionInfo: TCoolBar
           Left = 0
           Top = 0
-          Width = 793
+          Width = 791
           Height = 24
           AutoSize = True
           BandBorderStyle = bsNone
@@ -1569,7 +1646,7 @@ object MainForm: TMainForm
               Control = actbExceptionInfo
               ImageIndex = -1
               MinHeight = 24
-              Width = 793
+              Width = 791
             end>
           EdgeBorders = [ebTop]
           EdgeInner = esNone
@@ -1578,7 +1655,7 @@ object MainForm: TMainForm
           object actbExceptionInfo: TActionToolBar
             Left = 0
             Top = 0
-            Width = 793
+            Width = 791
             Height = 24
             ActionManager = amMain
             Caption = 'actbExceptionInfo'
@@ -1599,11 +1676,16 @@ object MainForm: TMainForm
     object tsCodeTracking: TTabSheet
       Caption = 'Code tracking'
       ImageIndex = 5
+      object splCodeTrack1: TSplitter
+        Left = 542
+        Top = 0
+        Height = 546
+      end
       object vstTrackThreads: TVirtualStringTree
         Left = 0
         Top = 0
         Width = 542
-        Height = 517
+        Height = 546
         Align = alLeft
         BorderStyle = bsNone
         ClipboardFormats.Strings = (
@@ -1618,6 +1700,7 @@ object MainForm: TMainForm
         Colors.SelectionRectangleBlendColor = clBtnFace
         Colors.SelectionRectangleBorderColor = clBtnFace
         Colors.SelectionTextColor = clWindowText
+        Constraints.MinWidth = 200
         DrawSelectionMode = smBlendedRectangle
         Header.AutoSizeIndex = -1
         Header.Font.Charset = DEFAULT_CHARSET
@@ -1633,12 +1716,13 @@ object MainForm: TMainForm
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
-        OnColumnResize = vstThreadsColumnResize
+        OnColumnResize = vstColumnResize
         OnDrawText = vstThreadsDrawText
         OnFocusChanged = vstTrackThreadsFocusChanged
         OnFocusChanging = vstTrackThreadsFocusChanging
         OnGetText = vstTrackThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnResize = vstTreeResize
         Columns = <
           item
             CaptionAlignment = taCenter
@@ -1673,30 +1757,36 @@ object MainForm: TMainForm
           end>
       end
       object pCodeTrackingInfo: TPanel
-        Left = 542
+        Left = 545
         Top = 0
-        Width = 662
-        Height = 517
+        Width = 660
+        Height = 546
         Align = alClient
         BevelOuter = bvNone
         Caption = 'pCodeTrackingInfo'
+        Constraints.MinWidth = 400
         ShowCaption = False
         TabOrder = 1
         object pTrackAdv: TPanel
           Left = 0
           Top = 26
-          Width = 662
-          Height = 491
+          Width = 660
+          Height = 520
           Align = alClient
           BevelOuter = bvNone
           Caption = 'pTrackAdv'
           ShowCaption = False
           TabOrder = 0
+          object splCodeTrack2: TSplitter
+            Left = 457
+            Top = 0
+            Height = 520
+          end
           object vstTrackFuncs: TVirtualStringTree
             Left = 0
             Top = 0
             Width = 457
-            Height = 491
+            Height = 520
             Align = alLeft
             BevelEdges = []
             BevelInner = bvNone
@@ -1709,6 +1799,7 @@ object MainForm: TMainForm
               'Rich Text Format'
               'Rich Text Format Without Objects'
               'Unicode text')
+            Constraints.MinWidth = 200
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
@@ -1724,13 +1815,14 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
-            OnColumnResize = vstThreadsColumnResize
+            OnColumnResize = vstColumnResize
             OnCompareNodes = vstTrackFuncsCompareNodes
             OnDrawText = vstTrackFuncsDrawText
             OnFocusChanged = vstTrackFuncsFocusChanged
             OnFocusChanging = vstTrackFuncsFocusChanging
             OnGetText = vstTrackFuncsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnResize = vstTreeResize
             Columns = <
               item
                 CaptionAlignment = taCenter
@@ -1759,20 +1851,21 @@ object MainForm: TMainForm
               end>
           end
           object pcTrackFuncAdv: TPageControl
-            Left = 457
+            Left = 460
             Top = 0
-            Width = 205
-            Height = 491
+            Width = 200
+            Height = 520
             ActivePage = tsTrackFuncAdvLinks
             Align = alClient
+            Constraints.MinWidth = 200
             TabOrder = 1
             object tsTrackFuncAdvLinks: TTabSheet
               Caption = 'Links'
               object pTrackFuncAdv: TPanel
                 Left = 0
                 Top = 0
-                Width = 197
-                Height = 463
+                Width = 192
+                Height = 492
                 Align = alClient
                 BevelOuter = bvNone
                 Caption = 'pTrackFuncAdv'
@@ -1782,7 +1875,7 @@ object MainForm: TMainForm
                 object splTrackFuncAdv: TSplitter
                   Left = 0
                   Top = 329
-                  Width = 197
+                  Width = 192
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
@@ -1790,7 +1883,7 @@ object MainForm: TMainForm
                 object vstTrackFuncParent: TVirtualStringTree
                   Left = 0
                   Top = 0
-                  Width = 197
+                  Width = 192
                   Height = 329
                   Align = alTop
                   BevelEdges = []
@@ -1804,6 +1897,7 @@ object MainForm: TMainForm
                     'Rich Text Format'
                     'Rich Text Format Without Objects'
                     'Unicode text')
+                  Constraints.MinHeight = 100
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -1856,8 +1950,8 @@ object MainForm: TMainForm
                 object vstTrackFuncChilds: TVirtualStringTree
                   Left = 0
                   Top = 332
-                  Width = 197
-                  Height = 131
+                  Width = 192
+                  Height = 160
                   Align = alClient
                   BevelEdges = []
                   BevelInner = bvNone
@@ -1870,6 +1964,7 @@ object MainForm: TMainForm
                     'Rich Text Format'
                     'Rich Text Format Without Objects'
                     'Unicode text')
+                  Constraints.MinHeight = 100
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -1926,16 +2021,16 @@ object MainForm: TMainForm
               inline svfTrackFuncAdvSource: TSourceViewFrame
                 Left = 0
                 Top = 0
-                Width = 197
-                Height = 463
+                Width = 192
+                Height = 492
                 Align = alClient
                 TabOrder = 0
                 inherited synmSourceView: TSynMemo
-                  Width = 197
-                  Height = 442
+                  Width = 192
+                  Height = 471
                 end
                 inherited eSrcFileName: TEdit
-                  Width = 197
+                  Width = 192
                 end
               end
             end
@@ -1944,7 +2039,7 @@ object MainForm: TMainForm
         object cbCodeTrackingInfo: TCoolBar
           Left = 0
           Top = 0
-          Width = 662
+          Width = 660
           Height = 26
           AutoSize = True
           BandBorderStyle = bsNone
@@ -1953,7 +2048,7 @@ object MainForm: TMainForm
               Control = actbCodeTrackingInfo
               ImageIndex = -1
               MinHeight = 26
-              Width = 662
+              Width = 660
             end>
           EdgeBorders = []
           FixedSize = True
@@ -1961,7 +2056,7 @@ object MainForm: TMainForm
           object actbCodeTrackingInfo: TActionToolBar
             Left = 0
             Top = 0
-            Width = 662
+            Width = 660
             Height = 26
             ActionManager = amMain
             Caption = 'actbCodeTrackingInfo'
@@ -1982,11 +2077,16 @@ object MainForm: TMainForm
     object tsLockTracking: TTabSheet
       Caption = 'Lock tracking'
       ImageIndex = 7
+      object splLockTrack1: TSplitter
+        Left = 477
+        Top = 0
+        Height = 546
+      end
       object vstLockThreads: TVirtualStringTree
         Left = 0
         Top = 0
         Width = 477
-        Height = 517
+        Height = 546
         Align = alLeft
         BorderStyle = bsNone
         Colors.FocusedSelectionColor = clBtnFace
@@ -1994,6 +2094,7 @@ object MainForm: TMainForm
         Colors.SelectionRectangleBlendColor = clBtnFace
         Colors.SelectionRectangleBorderColor = clBtnFace
         Colors.SelectionTextColor = clWindowText
+        Constraints.MinWidth = 200
         DrawSelectionMode = smBlendedRectangle
         Header.AutoSizeIndex = -1
         Header.Font.Charset = DEFAULT_CHARSET
@@ -2009,11 +2110,12 @@ object MainForm: TMainForm
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toInitOnSave, toToggleOnDblClick, toWheelPanning]
         TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
-        OnColumnResize = vstThreadsColumnResize
+        OnColumnResize = vstColumnResize
         OnDrawText = vstThreadsDrawText
         OnFocusChanged = vstLockThreadsFocusChanged
         OnGetText = vstLockThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnResize = vstTreeResize
         Columns = <
           item
             CaptionAlignment = taCenter
@@ -2040,20 +2142,21 @@ object MainForm: TMainForm
           end>
       end
       object pLockTrackingInfo: TPanel
-        Left = 477
+        Left = 480
         Top = 0
-        Width = 727
-        Height = 517
+        Width = 725
+        Height = 546
         Align = alClient
         BevelEdges = []
         BevelOuter = bvNone
         Caption = 'pLockTrackingInfo'
+        Constraints.MinWidth = 400
         ShowCaption = False
         TabOrder = 1
         object spl4: TSplitter
           Left = 0
-          Top = 245
-          Width = 727
+          Top = 274
+          Width = 725
           Height = 3
           Cursor = crVSplit
           Align = alBottom
@@ -2061,7 +2164,7 @@ object MainForm: TMainForm
         object cbLockTracking: TCoolBar
           Left = 0
           Top = 0
-          Width = 727
+          Width = 725
           Height = 24
           AutoSize = True
           BandBorderStyle = bsNone
@@ -2070,7 +2173,7 @@ object MainForm: TMainForm
               Control = actbLockTracking
               ImageIndex = -1
               MinHeight = 24
-              Width = 727
+              Width = 725
             end>
           EdgeInner = esNone
           EdgeOuter = esNone
@@ -2078,7 +2181,7 @@ object MainForm: TMainForm
           object actbLockTracking: TActionToolBar
             Left = 0
             Top = 0
-            Width = 727
+            Width = 725
             Height = 24
             ActionManager = amMain
             Caption = 'actbLockTracking'
@@ -2097,23 +2200,30 @@ object MainForm: TMainForm
         object pLockTrackingAdv: TPanel
           Left = 0
           Top = 24
-          Width = 727
-          Height = 221
+          Width = 725
+          Height = 250
           Align = alClient
           BevelOuter = bvNone
           Caption = 'pLockTrackingAdv'
+          Constraints.MinHeight = 250
           ShowCaption = False
           TabOrder = 1
+          object splLockTrack3: TSplitter
+            Left = 457
+            Top = 0
+            Height = 250
+          end
           object vstLockTrackingList: TVirtualStringTree
             Left = 0
             Top = 0
             Width = 457
-            Height = 221
+            Height = 250
             Align = alLeft
             BevelEdges = []
             BevelInner = bvNone
             BevelOuter = bvNone
             BorderStyle = bsNone
+            Constraints.MinWidth = 200
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
@@ -2129,12 +2239,13 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect]
-            OnColumnResize = vstThreadsColumnResize
+            OnColumnResize = vstColumnResize
             OnCompareNodes = vstLockTrackingListCompareNodes
             OnDrawText = vstTrackFuncsDrawText
             OnFocusChanged = vstLockTrackingListFocusChanged
             OnGetText = vstLockTrackingListGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnResize = vstTreeResize
             Columns = <
               item
                 CaptionAlignment = taCenter
@@ -2163,20 +2274,21 @@ object MainForm: TMainForm
               end>
           end
           object pcLockTrackingLinks: TPageControl
-            Left = 457
+            Left = 460
             Top = 0
-            Width = 270
-            Height = 221
+            Width = 265
+            Height = 250
             ActivePage = ts1
             Align = alClient
+            Constraints.MinWidth = 200
             TabOrder = 1
             object ts1: TTabSheet
               Caption = 'Links'
               object pLockTrackingLinks: TPanel
                 Left = 0
                 Top = 0
-                Width = 262
-                Height = 193
+                Width = 257
+                Height = 222
                 Align = alClient
                 BevelOuter = bvNone
                 ShowCaption = False
@@ -2185,7 +2297,7 @@ object MainForm: TMainForm
                 object spl3: TSplitter
                   Left = 0
                   Top = 100
-                  Width = 262
+                  Width = 257
                   Height = 3
                   Cursor = crVSplit
                   Align = alTop
@@ -2193,7 +2305,7 @@ object MainForm: TMainForm
                 object vstLockTrackingParents: TVirtualStringTree
                   Left = 0
                   Top = 0
-                  Width = 262
+                  Width = 257
                   Height = 100
                   Align = alTop
                   BevelEdges = []
@@ -2207,6 +2319,7 @@ object MainForm: TMainForm
                     'Rich Text Format'
                     'Rich Text Format Without Objects'
                     'Unicode text')
+                  Constraints.MinHeight = 100
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -2258,8 +2371,8 @@ object MainForm: TMainForm
                 object vstLockTrackingChilds: TVirtualStringTree
                   Left = 0
                   Top = 103
-                  Width = 262
-                  Height = 90
+                  Width = 257
+                  Height = 119
                   Align = alClient
                   BevelEdges = []
                   BevelInner = bvNone
@@ -2272,6 +2385,7 @@ object MainForm: TMainForm
                     'Rich Text Format'
                     'Rich Text Format Without Objects'
                     'Unicode text')
+                  Constraints.MinHeight = 100
                   Header.AutoSizeIndex = 0
                   Header.Font.Charset = DEFAULT_CHARSET
                   Header.Font.Color = clWindowText
@@ -2328,16 +2442,16 @@ object MainForm: TMainForm
               inline svfLockTrackingSource: TSourceViewFrame
                 Left = 0
                 Top = 0
-                Width = 262
-                Height = 193
+                Width = 257
+                Height = 222
                 Align = alClient
                 TabOrder = 0
                 inherited synmSourceView: TSynMemo
-                  Width = 262
-                  Height = 172
+                  Width = 257
+                  Height = 201
                 end
                 inherited eSrcFileName: TEdit
-                  Width = 262
+                  Width = 257
                 end
               end
             end
@@ -2345,15 +2459,21 @@ object MainForm: TMainForm
         end
         object p2: TPanel
           Left = 0
-          Top = 248
-          Width = 727
+          Top = 277
+          Width = 725
           Height = 269
           Align = alBottom
           BevelEdges = []
           BevelOuter = bvNone
           Caption = 'pMemInfoButtom'
+          Constraints.MinHeight = 100
           ShowCaption = False
           TabOrder = 2
+          object splLockTrack2: TSplitter
+            Left = 331
+            Top = 0
+            Height = 269
+          end
           object vstLockTrackingSyncObjs: TVirtualStringTree
             Left = 0
             Top = 0
@@ -2367,6 +2487,7 @@ object MainForm: TMainForm
               'Rich Text Format'
               'Rich Text Format Without Objects'
               'Unicode text')
+            Constraints.MinWidth = 200
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
@@ -2383,11 +2504,12 @@ object MainForm: TMainForm
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
-            OnColumnResize = vstThreadsColumnResize
+            OnColumnResize = vstColumnResize
             OnCompareNodes = vstLockTrackingSyncObjsCompareNodes
             OnFocusChanged = vstLockTrackingSyncObjsFocusChanged
             OnGetText = vstLockTrackingSyncObjsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnResize = vstTreeResize
             Columns = <
               item
                 CaptionAlignment = taCenter
@@ -2414,9 +2536,9 @@ object MainForm: TMainForm
               end>
           end
           object vstLockTrackingSyncObjStack: TVirtualStringTree
-            Left = 331
+            Left = 334
             Top = 0
-            Width = 396
+            Width = 391
             Height = 269
             Align = alClient
             ClipboardFormats.Strings = (
@@ -2426,6 +2548,7 @@ object MainForm: TMainForm
               'Rich Text Format'
               'Rich Text Format Without Objects'
               'Unicode text')
+            Constraints.MinWidth = 200
             Header.AutoSizeIndex = 0
             Header.Font.Charset = DEFAULT_CHARSET
             Header.Font.Color = clWindowText
@@ -2480,8 +2603,8 @@ object MainForm: TMainForm
       object vstUpdateInfo: TVirtualStringTree
         Left = 0
         Top = 24
-        Width = 1204
-        Height = 493
+        Width = 1205
+        Height = 522
         Align = alClient
         ClipboardFormats.Strings = (
           'CSV'
@@ -2506,14 +2629,14 @@ object MainForm: TMainForm
         Columns = <
           item
             Position = 0
-            Width = 1204
+            Width = 1201
             WideText = 'Info'
           end>
       end
       object cbUpdateInfo: TCoolBar
         Left = 0
         Top = 0
-        Width = 1204
+        Width = 1205
         Height = 24
         AutoSize = True
         BandBorderStyle = bsNone
@@ -2522,7 +2645,7 @@ object MainForm: TMainForm
             Control = actbUpdateInfo
             ImageIndex = -1
             MinHeight = 24
-            Width = 1204
+            Width = 1205
           end>
         EdgeInner = esNone
         EdgeOuter = esNone
@@ -2530,7 +2653,7 @@ object MainForm: TMainForm
         object actbUpdateInfo: TActionToolBar
           Left = 0
           Top = 0
-          Width = 1204
+          Width = 1205
           Height = 24
           ActionManager = amMain
           Caption = 'actbUpdateInfo'
@@ -2551,7 +2674,7 @@ object MainForm: TMainForm
   object rbnMain: TRibbon
     Left = 0
     Top = 0
-    Width = 1212
+    Width = 1213
     Height = 143
     ActionManager = amMain
     ApplicationMenu.Caption = 'Recent projects'
@@ -2708,7 +2831,7 @@ object MainForm: TMainForm
     TabIndex = 1
     UseCustomFrame = False
     DesignSize = (
-      1212
+      1213
       143)
     StyleName = 'Ribbon - Silver'
     object rbambMain: TRibbonApplicationMenuBar
@@ -2778,7 +2901,7 @@ object MainForm: TMainForm
     object rbpMain: TRibbonPage
       Left = 0
       Top = 50
-      Width = 1211
+      Width = 1212
       Height = 93
       Caption = 'Menu'
       Index = 0
@@ -2834,7 +2957,7 @@ object MainForm: TMainForm
     object rbnpgOptions: TRibbonPage
       Left = 0
       Top = 50
-      Width = 1211
+      Width = 1212
       Height = 93
       Caption = 'Options'
       Index = 1
@@ -2907,7 +3030,7 @@ object MainForm: TMainForm
   object cbMainTabs: TCoolBar
     Left = 0
     Top = 143
-    Width = 1212
+    Width = 1213
     Height = 24
     AutoSize = True
     Bands = <
@@ -2915,7 +3038,7 @@ object MainForm: TMainForm
         Control = actbMainTabs
         ImageIndex = -1
         MinHeight = 24
-        Width = 1212
+        Width = 1213
       end>
     EdgeBorders = []
     FixedSize = True
@@ -2923,7 +3046,7 @@ object MainForm: TMainForm
     object actbMainTabs: TActionToolBar
       Left = 0
       Top = 0
-      Width = 1212
+      Width = 1213
       Height = 24
       ActionManager = amMain
       AllowHiding = False
@@ -2942,8 +3065,8 @@ object MainForm: TMainForm
   end
   object cbStatusInfo: TCoolBar
     Left = 0
-    Top = 712
-    Width = 1212
+    Top = 741
+    Width = 1213
     Height = 25
     Align = alBottom
     AutoSize = True
@@ -2953,7 +3076,7 @@ object MainForm: TMainForm
         Control = pStatusBar
         HorizontalOnly = True
         ImageIndex = -1
-        Width = 1212
+        Width = 1213
       end>
     EdgeBorders = []
     EdgeInner = esNone
@@ -2963,7 +3086,7 @@ object MainForm: TMainForm
     object pStatusBar: TPanel
       Left = 0
       Top = 0
-      Width = 1212
+      Width = 1213
       Height = 25
       BevelEdges = []
       BevelOuter = bvNone
@@ -2989,7 +3112,7 @@ object MainForm: TMainForm
         TabOrder = 0
       end
       object pStatusDbgInfo: TPanel
-        Left = 1076
+        Left = 1077
         Top = 0
         Width = 136
         Height = 25
@@ -3017,7 +3140,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 44
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3028,7 +3151,7 @@ object MainForm: TMainForm
         end
       end
       object pStatusDbgState: TPanel
-        Left = 956
+        Left = 957
         Top = 0
         Width = 120
         Height = 25
@@ -3041,7 +3164,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 51
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3067,7 +3190,7 @@ object MainForm: TMainForm
         end
       end
       object pStatusEventCnt: TPanel
-        Left = 836
+        Left = 837
         Top = 0
         Width = 120
         Height = 25
@@ -3080,7 +3203,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 59
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3107,7 +3230,7 @@ object MainForm: TMainForm
         end
       end
       object pStatusTrackEventCnt: TPanel
-        Left = 705
+        Left = 706
         Top = 0
         Width = 131
         Height = 25
@@ -3120,7 +3243,7 @@ object MainForm: TMainForm
           Left = 6
           Top = 3
           Width = 66
-          Height = 13
+          Height = 19
           Margins.Left = 5
           Margins.Top = 2
           Margins.Right = 5
@@ -3422,7 +3545,7 @@ object MainForm: TMainForm
     end
     object acAddressInfo: TAction
       Category = 'ExceptInfo'
-      Caption = 'Address info'
+      Caption = 'Custom stack info'
       ImageIndex = 5
       OnExecute = acAddressInfoExecute
     end
@@ -4106,14 +4229,14 @@ object MainForm: TMainForm
       item
         Items = <
           item
-            Action = acAddressInfo
-            Caption = '&Address info'
-            ImageIndex = 5
-          end
-          item
             Action = acExcepInfoRefresh
             Caption = '&Refresh'
             ImageIndex = 17
+          end
+          item
+            Action = acAddressInfo
+            Caption = '&Custom stack info'
+            ImageIndex = 5
           end>
         ActionBar = actbExceptionInfo
       end
