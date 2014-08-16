@@ -198,6 +198,7 @@ procedure TfmProjectOptions.acSaveExecute(Sender: TObject);
 begin
   if not FileExists(ApplicationName) then
   begin
+    pcProjectOpt.ActivePage := tsProject;
     ActiveControl := lbeApplication;
     ShowMessageFmt('Application "%s" not found', [ApplicationName]);
     Exit;

@@ -266,6 +266,10 @@ object fmProjectOptions: TfmProjectOptions
       item
         DisplayName = 'Application (*.exe)'
         FileMask = '*.exe'
+      end
+      item
+        DisplayName = 'Debug info (*.map)'
+        FileMask = '*.map'
       end>
     Options = []
     Left = 128
