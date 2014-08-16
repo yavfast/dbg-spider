@@ -26,7 +26,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1213
     Height = 574
-    ActivePage = tsLockTracking
+    ActivePage = tsExceptions
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
