@@ -26,7 +26,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1213
     Height = 574
-    ActivePage = tsExceptions
+    ActivePage = tsCodeTracking
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -787,7 +787,7 @@ object MainForm: TMainForm
           Top = 24
           Width = 716
           Height = 522
-          ActivePage = tsMemInfoViewStack
+          ActivePage = tsMemInfoTreeView
           Align = alClient
           TabOrder = 1
           OnChange = pcMemInfoChange
