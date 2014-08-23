@@ -553,7 +553,23 @@ type
     property Leave: UInt64 read GetLeave write SetLeave;
   end;
 
-  TTrackStack = class(TStack);
+  TFastStack<T> = class
+  private
+    FTop: Integer;
+    FItems: array of T;
+
+    procedure Grow;
+    function GetCount: Integer; inline;
+  public
+    constructor Create(const ACapacity: Integer = 64);
+
+    function Push: Pointer;
+    function Pop: Pointer;
+    property Count: Integer read GetCount;
+  end;
+
+  TTrackStack = TFastStack<TTrackStackPoint>;
+
 
   TThreadAdvInfoList = TBaseCollectList; //TCollectList<TThreadAdvInfo>;
 
@@ -981,7 +997,7 @@ begin
   DbgTrackFuncList := TCodeTrackFuncInfoList.Create(4096, True);
   DbgTrackFuncList.OwnsValues := True;
 
-  DbgTrackStack := TTrackStack.Create;
+  DbgTrackStack := TTrackStack.Create(64);
 end;
 
 procedure TThreadData.UpdateGetMemUnitList;
@@ -1927,6 +1943,57 @@ begin
   LogType := dltUnknown;
 
   inherited;
+end;
+
+{ TTrackStack<T> }
+
+constructor TFastStack<T>.Create(const ACapacity: Integer);
+begin
+  inherited Create;
+
+  FTop := -1;
+  SetLength(FItems, ACapacity);
+end;
+
+function TFastStack<T>.GetCount: Integer;
+begin
+  Result := FTop + 1;
+end;
+
+procedure TFastStack<T>.Grow;
+var
+  L: Integer;
+  Delta: Integer;
+begin
+  L := Length(Fitems);
+
+  if L <= 32 then
+    Delta := L
+  else
+    Delta := L div 2;
+
+  SetLength(FItems, L + Delta);
+end;
+
+function TFastStack<T>.Pop: Pointer;
+begin
+  if FTop >= 0  then
+  begin
+    Result := @FItems[FTop];
+    Dec(FTop);
+  end
+  else
+    Result := Nil;
+end;
+
+function TFastStack<T>.Push: Pointer;
+begin
+  Inc(FTop);
+
+  if FTop = Length(FItems) then
+    Grow;
+
+  Result := @FItems[FTop];
 end;
 
 end.
