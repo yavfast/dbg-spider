@@ -126,11 +126,8 @@ var
       end;
     end;
 
-    // Создание новой записи для Track Stack
-    TrackStackPoint := AllocMem(SizeOf(TTrackStackPoint));
-
     // Добавляем в Track Stack
-    ThData^.DbgTrackStack.Push(TrackStackPoint);
+    TrackStackPoint := ThData^.DbgTrackStack.Push;
 
     TrackStackPoint^.TrackFuncInfo := TrackFuncInfo;
     TrackStackPoint^.ParentTrackFuncInfo := ParentTrackFuncInfo;
@@ -293,12 +290,8 @@ var
       if TrackStackPoint^.TrackRETBreakpoint = TrackRETBp then
       begin
         // Dec(TrackRETBp.Count);
-
-        FreeMemory(TrackStackPoint);
         Break;
       end;
-
-      FreeMemory(TrackStackPoint);
     end;
   end;
 
