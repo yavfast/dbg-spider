@@ -3512,6 +3512,8 @@ begin
       begin
         gvProjectOptions.Open(ChangeFileExt(ProjectName, '.spider'));
         gvProjectOptions.ApplicationName := ChangeFileExt(ProjectName, '.exe');
+        if not FileExists(gvProjectOptions.ApplicationName) then
+          gvProjectOptions.ApplicationName := ProjectName;
         gvProjectOptions.ProjectSource := TProjectOptions.GetDefProjectSource(ProjectName);
         gvProjectOptions.DelphiSource := TProjectOptions.GetDefDelphiSource;
       end;
