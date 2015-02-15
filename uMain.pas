@@ -669,6 +669,10 @@ begin
           AddressStr := AddressList[I];
           if AddressStr <> '' then
           begin
+            // Mac address style
+            if AddressStr.StartsWith('0x', True) then
+              AddressStr := Copy(AddressStr, Length('0x') + 1, MaxInt);
+
             if AddressStr[1] <> '$' then
               AddressStr := '$' + AddressStr;
 
