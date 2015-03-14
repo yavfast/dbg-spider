@@ -29,10 +29,8 @@ uses Debuger;
 
 constructor TDbgWorkerThread.Create;
 begin
-  inherited Create(True);
+  inherited Create(False);
   FreeOnTerminate := False;
-
-  Suspended := False;
 end;
 
 destructor TDbgWorkerThread.Destroy;

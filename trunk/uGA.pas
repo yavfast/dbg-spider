@@ -390,7 +390,7 @@ end;
 
 constructor TGASender.Create;
 begin
-  inherited Create(True);
+  inherited Create(False);
 
   FreeOnTerminate := False; // free on finalization
 
@@ -398,8 +398,6 @@ begin
   FQueue := TGAQueue.Create;
   FQueueEvent := TEvent.Create;
   FQueueCS := TCriticalSection.Create;
-
-  Suspended := False;
 end;
 
 destructor TGASender.Destroy;

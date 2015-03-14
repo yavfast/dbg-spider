@@ -62,7 +62,7 @@ uses Debuger, DebugInfo, DelphiDebugInfo, MapDebugInfo;
 
 constructor TDebugerThread.Create(const ADbgOptions: TDbgOptions; const AProcessID: TProcessId = 0);
 begin
-  inherited Create(True);
+  inherited Create(False);
   FreeOnTerminate := True;
 
   FDbgOptions := ADbgOptions;
@@ -72,8 +72,6 @@ begin
   FDbgStarted := False;
 
   Priority := tpHighest;
-
-  Suspended := False;
 end;
 
 destructor TDebugerThread.Destroy;
