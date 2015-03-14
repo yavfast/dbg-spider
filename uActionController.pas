@@ -509,11 +509,9 @@ end;
 
 constructor TActionThread.Create;
 begin
-  inherited Create(True);
+  inherited Create(False);
 
   FreeOnTerminate := True;
-
-  Suspended := False;
 end;
 
 destructor TActionThread.Destroy;

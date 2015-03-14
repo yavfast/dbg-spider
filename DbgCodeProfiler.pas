@@ -564,12 +564,10 @@ end;
 
 constructor TDbgCodeProfilerWorkerThread.Create(AOwner: TDbgCodeProfiler);
 begin
-  inherited Create(True);
+  inherited Create(False);
   FreeOnTerminate := False;
 
   FOwner := AOwner;
-
-  Suspended := False;
 end;
 
 procedure TDbgCodeProfilerWorkerThread.Execute;
