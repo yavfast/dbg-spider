@@ -1,0 +1,20 @@
+a.login-with { display:inline-block; text-decoration:none; position:relative; width:auto; margin:2px; font-size:9pt; outline:none; user-select:none; -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none; -o-user-select:none }
+a.login-with:hover { background:none; text-decoration:none }
+a.login-with b { font-weight:normal }
+a.login-with i { display:inline-block;cursor:pointer;vertical-align:middle;width:26px; height:26px; background-color:#fff; background-position: center center; background-repeat: no-repeat; background-size:70% 55%; -webkit-transition: background-color .2s .01s ease-out, border-color .1s .01s ease-out;transition: background-color .2s .01s ease-out, border-color .1s .01s ease-out;border: none;position: static;opacity: 1;border-radius: 16px;}
+a.facebook i { background-image: url(/.s/img/icon/social/fb.svg); border:2px solid #3c599f }
+a.facebook:hover i {background-image: url(/.s/img/icon/social/fb-w.svg); background-color:#3c599f }
+a.vkontakte i { background-image: url(/.s/img/icon/social/vk.svg); border:2px solid #2f6caa }
+a.vkontakte:hover i { background-image: url(/.s/img/icon/social/vk-w.svg); background-color:#2f6caa }
+a.yandex i { background-image: url(/.s/img/icon/social/ya.svg); border:2px solid #dc4c39 }
+a.yandex:hover i { background-image: url(/.s/img/icon/social/ya-w.svg); background-color:#dc4c39 }
+a.google i { background-image: url(/.s/img/icon/social/gp.svg); border:2px solid #505050 }
+a.google:hover i { background-image: url(/.s/img/icon/social/gp-w.svg); background-color:#505050 }
+a.twitter i { background-image: url(/.s/img/icon/social/tw.svg); border:2px solid #00b3ec }
+a.twitter:hover i { background-image: url(/.s/img/icon/social/tw-w.svg); background-color:#00b3ec }
+a.ok i { background-image: url(/.s/img/icon/social/ok.svg); border:2px solid #ed812b }
+a.ok:hover i { background-image: url(/.s/img/icon/social/ok-w.svg); background-color:#ed812b }
+a.uid i { background-image: url(/.s/img/icon/social/u.svg); border:2px solid #3498db }
+a.uid:hover i { background-image: url(/.s/img/icon/social/u-w.svg); background-color:#3498db }
+a.local i { background-image: url(/.s/img/icon/social/l.svg); border:2px solid #6c6c6c }
+a.local:hover i { background-image: url(/.s/img/icon/social/l-w.svg); background-color:#6c6c6c }
