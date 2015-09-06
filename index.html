@@ -1,80 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html style="height:97%;">
   <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
-    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
-    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
-
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-
-    <title>Spider by yavfast</title>
+    <title>Spider - Delphi profiler</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" /> 
+    <meta name='yandex-verification' content='731f586c9312b672' />
+    <script type="text/javascript">
+      var browser = navigator.userAgent;
+      var browserRegex = /(Android|BlackBerry|IEMobile|Nokia|iP(ad|hone|od)|Opera M(obi|ini))/;
+      var isMobile = false;
+      if(browser.match(browserRegex)) {
+	isMobile = true;
+	addEventListener("load", function() { setTimeout(hideURLbar, 0); }, false);
+	function hideURLbar(){
+	  window.scrollTo(0,1);
+	}
+      }
+    </script>
+    <script type="text/javascript" defer>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      
+      ga('create', 'UA-44820931-1', 'auto');
+      ga('send', 'pageview');
+      
+    </script> 
+    <link type="text/css" rel="StyleSheet" href="stylesheets/my.css" />
+    <link type="text/css" rel="StyleSheet" href="stylesheets/base.css" />
+    <link type="text/css" rel="StyleSheet" href="stylesheets/social.css" />
   </head>
-
-  <body>
-    <header>
-      <div class="inner">
-        <h1>Spider</h1>
-        <h2>Delphi profiler</h2>
-        <a href="https://github.com/yavfast/dbg-spider" class="button"><small>View project on</small> GitHub</a>
-      </div>
-    </header>
-
-    <div id="content-wrapper">
-      <div class="inner clearfix">
-        <section id="main-content">
-          <div>
- <div>
- <div><b>Real time profiler for Delphi applications:</b></div>
- <div>✓  Detailed debug information (internal, TDS, MAP)</div>
- <div>✓  Display information for multi-threaded applications</div>
- <div>✓  Timeline diagram for process execute</div>
- <div>✓  Analysis of exceptions</div>
- <div>✓  Analysis of the realtime use of memory</div>
- <div>✓  Analysis of memory leaks</div>
- <div>✓  Analysis of the call stack</div>
- <div>✓  Analysis of run-time functions (code tracking)</div>
- <div>✓  Analysis of the "deadlocks" (Sleep, CriticalSection, SendMessage, etc.)</div>
- <div>✓  The ability to view the source code in the analysis of events</div>
- </div>
- <div>
  
- </div>
-</div>
-        </section>
+  <body>
+    <table style="height:100%;width:100%;"> 
+      <tr>
+	<td>
+	  <table style="height:100%;width:100%;">
+	    <tr >
+	      <td style="vertical-align:top;">
+		<header>
+		  <div id="header">
+		    <div class="wrapper">
+		    <div id="head-t">
+		    <div class="head-l" style="vertical-align:middle;">
+		      <img src="images/Spider.png" style="vertical-align:middle;" />&nbsp;
+		      <span class="site-n" style="vertical-align:middle;">
+			<a href="http://dbg-spider.net/" style="vertical-align:middle;">Spider - Delphi profiler</a>
+		      </span>
+		    </div>
+		    <div class="head-r" style=" margin-top: 32px; vertical-align:middle;">
+		      <a href="https://github.com/yavfast/dbg-spider" title="View project on GitHub" target="_blank">
+			<img src="images/github.png" style="opacity: 0.25; vertical-align:middle; height:32px; width:32px;" />
+		      </a>
+		    </div>
+		    <div class="head-b">
+		      <ul class="head-soc">
+			<li><a href="https://twitter.com/DbgSpider" class="soc-ts" target="_blank"></a></li>
+			<li><a href="https://www.facebook.com/pages/Spider/330609123760349" class="soc-fc" target="_blank"></a></li>
+		      </ul>
+		    </div>
+		    <div class="clr"></div>
+		  </div>
 
-        <aside id="sidebar">
-          <a href="https://github.com/yavfast/dbg-spider/zipball/master" class="button">
-            <small>Download</small>
-            .zip file
-          </a>
-          <a href="https://github.com/yavfast/dbg-spider/tarball/master" class="button">
-            <small>Download</small>
-            .tar.gz file
-          </a>
-
-          <p class="repo-owner"><a href="https://github.com/yavfast/dbg-spider"></a> is maintained by <a href="https://github.com/yavfast">yavfast</a>.</p>
-
-          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
-        </aside>
-      </div>
-    </div>
-
-            <script type="text/javascript">
-            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
-            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
-          </script>
-          <script type="text/javascript">
-            try {
-              var pageTracker = _gat._getTracker("UA-44820931-1");
-            pageTracker._trackPageview();
-            } catch(err) {}
-          </script>
-
+		  <div id="promo">
+		    <div class="promo-i">
+		      <div class="promo-l">
+			<div class="promo-t">Real time profiler for Delphi applications:</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Detailed debug information (internal, TDS, MAP)</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Display information for multi-threaded applications</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Timeline diagram for process execute</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Analysis of exceptions</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Analysis of the realtime use of memory</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Analysis of memory leaks</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Analysis of the call stack</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Analysis of run-time functions (code tracking)</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>Analysis of the "deadlocks" (Sleep, CriticalSection, SendMessage, etc.)</div>
+			<div class="promo-st"><span style="color:#008A00;">&#x2713;&nbsp;&nbsp;</span>The ability to view the source code in the analysis of events</div>
+		      </div>
+		      <div class="promo-r">
+			<img src="images/Screenshot_1.png" class="promo-img" alt="" />
+		      </div>
+		    <div class="clr"></div>
+		  </div>
+		  <div class="promo-st"></div>
+		  <a href="download/dbg-spider_v1.3.9.7z" class="read-m">
+		    <b>Download free</b>
+		  </a>
+		  <span class="promo-st">&nbsp;&nbsp;Version: 1.3.9</span>
+		</header>
+	      </td>
+	    </tr>
+	    <tr height="2%">
+	      <td>
+		<footer>
+		  <div id="footer">
+		    <div class="wrapper">
+		      <div class="foot-i">
+			<table style="width:100%;">
+			  <tr>
+			    <td style="text-align:center;">
+			      Spider &copy; 2015
+			    </td>
+    
+			  </tr>
+			</table>
+		      </div>
+		    </div>
+		  </div>
+		</footer>
+	      </td>
+	    </tr>
+	  </table> 
+	</td>
+      </tr>
+    </table>
   </body>
 </html>
