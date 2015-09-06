@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<spider last_version="1.3.9.0">
+  <change_log>
+    <release version="1.3.9.0" date="2014-08-31">
+      <item type="fix">Error on save settings</item>
+      <item type="fix">Processing in separated thread for code profiler</item>
+      <item type="add">Splitters</item>
+    </release>
+    <release version="1.3.7.0" date="2014-07-13">
+      <item type="fix">Load MAP-file for MAC builds</item>
+      <item type="fix">Priority for source dirs</item>
+    </release>
+    <release version="1.3.6.0" date="2014-06-29">
+      <item type="fix">AV in DbgHook32.dll</item>
+      <item type="fix">Errors after second run applicatin in same session</item>
+    </release>
+    <release version="1.3.5.0" date="2014-06-22">
+      <item type="fix">Clear debug info before reopen project</item>
+    </release>
+    <release version="1.3.4.0" date="2014-06-01">
+      <item type="fix">speedup send info from DbgHook32.dll</item>
+    </release>
+    <release version="1.3.3.0" date="2014-05-27">
+      <item type="fix">Freeze application without active profiles</item>
+      <item type="fix">Sampling only for real active threads</item>
+      <item type="add">Leave info for CriticalSection (duration time in section)</item>
+    </release>
+    <release version="1.3.2.0" date="2014-05-18">
+      <item type="fix">Out of memory</item>
+    </release>
+    <release version="1.3.1.0" date="2014-05-11">
+      <item type="add">Sampling method for code tracking (default on)</item>
+      <item type="fix">AV on view logs</item>
+    </release>
+    <release version="1.2.2.0" date="2014-04-19">
+      <item type="fix">Error while loading application from system folder</item>
+      <item type="fix">Find source code</item>
+    </release>
+    <release version="1.2.1.0" date="2014-03-23">
+      <item type="add">Support MAP-files</item>
+      <item type="fix">Debug info for System.pas</item>
+    </release>
+    <release version="1.1.3.0" date="2014-02-23">
+      <item type="add">SendMessage tracking</item>
+      <item type="add">Debug options on separated tab</item>
+    </release>
+    <release version="1.1.2.0" date="2014-02-14">
+      <item type="fix">Reducing memory usage</item>
+    </release>
+    <release version="1.1.1.0" date="2014-02-12">
+      <item type="add">Lock tracking</item>
+      <item type="add">Default source dirs</item>
+    </release>
+    <release version="1.0.11.0" date="2014-01-19">
+      <item type="add">Copy to clipboard</item>
+      <item type="fix">Lock exe-file after load debug info</item>
+    </release>
+    <release version="1.0.10.0" date="2013-11-24">
+      <item type="add">Synchronize objects</item>
+      <item type="add">GDI+</item>
+      <item type="fix">AV in DbgHook32.dll</item>
+    </release>
+    <release version="1.0.9.0" date="2013-11-10">
+      <item type="add">Pause for debug</item>
+    </release>
+    <release version="1.0.8.0" date="2013-11-03">
+      <item type="add">Waiting markers in the timeline diagram</item>
+    </release>
+    <release version="1.0.7.0" date="2013-10-27">
+      <item type="add">Sorting for memory info and code tracking</item>
+      <item type="fix">AV in DbgHook32.dll</item>
+    </release>
+    <release version="1.0.6.0" date="2013-10-25">
+      <item type="add">Project settings: run parameters</item>
+    </release>
+    <release version="1.0.5.0" date="2013-10-20">
+      <item type="fix">Skip call FreeMem for terminated threads</item>
+    </release>
+    <release version="1.0.4.0" date="2013-10-20">
+      <item type="add">Update info</item>
+      <item type="add">Feedback form</item>
+      <item type="update">Improve speed for code tracking</item>
+      <item type="update">Improve speed for memory info</item>
+    </release>
+    <release version="1.0.3.0" date="2013-10-17">
+      <item type="add">Memory info as tree view</item>
+    </release>
+  </change_log>
+</spider>
+
