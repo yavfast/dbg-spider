@@ -2440,6 +2440,7 @@ end;
 procedure TMainForm.LoadMemInfoObjects(Tree: TBaseVirtualTree; MemInfo: TGetMemInfoList; SyncNode: PVirtualNode);
 var
   MItem: TGetMemInfoItem;
+  node,
   MemNode: PVirtualNode;
   Data: PLinkData;
 begin
@@ -2451,13 +2452,20 @@ begin
 
     MemInfo.Lock.BeginRead;
     try
+      //init all nodes at once: much and much faster!
+      Tree.ChildCount[nil] := MemInfo.Count;
+      node := Tree.RootNode.FirstChild;
+      MemNode := node;
+
       for MItem in MemInfo do
       begin
-        MemNode := Tree.AddChild(nil);
+        //MemNode := Tree.AddChild(nil);       slooooooow
         Data := Tree.GetNodeData(MemNode);
         Data^.SyncNode := SyncNode;
         Data^.MemPtr := MItem.Key;
         Data^.LinkType := ltMemInfo;
+
+        MemNode := MemNode.NextSibling;
       end;
     finally
       MemInfo.Lock.EndRead;
@@ -2564,6 +2572,8 @@ begin
   Th := TThread.CreateAnonymousThread(
     procedure
     begin
+      TThread.NameThreadForDebugging('TMainForm.LoadMemInfoThreadFunctions');
+
       ThData^.UpdateGetMemUnitList;
 
       // ∆дем, пока не освободитс€ ресурс на чтение
@@ -3314,6 +3324,8 @@ begin
   Th := TThread.CreateAnonymousThread(
     procedure
     begin
+      TThread.NameThreadForDebugging('TMainForm.LoadUpdateInfo');
+
       CoInitializeEx(nil, COINIT_MULTITHREADED);
       try
         gvUpdateInfo.Load;
