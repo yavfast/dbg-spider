@@ -193,7 +193,7 @@ type
 
     // чтение запись данных
     Function ProcAllocMem(const Size: Cardinal): Pointer;
-    Procedure ProcFreeMem(Data : Pointer; const Size: Cardinal = 0);
+    Procedure ProcFreeMem(Data : Pointer; const Size: NativeUInt = 0);
 
     procedure InjectThread(hProcess: THandle; Func: Pointer; FuncSize: Cardinal; aParams: Pointer;
       aParamsSize: Cardinal; WaitAndFree: LongBool = True);
@@ -1146,9 +1146,9 @@ begin
 
 end;
 
-procedure TDebuger.ProcFreeMem(Data: Pointer; const Size: Cardinal = 0);
+procedure TDebuger.ProcFreeMem(Data: Pointer; const Size: NativeUInt = 0);
 begin
-  if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) = nil then
+  if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) then
     RaiseLastOSError;
 end;
 
@@ -1573,14 +1573,14 @@ var
   ThreadAddr, ParamAddr: Pointer;
 begin
   // Выделяем место в памяти процесса, и записываем туда нашу функцию
-  ThreadAddr := VirtualAllocEx(hProcess, nil, FuncSize, MEM_COMMIT, PAGE_READWRITE);
+  ThreadAddr := VirtualAllocEx(hProcess, nil, FuncSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
   if not WriteProcessMemory(hProcess, ThreadAddr, Func, FuncSize, lpNumberOfBytes) then
     RaiseDebugCoreException();
 
   // Также запишем параметры к ней
   if (aParams <> nil) and (aParamsSize > 0) then
   begin
-    ParamAddr := VirtualAllocEx(hProcess, nil, aParamsSize, MEM_COMMIT, PAGE_READWRITE);
+    ParamAddr := VirtualAllocEx(hProcess, nil, aParamsSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     if not WriteProcessMemory(hProcess, ParamAddr, aParams, aParamsSize, lpNumberOfBytes) then
       RaiseDebugCoreException();
   end
@@ -1605,7 +1605,9 @@ begin
     CloseHandle(hThread);
     VirtualFreeEx(hProcess, ParamAddr, 0, MEM_RELEASE);
     VirtualFreeEx(hProcess, ThreadAddr, 0, MEM_RELEASE);
-  end;
+  end
+  else
+    Sleep(1000);
 end;
 
 function TDebuger.PerfomancePauseDebug: LongBool;
