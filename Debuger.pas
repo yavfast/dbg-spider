@@ -1148,7 +1148,7 @@ end;
 
 procedure TDebuger.ProcFreeMem(Data: Pointer; const Size: NativeUInt = 0);
 begin
-  if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) then
+  if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) = nil then
     RaiseLastOSError;
 end;
 

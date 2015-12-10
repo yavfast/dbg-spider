@@ -25,7 +25,7 @@ type
     // it should return   -1 if item1 < item2
     //                    0 if item1 = item2
     //                    1 if item1 > item2
-    function Compare(Item1, Item2: Pointer; aFindMode: Boolean): Integer; virtual; abstract;
+    function Compare(Item1, Item2: Pointer; const aFindMode: LongBool): Integer; virtual; abstract;
 
     //function AddKeyValue(Key, Value: Pointer): Integer;
     function Add(Item: Pointer): Integer;
@@ -66,7 +66,7 @@ end;
 function TListSorted.Add(Item: Pointer): Integer;
 var
    nCount  : Integer;
-   bFound  : Boolean;
+   bFound  : LongBool;
    nResult : Integer;
 begin
    nCount := 0;

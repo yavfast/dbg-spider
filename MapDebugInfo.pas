@@ -135,7 +135,7 @@ type
 
   TUnitSegmentInfoList = class(TListSorted)
   public
-    function Compare(Item1, Item2: Pointer; aFindMode: Boolean): Integer; override;
+    function Compare(Item1, Item2: Pointer; const aFindMode: LongBool): Integer; override;
   end;
 
 implementation
@@ -1049,7 +1049,7 @@ end;
 
 { TUnitSegmentInfoList }
 
-function TUnitSegmentInfoList.Compare(Item1, Item2: Pointer; aFindMode: Boolean): Integer;
+function TUnitSegmentInfoList.Compare(Item1, Item2: Pointer; const aFindMode: LongBool): Integer;
 var
   v1, v2: TUnitSegmentInfo;
 begin
