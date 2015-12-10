@@ -59,25 +59,29 @@ var
   InitMemoryHook: procedure(MemoryMgr: Pointer; MemoryCallStack: LongBool); stdcall;
   InitPerfomance: procedure(Delta: Cardinal); stdcall;
 begin
+  //asm
+  //  int 3;   // breakpoint for testing
+  //end;
+
   if DbgLoaderInfo = nil then Exit;
 
   with DbgLoaderInfo^ do
   begin
-    HLib := LoadLibrary(sKernel32);
+    HLib := DbgLoaderInfo.LoadLibrary(sKernel32);
 
     if HLib = 0 then Exit;
 
-    @ExitThread := GetProcAddress(HLib, sExitThread);
+    @ExitThread := DbgLoaderInfo.GetProcAddress(HLib, sExitThread);
 
     if @ExitThread = nil then Exit;
 
-    HLib := LoadLibrary(sDllPath);
+    HLib := DbgLoaderInfo.LoadLibrary(sDllPath);
     if HLib <> 0 then
     begin
-      @InitThreadHook := GetProcAddress(HLib, sDllProcThreadHook);
-      @InitSyncObjsHook := GetProcAddress(HLib, sDllProcSyncObjsHook);
-      @InitMemoryHook := GetProcAddress(HLib, sDllProcMemoryHook);
-      @InitPerfomance := GetProcAddress(HLib, sDllProcPerfomance);
+      @InitThreadHook   := DbgLoaderInfo.GetProcAddress(HLib, sDllProcThreadHook);
+      @InitSyncObjsHook := DbgLoaderInfo.GetProcAddress(HLib, sDllProcSyncObjsHook);
+      @InitMemoryHook   := DbgLoaderInfo.GetProcAddress(HLib, sDllProcMemoryHook);
+      @InitPerfomance   := DbgLoaderInfo.GetProcAddress(HLib, sDllProcPerfomance);
 
       if (@InitThreadHook <> nil) and InitThreadHook(ImageBase, vmtClassName) then
       begin
@@ -138,7 +142,7 @@ begin
   lstrcpyA(DbgLoaderInfo.sDllProcThreadHook, 'InitThreadHook');
   lstrcpyA(DbgLoaderInfo.sDllProcSyncObjsHook, 'InitSyncObjsHook');
   lstrcpyA(DbgLoaderInfo.sDllProcMemoryHook, 'InitMemoryHook');
-  lstrcpyA(DbgLoaderInfo.sDllProcPerfomance, 'InitPerfomance');
+  //lstrcpyA(DbgLoaderInfo.sDllProcPerfomance, 'InitPerfomance');
 
   try
     gvDebuger.InjectThread(hProcess,

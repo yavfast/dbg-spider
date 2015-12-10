@@ -7,7 +7,8 @@ procedure ResetThreadHook; stdcall;
 
 implementation
 
-uses WinApi.Windows, System.SysUtils, System.Classes, DbgHookTypes, DbgHookCS, DbgHookUtils, JclPEImage{TODO: Remove JCL};
+uses WinApi.Windows, System.SysUtils, System.Classes, DbgHookTypes, DbgHookCS, DbgHookUtils, JclPEImage{TODO: Remove JCL},
+  KOLDetours;
 
 type
   TKernel32_CreateThread = function(SecurityAttributes: Pointer; StackSize: LongWord;
@@ -108,7 +109,13 @@ begin
       Result := _PeMapImgHooks.ReplaceImport(ImageBase, kernel32, ProcAddr, @_HookedCreateThread);
 
       if Result then
-        @Kernel32_CreateThread := ProcAddr;
+        @Kernel32_CreateThread := ProcAddr
+      else
+      begin
+	    //in case it doesn't work (Windows Server?): the hard way 
+        Kernel32_CreateThread := KOLDetours.InterceptCreate(ProcAddr, @_HookedCreateThread);
+        Result := True;
+      end;
 
       ThreadsHooked := Result;
     finally

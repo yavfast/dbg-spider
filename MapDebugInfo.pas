@@ -2,14 +2,18 @@ unit MapDebugInfo;
 
 interface
 
-uses System.Classes, System.SysUtils, DebugInfo, JclDebug, Windows, DelphiDebugInfo;
+uses System.Classes, System.SysUtils, DebugInfo, JclDebug, Windows, DelphiDebugInfo,
+  uFastList;
 
 type
   TMapScanner = class;
 
+  TUnitSegmentInfoList = class;
+
   TMapDebugInfo = class(TDelphiDebugInfo)
   private
     FMapScanner: TMapScanner;
+    FUnitSegmentInfoList: TUnitSegmentInfoList;
 
     procedure LoadSegmentClasses;
 
@@ -35,6 +39,8 @@ type
   public
     Constructor Create;
     Destructor Destroy; Override;
+
+    Procedure ClearDebugInfo; Override;
 
     Function GetNameById(const Idx: TNameId): AnsiString; override;
 
@@ -127,6 +133,11 @@ type
     property LineNumbers[const Index: Integer]: PJclMapLineNumber read GetLineNumber;
   end;
 
+  TUnitSegmentInfoList = class(TListSorted)
+  public
+    function Compare(Item1, Item2: Pointer; aFindMode: Boolean): Integer; override;
+  end;
+
 implementation
 
 uses
@@ -175,16 +186,24 @@ begin
   FuncInfo.Size := FuncInfo.UnitSegment.Size - (Cardinal(FuncInfo.Address) - Cardinal(FuncInfo.UnitSegment.Address));
 end;
 
+procedure TMapDebugInfo.ClearDebugInfo;
+begin
+  inherited;
+  FUnitSegmentInfoList.Clear;
+end;
+
 constructor TMapDebugInfo.Create;
 begin
   inherited;
 
   FMapScanner := Nil;
+  FUnitSegmentInfoList := TUnitSegmentInfoList.Create;
 end;
 
 destructor TMapDebugInfo.Destroy;
 begin
   FreeAndNil(FMapScanner);
+  FUnitSegmentInfoList.Free;
 
   inherited;
 end;
@@ -286,9 +305,42 @@ end;
 
 function TMapDebugInfo.FindSegmentByAddr(const Addr: Pointer; const SegmentID: Word = 0): TUnitSegmentInfo;
 var
-  I: Integer;
+  I, j: Integer;
   UnitInfo: TUnitInfo;
+  seg: TUnitSegmentInfo;
 Begin
+  //need to fill the fast sorted list the first time?
+  if FUnitSegmentInfoList.Count = 0 then
+  begin
+    for i := 0 to Units.Count - 1 do
+    begin
+      UnitInfo := TUnitInfo(Units.Objects[i]);
+      for j := 0 to UnitInfo.Segments.Count - 1 do
+      begin
+        seg := UnitInfo.Segments[j];
+        FUnitSegmentInfoList.Add(seg);
+      end;
+    end;
+  end;
+
+  //fast binary search
+  j := FUnitSegmentInfoList.FindObject(Addr);
+  if j >= 0 then
+  for i := j to FUnitSegmentInfoList.Count - 1 do
+  begin
+    if i > j + 5 then Break; //only search a limit number of items
+    seg := FUnitSegmentInfoList.Items[i];
+
+    if (SegmentID <> 0) and Assigned(seg.SegmentClassInfo) and (seg.SegmentClassInfo.ID <> SegmentID) then
+      Continue;
+    if (Cardinal(Addr) >= Cardinal(seg.Address)) and (Cardinal(Addr) < (Cardinal(seg.Address) + seg.Size)) then
+    begin
+      Result := seg;
+      Exit;
+    end;
+  end;
+
+  ///old slow linear search
   for I := 0 to Units.Count - 1 do
   begin
     UnitInfo := TUnitInfo(Units.Objects[I]);
@@ -993,6 +1045,20 @@ end;
 function TJclMapSegmentClassHelper.SegmentType: TSegmentType;
 begin
   Result := TSegmentClassInfo.StrToSegmentType(Name);
+end;
+
+{ TUnitSegmentInfoList }
+
+function TUnitSegmentInfoList.Compare(Item1, Item2: Pointer; aFindMode: Boolean): Integer;
+var
+  v1, v2: TUnitSegmentInfo;
+begin
+  v1 := TUnitSegmentInfo(Item1);
+  v2 := TUnitSegmentInfo(Item2);
+  if aFindMode then //first item is a value, not an object!
+    Result := NativeUInt(Item1) - NativeUInt(v2.Address)
+  else
+    Result := NativeUInt(v1.Address) - NativeUInt(v2.Address);
 end;
 
 end.

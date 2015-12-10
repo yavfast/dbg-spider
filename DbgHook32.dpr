@@ -9,7 +9,8 @@ uses
   DbgHookSyncObjs in 'DbgHookSyncObjs.pas',
   DbgHookCS in 'DbgHookCS.pas',
   DbgHookUtils in 'DbgHookUtils.pas',
-  WinAPIUtils in 'WinAPIUtils.pas';
+  WinAPIUtils in 'WinAPIUtils.pas',
+  KOLDetours in 'External\KOLDetours.pas';
 
 exports
   InitThreadHook,

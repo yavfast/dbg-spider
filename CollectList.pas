@@ -62,9 +62,26 @@ type
     procedure Clear; override;
   end;
 
+  //XE6 bug? default AtomicIncrement gives an AV!
+  function AtomicIncrement(var Target: Integer; Increment: Integer): Integer; overload;
+  function AtomicIncrement(var Target: Integer): Integer; overload;
+
 implementation
 
+uses
+  Winapi.Windows;
+
 { TBaseCollectList }
+
+function AtomicIncrement(var Target: Integer; Increment: Integer): Integer; overload; inline;
+begin
+  Result := InterlockedExchangeAdd(Target, Increment);
+end;
+
+function AtomicIncrement(var Target: Integer): Integer; overload; inline;
+begin
+  Result := InterlockedIncrement(Target);
+end;
 
 function TBaseCollectList.Add: PData;
 begin
