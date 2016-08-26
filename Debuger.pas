@@ -1148,7 +1148,11 @@ end;
 
 procedure TDebuger.ProcFreeMem(Data: Pointer; const Size: NativeUInt = 0);
 begin
+{$IF CompilerVersion >= 28.0}
+  if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) = false then
+{$ELSE}
   if VirtualFreeEx(FProcessData.AttachedProcessHandle, Data, Size, MEM_RELEASE) = nil then
+{$IFEND}
     RaiseLastOSError;
 end;
 
