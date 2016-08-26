@@ -505,6 +505,10 @@ type
     procedure acSamplingMethodExecute(Sender: TObject);
 
     procedure vstTreeResize(Sender: TObject);
+    procedure vstTrackFuncsIncrementalSearch(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; const SearchText: string; var Result: Integer);
+    procedure vstDbgInfoUnitsIncrementalSearch(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; const SearchText: string; var Result: Integer);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -4161,7 +4165,7 @@ begin
         Name1 := '';
         Name2 := '';
 
-        if (Data1^.LinkType = ltDbgUnitInfo) and (Data1^.LinkType = ltDbgUnitInfo) then
+        if (Data1^.LinkType = ltDbgUnitInfo) and (Data2^.LinkType = ltDbgUnitInfo) then
         begin
           Name1 := Data1^.DbgUnitInfo.ShortName;
           Name2 := Data2^.DbgUnitInfo.ShortName;
@@ -4174,7 +4178,7 @@ begin
         ValueU1 := 0;
         ValueU2 := 0;
 
-        if (Data1^.LinkType = ltDbgUnitInfo) and (Data1^.LinkType = ltDbgUnitInfo) then
+        if (Data1^.LinkType = ltDbgUnitInfo) and (Data2^.LinkType = ltDbgUnitInfo) then
         begin
           ValueU1 := NativeUInt(Data1^.DbgUnitInfo.Address);
           ValueU2 := NativeUInt(Data2^.DbgUnitInfo.Address);
@@ -4268,6 +4272,22 @@ begin
         end;
       end;
   end;
+end;
+
+procedure TMainForm.vstDbgInfoUnitsIncrementalSearch(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; const SearchText: string; var Result: Integer);
+var
+  Data : PLinkData;
+  Name: String;
+begin
+  Data := vstDbgInfoUnits.GetNodeData(Node);
+
+  Name := '';
+
+  if (Data^.LinkType = ltDbgUnitInfo) then
+    Name := Data^.DbgUnitInfo.ShortName;
+
+  Result := CompareText(SearchText, Name);
 end;
 
 procedure TMainForm.vstTreeResize(Sender: TObject);
@@ -6316,12 +6336,31 @@ begin
   end;
 end;
 
+procedure TMainForm.vstTrackFuncsIncrementalSearch(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; const SearchText: string; var Result: Integer);
+var
+  Data: PLinkData;
+  Name: String;
+begin
+  Data := vstTrackFuncs.GetNodeData(Node);
+
+  Name := '';
+
+  if (Data^.LinkType = ltTrackFuncInfo) then
+    Name := TFuncInfo(Data^.TrackFuncInfo.FuncInfo).ShortName
+  else
+  if (Data^.LinkType = ltTrackUnitInfo) then
+    Name := TUnitInfo(Data^.TrackUnitInfo.UnitInfo).ShortName;
+
+  Result := CompareText(SearchText, Name);
+end;
+
 procedure TMainForm.vstTrackThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
 var
   Data: PLinkData;
 begin
   if Node = nil then Exit;
-  
+
   Data := vstTrackThreads.GetNodeData(Node);
   case Data^.LinkType of
     ltProcess:

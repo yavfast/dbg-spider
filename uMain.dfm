@@ -26,7 +26,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1213
     Height = 574
-    ActivePage = tsCodeTracking
+    ActivePage = tsDebugInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -131,6 +131,7 @@ object MainForm: TMainForm
         OnFocusChanged = vstDbgInfoUnitsFocusChanged
         OnGetText = vstDbgInfoUnitsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnIncrementalSearch = vstDbgInfoUnitsIncrementalSearch
         OnResize = vstTreeResize
         Columns = <
           item
@@ -771,7 +772,7 @@ object MainForm: TMainForm
             Caption = 'actbMemInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = 14410210
             EdgeInner = esNone
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
@@ -1661,7 +1662,7 @@ object MainForm: TMainForm
             Caption = 'actbExceptionInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = 14410210
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -1822,6 +1823,7 @@ object MainForm: TMainForm
             OnFocusChanging = vstTrackFuncsFocusChanging
             OnGetText = vstTrackFuncsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnIncrementalSearch = vstTrackFuncsIncrementalSearch
             OnResize = vstTreeResize
             Columns = <
               item
@@ -2062,7 +2064,7 @@ object MainForm: TMainForm
             Caption = 'actbCodeTrackingInfo'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = 14410210
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2187,7 +2189,7 @@ object MainForm: TMainForm
             Caption = 'actbLockTracking'
             ColorMap.MenuColor = clMenu
             ColorMap.BtnSelectedColor = clBtnFace
-            ColorMap.UnusedColor = 13684944
+            ColorMap.UnusedColor = 14410210
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clBlack
             Font.Height = -11
@@ -2659,7 +2661,7 @@ object MainForm: TMainForm
           Caption = 'actbUpdateInfo'
           ColorMap.MenuColor = clMenu
           ColorMap.BtnSelectedColor = clBtnFace
-          ColorMap.UnusedColor = 13684944
+          ColorMap.UnusedColor = 14410210
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clBlack
           Font.Height = -11
@@ -3053,7 +3055,7 @@ object MainForm: TMainForm
       Caption = 'actbMainTabs'
       ColorMap.MenuColor = clMenu
       ColorMap.BtnSelectedColor = clBtnFace
-      ColorMap.UnusedColor = 13684944
+      ColorMap.UnusedColor = 14410210
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
