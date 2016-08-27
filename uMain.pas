@@ -509,6 +509,22 @@ type
       Node: PVirtualNode; const SearchText: string; var Result: Integer);
     procedure vstDbgInfoUnitsIncrementalSearch(Sender: TBaseVirtualTree;
       Node: PVirtualNode; const SearchText: string; var Result: Integer);
+    procedure vstDbgInfoFunctionsCompareNodes(Sender: TBaseVirtualTree; Node1,
+      Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstDbgInfoFunctionsIncrementalSearch(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; const SearchText: string; var Result: Integer);
+    procedure vstDbgInfoConstsCompareNodes(Sender: TBaseVirtualTree; Node1,
+      Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstDbgInfoConstsIncrementalSearch(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; const SearchText: string; var Result: Integer);
+    procedure vstDbgInfoTypesCompareNodes(Sender: TBaseVirtualTree; Node1,
+      Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstDbgInfoTypesIncrementalSearch(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; const SearchText: string; var Result: Integer);
+    procedure vstDbgInfoVarsCompareNodes(Sender: TBaseVirtualTree; Node1,
+      Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstDbgInfoVarsIncrementalSearch(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; const SearchText: string; var Result: Integer);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -644,6 +660,10 @@ const
 
 type
   THookBaseVirtualTree = class(TBaseVirtualTree);
+
+const
+  CUnitTypeStrings: array [TUnitType] of string =
+    ('Project units', 'System units', 'Components', 'External', 'Other');
 
 procedure TMainForm.acAddressInfoExecute(Sender: TObject);
 var
@@ -3990,6 +4010,51 @@ begin
   end;
 end;
 
+procedure TMainForm.vstDbgInfoConstsCompareNodes(Sender: TBaseVirtualTree;
+  Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+begin
+  Data1 := vstDbgInfoConsts.GetNodeData(Node1);
+  Data2 := vstDbgInfoConsts.GetNodeData(Node2);
+
+  Name1 := '';
+  Name2 := '';
+  case Column of
+    0:
+      begin
+        if (Data1^.LinkType = ltDbgConstInfo) and (Data2^.LinkType = ltDbgConstInfo) then
+        begin
+          Name1 := Data1^.DbgConstInfo.ShortName;
+          Name2 := Data2^.DbgConstInfo.ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        if (Data1^.LinkType = ltDbgConstInfo) and (Data2^.LinkType = ltDbgConstInfo) then
+        begin
+          Name1 := Data1^.DbgConstInfo.ValueAsString;
+          Name2 := Data2^.DbgConstInfo.ValueAsString;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    2:
+      begin
+        if (Data1^.LinkType = ltDbgConstInfo) and (Data2^.LinkType = ltDbgConstInfo) then
+        begin
+          Name1 := Data1^.DbgConstInfo.TypeInfo.ShortName;
+          Name2 := Data2^.DbgConstInfo.TypeInfo.ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+  end;
+end;
+
 procedure TMainForm.vstDbgInfoConstsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 var
   Data: PLinkData;
@@ -4016,6 +4081,75 @@ begin
           1: CellText := ConstInfo.ValueAsString;
           2: CellText := String(ConstInfo.TypeInfo.ShortName);
         end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstDbgInfoConstsIncrementalSearch(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; const SearchText: string; var Result: Integer);
+var
+  Data: PLinkData;
+  Name: String;
+begin
+  Data := vstDbgInfoConsts.GetNodeData(Node);
+
+  Name := '';
+  if (Data^.LinkType = ltDbgConstInfo) then
+    Name := Data^.DbgConstInfo.ShortName;
+
+  Result := AnsiStrLIComp(PChar(SearchText), PChar(Name), Min(Length(SearchText), Length(Name)));
+end;
+
+procedure TMainForm.vstDbgInfoFunctionsCompareNodes(Sender: TBaseVirtualTree;
+  Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  ValueU1, ValueU2: NativeUInt;
+  ValueS1, ValueS2: Int64;
+begin
+  Data1 := vstDbgInfoFunctions.GetNodeData(Node1);
+  Data2 := vstDbgInfoFunctions.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltDbgFuncInfo) and (Data2^.LinkType = ltDbgFuncInfo) then
+        begin
+          Name1 := Data1^.DbgFuncInfo.ShortName;
+          Name2 := Data2^.DbgFuncInfo.ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        ValueU1 := 0;
+        ValueU2 := 0;
+
+        if (Data1^.LinkType = ltDbgFuncInfo) and (Data2^.LinkType = ltDbgFuncInfo) then
+        begin
+          ValueU1 := NativeUInt(Data1^.DbgFuncInfo.Address);
+          ValueU2 := NativeUInt(Data2^.DbgFuncInfo.Address);
+        end;
+
+        Result := Compare(ValueU1, ValueU2);
+      end;
+    2:
+      begin
+        ValueS1 := 0;
+        ValueS2 := 0;
+
+        if (Data1^.LinkType = ltDbgFuncInfo) and (Data2^.LinkType = ltDbgFuncInfo) then
+        begin
+          ValueS1 := Data1^.DbgFuncInfo.Size;
+          ValueS2 := Data2^.DbgFuncInfo.Size;
+        end;
+
+        Result := Compare(ValueS1, ValueS2);
       end;
   end;
 end;
@@ -4065,6 +4199,22 @@ begin
   end;
 end;
 
+procedure TMainForm.vstDbgInfoFunctionsIncrementalSearch(
+  Sender: TBaseVirtualTree; Node: PVirtualNode; const SearchText: string;
+  var Result: Integer);
+var
+  Data: PLinkData;
+  Name: String;
+begin
+  Data := vstDbgInfoFunctions.GetNodeData(Node);
+
+  Name := '';
+  if (Data^.LinkType = ltDbgFuncInfo) then
+    Name := Data^.DbgFuncInfo.ShortName;
+
+  Result := AnsiStrLIComp(PChar(SearchText), PChar(Name), Min(Length(SearchText), Length(Name)));
+end;
+
 procedure TMainForm.vstDbgInfoFuncVarsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 var
   Data: PLinkData;
@@ -4102,6 +4252,87 @@ begin
               end;
             end;
         end;
+      end;
+  end;
+end;
+
+procedure TMainForm.vstDbgInfoTypesCompareNodes(Sender: TBaseVirtualTree; Node1,
+  Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  ValueS1, ValueS2: Int64;
+begin
+  Data1 := vstDbgInfoTypes.GetNodeData(Node1);
+  Data2 := vstDbgInfoTypes.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltDbgTypeInfo) and (Data2^.LinkType = ltDbgTypeInfo) then
+        begin
+          Name1 := Data1^.DbgTypeInfo.ShortName;
+          Name2 := Data2^.DbgTypeInfo.ShortName;
+        end
+        else if (Data1^.LinkType = ltDbgStructMemberInfo) and (Data2^.LinkType = ltDbgStructMemberInfo) then
+        begin
+          Name1 := Data1^.DbgStructMemberInfo.ShortName;
+          Name2 := Data2^.DbgStructMemberInfo.ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltDbgTypeInfo) and (Data2^.LinkType = ltDbgTypeInfo) then
+        begin
+          Name1 := Data1^.DbgTypeInfo.TypeOf;
+          Name2 := Data2^.DbgTypeInfo.TypeOf;
+        end
+        else if (Data1^.LinkType = ltDbgStructMemberInfo) and (Data2^.LinkType = ltDbgStructMemberInfo) then
+        begin
+          Name1 := Data1^.DbgStructMemberInfo.DataType.ShortName;
+          Name2 := Data2^.DbgStructMemberInfo.DataType.ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    2:
+      begin
+        ValueS1 := 0;
+        ValueS2 := 0;
+
+        if (Data1^.LinkType = ltDbgTypeInfo) and (Data2^.LinkType = ltDbgTypeInfo) then
+        begin
+          ValueS1 := Data1^.DbgTypeInfo.DataSize;
+          ValueS2 := Data2^.DbgTypeInfo.DataSize;
+        end
+        else if (Data1^.LinkType = ltDbgStructMemberInfo) and (Data2^.LinkType = ltDbgStructMemberInfo) then
+        begin
+          ValueS1 := Data1^.DbgStructMemberInfo.DataSize;
+          ValueS2 := Data2^.DbgStructMemberInfo.DataSize;
+        end;
+
+        Result := Compare(ValueS1, ValueS2);
+      end;
+    3:
+      begin
+        ValueS1 := 0;
+        ValueS2 := 0;
+
+        if (Data1^.LinkType = ltDbgStructMemberInfo) and (Data2^.LinkType = ltDbgStructMemberInfo) then
+        begin
+          ValueS1 := Data1^.DbgStructMemberInfo.Offset;
+          ValueS2 := Data2^.DbgStructMemberInfo.Offset;
+        end;
+
+        Result := Compare(ValueS1, ValueS2);
       end;
   end;
 end;
@@ -4146,7 +4377,23 @@ begin
         end;
       end;
   end;
+end;
 
+procedure TMainForm.vstDbgInfoTypesIncrementalSearch(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; const SearchText: string; var Result: Integer);
+var
+  Data: PLinkData;
+  Name: String;
+begin
+  Data := vstDbgInfoTypes.GetNodeData(Node);
+  Name := '';
+
+  if (Data^.LinkType = ltDbgTypeInfo) then
+    Name := Data^.DbgTypeInfo.ShortName
+  else if (Data^.LinkType = ltDbgStructMemberInfo) then
+    Name := Data^.DbgStructMemberInfo.ShortName;
+
+  Result := AnsiStrLIComp(PChar(SearchText), PChar(Name), Min(Length(SearchText), Length(Name)));
 end;
 
 procedure TMainForm.vstDbgInfoUnitsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
@@ -4247,20 +4494,7 @@ begin
     ltDbgUnitGroup:
       begin
         if Column = 0 then
-        begin
-          case Data^.DbgUnitGroupType of
-            utUnknown:
-              CellText := 'Other';
-            utProject:
-              CellText := 'Project units';
-            utSystem:
-              CellText := 'System units';
-            utComponentLib:
-              CellText := 'Components';
-            utExternal:
-              CellText := 'External';
-          end;
-        end;
+          CellText := CUnitTypeStrings[Data^.DbgUnitGroupType];
       end;
     ltDbgUnitInfo:
       begin
@@ -4285,9 +4519,12 @@ begin
   Name := '';
 
   if (Data^.LinkType = ltDbgUnitInfo) then
-    Name := Data^.DbgUnitInfo.ShortName;
+    Name := Data^.DbgUnitInfo.ShortName
+  else
+  if (Data^.LinkType = ltDbgUnitGroup) then
+    Name := CUnitTypeStrings[Data^.DbgUnitGroupType];
 
-  Result := CompareText(SearchText, Name);
+  Result := AnsiStrLIComp(PChar(SearchText), PChar(Name), Min(Length(SearchText), Length(Name)));
 end;
 
 procedure TMainForm.vstTreeResize(Sender: TObject);
@@ -4342,6 +4579,59 @@ begin
   end;
 end;
 
+procedure TMainForm.vstDbgInfoVarsCompareNodes(Sender: TBaseVirtualTree; Node1,
+  Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Name1, Name2: String;
+  ValueS1, ValueS2: Int64;
+begin
+  Data1 := vstDbgInfoVars.GetNodeData(Node1);
+  Data2 := vstDbgInfoVars.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltDbgVarInfo) and (Data2^.LinkType = ltDbgVarInfo) then
+        begin
+          Name1 := Data1^.DbgVarInfo.ShortName;
+          Name2 := Data2^.DbgVarInfo.ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltDbgVarInfo) and (Data2^.LinkType = ltDbgVarInfo) then
+        begin
+          Name1 := Data1^.DbgVarInfo.DataTypeName;
+          Name2 := Data2^.DbgVarInfo.DataTypeName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    2:
+      begin
+        ValueS1 := 0;
+        ValueS2 := 0;
+
+        if (Data1^.LinkType = ltDbgVarInfo) and (Data2^.LinkType = ltDbgVarInfo) then
+        begin
+          ValueS1 := Data1^.DbgVarInfo.Offset;
+          ValueS2 := Data2^.DbgVarInfo.Offset;
+        end;
+
+        Result := Compare(ValueS1, ValueS2);
+      end;
+  end;
+end;
+
 procedure TMainForm.vstDbgInfoVarsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 var
   Data: PLinkData;
@@ -4370,6 +4660,21 @@ begin
         end;
       end;
   end;
+end;
+
+procedure TMainForm.vstDbgInfoVarsIncrementalSearch(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; const SearchText: string; var Result: Integer);
+var
+  Data: PLinkData;
+  Name: String;
+begin
+  Data := vstDbgInfoVars.GetNodeData(Node);
+
+  Name := '';
+  if Data^.LinkType = ltDbgVarInfo then
+    Name := Data^.DbgVarInfo.ShortName;
+
+  Result := AnsiStrLIComp(PChar(SearchText), PChar(Name), Min(Length(SearchText), Length(Name)));
 end;
 
 procedure TMainForm.vstExceptionCallStackFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
@@ -6352,7 +6657,7 @@ begin
   if (Data^.LinkType = ltTrackUnitInfo) then
     Name := TUnitInfo(Data^.TrackUnitInfo.UnitInfo).ShortName;
 
-  Result := CompareText(SearchText, Name);
+  Result := AnsiStrLIComp(PChar(SearchText), PChar(Name), Min(Length(SearchText), Length(Name)));
 end;
 
 procedure TMainForm.vstTrackThreadsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);

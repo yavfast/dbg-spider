@@ -120,6 +120,7 @@ object MainForm: TMainForm
         Header.Font.Style = []
         Header.Options = [hoColumnResize, hoShowImages, hoVisible, hoHeaderClickAutoSort]
         Header.SortColumn = 0
+        IncrementalSearch = isVisibleOnly
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
         TreeOptions.MiscOptions = [toAcceptOLEDrop, toCheckSupport, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
@@ -203,13 +204,16 @@ object MainForm: TMainForm
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
               Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+              IncrementalSearch = isVisibleOnly
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+              OnCompareNodes = vstDbgInfoConstsCompareNodes
               OnGetText = vstDbgInfoConstsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              OnIncrementalSearch = vstDbgInfoConstsIncrementalSearch
               Columns = <
                 item
                   CaptionAlignment = taCenter
@@ -262,13 +266,16 @@ object MainForm: TMainForm
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
               Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+              IncrementalSearch = isVisibleOnly
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+              OnCompareNodes = vstDbgInfoTypesCompareNodes
               OnGetText = vstDbgInfoTypesGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              OnIncrementalSearch = vstDbgInfoTypesIncrementalSearch
               Columns = <
                 item
                   CaptionAlignment = taCenter
@@ -329,13 +336,16 @@ object MainForm: TMainForm
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
               Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+              IncrementalSearch = isVisibleOnly
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+              OnCompareNodes = vstDbgInfoVarsCompareNodes
               OnGetText = vstDbgInfoVarsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              OnIncrementalSearch = vstDbgInfoVarsIncrementalSearch
               Columns = <
                 item
                   CaptionAlignment = taCenter
@@ -394,15 +404,18 @@ object MainForm: TMainForm
               Header.Font.Name = 'Tahoma'
               Header.Font.Style = []
               Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+              IncrementalSearch = isVisibleOnly
               ScrollBarOptions.AlwaysVisible = True
               TabOrder = 0
               TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
               TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
               TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
               OnColumnResize = vstColumnResize
+              OnCompareNodes = vstDbgInfoFunctionsCompareNodes
               OnFocusChanged = vstDbgInfoFunctionsFocusChanged
               OnGetText = vstDbgInfoFunctionsGetText
               OnGetNodeDataSize = vstThreadsGetNodeDataSize
+              OnIncrementalSearch = vstDbgInfoFunctionsIncrementalSearch
               OnResize = vstTreeResize
               Columns = <
                 item
