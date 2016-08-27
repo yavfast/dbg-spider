@@ -26,7 +26,7 @@ object MainForm: TMainForm
     Top = 167
     Width = 1395
     Height = 693
-    ActivePage = tsCodeTracking
+    ActivePage = tsMemInfo
     Align = alClient
     TabOrder = 0
     OnChange = pcMainChange
@@ -912,6 +912,7 @@ object MainForm: TMainForm
                   inherited synmSourceView: TSynMemo
                     Width = 582
                     Height = 364
+                    SearchEngine = dmShareData.synEditSearch1
                   end
                   inherited eSrcFileName: TEdit
                     Width = 582
@@ -1644,6 +1645,7 @@ object MainForm: TMainForm
               inherited synmSourceView: TSynMemo
                 Width = 459
                 Height = 400
+                SearchEngine = dmShareData.synEditSearch1
               end
               inherited eSrcFileName: TEdit
                 Width = 459
@@ -1874,7 +1876,7 @@ object MainForm: TMainForm
             Top = 0
             Width = 382
             Height = 639
-            ActivePage = tsTrackFuncAdvLinks
+            ActivePage = tsTrackFuncAdvSrc
             Align = alClient
             Constraints.MinWidth = 200
             TabOrder = 1
@@ -2050,6 +2052,7 @@ object MainForm: TMainForm
                 inherited synmSourceView: TSynMemo
                   Width = 374
                   Height = 590
+                  SearchEngine = dmShareData.synEditSearch1
                 end
                 inherited eSrcFileName: TEdit
                   Width = 374
@@ -2126,6 +2129,7 @@ object MainForm: TMainForm
         Header.Font.Style = []
         Header.Options = [hoColumnResize, hoVisible]
         Header.Style = hsPlates
+        IncrementalSearch = isVisibleOnly
         ScrollBarOptions.AlwaysVisible = True
         TabOrder = 0
         TreeOptions.AutoOptions = [toAutoTristateTracking, toAutoDeleteMovedNodes]
@@ -2133,10 +2137,12 @@ object MainForm: TMainForm
         TreeOptions.PaintOptions = [toHideFocusRect, toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
         TreeOptions.SelectionOptions = [toDisableDrawSelection, toExtendedFocus, toFullRowSelect]
         OnColumnResize = vstColumnResize
+        OnCompareNodes = vstLockThreadsCompareNodes
         OnDrawText = vstThreadsDrawText
         OnFocusChanged = vstLockThreadsFocusChanged
         OnGetText = vstLockThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnIncrementalSearch = vstLockThreadsIncrementalSearch
         OnResize = vstTreeResize
         Columns = <
           item
@@ -2255,6 +2261,7 @@ object MainForm: TMainForm
             Header.Options = [hoColumnResize, hoVisible, hoHeaderClickAutoSort]
             Header.SortColumn = 2
             Header.SortDirection = sdDescending
+            IncrementalSearch = isVisibleOnly
             ScrollBarOptions.AlwaysVisible = True
             TabOrder = 0
             TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
@@ -2267,6 +2274,7 @@ object MainForm: TMainForm
             OnFocusChanged = vstLockTrackingListFocusChanged
             OnGetText = vstLockTrackingListGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnIncrementalSearch = vstLockTrackingListIncrementalSearch
             OnResize = vstTreeResize
             Columns = <
               item
@@ -2349,15 +2357,18 @@ object MainForm: TMainForm
                   Header.Font.Name = 'Tahoma'
                   Header.Font.Style = []
                   Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+                  IncrementalSearch = isVisibleOnly
                   ScrollBarOptions.AlwaysVisible = True
                   TabOrder = 0
                   TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                   TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                   TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+                  OnCompareNodes = vstLockTrackingParentsCompareNodes
                   OnDblClick = vstLockTrackingParentsDblClick
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstLockTrackingLinksGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  OnIncrementalSearch = vstLockTrackingParentsIncrementalSearch
                   Columns = <
                     item
                       CaptionAlignment = taCenter
@@ -2415,15 +2426,18 @@ object MainForm: TMainForm
                   Header.Font.Name = 'Tahoma'
                   Header.Font.Style = []
                   Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
+                  IncrementalSearch = isVisibleOnly
                   ScrollBarOptions.AlwaysVisible = True
                   TabOrder = 1
                   TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
                   TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
                   TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+                  OnCompareNodes = vstLockTrackingChildsCompareNodes
                   OnDblClick = vstLockTrackingChildsDblClick
                   OnDrawText = vstTrackFuncLinksDrawText
                   OnGetText = vstLockTrackingLinksGetText
                   OnGetNodeDataSize = vstThreadsGetNodeDataSize
+                  OnIncrementalSearch = vstLockTrackingChildsIncrementalSearch
                   Columns = <
                     item
                       CaptionAlignment = taCenter
@@ -2471,6 +2485,7 @@ object MainForm: TMainForm
                 inherited synmSourceView: TSynMemo
                   Width = 439
                   Height = 320
+                  SearchEngine = dmShareData.synEditSearch1
                 end
                 inherited eSrcFileName: TEdit
                   Width = 439
@@ -2520,6 +2535,7 @@ object MainForm: TMainForm
             Header.SortColumn = 2
             Header.SortDirection = sdDescending
             Header.Style = hsFlatButtons
+            IncrementalSearch = isVisibleOnly
             ScrollBarOptions.AlwaysVisible = True
             TabOrder = 0
             TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes]
@@ -2531,6 +2547,7 @@ object MainForm: TMainForm
             OnFocusChanged = vstLockTrackingSyncObjsFocusChanged
             OnGetText = vstLockTrackingSyncObjsGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnIncrementalSearch = vstLockTrackingSyncObjsIncrementalSearch
             OnResize = vstTreeResize
             Columns = <
               item
@@ -2579,14 +2596,17 @@ object MainForm: TMainForm
             Header.Font.Style = []
             Header.Options = [hoColumnResize, hoShowSortGlyphs, hoVisible]
             Header.Style = hsFlatButtons
+            IncrementalSearch = isVisibleOnly
             ScrollBarOptions.AlwaysVisible = True
             TabOrder = 1
             TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toGridExtensions, toInitOnSave, toToggleOnDblClick, toWheelPanning, toEditOnClick]
             TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines]
             TreeOptions.SelectionOptions = [toExtendedFocus, toFullRowSelect, toMultiSelect]
+            OnCompareNodes = vstLockTrackingSyncObjStackCompareNodes
             OnDblClick = vstLockTrackingSyncObjStackDblClick
             OnGetText = vstLockTrackingSyncObjStackGetText
             OnGetNodeDataSize = vstThreadsGetNodeDataSize
+            OnIncrementalSearch = vstLockTrackingSyncObjStackIncrementalSearch
             Columns = <
               item
                 Alignment = taRightJustify
@@ -2850,6 +2870,7 @@ object MainForm: TMainForm
         Caption = 'Options'
         Page = rbnpgOptions
       end>
+    TabIndex = 1
     UseCustomFrame = False
     DesignSize = (
       1395
@@ -2918,6 +2939,62 @@ object MainForm: TMainForm
       Width = 48
       Height = 24
       ActionManager = amMain
+    end
+    object rbpMain: TRibbonPage
+      Left = 0
+      Top = 50
+      Width = 1394
+      Height = 93
+      Caption = 'Menu'
+      Index = 0
+      object rbgProject: TRibbonGroup
+        Left = 4
+        Top = 3
+        Width = 197
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Project'
+        GroupIndex = 0
+      end
+      object rbgApplication: TRibbonGroup
+        Left = 203
+        Top = 3
+        Width = 122
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Application'
+        GroupIndex = 1
+        Rows = 2
+      end
+      object rbngrpDebug: TRibbonGroup
+        Left = 327
+        Top = 3
+        Width = 121
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Debug'
+        GroupIndex = 2
+      end
+      object rbngrpFeedback: TRibbonGroup
+        AlignWithMargins = True
+        Left = 616
+        Top = 3
+        Width = 61
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Feedback'
+        GroupIndex = 9
+        Rows = 1
+      end
+      object rbngrpProfilers: TRibbonGroup
+        Left = 450
+        Top = 3
+        Width = 164
+        Height = 86
+        ActionManager = amMain
+        Caption = 'Active profilers'
+        GroupIndex = 4
+      end
     end
     object rbnpgOptions: TRibbonPage
       Left = 0
@@ -2989,62 +3066,6 @@ object MainForm: TMainForm
         ActionManager = amMain
         Caption = 'Lock tracking options'
         GroupIndex = 3
-      end
-    end
-    object rbpMain: TRibbonPage
-      Left = 0
-      Top = 50
-      Width = 1394
-      Height = 93
-      Caption = 'Menu'
-      Index = 0
-      object rbgProject: TRibbonGroup
-        Left = 4
-        Top = 3
-        Width = 197
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Project'
-        GroupIndex = 0
-      end
-      object rbgApplication: TRibbonGroup
-        Left = 203
-        Top = 3
-        Width = 122
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Application'
-        GroupIndex = 1
-        Rows = 2
-      end
-      object rbngrpDebug: TRibbonGroup
-        Left = 327
-        Top = 3
-        Width = 121
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Debug'
-        GroupIndex = 2
-      end
-      object rbngrpFeedback: TRibbonGroup
-        AlignWithMargins = True
-        Left = 616
-        Top = 3
-        Width = 61
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Feedback'
-        GroupIndex = 9
-        Rows = 1
-      end
-      object rbngrpProfilers: TRibbonGroup
-        Left = 450
-        Top = 3
-        Width = 164
-        Height = 86
-        ActionManager = amMain
-        Caption = 'Active profilers'
-        GroupIndex = 4
       end
     end
   end
