@@ -316,6 +316,9 @@ type
     vstTrackFuncs: TVirtualStringTree;
     vstTrackThreads: TVirtualStringTree;
     vstUpdateInfo: TVirtualStringTree;
+    pmVirtualTreeView: TPopupMenu;
+    mnuCollapseAll: TMenuItem;
+    acCollapseAll: TAction;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -326,6 +329,8 @@ type
     procedure vstThreadsDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
     procedure vstThreadsGetNodeDataSize(Sender: TBaseVirtualTree; var NodeDataSize: Integer);
+    procedure vstThreadsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstThreadsIncrementalSearch(Sender: TBaseVirtualTree; Node: PVirtualNode; const SearchText: string; var Result: Integer);
     procedure vstThreadsScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: Integer);
     procedure vstThreadsCollapsed(Sender: TBaseVirtualTree; Node: PVirtualNode);
     procedure vstThreadsExpanded(Sender: TBaseVirtualTree; Node: PVirtualNode);
@@ -412,6 +417,7 @@ type
 
     procedure vstTrackFuncsFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
     procedure vstTrackFuncsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstTrackFuncsIncrementalSearch(Sender: TBaseVirtualTree; Node: PVirtualNode; const SearchText: string; var Result: Integer);
     procedure vstTrackFuncsFocusChanging(Sender: TBaseVirtualTree; OldNode, NewNode: PVirtualNode; OldColumn, NewColumn: TColumnIndex;
       var Allowed: Boolean);
 
@@ -420,6 +426,8 @@ type
 
     procedure vstTrackFuncChildsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstTrackFuncChildsDblClick(Sender: TObject);
+    procedure vstTrackFuncChildsCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+    procedure vstTrackFuncChildsIncrementalSearch(Sender: TBaseVirtualTree; Node: PVirtualNode; const SearchText: string; var Result: Integer);
 
     procedure vstTrackFuncLinksDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       const Text: string; const CellRect: TRect; var DefaultDraw: Boolean);
@@ -471,7 +479,6 @@ type
     procedure acUseShortNamesExecute(Sender: TObject);
     procedure acCodeTrackingExecute(Sender: TObject);
     procedure acTrackSystemUnitsExecute(Sender: TObject);
-    procedure pTrackFuncAdvResize(Sender: TObject);
     procedure acParentViewSourceExecute(Sender: TObject);
     procedure acMemoryInfoExecute(Sender: TObject);
     procedure acProcessTimelineExecute(Sender: TObject);
@@ -479,23 +486,33 @@ type
     procedure acMemInfoCallStackExecute(Sender: TObject);
     procedure acExceptionsExecute(Sender: TObject);
     procedure acExceptionCallStackExecute(Sender: TObject);
-    procedure pcMainChange(Sender: TObject);
     procedure acCodeTrackHistoryBackExecute(Sender: TObject);
     procedure acCodeTrackRefreshExecute(Sender: TObject);
     procedure acFuncExecute(Sender: TObject);
     procedure acMemInfoRefreshExecute(Sender: TObject);
     procedure acMemInfoHistoryExecute(Sender: TObject);
-    procedure vstMemInfoFuncChildsDblClick(Sender: TObject);
-    procedure pcMemInfoChange(Sender: TObject);
-    procedure pMemInfoFuncLinksResize(Sender: TObject);
     procedure acAddressInfoExecute(Sender: TObject);
-    procedure vstMemInfoObjStackDblClick(Sender: TObject);
     procedure acOpenSiteExecute(Sender: TObject);
     procedure acFeedbackExecute(Sender: TObject);
     procedure acExcepInfoRefreshExecute(Sender: TObject);
     procedure acCopyExecute(Sender: TObject);
+    procedure acLockTrackingRefreshExecute(Sender: TObject);
+    procedure acLockTrackingExecute(Sender: TObject);
+    procedure acViewSyncObjsOnTimeLineExecute(Sender: TObject);
+    procedure acCollapseAllExecute(Sender: TObject);
+    procedure acDebugOptionsExecute(Sender: TObject);
+    procedure acSamplingMethodExecute(Sender: TObject);
 
+    procedure pcMainChange(Sender: TObject);
+    procedure pcMemInfoChange(Sender: TObject);
+
+    procedure pTrackFuncAdvResize(Sender: TObject);
+    procedure pMemInfoFuncLinksResize(Sender: TObject);
     procedure pLockTrackingLinksResize(Sender: TObject);
+
+    procedure vstMemInfoFuncChildsDblClick(Sender: TObject);
+    procedure vstMemInfoObjStackDblClick(Sender: TObject);
+
     procedure vstLockTrackingSyncObjStackGetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
     procedure vstLockTrackingParentsDblClick(Sender: TObject);
@@ -507,19 +524,8 @@ type
     procedure vstLockTrackingSyncObjsCompareNodes(Sender: TBaseVirtualTree;
       Node1, Node2: PVirtualNode; Column: TColumnIndex;
       var Result: Integer);
-    procedure acLockTrackingRefreshExecute(Sender: TObject);
-    procedure acLockTrackingExecute(Sender: TObject);
-    procedure acViewSyncObjsOnTimeLineExecute(Sender: TObject);
-    procedure acDebugOptionsExecute(Sender: TObject);
-    procedure acSamplingMethodExecute(Sender: TObject);
 
     procedure vstTreeResize(Sender: TObject);
-    procedure vstTrackFuncsIncrementalSearch(Sender: TBaseVirtualTree;
-      Node: PVirtualNode; const SearchText: string; var Result: Integer);
-    procedure vstThreadsCompareNodes(Sender: TBaseVirtualTree; Node1,
-      Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
-    procedure vstThreadsIncrementalSearch(Sender: TBaseVirtualTree;
-      Node: PVirtualNode; const SearchText: string; var Result: Integer);
   private
     FSpiderOptions: TSpiderOptions;
     FProjectType: TProgectType;
@@ -767,6 +773,24 @@ end;
 procedure TMainForm.acCodeTrackRefreshExecute(Sender: TObject);
 begin
   vstTrackThreadsFocusChanged(vstTrackThreads, vstTrackThreads.FocusedNode, 0);
+end;
+
+procedure TMainForm.acCollapseAllExecute(Sender: TObject);
+var
+  VirtualTreeView: TBaseVirtualTree;
+  Node: PVirtualNode;
+begin
+  if vstTrackFuncs.Focused then
+    VirtualTreeView := vstTrackFuncs
+  else
+  if vstTrackFuncChilds.Focused then
+    VirtualTreeView := vstTrackFuncChilds
+  else
+    Exit;
+
+  if VirtualTreeView is TBaseVirtualTree then
+    for Node in VirtualTreeView.Nodes do
+      VirtualTreeView.Expanded[Node] := False;
 end;
 
 procedure TMainForm.acContinueExecute(Sender: TObject);
@@ -6348,6 +6372,28 @@ begin
   end;
 end;
 
+procedure TMainForm.vstTrackFuncChildsIncrementalSearch(
+  Sender: TBaseVirtualTree; Node: PVirtualNode; const SearchText: string;
+  var Result: Integer);
+var
+  Data: PLinkData;
+  Name: String;
+begin
+  Data := vstTrackFuncChilds.GetNodeData(Node);
+
+  Name := '';
+  if (Data^.LinkType = ltTrackCallFuncInfo) then
+    Name := TFuncInfo(Data^.TrackCallFuncInfo.FuncInfo).ShortName
+  else
+  if (Data^.LinkType = ltTrackFuncInfo) then
+    Name := TFuncInfo(Data^.TrackFuncInfo.FuncInfo).ShortName
+  else
+  if (Data^.LinkType = ltTrackUnitInfo) then
+    Name := TUnitInfo(Data^.TrackUnitInfo.UnitInfo).ShortName;
+
+  Result := AnsiStrLIComp(PChar(SearchText), PChar(Name), Min(Length(SearchText), Length(Name)));
+end;
+
 procedure TMainForm.vstTrackFuncParentDblClick(Sender: TObject);
 var
   Node: PVirtualNode;
@@ -6391,6 +6437,111 @@ begin
   case Data^.LinkType of
     ltTrackFuncInfo, ltDbgUnitInfo, ltTrackUnitInfo:
       TargetCanvas.Font.Style := [fsBold];
+  end;
+end;
+
+procedure TMainForm.vstTrackFuncChildsCompareNodes(Sender: TBaseVirtualTree;
+  Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+var
+  Data1, Data2: PLinkData;
+  Value1, Value2: UInt64;
+  Name1, Name2: String;
+begin
+  Data1 := vstTrackFuncChilds.GetNodeData(Node1);
+  Data2 := vstTrackFuncChilds.GetNodeData(Node2);
+
+  case Column of
+    0:
+      begin
+        Name1 := '';
+        Name2 := '';
+
+        if (Data1^.LinkType = ltTrackCallFuncInfo) and (Data2^.LinkType = ltTrackCallFuncInfo) then
+        begin
+          Name1 := TFuncInfo(Data1^.TrackCallFuncInfo.FuncInfo).ShortName;
+          Name2 := TFuncInfo(Data2^.TrackCallFuncInfo.FuncInfo).ShortName;
+        end
+        else
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Name1 := TFuncInfo(Data1^.TrackFuncInfo.FuncInfo).ShortName;
+          Name2 := TFuncInfo(Data2^.TrackFuncInfo.FuncInfo).ShortName;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          Name1 := TUnitInfo(Data1^.TrackUnitInfo.UnitInfo).ShortName;
+          Name2 := TUnitInfo(Data2^.TrackUnitInfo.UnitInfo).ShortName;
+        end;
+
+        Result := CompareText(Name1, Name2);
+      end;
+    1:
+      begin
+        Value1 := 0;
+        Value2 := 0;
+
+
+        if (Data1^.LinkType = ltTrackCallFuncInfo) and (Data2^.LinkType = ltTrackCallFuncInfo) then
+        begin
+          Value1 := Data1^.TrackCallFuncInfo.LineNo;
+          Value2 := Data2^.TrackCallFuncInfo.LineNo;
+        end
+        else
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Value1 := Data1^.TrackFuncInfo.CallCount;
+          Value2 := Data2^.TrackFuncInfo.CallCount;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          // Для юнитов считаем по кол-ву вызовов функций
+          Value1 := Data1^.TrackUnitInfo.CallCount;
+          Value2 := Data2^.TrackUnitInfo.CallCount;
+        end;
+
+        Result := Compare(Value1, Value2);
+      end;
+    2:
+      begin
+        Value1 := 0;
+        Value2 := 0;
+
+        if (Data1^.LinkType = ltTrackCallFuncInfo) and (Data2^.LinkType = ltTrackCallFuncInfo) then
+        begin
+          Value1 := Data1^.TrackCallFuncInfo.CallCount;
+          Value2 := Data2^.TrackCallFuncInfo.CallCount;
+        end
+        else
+        if (Data1^.LinkType = ltTrackFuncInfo) and (Data2^.LinkType = ltTrackFuncInfo) then
+        begin
+          Value1 := TCodeTrackFuncInfo(Data1^.TrackFuncInfo).CPUElapsed;
+          Value2 := TCodeTrackFuncInfo(Data2^.TrackFuncInfo).CPUElapsed;
+        end
+        else
+        if (Data1^.LinkType = ltTrackUnitInfo) and (Data2^.LinkType = ltTrackUnitInfo) then
+        begin
+          // Для юнитов считаем по кол-ву вызовов функций
+          Value1 := Data1^.TrackUnitInfo.CallCount;
+          Value2 := Data2^.TrackUnitInfo.CallCount;
+        end;
+
+        Result := Compare(Value1, Value2);
+      end;
+    3:
+      begin
+        Value1 := 0;
+        Value2 := 0;
+
+        if (Data1^.LinkType = ltTrackCallFuncInfo) and (Data2^.LinkType = ltTrackCallFuncInfo) then
+        begin
+          Value1 := Data1^.TrackCallFuncInfo.Elapsed;
+          Value2 := Data2^.TrackCallFuncInfo.Elapsed;
+        end;
+
+        Result := Compare(Value1, Value2);
+      end;
   end;
 end;
 
