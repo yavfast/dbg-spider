@@ -427,7 +427,7 @@ Type
     Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: LongBool): TFindResult; Virtual;
 
     procedure UpdateSourceDirs(const SourceType: TUnitType; const SourceDirs: String); virtual;
-    procedure AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: LongBool = True); virtual;
+    procedure AddSourceDir(const SourceDir: TDbgSourceDirs; const Dir: String; const Recursive: LongBool = True); virtual;
 
     function FullUnitName(const UnitName: String): String;
     function GetUnitType(const UnitName: String): TUnitType;
@@ -573,11 +573,10 @@ begin
   end;
 end;
 
-procedure TDebugInfo.AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: LongBool);
+procedure TDebugInfo.AddSourceDir(const SourceDir: TDbgSourceDirs; const Dir: String; const Recursive: LongBool);
 const
   _PAS_EXTS: array [0 .. 2] of String = ('*.pas', '*.inc', '*.dpr');
 var
-  ChildDirs: TStringDynArray;
   Files: TStringDynArray;
   J, I: Integer;
   FileName: String;
@@ -585,7 +584,7 @@ var
 begin
   for J := 0 to High(_PAS_EXTS) do
   begin
-    Files := TDirectory.GetFiles(Dir, _PAS_EXTS[J]);
+    Files := TDirectory.GetFiles(Dir, _PAS_EXTS[J], TSearchOption.soAllDirectories);
 
     if Length(Files) > 0 then
       for I := 0 to High(Files) do
@@ -594,15 +593,10 @@ begin
         ShortFileName := AnsiLowerCase(ExtractFileName(FileName));
 
         // Добавляем только первый файл по поиску
-        if not FDirs[SourceType].ContainsKey(ShortFileName) then
-          FDirs[SourceType].Add(ShortFileName, FileName);
+        if not SourceDir.ContainsKey(ShortFileName) then
+          SourceDir.Add(ShortFileName, FileName);
       end;
   end;
-
-  ChildDirs := TDirectory.GetDirectories(Dir);
-  if Length(ChildDirs) > 0 then
-    for I := 0 to High(ChildDirs) do
-      AddSourceDir(SourceType, ChildDirs[I], True);
 end;
 
 Function TDebugInfo.CheckAddr(Const Addr: Pointer): LongBool;
@@ -692,7 +686,7 @@ begin
       begin
         S := ExcludeTrailingPathDelimiter(S);
         if DirectoryExists(S) then
-          AddSourceDir(SourceType, S, True);
+          AddSourceDir(FDirs[SourceType], S, True);
       end;
     end;
   finally

@@ -222,8 +222,10 @@ begin
 
   _AC.DoAction(acProgress, ['Load debug info...', 1]);
   try
-    _AC.Log(dltInfo, 'Scan source dirs');
+    _AC.Log(dltInfo, 'Scan delphi source dirs');
     gvDebugInfo.UpdateSourceDirs(utSystem, DelphiSourceDirs);
+
+    _AC.Log(dltInfo, 'Scan project source dirs');
     gvDebugInfo.UpdateSourceDirs(utProject, ProjectSourceDirs);
 
     _AC.Log(dltInfo, 'Load debug info for "%s"', [AppName]);
