@@ -586,6 +586,7 @@ object MainForm: TMainForm
         Header.Font.Style = []
         Header.Options = [hoColumnResize, hoVisible]
         Header.Style = hsPlates
+        IncrementalSearch = isVisibleOnly
         ScrollBarOptions.AlwaysVisible = True
         ScrollBarOptions.ScrollBars = ssHorizontal
         TabOrder = 0
@@ -596,10 +597,12 @@ object MainForm: TMainForm
         OnChange = vdtTimeLineChange
         OnCollapsed = vstThreadsCollapsed
         OnColumnResize = vstColumnResize
+        OnCompareNodes = vstThreadsCompareNodes
         OnDrawText = vstThreadsDrawText
         OnExpanded = vstThreadsExpanded
         OnGetText = vstThreadsGetText
         OnGetNodeDataSize = vstThreadsGetNodeDataSize
+        OnIncrementalSearch = vstThreadsIncrementalSearch
         OnScroll = vstThreadsScroll
         Columns = <
           item
@@ -4348,7 +4351,7 @@ object MainForm: TMainForm
         Caption = 'AL'
       end
       item
-        ActionList = ALRecent
+        ActionList = alRecent
         Caption = 'ALRecent'
       end
       item
@@ -4360,7 +4363,7 @@ object MainForm: TMainForm
     Top = 232
     StyleName = 'Ribbon - Silver'
   end
-  object ALRecent: TActionList
+  object alRecent: TActionList
     Left = 112
     Top = 352
     object acRecent0: TAction
@@ -4407,7 +4410,7 @@ object MainForm: TMainForm
   object pmTrackFuncAdvParents: TPopupMenu
     Left = 112
     Top = 408
-    object Viewsource1: TMenuItem
+    object mnViewSource: TMenuItem
       Action = acParentViewSource
     end
   end
