@@ -52,7 +52,7 @@ end;
 
 destructor TDbgSyncObjsProfiler.Destroy;
 begin
-
+  FSyncObjsInfoQueue.Free;
   inherited;
 end;
 
