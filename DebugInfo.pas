@@ -348,8 +348,33 @@ Type
 
   TDebugInfoProgressCallback = procedure(const Action: String; const Progress: Integer) of object;
 
-  TDbgSourceDirs = TDictionary<String, String>;
-  TDbgSourceList = Array [Low(TUnitType) .. High(TUnitType)] of TDbgSourceDirs;
+  TDbgSourceDirListItem = record
+    ShortFileName: String;
+    FileName: String;
+    HashCode : Cardinal;
+  end;
+
+  TDbgSourceDirList = class
+  private
+    FBuckets: array of TDbgSourceDirListItem;
+    FCount: Integer;
+    FGrowth: Integer;
+    FCapacity: Integer;
+  protected
+    procedure Grow;
+    function LinearFind(const HashCode: Cardinal; const ShortFileName: String; var Index : Integer): Boolean;
+    function SameItem(const HashCode1, HashCode2: Cardinal; const ShortFileName1, ShortFileName2: String): Boolean;
+    function GetItemHashCode(const ShortFileName: String): Integer;
+  public
+    function Add(const FileName: String): Boolean;
+    function Contains(const ShortFileName: String): Boolean;
+    function TryGetValue(const ShortFileName: String; out FileName: String): Boolean;
+    procedure Clear;
+
+    property Count : Integer read FCount;
+  end;
+
+  TDbgSourceList = Array [Low(TUnitType) .. High(TUnitType)] of TDbgSourceDirList;
 
   TMemoryManagerInfo = class
   public
@@ -392,7 +417,7 @@ Type
     FLastProgressAction: String;
     FLastProgress: Integer;
 
-    function GetDirs(const SourceType: TUnitType): TDbgSourceDirs;
+    function GetDirs(const SourceType: TUnitType): TDbgSourceDirList;
     procedure ClearDirs;
   Protected
     FDebugInfoType: String;
@@ -427,7 +452,7 @@ Type
     Function GetLineInformation(const Addr: Pointer; Var UnitName: String; Var FuncName: String; Var Line: LongInt; GetPrevLine: LongBool): TFindResult; Virtual;
 
     procedure UpdateSourceDirs(const SourceType: TUnitType; const SourceDirs: String); virtual;
-    procedure AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: LongBool = True); virtual;
+    procedure AddSourceDir(const SourceDir: TDbgSourceDirList; const Dir: String; const Recursive: LongBool = True); virtual;
 
     function FullUnitName(const UnitName: String): String;
     function GetUnitType(const UnitName: String): TUnitType;
@@ -473,7 +498,7 @@ Type
     Function IsValidDataAddr(Const Addr: Pointer; const ThreadID: TThreadId): LongBool;
 
     // Property SourceDirs: String read FSourceDirs;
-    Property Dirs[const SourceType: TUnitType]: TDbgSourceDirs Read GetDirs;
+    Property Dirs[const SourceType: TUnitType]: TDbgSourceDirList Read GetDirs;
     Property Segments: TStringList Read FSegments;
     Property Units: TStringList Read FUnits;
     Property UnitsByAddr: TSegmentCodeInfoList read FUnitsByAddr;
@@ -506,6 +531,42 @@ begin
   Result := Pointer(Integer(Ptr) + Offset);
 end;
 
+// SimpleStringHash and SimpleLowerCaseStringHash are taken from DWScript
+// The code is probably under copyright of Eric Grange
+function SimpleStringHash(const s : UnicodeString) : Cardinal; inline;
+var
+  i : Integer;
+begin
+  // modified FNV-1a using length as seed
+  Result:=Length(s);
+  for i:=1 to Result do
+    Result:=(Result xor Ord(s[i]))*16777619;
+end;
+
+function SimpleLowerCaseStringHash(const s : UnicodeString) : Cardinal;
+
+  function Fallback(const s : UnicodeString) : Cardinal;
+  begin
+    Result:=SimpleStringHash(LowerCase(s));
+  end;
+
+var
+  i : Integer;
+  c : Word;
+begin
+  // modified FNV-1a using length as seed
+  Result:=Length(s);
+  for i:=1 to Result do begin
+    c:=Ord(s[i]);
+    if c>127 then
+      Exit(Fallback(s))
+    else if c in [Ord('A')..Ord('Z')] then
+      c:=c+(Ord('a')-Ord('A'));
+    Result:=(Result xor c)*16777619;
+  end;
+end;
+
+
 { TDebugInfo }
 
 Constructor TDebugInfo.Create;
@@ -515,7 +576,7 @@ Begin
   Inherited Create;
 
   for ST := Low(TUnitType) to High(TUnitType) do
-    FDirs[ST] := TDbgSourceDirs.Create(4096);
+    FDirs[ST] := TDbgSourceDirList.Create;
 
   FSegments := TStringList.Create;
   FSegments.OwnsObjects := True;
@@ -573,36 +634,25 @@ begin
   end;
 end;
 
-procedure TDebugInfo.AddSourceDir(const SourceType: TUnitType; const Dir: String; const Recursive: LongBool);
+procedure TDebugInfo.AddSourceDir(const SourceDir: TDbgSourceDirList; const Dir: String; const Recursive: LongBool);
 const
   _PAS_EXTS: array [0 .. 2] of String = ('*.pas', '*.inc', '*.dpr');
 var
-  ChildDirs: TStringDynArray;
   Files: TStringDynArray;
   J, I: Integer;
   FileName: String;
-  ShortFileName: String;
 begin
   for J := 0 to High(_PAS_EXTS) do
   begin
-    Files := TDirectory.GetFiles(Dir, _PAS_EXTS[J]);
+    Files := TDirectory.GetFiles(Dir, _PAS_EXTS[J], TSearchOption.soAllDirectories);
 
     if Length(Files) > 0 then
       for I := 0 to High(Files) do
       begin
         FileName := Files[I];
-        ShortFileName := AnsiLowerCase(ExtractFileName(FileName));
-
-        // Добавляем только первый файл по поиску
-        if not FDirs[SourceType].ContainsKey(ShortFileName) then
-          FDirs[SourceType].Add(ShortFileName, FileName);
+        SourceDir.Add(FileName);
       end;
   end;
-
-  ChildDirs := TDirectory.GetDirectories(Dir);
-  if Length(ChildDirs) > 0 then
-    for I := 0 to High(ChildDirs) do
-      AddSourceDir(SourceType, ChildDirs[I], True);
 end;
 
 Function TDebugInfo.CheckAddr(Const Addr: Pointer): LongBool;
@@ -692,7 +742,7 @@ begin
       begin
         S := ExcludeTrailingPathDelimiter(S);
         if DirectoryExists(S) then
-          AddSourceDir(SourceType, S, True);
+          AddSourceDir(FDirs[SourceType], S, True);
       end;
     end;
   finally
@@ -896,7 +946,7 @@ function TDebugInfo.GetUnitType(const UnitName: String): TUnitType;
 begin
   for Result := Low(TUnitType) to High(TUnitType) do
   begin
-    if FDirs[Result].ContainsKey(AnsiLowerCase(UnitName)) then
+    if FDirs[Result].Contains(AnsiLowerCase(UnitName)) then
       Exit;
   end;
 
@@ -1077,7 +1127,7 @@ Begin
   End;
 End;
 
-function TDebugInfo.GetDirs(const SourceType: TUnitType): TDbgSourceDirs;
+function TDebugInfo.GetDirs(const SourceType: TUnitType): TDbgSourceDirList;
 begin
   Result := FDirs[SourceType];
 end;
@@ -2059,6 +2109,122 @@ end;
 function TUnitSourceModuleInfo.ShortName: String;
 begin
   Result := String(Name);
+end;
+
+{ TDbgSourceDirList }
+
+procedure TDbgSourceDirList.Grow;
+var
+  i, j, n : Integer;
+  oldBuckets : array of TDbgSourceDirListItem;
+begin
+  if FCapacity = 0 then
+    FCapacity := 64
+  else
+    FCapacity := FCapacity * 2;
+  FGrowth := (FCapacity * 11) div 16;
+
+  SetLength(oldBuckets, Length(FBuckets));
+  for i := 0 to Length(FBuckets) - 1 do
+    oldBuckets[i] := FBuckets[i];
+
+  FBuckets := nil;
+  SetLength(FBuckets, FCapacity);
+
+  n := FCapacity - 1;
+  for i := 0 to High(oldBuckets) do
+  begin
+    if oldBuckets[i].HashCode = 0 then
+      Continue;
+    j := (oldBuckets[i].HashCode and (FCapacity - 1));
+    while FBuckets[j].HashCode <> 0 do
+      j := (j + 1) and n;
+    FBuckets[j] := oldBuckets[i];
+  end;
+end;
+
+function TDbgSourceDirList.LinearFind(const HashCode: Cardinal;
+  const ShortFileName: String; var Index: Integer) : Boolean;
+begin
+  repeat
+    if FBuckets[Index].HashCode = 0 then
+      Exit(False)
+    else
+    if SameItem(HashCode, FBuckets[Index].HashCode, ShortFileName, FBuckets[Index].ShortFileName) then
+      Exit(True);
+    Index := (Index + 1) and (FCapacity - 1);
+  until False;
+end;
+
+function TDbgSourceDirList.Add(const FileName: String) : Boolean;
+var
+  Index: Integer;
+  HashCode: Integer;
+  ShortFileName: String;
+begin
+  if FCount >= FGrowth then
+    Grow;
+
+  ShortFileName := AnsiLowerCase(ExtractFileName(FileName));
+
+  HashCode := GetItemHashCode(ShortFileName);
+  Index := (HashCode and (FCapacity - 1));
+  if LinearFind(HashCode, ShortFileName, Index) then
+    Exit(False);
+
+  FBuckets[Index].ShortFileName := ShortFileName;
+  FBuckets[Index].FileName := FileName;
+  FBuckets[Index].HashCode := HashCode;
+  Inc(FCount);
+  Result := True;
+end;
+
+function TDbgSourceDirList.Contains(const ShortFileName: String): Boolean;
+var
+  Index: Integer;
+  HashCode: Cardinal;
+begin
+  if FCount = 0 then
+    Exit(False);
+  HashCode := GetItemHashCode(ShortFileName);
+  Index := HashCode and (FCapacity - 1);
+  Result := LinearFind(HashCode, ShortFileName, Index);
+end;
+
+procedure TDbgSourceDirList.Clear;
+begin
+  FCount := 0;
+  FCapacity := 0;
+  FGrowth := 0;
+  FBuckets := nil;
+end;
+
+function TDbgSourceDirList.SameItem(const HashCode1, HashCode2: Cardinal;
+  const ShortFileName1, ShortFileName2: String): Boolean;
+begin
+  Result := HashCode1 = HashCode2;
+  if Result then
+    Result := SameText(ShortFileName1, ShortFileName2);
+end;
+
+function TDbgSourceDirList.TryGetValue(const ShortFileName: String;
+  out FileName: String): Boolean;
+var
+  Index: Integer;
+  HashCode: Integer;
+begin
+  if FCount = 0 then
+    Exit(False);
+  HashCode := GetItemHashCode(ShortFileName);
+  Index := (HashCode and (FCapacity - 1));
+  Result := LinearFind(HashCode, ShortFileName, Index);
+  if Result then
+    FileName := FBuckets[Index].FileName;
+end;
+
+function TDbgSourceDirList.GetItemHashCode(const ShortFileName: String): Integer;
+begin
+  Result := SimpleLowerCaseStringHash(ShortFileName);
 end;
 
 { TMemoryManagerInfo }

@@ -108,6 +108,7 @@ end;
 destructor TDbgSamplingProfiler.Destroy;
 begin
   Clear;
+  FreeAndNil(FSamplingLock);
 
   inherited;
 end;
